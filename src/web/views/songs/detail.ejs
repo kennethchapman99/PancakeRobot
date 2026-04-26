@@ -1,0 +1,851 @@
+<% title = song.title || song.id %>
+
+<div class="p-8 max-w-4xl" x-data="songDetail()" @keydown.escape.window="closeThumbTerminal(); editOpen = false">
+
+  <!-- Back + header -->
+  <a href="/songs" class="text-sm text-zinc-500 hover:text-zinc-700 mb-6 inline-flex items-center gap-1">← Song Catalog</a>
+
+  <div class="flex items-start justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-2xl font-bold"><%= song.title || song.topic || song.id %></h1>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="<%= statusBadge(song.status) %>"><%= song.status %></span>
+        <span class="text-sm text-zinc-400">Created <%= formatDate(song.created_at) %></span>
+        <span class="text-sm text-zinc-300">·</span>
+        <span class="text-sm text-zinc-500">📦 DistroKid</span>
+        <% if (song.brand_score) { %>
+        <span class="text-sm text-zinc-300">·</span>
+        <span class="text-sm text-zinc-500">Brand: <%= song.brand_score %>/100</span>
+        <% } %>
+      </div>
+    </div>
+    <div class="flex gap-2 shrink-0 items-center">
+      <%
+        const noAssets = (!fsAssets.audioFiles || fsAssets.audioFiles.length === 0) && (!fsAssets.lyrics);
+        const hasLyrics = !!fsAssets.lyrics;
+      %>
+      <% if (hasLyrics) { %>
+      <!-- Edit Song — AI lyric revision -->
+      <button @click="editOpen = !editOpen"
+         :class="editOpen ? 'bg-violet-700 text-white' : 'bg-violet-600 hover:bg-violet-700 text-white'"
+         class="text-sm px-4 py-2 rounded-lg transition flex items-center gap-1.5 font-semibold">
+        ✏️ Edit Song
+      </button>
+      <% } %>
+      <!-- Generate / Regenerate -->
+      <a href="/songs/<%= song.id %>/generate"
+         class="<%= noAssets ? 'bg-amber-500 hover:bg-amber-600 text-white font-bold shadow' : 'border border-zinc-200 text-zinc-500 hover:bg-zinc-50' %> text-sm px-4 py-2 rounded-lg transition flex items-center gap-1.5">
+        🚀 <%= noAssets ? 'Generate Song' : 'Regenerate' %>
+      </a>
+      <a href="/songs/<%= song.id %>/edit" class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg hover:bg-zinc-50 transition">Edit Details</a>
+      <select onchange="updateStatus('<%= song.id %>', this.value)"
+        class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg focus:outline-none bg-white">
+        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','submitted_to_distrokid','published','paused','archived']) { %>
+          <option value="<%= s %>" <%= song.status === s ? 'selected' : '' %>>
+            <%= s === 'approved' ? '✅ approved' : s === 'submitted_to_distrokid' ? '📤 submitted to distrokid' : s === 'published' ? '🎵 published' : s.replace(/_/g,' ') %>
+          </option>
+        <% } %>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── EDIT SONG PANEL ── -->
+  <% if (fsAssets.lyrics) { %>
+  <div x-show="editOpen" x-cloak class="mb-6">
+    <div class="bg-violet-950 rounded-2xl overflow-hidden shadow-xl">
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 px-5 py-4 bg-violet-900 border-b border-violet-800">
+        <span class="text-violet-300 text-lg">✏️</span>
+        <div>
+          <div class="font-bold text-white">Edit Song Lyrics</div>
+          <div class="text-violet-300 text-xs mt-0.5">Describe what you want changed — the AI lyricist will revise accordingly</div>
+        </div>
+        <button @click="editOpen = false" class="ml-auto text-violet-400 hover:text-white text-lg leading-none">✕</button>
+      </div>
+
+      <!-- Input area — shown when idle -->
+      <div x-show="editState === 'idle'" class="p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <% const suggestions = [
+            'Fewer lyrics — cut it by a third',
+            'Add more counting / numbers',
+            'Make the chorus simpler and catchier',
+            'More physical action cues for kids',
+            'Make it sillier and more absurd',
+            'Stronger opening hook',
+          ]; %>
+          <% for (const s of suggestions) { %>
+          <button @click="feedback = '<%= s %>'"
+            class="text-left text-xs bg-violet-900 hover:bg-violet-800 text-violet-200 px-3 py-2 rounded-lg transition border border-violet-700 hover:border-violet-500">
+            <%= s %>
+          </button>
+          <% } %>
+        </div>
+        <textarea x-model="feedback" rows="3" placeholder="Tell the AI what to change… e.g. 'less lyrics overall', 'more mention of tacos', 'make the chorus rhyme better', 'add a robot sound effect moment'"
+          class="w-full bg-violet-900 border border-violet-700 rounded-xl px-4 py-3 text-sm text-white placeholder-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"></textarea>
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-violet-400">The current lyrics.md will be overwritten. The audio will need to be regenerated separately.</p>
+          <button @click="startRevision('<%= song.id %>')" :disabled="!feedback.trim()"
+            class="bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white font-bold px-5 py-2 rounded-xl transition text-sm">
+            Revise →
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal — shown when running or done -->
+      <div x-show="editState !== 'idle'">
+        <div id="revise-log" class="p-5 font-mono text-sm space-y-0.5 overflow-y-auto" style="min-height:200px; max-height:360px;">
+          <div class="text-violet-700 mb-2">$ node src/scripts/revise-song.js <%= song.id %></div>
+          <div class="text-violet-800 mb-3">────────────────────────────────────────</div>
+        </div>
+        <div class="px-5 py-3 bg-violet-900 border-t border-violet-800 flex items-center justify-between">
+          <span class="text-xs font-mono"
+            :class="editState === 'running' ? 'text-green-400' : editState === 'done' ? 'text-emerald-400' : 'text-red-400'"
+            x-text="editState === 'running' ? '⏳ Revising lyrics…' : editState === 'done' ? '✅ Done — reloading…' : '❌ ' + editError"></span>
+          <button x-show="editState !== 'running'" @click="resetEdit()"
+            class="text-xs text-violet-400 hover:text-white px-3 py-1 rounded border border-violet-700 hover:border-violet-500 transition">
+            <span x-text="editState === 'done' ? 'Close' : 'Try Again'"></span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <% } %>
+
+  <!-- DistroKid submit banner — approved songs only -->
+  <% if (song.status === 'approved') { %>
+  <div class="bg-gradient-to-r from-emerald-600 to-green-500 rounded-2xl p-5 mb-6 text-white flex items-center justify-between gap-4" x-data="distrokidSubmit()">
+    <div>
+      <div class="font-bold text-lg mb-0.5">✅ Ready to Distribute</div>
+      <div class="text-emerald-100 text-sm">Upload to DistroKid to publish on Spotify, Apple Music, YouTube Music & more.</div>
+    </div>
+    <button @click="open = true" class="shrink-0 bg-white text-emerald-700 font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-50 transition text-sm shadow">
+      📤 Submit to DistroKid
+    </button>
+
+    <!-- Submit modal -->
+    <div x-show="open" x-cloak class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-8">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" @click.stop>
+        <h3 class="text-lg font-bold text-zinc-900 mb-1">📤 Submit to DistroKid</h3>
+        <p class="text-sm text-zinc-500 mb-4"><%= song.title || song.topic %></p>
+        <div class="bg-zinc-50 rounded-xl p-4 mb-5 text-xs text-zinc-600 space-y-2">
+          <p>1. Go to <a href="https://distrokid.com" target="_blank" class="text-blue-600 underline">distrokid.com</a> and upload your MP3 and cover art</p>
+          <p>2. Complete the release form using the song metadata</p>
+          <p>3. Paste your DistroKid release URL below (optional)</p>
+        </div>
+        <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">DistroKid Release URL (optional)</label>
+        <input x-model="url" type="url" placeholder="https://distrokid.com/…"
+          class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-zinc-900">
+        <div class="flex gap-3">
+          <button @click="submit('<%= song.id %>')" :disabled="saving"
+            class="flex-1 bg-zinc-900 hover:bg-zinc-700 disabled:opacity-50 text-white font-semibold px-4 py-2.5 rounded-xl transition text-sm">
+            <span x-text="saving ? 'Saving…' : '📤 Mark as Submitted'"></span>
+          </button>
+          <button @click="open = false" class="flex-1 border border-zinc-200 text-zinc-600 px-4 py-2.5 rounded-xl hover:bg-zinc-50 transition text-sm">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% } else if (song.status === 'submitted_to_distrokid') { %>
+  <div class="bg-purple-50 border border-purple-200 rounded-2xl p-5 mb-6 flex items-center gap-4">
+    <div class="text-3xl">📤</div>
+    <div>
+      <div class="font-bold text-purple-800">Submitted to DistroKid</div>
+      <% if (song.tunecore_submission_date) { %><div class="text-sm text-purple-600">Submitted on <%= song.tunecore_submission_date %></div><% } %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Checklist progress banner -->
+  <div class="bg-white border border-zinc-200 rounded-xl p-5 mb-6">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium text-zinc-700">DistroKid Publishing Progress</span>
+      <span class="text-sm font-bold text-zinc-900" id="pct-label"><%= progress.pct %>%</span>
+    </div>
+    <div class="h-2 bg-zinc-100 rounded-full overflow-hidden">
+      <div id="progress-bar" class="h-full rounded-full transition-all duration-300
+        <%= progress.pct >= 100 ? 'bg-emerald-500' : progress.pct >= 60 ? 'bg-green-500' : 'bg-amber-400' %>"
+        style="width: <%= progress.pct %>%"></div>
+    </div>
+    <div class="text-xs text-zinc-400 mt-1.5"><%= progress.done %> of <%= progress.total %> steps complete</div>
+  </div>
+
+  <!-- ── MEDIA ROW: Audio Player + Thumbnails ── -->
+  <% const hasAudio = fsAssets.audioFiles && fsAssets.audioFiles.length > 0; %>
+  <% const hasThumbs = fsAssets.thumbnails && fsAssets.thumbnails.length > 0; %>
+  <% if (hasAudio || hasThumbs) { %>
+  <div class="grid grid-cols-3 gap-6 mb-6">
+
+    <!-- Audio Player -->
+    <div class="col-span-1">
+      <% if (hasAudio) { %>
+      <div class="bg-zinc-900 rounded-2xl p-5 text-white">
+        <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">Audio</div>
+        <% for (let i = 0; i < fsAssets.audioFiles.length; i++) { const af = fsAssets.audioFiles[i]; %>
+        <div class="mb-3">
+          <div class="text-xs text-zinc-500 mb-1.5 truncate"><%= af.name || 'Track ' + (i+1) %></div>
+          <audio controls class="w-full" style="height:38px;" preload="metadata">
+            <source src="<%= af.url %>" type="audio/mpeg">
+          </audio>
+          <% if (af.size) { %><div class="text-xs text-zinc-600 mt-1"><%= (af.size / 1024 / 1024).toFixed(1) %> MB</div><% } %>
+        </div>
+        <% } %>
+      </div>
+      <% } else { %>
+      <div class="bg-zinc-100 rounded-2xl p-5 text-center text-zinc-400">
+        <div class="text-3xl mb-2">🎵</div>
+        <div class="text-xs">No audio generated yet</div>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Thumbnail Gallery -->
+    <div class="col-span-2">
+      <% if (hasThumbs) { %>
+      <div class="bg-white border border-zinc-200 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Thumbnails</div>
+          <button onclick="generateThumbnails('<%= song.id %>')" id="thumb-btn"
+            class="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-3 py-1 rounded-lg transition font-medium">
+            🔄 Regenerate
+          </button>
+        </div>
+        <div class="flex gap-3 overflow-x-auto pb-1">
+          <% for (const thumb of fsAssets.thumbnails) { %>
+          <div class="shrink-0">
+            <img src="<%= thumb.url %>" alt="<%= thumb.name %>"
+                 class="rounded-lg object-cover border border-zinc-200 cursor-pointer hover:border-zinc-400 hover:shadow-md transition"
+                 style="height:110px; width:auto;"
+                 onclick="openLightbox('<%= thumb.url %>', '<%= thumb.name %>')">
+            <div class="text-xs text-zinc-400 mt-1 text-center" style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <%= thumb.name.replace(/-final\.png$|-base\.png$|\.png$/, '') %>
+            </div>
+          </div>
+          <% } %>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="bg-zinc-50 border border-dashed border-zinc-300 rounded-2xl p-6 text-center text-zinc-400">
+        <div class="text-3xl mb-2">🖼️</div>
+        <div class="text-sm font-medium">No thumbnails yet</div>
+        <div class="text-xs mt-1 mb-3">Run the pipeline or generate artwork now</div>
+        <button onclick="generateThumbnails('<%= song.id %>')" id="thumb-btn"
+          class="text-xs bg-zinc-900 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 transition font-medium">
+          🖼️ Generate Thumbnails
+        </button>
+      </div>
+      <% } %>
+    </div>
+  </div>
+  <% } else { %>
+  <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6 text-center">
+    <div class="text-4xl mb-3">🎵 🖼️</div>
+    <div class="text-sm text-zinc-600 mb-4">No audio or thumbnails yet — click Generate to run the full AI pipeline.</div>
+    <a href="/songs/<%= song.id %>/generate"
+       class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow">
+      🚀 Generate Song
+    </a>
+  </div>
+  <% } %>
+
+  <!-- Thumbnail Terminal Modal -->
+  <div id="thumb-terminal-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-8 hidden">
+    <div class="bg-zinc-950 rounded-2xl shadow-2xl overflow-hidden w-full max-w-2xl">
+      <!-- Title bar -->
+      <div class="flex items-center gap-2 px-4 py-3 bg-zinc-900 border-b border-zinc-800">
+        <span class="w-3 h-3 rounded-full bg-red-500 cursor-pointer" onclick="closeThumbTerminal()"></span>
+        <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+        <span class="ml-3 text-xs text-zinc-500 font-mono">pancake-robot — thumbnail generator</span>
+        <span id="thumb-status-badge" class="ml-auto text-xs font-semibold font-mono text-green-400">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Running
+          </span>
+        </span>
+      </div>
+      <!-- Log output -->
+      <div id="thumb-log" class="p-5 font-mono text-sm space-y-0.5 overflow-y-auto" style="min-height:240px; max-height:400px;">
+        <div class="text-zinc-600 mb-2">$ node src/scripts/generate-thumbs.js <%= song.id %></div>
+        <div class="text-zinc-700 mb-3">────────────────────────────────────────</div>
+      </div>
+      <!-- Footer -->
+      <div class="px-4 py-3 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between">
+        <span class="text-xs text-zinc-500" id="thumb-footer-msg">Generating artwork via Cloudflare Flux…</span>
+        <button onclick="closeThumbTerminal()" class="text-xs text-zinc-400 hover:text-white px-3 py-1 rounded border border-zinc-700 hover:border-zinc-500 transition">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8 hidden">
+    <div class="relative max-w-5xl w-full" onclick="event.stopPropagation()">
+      <img id="lightbox-img" src="" alt="" class="w-full rounded-xl shadow-2xl">
+      <div id="lightbox-label" class="text-white text-sm text-center mt-3 opacity-70"></div>
+      <button onclick="closeLightbox()" class="absolute -top-4 -right-4 bg-white text-zinc-900 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow hover:bg-zinc-100">✕</button>
+    </div>
+  </div>
+
+  <!-- ── CONTENT TABS: Lyrics / Audio Prompt / Metadata ── -->
+  <% if (lyricsContent || audioPromptContent || metadataParsed) { %>
+  <div class="mb-6" x-data="{ tab: '<%= lyricsContent ? 'lyrics' : audioPromptContent ? 'prompt' : 'meta' %>' }">
+    <!-- Tab bar -->
+    <div class="flex gap-1 border-b border-zinc-200 mb-4">
+      <% if (lyricsContent) { %>
+      <button @click="tab='lyrics'"
+        :class="tab==='lyrics' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
+        class="px-4 py-2.5 text-sm transition">✍️ Lyrics</button>
+      <% } %>
+      <% if (audioPromptContent) { %>
+      <button @click="tab='prompt'"
+        :class="tab==='prompt' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
+        class="px-4 py-2.5 text-sm transition">🎵 Audio Prompt</button>
+      <% } %>
+      <% if (metadataParsed) { %>
+      <button @click="tab='meta'"
+        :class="tab==='meta' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
+        class="px-4 py-2.5 text-sm transition">📋 Metadata</button>
+      <% } %>
+    </div>
+
+    <!-- Lyrics tab -->
+    <% if (lyricsContent) { %>
+    <div x-show="tab==='lyrics'" class="bg-white border border-zinc-200 rounded-xl p-6">
+      <pre class="whitespace-pre-wrap text-sm text-zinc-800 font-mono leading-relaxed"><%= lyricsContent %></pre>
+    </div>
+    <% } %>
+
+    <!-- Audio Prompt tab -->
+    <% if (audioPromptContent) { %>
+    <div x-show="tab==='prompt'" class="bg-white border border-zinc-200 rounded-xl p-6">
+      <pre class="whitespace-pre-wrap text-sm text-zinc-700 leading-relaxed"><%= audioPromptContent %></pre>
+    </div>
+    <% } %>
+
+    <!-- Metadata tab -->
+    <% if (metadataParsed) { %>
+    <div x-show="tab==='meta'" class="bg-white border border-zinc-200 rounded-xl divide-y divide-zinc-100">
+      <% const meta = metadataParsed; %>
+      <% if (meta.title) { %>
+      <div class="px-5 py-4"><div class="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1">Title</div><div class="text-sm text-zinc-800 font-medium"><%= meta.title %></div></div>
+      <% } %>
+      <% if (meta.youtube_title) { %>
+      <div class="px-5 py-4"><div class="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1">YouTube Title</div><div class="text-sm text-zinc-800"><%= meta.youtube_title %></div></div>
+      <% } %>
+      <% if (meta.youtube_description) { %>
+      <div class="px-5 py-4"><div class="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1">YouTube Description</div><div class="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed"><%= meta.youtube_description %></div></div>
+      <% } %>
+      <% if (meta.youtube_tags && meta.youtube_tags.length) { %>
+      <div class="px-5 py-4">
+        <div class="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">YouTube Tags (<%= meta.youtube_tags.length %>)</div>
+        <div class="flex flex-wrap gap-1.5">
+          <% for (const tag of meta.youtube_tags) { %><span class="bg-zinc-100 text-zinc-600 text-xs px-2 py-0.5 rounded-full"><%= tag %></span><% } %>
+        </div>
+      </div>
+      <% } %>
+      <% if (meta.spotify_genre_tags && meta.spotify_genre_tags.length) { %>
+      <div class="px-5 py-4">
+        <div class="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">Genre Tags</div>
+        <div class="flex flex-wrap gap-1.5">
+          <% for (const tag of meta.spotify_genre_tags) { %><span class="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full"><%= tag %></span><% } %>
+        </div>
+      </div>
+      <% } %>
+      <% if (meta.isrc) { %>
+      <div class="px-5 py-4"><div class="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1">ISRC</div><div class="text-sm font-mono text-zinc-800"><%= meta.isrc %></div></div>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+  <% } %>
+
+  <div class="grid grid-cols-3 gap-6">
+
+    <!-- LEFT COLUMN: Overview + Linked Idea + Publishing Checklist -->
+    <div class="col-span-2 space-y-6">
+
+      <!-- Overview -->
+      <section class="bg-white border border-zinc-200 rounded-xl divide-y divide-zinc-100">
+        <div class="px-5 py-4 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-zinc-700">Overview</h2>
+        </div>
+        <div class="px-5 py-4 grid grid-cols-2 gap-4 text-sm">
+          <% if (song.topic) { %>
+          <div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Topic</div>
+            <div class="text-zinc-800"><%= song.topic %></div>
+          </div>
+          <% } %>
+          <% if (song.concept) { %>
+          <div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Concept</div>
+            <div class="text-zinc-800"><%= song.concept %></div>
+          </div>
+          <% } %>
+          <% if (song.target_age_range) { %>
+          <div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Age Range</div>
+            <div class="text-zinc-800"><%= song.target_age_range %></div>
+          </div>
+          <% } %>
+          <div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Distributor</div>
+            <div class="text-zinc-800 font-medium">DistroKid</div>
+          </div>
+          <% if (song.release_date) { %>
+          <div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Release Date</div>
+            <div class="text-zinc-800"><%= song.release_date %></div>
+          </div>
+          <% } %>
+          <% if (song.tunecore_submission_date) { %>
+          <div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">DistroKid Submitted</div>
+            <div class="text-zinc-800"><%= song.tunecore_submission_date %></div>
+          </div>
+          <% } %>
+        </div>
+        <% if ((song.genre_tags && song.genre_tags.length) || (song.mood_tags && song.mood_tags.length)) { %>
+        <div class="px-5 py-4">
+          <div class="flex flex-wrap gap-2">
+            <% for (const t of (song.genre_tags||[])) { %><span class="bg-zinc-100 text-zinc-600 text-xs px-2 py-0.5 rounded-full"><%= t %></span><% } %>
+            <% for (const t of (song.mood_tags||[])) { %><span class="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full"><%= t %></span><% } %>
+          </div>
+        </div>
+        <% } %>
+        <% if (song.notes) { %>
+        <div class="px-5 py-4">
+          <div class="text-xs text-zinc-400 mb-1 uppercase tracking-wide font-medium">Notes</div>
+          <div class="text-sm text-zinc-700 whitespace-pre-wrap"><%= song.notes %></div>
+        </div>
+        <% } %>
+      </section>
+
+      <!-- Originating Idea -->
+      <% if (idea) { %>
+      <section class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-zinc-700">Originating Idea</h2>
+          <a href="/ideas/<%= idea.id %>" class="text-xs text-zinc-500 hover:text-zinc-700">View →</a>
+        </div>
+        <div class="px-5 py-4">
+          <div class="font-medium text-sm"><%= idea.title %></div>
+          <% if (idea.concept) { %><div class="text-sm text-zinc-500 mt-1"><%= idea.concept %></div><% } %>
+          <% if (idea.hook) { %><div class="text-sm text-zinc-600 italic mt-1">"<%= idea.hook %>"</div><% } %>
+        </div>
+      </section>
+      <% } %>
+
+      <!-- Publishing Checklist -->
+      <section class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-5 py-4 border-b border-zinc-100">
+          <h2 class="font-semibold text-sm text-zinc-700">DistroKid Publishing Checklist</h2>
+          <p class="text-xs text-zinc-400 mt-0.5">Click a status to update it</p>
+        </div>
+        <div class="divide-y divide-zinc-50">
+          <% for (const item of checklist) { %>
+          <div class="px-5 py-3 flex items-center gap-3" id="cl-<%= item.key %>">
+            <% const clColors = { done: 'text-emerald-500', in_progress: 'text-amber-500', blocked: 'text-red-500', not_started: 'text-zinc-300' }; %>
+            <span class="text-lg shrink-0 <%= clColors[item.status] || 'text-zinc-300' %>">
+              <%= item.status === 'done' ? '✓' : item.status === 'in_progress' ? '◐' : item.status === 'blocked' ? '✗' : '○' %>
+            </span>
+            <div class="flex-1 text-sm text-zinc-700"><%= item.label %></div>
+            <select class="text-xs border border-zinc-200 rounded-md px-2 py-1 focus:outline-none"
+              onchange="updateChecklist('<%= song.id %>', '<%= item.key %>', this.value)">
+              <% for (const s of ['not_started','in_progress','done','blocked']) { %>
+                <option value="<%= s %>" <%= item.status === s ? 'selected' : '' %>><%= s.replace(/_/g,' ') %></option>
+              <% } %>
+            </select>
+          </div>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- Performance -->
+      <section class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-zinc-700">Performance</h2>
+          <% if (snapshots.length === 0) { %>
+          <span class="text-xs text-zinc-400">No data yet</span>
+          <% } %>
+        </div>
+        <% if (snapshots.length === 0) { %>
+        <div class="px-5 py-10 text-center text-zinc-400">
+          <div class="text-3xl mb-2">📊</div>
+          <div class="text-sm">No performance data yet.</div>
+          <div class="text-xs mt-1 text-zinc-300">Stats will appear here once the song is published and analytics are connected.</div>
+          <div class="mt-4 flex flex-wrap justify-center gap-3 text-xs text-zinc-400">
+            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">Spotify streams</span>
+            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">YouTube views</span>
+            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">YouTube watch time</span>
+            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">YouTube Music plays</span>
+            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">Apple Music plays</span>
+          </div>
+        </div>
+        <% } else { %>
+        <div class="divide-y divide-zinc-100">
+          <% for (const snap of snapshots) { %>
+          <div class="px-5 py-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-zinc-700"><%= snap.platform %></span>
+              <span class="text-xs text-zinc-400"><%= snap.snapshot_date %></span>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <% for (const [k, v] of Object.entries(snap.metrics || {})) { %>
+              <div class="bg-zinc-50 rounded-lg px-3 py-2">
+                <div class="text-xs text-zinc-400"><%= k %></div>
+                <div class="text-sm font-bold text-zinc-800"><%= Number(v).toLocaleString() %></div>
+              </div>
+              <% } %>
+            </div>
+          </div>
+          <% } %>
+        </div>
+        <% } %>
+      </section>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Files + Checklist + Links -->
+    <div class="space-y-6">
+
+      <!-- Assets from filesystem -->
+      <section class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-4 py-3 border-b border-zinc-100">
+          <h2 class="font-semibold text-sm text-zinc-700">Files</h2>
+        </div>
+        <div class="px-4 py-3 space-y-2 text-sm">
+
+          <!-- Lyrics -->
+          <div class="flex items-center gap-2">
+            <span class="<%= fsAssets.lyrics ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
+            <span class="text-zinc-600">Lyrics</span>
+            <% if (fsAssets.lyrics) { %><span class="text-xs text-zinc-400 ml-auto">lyrics.md</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">missing</span><% } %>
+          </div>
+
+          <!-- Audio Prompt -->
+          <div class="flex items-center gap-2">
+            <span class="<%= fsAssets.audioPrompt ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
+            <span class="text-zinc-600">Audio Prompt</span>
+            <% if (fsAssets.audioPrompt) { %><span class="text-xs text-zinc-400 ml-auto">audio-prompt.md</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">missing</span><% } %>
+          </div>
+
+          <!-- Audio files -->
+          <div class="flex items-center gap-2">
+            <span class="<%= fsAssets.audioFiles && fsAssets.audioFiles.length > 0 ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
+            <span class="text-zinc-600">Audio</span>
+            <span class="text-xs text-zinc-400 ml-auto">
+              <%= fsAssets.audioFiles && fsAssets.audioFiles.length > 0 ? fsAssets.audioFiles.length + ' file(s)' : 'missing' %>
+            </span>
+          </div>
+
+          <!-- Thumbnails -->
+          <div class="flex items-center gap-2">
+            <span class="<%= fsAssets.thumbnails && fsAssets.thumbnails.length > 0 ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
+            <span class="text-zinc-600">Thumbnails</span>
+            <span class="text-xs text-zinc-400 ml-auto">
+              <%= fsAssets.thumbnails && fsAssets.thumbnails.length > 0 ? fsAssets.thumbnails.length + ' PNG' : 'missing' %>
+            </span>
+          </div>
+
+          <!-- Metadata -->
+          <div class="flex items-center gap-2">
+            <span class="<%= fsAssets.metadata ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
+            <span class="text-zinc-600">Metadata JSON</span>
+            <% if (fsAssets.metadata) { %><span class="text-xs text-zinc-400 ml-auto">✓</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">missing</span><% } %>
+          </div>
+
+          <!-- Brand Review -->
+          <div class="flex items-center gap-2">
+            <span class="<%= fsAssets.brandReview ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
+            <span class="text-zinc-600">Brand Review</span>
+            <% if (song.brand_score) { %><span class="text-xs text-zinc-400 ml-auto"><%= song.brand_score %>/100</span><% } else if (fsAssets.brandReview) { %><span class="text-xs text-zinc-400 ml-auto">✓</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">—</span><% } %>
+          </div>
+
+        </div>
+        <div class="px-4 py-3 border-t border-zinc-100 text-xs text-zinc-400">
+          Files are in <code class="font-mono">output/songs/<%= song.id %>/</code>
+        </div>
+      </section>
+
+      <!-- Release Links -->
+      <section class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-zinc-700">Release Links</h2>
+        </div>
+        <% if (links.length === 0) { %>
+        <div class="px-4 py-4 text-sm text-zinc-400 text-center">No release links yet</div>
+        <% } else { %>
+        <div class="divide-y divide-zinc-100">
+          <% for (const link of links) { %>
+          <div class="px-4 py-3 flex items-center justify-between">
+            <span class="text-sm text-zinc-700"><%= link.platform %></span>
+            <a href="<%= link.url %>" target="_blank" class="text-xs text-blue-600 hover:underline">Open ↗</a>
+          </div>
+          <% } %>
+        </div>
+        <% } %>
+
+        <!-- Add link form -->
+        <div class="px-4 py-3 border-t border-zinc-100" x-data="{ show: false }">
+          <button @click="show = !show" class="text-xs text-zinc-500 hover:text-zinc-700">+ Add link</button>
+          <div x-show="show" x-cloak class="mt-2 space-y-2">
+            <select id="link-platform" class="w-full text-xs border border-zinc-200 rounded px-2 py-1.5 focus:outline-none">
+              <% for (const p of ['Spotify','YouTube','Apple Music','YouTube Music','DistroKid','Amazon Music','Tidal']) { %>
+              <option><%= p %></option>
+              <% } %>
+            </select>
+            <input id="link-url" type="url" placeholder="https://…"
+              class="w-full text-xs border border-zinc-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-zinc-400">
+            <button onclick="addLink('<%= song.id %>')"
+              class="w-full bg-zinc-900 text-white text-xs px-3 py-1.5 rounded hover:bg-zinc-700">Save</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- DB Assets -->
+      <% if (assets.length > 0) { %>
+      <section class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-4 py-3 border-b border-zinc-100">
+          <h2 class="font-semibold text-sm text-zinc-700">Asset Versions</h2>
+        </div>
+        <div class="divide-y divide-zinc-100">
+          <% for (const asset of assets) { %>
+          <div class="px-4 py-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-zinc-700"><%= asset.asset_type %></span>
+              <span class="text-xs text-zinc-400">v<%= asset.version %><%= asset.is_current ? ' · current' : '' %></span>
+            </div>
+            <% if (asset.label) { %><div class="text-xs text-zinc-500 mt-0.5"><%= asset.label %></div><% } %>
+          </div>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function songDetail() {
+  return {
+    editOpen: false,
+    editState: 'idle',  // idle | running | done | error
+    feedback: '',
+    editError: '',
+
+    startRevision(songId) {
+      if (!this.feedback.trim()) return;
+      this.editState = 'running';
+      this.editError = '';
+
+      // Reset log area
+      const log = document.getElementById('revise-log');
+      log.innerHTML = `
+        <div class="text-violet-700 mb-2">$ node src/scripts/revise-song.js ${songId}</div>
+        <div class="text-violet-800 mb-3">────────────────────────────────────────</div>
+      `;
+
+      fetch('/api/songs/' + songId + '/revise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback: this.feedback }),
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (!d.jobId) throw new Error(d.error || 'No job ID');
+          const es = new EventSource('/api/songs/revise/stream/' + d.jobId);
+
+          es.addEventListener('log', e => {
+            const { message } = JSON.parse(e.data);
+            const div = document.createElement('div');
+            div.className = 'leading-relaxed whitespace-pre-wrap break-words ' + (
+              message.startsWith('✅') ? 'text-emerald-400 font-semibold' :
+              message.startsWith('❌') ? 'text-red-400' :
+              message.startsWith('📝') || message.startsWith('✍️') || message.startsWith('🤖') ? 'text-violet-300' :
+              message.startsWith('⚠') ? 'text-amber-400' :
+              'text-violet-200'
+            );
+            div.textContent = message;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+          });
+
+          es.addEventListener('complete', () => {
+            es.close();
+            this.editState = 'done';
+            setTimeout(() => window.location.reload(), 1500);
+          });
+
+          es.addEventListener('error', e => {
+            if (e.data) {
+              es.close();
+              this.editState = 'error';
+              try { this.editError = JSON.parse(e.data).message; } catch { this.editError = e.data; }
+            }
+          });
+        })
+        .catch(err => { this.editState = 'error'; this.editError = err.message; });
+    },
+
+    resetEdit() {
+      this.editState = 'idle';
+      this.feedback = '';
+      this.editError = '';
+    },
+  };
+}
+
+window.distrokidSubmit = function() {
+  return {
+    open: false, url: '', saving: false,
+    async submit(songId) {
+      this.saving = true;
+      const r = await fetch('/api/songs/' + songId + '/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: this.url.trim() }),
+      });
+      const d = await r.json();
+      if (d.ok) window.location.reload();
+      else { alert('Failed: ' + (d.error || 'unknown')); this.saving = false; }
+    }
+  };
+};
+
+function updateStatus(songId, status) {
+  fetch('/api/songs/' + songId + '/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+}
+
+function updateChecklist(songId, key, status) {
+  fetch('/api/songs/' + songId + '/checklist/' + key, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  }).then(r => r.json()).then(d => {
+    if (d.progress) {
+      document.getElementById('pct-label').textContent = d.progress.pct + '%';
+      const bar = document.getElementById('progress-bar');
+      bar.style.width = d.progress.pct + '%';
+      bar.className = bar.className.replace(/bg-\w+-\d+/, d.progress.pct >= 100 ? 'bg-emerald-500' : d.progress.pct >= 60 ? 'bg-green-500' : 'bg-amber-400');
+    }
+    // Update row icon
+    const row = document.getElementById('cl-' + key);
+    if (row) {
+      const icon = row.querySelector('span:first-child');
+      const icons = { done: '✓', in_progress: '◐', blocked: '✗', not_started: '○' };
+      const colors = { done: 'text-emerald-500', in_progress: 'text-amber-500', blocked: 'text-red-500', not_started: 'text-zinc-300' };
+      if (icon) {
+        icon.textContent = icons[status] || '○';
+        icon.className = icon.className.replace(/text-\w+-\d+|text-zinc-300/, colors[status] || 'text-zinc-300');
+      }
+    }
+  });
+}
+
+function addLink(songId) {
+  const platform = document.getElementById('link-platform').value;
+  const url = document.getElementById('link-url').value;
+  if (!url) return;
+  fetch('/api/songs/' + songId + '/links', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ platform, url })
+  }).then(() => window.location.reload());
+}
+
+function generateThumbnails(songId) {
+  const btn = document.getElementById('thumb-btn');
+  if (btn) { btn.textContent = '⏳ Generating…'; btn.disabled = true; }
+
+  // Show terminal modal
+  const modal = document.getElementById('thumb-terminal-modal');
+  const log = document.getElementById('thumb-log');
+  const badge = document.getElementById('thumb-status-badge');
+  const footer = document.getElementById('thumb-footer-msg');
+
+  // Reset log to just the header lines
+  log.innerHTML = `
+    <div class="text-zinc-600 mb-2">$ node src/scripts/generate-thumbs.js ${songId}</div>
+    <div class="text-zinc-700 mb-3">────────────────────────────────────────</div>
+  `;
+  badge.innerHTML = '<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Running</span>';
+  footer.textContent = 'Generating artwork via Cloudflare Flux…';
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  fetch('/api/songs/' + songId + '/thumbnails', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.jobId) throw new Error(d.error || 'No job ID returned');
+      const es = new EventSource('/api/songs/thumbnails/stream/' + d.jobId);
+
+      const appendLine = (text, cls) => {
+        const div = document.createElement('div');
+        div.className = 'leading-relaxed whitespace-pre-wrap break-words ' + (cls || 'text-zinc-300');
+        div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      };
+
+      es.addEventListener('log', e => {
+        const { message } = JSON.parse(e.data);
+        let cls = 'text-zinc-300';
+        if (message.startsWith('✅') || message.startsWith('✓')) cls = 'text-emerald-400 font-semibold';
+        else if (message.startsWith('⚠')) cls = 'text-amber-400';
+        else if (message.startsWith('❌') || message.startsWith('✗')) cls = 'text-red-400';
+        else if (message.startsWith('[CREATIVE')) cls = 'text-cyan-300';
+        appendLine(message, cls);
+      });
+
+      es.addEventListener('complete', e => {
+        const { count } = JSON.parse(e.data);
+        badge.innerHTML = '✓ Complete';
+        badge.className = badge.className.replace('text-green-400', 'text-emerald-400');
+        footer.textContent = `✅ ${count} thumbnail(s) generated — reloading…`;
+        es.close();
+        if (btn) { btn.textContent = '🔄 Regenerate'; btn.disabled = false; }
+        setTimeout(() => window.location.reload(), 1500);
+      });
+
+      es.addEventListener('error', e => {
+        if (e.data) {
+          const msg = (() => { try { return JSON.parse(e.data).message; } catch { return e.data; } })();
+          badge.innerHTML = '✗ Failed';
+          badge.className = badge.className.replace('text-green-400', 'text-red-400');
+          footer.textContent = '❌ ' + msg;
+          es.close();
+          if (btn) { btn.textContent = '🖼️ Generate Thumbnails'; btn.disabled = false; }
+        }
+      });
+    })
+    .catch(err => {
+      footer.textContent = '❌ ' + err.message;
+      badge.innerHTML = '✗ Failed';
+      if (btn) { btn.textContent = '🖼️ Generate Thumbnails'; btn.disabled = false; }
+    });
+}
+
+function closeThumbTerminal() {
+  document.getElementById('thumb-terminal-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function openLightbox(url, name) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-label').textContent = name;
+  document.getElementById('lightbox').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+</script>

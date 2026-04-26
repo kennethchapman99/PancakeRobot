@@ -1,0 +1,159 @@
+<% title = 'Idea Vault' %>
+
+<div class="p-8" x-data="{ view: 'list' }">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold">Idea Vault</h1>
+      <p class="text-sm text-zinc-500 mt-1"><%= ideas.length %> idea<%= ideas.length !== 1 ? 's' : '' %></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/ideas/generate" class="bg-amber-500 hover:bg-amber-600 text-white text-sm px-5 py-2 rounded-lg transition font-semibold">✨ Generate Ideas</a>
+      <a href="/ideas/new" class="text-xs text-zinc-400 hover:text-zinc-600 transition">+ manual capture</a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" action="/ideas" class="flex flex-wrap gap-3 mb-6">
+    <input type="text" name="q" value="<%= q %>" placeholder="Search ideas…"
+      class="border border-zinc-200 rounded-lg px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-zinc-900">
+
+    <select name="status" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All statuses</option>
+      <% for (const s of ['new','shortlisted','in_review','promoted','archived']) { %>
+        <option value="<%= s %>" <%= filterStatus === s ? 'selected' : '' %>><%= s %></option>
+      <% } %>
+    </select>
+
+    <% if (categories.length > 0) { %>
+    <select name="category" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All categories</option>
+      <% for (const c of categories) { %>
+        <option value="<%= c %>" <%= filterCategory === c ? 'selected' : '' %>><%= c %></option>
+      <% } %>
+    </select>
+    <% } %>
+
+    <button type="submit" class="bg-zinc-100 border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-200 transition">Filter</button>
+    <% if (q || filterStatus || filterCategory) { %>
+      <a href="/ideas" class="text-sm px-4 py-2 text-zinc-500 hover:text-zinc-700 transition self-center">Clear</a>
+    <% } %>
+  </form>
+
+  <% if (ideas.length === 0) { %>
+    <div class="text-center py-20 text-zinc-400">
+      <div class="text-5xl mb-4">💡</div>
+      <div class="text-lg font-medium text-zinc-500">No ideas found</div>
+      <div class="text-sm mt-2">
+        <% if (q || filterStatus || filterCategory) { %>
+          Try adjusting your filters, or <a href="/ideas" class="underline">clear them</a>.
+        <% } else { %>
+          <a href="/ideas/new" class="underline">Add your first idea</a> or run <code class="bg-zinc-100 px-1.5 py-0.5 rounded font-mono text-xs">npm run suggest</code> to generate ideas.
+        <% } %>
+      </div>
+    </div>
+  <% } else { %>
+
+  <!-- Status tabs shortcut -->
+  <div class="flex gap-2 mb-4 overflow-x-auto">
+    <% const statCounts = {}; for (const i of ideas) statCounts[i.status] = (statCounts[i.status]||0)+1; %>
+  </div>
+
+  <div class="space-y-2">
+    <% for (const idea of ideas) { %>
+    <div x-data="{ open: false, status: '<%= idea.status %>' }"
+         class="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+      <div class="flex items-center gap-4 px-5 py-4">
+        <!-- Expand toggle -->
+        <button @click="open = !open" class="text-zinc-400 hover:text-zinc-600 shrink-0">
+          <span x-text="open ? '▾' : '▸'" class="text-sm"></span>
+        </button>
+
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <a href="/ideas/<%= idea.id %>" class="font-medium hover:underline"><%= idea.title %></a>
+          <% if (idea.concept) { %>
+            <div class="text-sm text-zinc-500 mt-0.5 truncate"><%= idea.concept %></div>
+          <% } %>
+          <div class="flex flex-wrap gap-2 mt-1.5">
+            <% if (idea.category) { %><span class="text-xs bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full"><%= idea.category %></span><% } %>
+            <% if (idea.mood) { %><span class="text-xs bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full"><%= idea.mood %></span><% } %>
+            <% if (idea.target_age_range) { %><span class="text-xs text-zinc-400">Ages <%= idea.target_age_range %></span><% } %>
+            <% for (const tag of (idea.tags || []).slice(0,3)) { %><span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">#<%= tag %></span><% } %>
+          </div>
+        </div>
+
+        <!-- Status + actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="<%= statusBadge(idea.status) %>"><%= idea.status %></span>
+          <span class="text-xs text-zinc-400"><%= timeAgo(idea.created_at) %></span>
+
+          <!-- Quick actions menu -->
+          <div x-data="{ menu: false }" class="relative">
+            <button @click="menu = !menu" class="text-zinc-400 hover:text-zinc-600 px-2 py-1 rounded hover:bg-zinc-100">⋯</button>
+            <div x-show="menu" x-cloak @click.outside="menu = false"
+                 class="absolute right-0 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg z-10 py-1 w-44">
+              <% if (idea.status !== 'shortlisted') { %>
+              <button @click="fetch('/api/ideas/<%= idea.id %>/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'shortlisted'})}).then(()=>{status='shortlisted';menu=false})"
+                class="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50">⭐ Shortlist</button>
+              <% } %>
+              <% if (idea.status !== 'archived' && idea.status !== 'promoted') { %>
+              <a href="/api/ideas/<%= idea.id %>/promote" @click.prevent="fetch('/api/ideas/<%= idea.id %>/promote',{method:'POST'}).then(r=>r.json()).then(d=>{window.location=d.generateUrl||'/songs/'+d.songId+'/generate'})"
+                class="block px-4 py-2 text-sm hover:bg-zinc-50 text-green-700 font-medium">🚀 Promote to Song</a>
+              <% } %>
+              <a href="/ideas/<%= idea.id %>/edit" class="block px-4 py-2 text-sm hover:bg-zinc-50">✏️ Edit</a>
+              <button @click="fetch('/api/ideas/<%= idea.id %>/duplicate',{method:'POST',headers:{'Content-Type':'application/json'}}).then(()=>{window.location.reload()})"
+                class="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50">⧉ Duplicate</button>
+              <% if (idea.status !== 'archived') { %>
+              <button @click="fetch('/api/ideas/<%= idea.id %>/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'archived'})}).then(()=>{window.location.reload()})"
+                class="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 text-zinc-400">Archive</button>
+              <% } else { %>
+              <button @click="fetch('/api/ideas/<%= idea.id %>/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'new'})}).then(()=>{window.location.reload()})"
+                class="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50">Unarchive</button>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expanded preview -->
+      <div x-show="open" x-cloak class="border-t border-zinc-100 px-5 py-4 bg-zinc-50 text-sm">
+        <div class="grid grid-cols-2 gap-4">
+          <% if (idea.hook) { %>
+          <div>
+            <div class="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Hook</div>
+            <div class="text-zinc-700 italic">"<%= idea.hook %>"</div>
+          </div>
+          <% } %>
+          <% if (idea.educational_angle) { %>
+          <div>
+            <div class="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Educational Angle</div>
+            <div class="text-zinc-700"><%= idea.educational_angle %></div>
+          </div>
+          <% } %>
+          <% if (idea.lyric_seed) { %>
+          <div class="col-span-2">
+            <div class="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Lyric Seed</div>
+            <div class="text-zinc-700 font-mono text-xs bg-white border border-zinc-200 rounded p-2"><%= idea.lyric_seed %></div>
+          </div>
+          <% } %>
+        </div>
+        <div class="flex gap-3 mt-3">
+          <a href="/ideas/<%= idea.id %>" class="text-sm text-zinc-600 hover:text-zinc-900 underline">Full details →</a>
+          <% if (idea.status !== 'promoted') { %>
+          <button onclick="promoteIdea('<%= idea.id %>')" class="text-sm text-green-700 font-medium hover:underline">🚀 Promote to Song</button>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <% } %>
+  </div>
+  <% } %>
+</div>
+
+<script>
+function promoteIdea(id) {
+  fetch('/api/ideas/' + id + '/promote', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => { window.location = d.generateUrl || '/songs/' + d.songId + '/generate'; });
+}
+</script>

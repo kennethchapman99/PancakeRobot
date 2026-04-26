@@ -1,0 +1,114 @@
+<% title = 'Dashboard' %>
+
+<div class="p-8">
+  <!-- Hero header -->
+  <div class="flex items-center gap-6 mb-10 bg-white border border-zinc-200 rounded-2xl px-8 py-6 shadow-sm">
+    <img src="/logo.png" alt="Pancake Robot" class="w-24 h-24 object-contain shrink-0 drop-shadow">
+    <div>
+      <h1 class="text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight">Pancake Robot</h1>
+      <p class="text-zinc-500 mt-1">Your AI-powered kids music studio — from idea to streaming.</p>
+      <div class="flex gap-3 mt-3">
+        <a href="/ideas/generate" class="text-sm bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg transition font-semibold">✨ Generate Ideas</a>
+        <a href="/songs" class="text-sm bg-zinc-900 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 transition font-medium">🎵 Song Catalog</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+    <a href="/ideas" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
+      <div class="text-3xl font-bold text-zinc-900"><%= stats.ideas.total || 0 %></div>
+      <div class="text-sm text-zinc-500 mt-1">Total Ideas</div>
+    </a>
+    <a href="/ideas?status=shortlisted" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
+      <div class="text-3xl font-bold text-blue-600"><%= stats.ideas.shortlisted || 0 %></div>
+      <div class="text-sm text-zinc-500 mt-1">Shortlisted</div>
+    </a>
+    <a href="/songs" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
+      <div class="text-3xl font-bold text-amber-600"><%= stats.songs.in_progress || 0 %></div>
+      <div class="text-sm text-zinc-500 mt-1">In Progress</div>
+    </a>
+    <a href="/songs?status=ready_to_publish" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
+      <div class="text-3xl font-bold text-green-600"><%= stats.songs.ready || 0 %></div>
+      <div class="text-sm text-zinc-500 mt-1">Ready to Publish</div>
+    </a>
+    <a href="/songs?status=published" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
+      <div class="text-3xl font-bold text-emerald-600"><%= stats.songs.published || 0 %></div>
+      <div class="text-sm text-zinc-500 mt-1">Published</div>
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- Recent Ideas -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-zinc-800">Recent Ideas</h2>
+        <a href="/ideas/generate" class="text-sm bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg transition font-semibold">✨ Generate</a>
+      </div>
+      <% if (recentIdeas.length === 0) { %>
+        <div class="bg-white border border-zinc-200 rounded-xl p-8 text-center text-zinc-400">
+          <div class="text-3xl mb-2">💡</div>
+          <div>No ideas yet. <a href="/ideas/generate" class="underline font-medium">✨ Generate your first ideas</a></div>
+        </div>
+      <% } else { %>
+        <div class="space-y-2">
+          <% for (const idea of recentIdeas) { %>
+            <a href="/ideas/<%= idea.id %>" class="flex items-center gap-3 bg-white border border-zinc-200 rounded-xl px-4 py-3 hover:border-zinc-300 transition">
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm truncate"><%= idea.title %></div>
+                <div class="text-xs text-zinc-400 truncate"><%= idea.concept || idea.category || '—' %></div>
+              </div>
+              <span class="<%= statusBadge(idea.status) %>"><%= idea.status %></span>
+              <span class="text-xs text-zinc-400 shrink-0"><%= timeAgo(idea.created_at) %></span>
+            </a>
+          <% } %>
+        </div>
+        <a href="/ideas" class="block text-sm text-zinc-500 hover:text-zinc-700 mt-3 text-center">View all ideas →</a>
+      <% } %>
+    </div>
+
+    <!-- Recent Songs -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-zinc-800">Recent Songs</h2>
+        <a href="/songs" class="text-sm text-zinc-500 hover:text-zinc-700">View all →</a>
+      </div>
+      <% if (recentSongs.length === 0) { %>
+        <div class="bg-white border border-zinc-200 rounded-xl p-8 text-center text-zinc-400">
+          <div class="text-3xl mb-2">🎵</div>
+          <div>No songs yet. Promote an idea to get started.</div>
+        </div>
+      <% } else { %>
+        <div class="space-y-2">
+          <% for (const song of recentSongs) { %>
+            <a href="/songs/<%= song.id %>" class="flex items-center gap-3 bg-white border border-zinc-200 rounded-xl px-4 py-3 hover:border-zinc-300 transition">
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm truncate"><%= song.title || song.topic || song.id %></div>
+                <div class="flex items-center gap-2 mt-1">
+                  <div class="h-1.5 w-20 bg-zinc-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-green-500 rounded-full" style="width: <%= song.progress.pct %>%"></div>
+                  </div>
+                  <span class="text-xs text-zinc-400"><%= song.progress.pct %>% ready</span>
+                </div>
+              </div>
+              <span class="<%= statusBadge(song.status) %>"><%= song.status %></span>
+            </a>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+
+  <!-- Quick actions -->
+  <div class="mt-10 p-5 bg-zinc-100 rounded-xl">
+    <h3 class="font-medium text-zinc-700 mb-3 text-sm">Quick Actions</h3>
+    <div class="flex flex-wrap gap-2">
+      <a href="/ideas/generate" class="bg-amber-500 hover:bg-amber-600 text-white text-sm px-4 py-2 rounded-lg transition font-semibold">✨ Generate Ideas</a>
+      <a href="/ideas" class="bg-white border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-50 transition">💡 Idea Vault</a>
+      <a href="/songs" class="bg-white border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-50 transition">🎵 Song Catalog</a>
+    </div>
+    <p class="text-xs text-zinc-400 mt-3">To generate a full song, run: <code class="bg-white px-2 py-0.5 rounded border border-zinc-200 font-mono">npm run new "topic here"</code></p>
+  </div>
+</div>

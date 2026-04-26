@@ -1,0 +1,109 @@
+<% title = idea && idea.id ? 'Edit Idea' : 'New Idea' %>
+
+<div class="p-8 max-w-2xl">
+  <a href="/ideas" class="text-sm text-zinc-500 hover:text-zinc-700 mb-6 inline-flex items-center gap-1">
+    ← Back to Idea Vault
+  </a>
+
+  <h1 class="text-2xl font-bold mb-8"><%= idea && idea.id ? 'Edit Idea' : 'Capture New Idea' %></h1>
+
+  <% if (error) { %>
+  <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6"><%= error %></div>
+  <% } %>
+
+  <form method="POST" action="<%= idea && idea.id ? '/ideas/' + idea.id : '/ideas' %>" class="space-y-6">
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Title <span class="text-red-500">*</span></label>
+      <input type="text" name="title" value="<%= (idea && idea.title) || '' %>" required
+        placeholder="e.g. Counting Pancakes 1 to 10"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Concept / Premise</label>
+      <textarea name="concept" rows="3" placeholder="What is this song about? What's the core idea?"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"><%= (idea && idea.concept) || '' %></textarea>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Hook</label>
+      <input type="text" name="hook" value="<%= (idea && idea.hook) || '' %>"
+        placeholder="The memorable line or musical hook concept"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+    </div>
+
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-zinc-700 mb-1">Target Age Range</label>
+        <select name="target_age_range"
+          class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+          <% for (const r of ['2-5','3-6','4-8','4-10','5-10','6-12']) { %>
+          <option value="<%= r %>" <%= (idea && idea.target_age_range === r) ? 'selected' : '' %>><%= r %></option>
+          <% } %>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-zinc-700 mb-1">Category</label>
+        <input type="text" name="category" value="<%= (idea && idea.category) || '' %>"
+          placeholder="e.g. counting, animals, emotions"
+          class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-zinc-700 mb-1">Mood / Energy</label>
+        <input type="text" name="mood" value="<%= (idea && idea.mood) || '' %>"
+          placeholder="e.g. silly, upbeat, calm"
+          class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Educational Angle</label>
+      <input type="text" name="educational_angle" value="<%= (idea && idea.educational_angle) || '' %>"
+        placeholder="e.g. counting 1-10, color recognition, sharing"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Tags</label>
+      <input type="text" name="tags" value="<%= idea && idea.tags ? idea.tags.join(', ') : '' %>"
+        placeholder="comma-separated: pancakes, counting, silly"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+      <p class="text-xs text-zinc-400 mt-1">Separate with commas</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Lyric Seed</label>
+      <textarea name="lyric_seed" rows="3"
+        placeholder="A chorus idea, key phrase, or lyric snippet to inspire the songwriter"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none font-mono"><%= (idea && idea.lyric_seed) || '' %></textarea>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Thumbnail Concept</label>
+      <input type="text" name="thumbnail_seed" value="<%= (idea && idea.thumbnail_seed) || '' %>"
+        placeholder="Visual idea for artwork"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Notes</label>
+      <textarea name="notes" rows="3"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"><%= (idea && idea.notes) || '' %></textarea>
+    </div>
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+        class="bg-zinc-900 text-white text-sm px-6 py-2.5 rounded-lg hover:bg-zinc-700 transition font-medium">
+        <%= idea && idea.id ? 'Save Changes' : 'Save Idea' %>
+      </button>
+      <a href="<%= idea && idea.id ? '/ideas/' + idea.id : '/ideas' %>"
+        class="border border-zinc-200 text-sm px-6 py-2.5 rounded-lg hover:bg-zinc-50 transition">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+</div>

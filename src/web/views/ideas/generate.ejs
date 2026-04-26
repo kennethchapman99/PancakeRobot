@@ -1,0 +1,258 @@
+<% title = 'Generate Ideas' %>
+
+<!-- Define Alpine component BEFORE Alpine initializes -->
+<script>
+// Must be defined before Alpine boots — do NOT let layout move this script
+window.generatorData = function() {
+  return {
+    state: 'idle',
+    logs: [],
+    results: null,
+    decisions: {},
+    errorMsg: '',
+    jobId: null,
+    eventSource: null,
+
+    get topPickId() {
+      if (!this.results?.recommendations) return null;
+      const top = this.results.recommendations.find(r => r.rank === 1);
+      return top?.ideaId || null;
+    },
+
+    init() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('autostart') === '1') this.startGenerate();
+    },
+
+    async startGenerate() {
+      this.state = 'running';
+      this.logs = [];
+      this.results = null;
+      this.decisions = {};
+      this.errorMsg = '';
+      try {
+        const res = await fetch('/api/suggest/run', { method: 'POST' });
+        const { jobId } = await res.json();
+        this.jobId = jobId;
+        this.listenToStream(jobId);
+      } catch (err) {
+        this.state = 'error';
+        this.errorMsg = err.message;
+      }
+    },
+
+    listenToStream(jobId) {
+      if (this.eventSource) this.eventSource.close();
+      this.eventSource = new EventSource('/api/suggest/stream/' + jobId);
+
+      this.eventSource.addEventListener('log', (e) => {
+        const { message } = JSON.parse(e.data);
+        this.logs.push(message);
+        this.$nextTick(() => {
+          const el = document.getElementById('log-output');
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      });
+
+      this.eventSource.addEventListener('complete', (e) => {
+        const { results } = JSON.parse(e.data);
+        this.results = results;
+        this.state = 'done';
+        this.eventSource.close();
+      });
+
+      this.eventSource.addEventListener('error', (e) => {
+        try {
+          const { message } = JSON.parse(e.data);
+          this.errorMsg = message || 'An error occurred.';
+        } catch {
+          this.errorMsg = 'An unexpected error occurred.';
+        }
+        this.state = 'error';
+        this.eventSource.close();
+      });
+
+      this.eventSource.onerror = () => { /* stream closed — expected */ };
+    },
+
+    async shortlist(rec) {
+      this.decisions[rec.rank] = 'shortlisted';
+      if (rec.ideaId) {
+        await fetch('/api/ideas/' + rec.ideaId + '/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'shortlisted' }),
+        });
+      }
+    },
+
+    dismiss(rec) {
+      this.decisions[rec.rank] = 'dismissed';
+    },
+  };
+};
+</script>
+
+<div class="p-8 max-w-3xl" x-data="generatorData()" x-init="init()">
+
+  <!-- Header -->
+  <a href="/ideas" class="text-sm text-zinc-500 hover:text-zinc-700 mb-6 inline-flex items-center gap-1">← Idea Vault</a>
+  <div class="flex items-center gap-4 mb-8">
+    <img src="/logo.png" alt="" class="w-14 h-14 object-contain">
+    <div>
+      <h1 class="text-2xl font-bold">Generate New Ideas</h1>
+      <p class="text-sm text-zinc-500 mt-0.5">AI analyzes your catalog + market data and recommends 5 next songs.</p>
+    </div>
+  </div>
+
+  <!-- STATE: idle — no x-cloak so it renders immediately -->
+  <div x-show="state === 'idle'">
+    <div class="bg-white border border-zinc-200 rounded-2xl p-10 text-center shadow-sm">
+      <div class="text-6xl mb-5">🤖</div>
+      <h2 class="text-xl font-semibold mb-2">Ready to brainstorm?</h2>
+      <p class="text-sm text-zinc-500 mb-8 max-w-sm mx-auto leading-relaxed">
+        The AI strategist reviews your existing catalog, market research, and brand guidelines — then recommends 5 high-potential song topics.
+      </p>
+      <button @click="startGenerate()"
+        class="bg-amber-500 hover:bg-amber-600 text-white px-10 py-3.5 rounded-xl font-bold text-base transition shadow">
+        ✨ Generate Ideas
+      </button>
+    </div>
+  </div>
+
+  <!-- STATE: running -->
+  <div x-show="state === 'running'" style="display:none">
+    <div class="bg-zinc-950 rounded-2xl p-6 font-mono text-sm shadow-lg">
+      <div class="flex items-center gap-2 mb-4 text-zinc-400 text-xs uppercase tracking-widest font-semibold">
+        <span class="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+        AI Strategist Running…
+      </div>
+      <div id="log-output" class="space-y-1.5 min-h-32 max-h-96 overflow-y-auto pr-1">
+        <template x-for="(line, i) in logs" :key="i">
+          <div class="text-green-300 leading-relaxed" x-text="line"></div>
+        </template>
+        <div class="text-zinc-600 animate-pulse mt-1">▌</div>
+      </div>
+    </div>
+    <p class="text-xs text-zinc-400 text-center mt-4">This takes about 15–30 seconds…</p>
+  </div>
+
+  <!-- STATE: error -->
+  <div x-show="state === 'error'" style="display:none">
+    <div class="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+      <div class="text-5xl mb-3">❌</div>
+      <h2 class="font-semibold text-red-800 mb-2">Something went wrong</h2>
+      <p class="text-sm text-red-600 mb-5 font-mono" x-text="errorMsg"></p>
+      <button @click="state = 'idle'" class="border border-red-300 text-red-700 px-6 py-2 rounded-lg text-sm hover:bg-red-100">
+        Try Again
+      </button>
+    </div>
+  </div>
+
+  <!-- STATE: done -->
+  <div x-show="state === 'done'" style="display:none">
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-bold">5 Fresh Ideas 🎉</h2>
+        <p class="text-sm text-zinc-500 mt-0.5">All saved to your Idea Vault. Shortlist the ones you love.</p>
+      </div>
+      <a href="/ideas" class="text-sm border border-zinc-200 px-4 py-2 rounded-lg hover:bg-zinc-50 transition text-zinc-600">
+        View All Ideas →
+      </a>
+    </div>
+
+    <!-- Top pick banner -->
+    <template x-if="results && results.recommended_next">
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
+        <div>
+          <div class="text-xs font-bold text-amber-700 uppercase tracking-widest mb-1">⭐ Top Pick</div>
+          <div class="font-semibold text-zinc-900" x-text="results.recommended_next"></div>
+        </div>
+        <a :href="'/ideas/' + topPickId" x-show="topPickId"
+           class="shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-sm px-4 py-2 rounded-lg font-medium transition">
+          View →
+        </a>
+      </div>
+    </template>
+
+    <!-- Recommendation cards -->
+    <div class="space-y-4">
+      <template x-for="(rec, i) in (results?.recommendations || [])" :key="i">
+        <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden transition-all"
+             :class="decisions[rec.rank] === 'shortlisted' ? 'border-green-300 ring-1 ring-green-200' : decisions[rec.rank] === 'dismissed' ? 'opacity-30 scale-95' : ''">
+
+          <div class="px-5 py-4 flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3">
+              <div class="w-7 h-7 rounded-full bg-zinc-100 text-zinc-500 text-sm font-bold flex items-center justify-center shrink-0 mt-0.5"
+                   x-text="rec.rank"></div>
+              <div>
+                <div class="font-semibold text-zinc-900" x-text="rec.title"></div>
+                <div class="text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-2">
+                  <span x-text="rec.topic"></span>
+                  <span class="text-zinc-200">·</span>
+                  <span :class="rec.urgency === 'trending' ? 'text-red-500 font-medium' : rec.urgency === 'seasonal' ? 'text-amber-500 font-medium' : 'text-green-600 font-medium'"
+                        x-text="rec.urgency"></span>
+                  <template x-if="rec.bpm_target">
+                    <span class="text-zinc-400" x-text="rec.bpm_target + ' BPM'"></span>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-2 shrink-0">
+              <template x-if="decisions[rec.rank] === 'shortlisted'">
+                <span class="text-sm text-green-600 font-semibold flex items-center gap-1">✓ Shortlisted</span>
+              </template>
+              <template x-if="!decisions[rec.rank]">
+                <div class="flex gap-2">
+                  <button @click="shortlist(rec)"
+                    class="text-sm bg-zinc-900 text-white px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition font-medium">
+                    ⭐ Shortlist
+                  </button>
+                  <button @click="dismiss(rec)"
+                    class="text-sm border border-zinc-200 text-zinc-500 px-3 py-1.5 rounded-lg hover:bg-zinc-50 transition">
+                    Dismiss
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="px-5 pb-4 border-t border-zinc-50 pt-3 space-y-3">
+            <p class="text-sm text-zinc-600 leading-relaxed" x-text="rec.why"></p>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <div class="bg-zinc-50 rounded-lg px-3 py-1.5">
+                <span class="text-zinc-400 block mb-0.5">Hook</span>
+                <span class="text-zinc-700 font-medium" x-text="rec.hook_idea"></span>
+              </div>
+              <template x-if="rec.physical_action">
+                <div class="bg-zinc-50 rounded-lg px-3 py-1.5">
+                  <span class="text-zinc-400 block mb-0.5">Physical Action</span>
+                  <span class="text-zinc-700 font-medium" x-text="rec.physical_action"></span>
+                </div>
+              </template>
+            </div>
+            <template x-if="rec.ideaId">
+              <a :href="'/ideas/' + rec.ideaId"
+                 class="text-xs text-zinc-400 hover:text-zinc-700 transition underline underline-offset-2 block">
+                View in Idea Vault →
+              </a>
+            </template>
+          </div>
+
+        </div>
+      </template>
+    </div>
+
+    <div class="mt-8 flex gap-3 justify-center">
+      <button @click="state = 'idle'; results = null; logs = []"
+        class="border border-zinc-200 text-zinc-600 px-5 py-2.5 rounded-xl text-sm hover:bg-zinc-50 transition">
+        Generate Again
+      </button>
+      <a href="/ideas" class="bg-zinc-900 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-zinc-700 transition font-medium">
+        View All Ideas →
+      </a>
+    </div>
+  </div>
+
+</div>

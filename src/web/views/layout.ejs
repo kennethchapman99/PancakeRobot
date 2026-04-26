@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' — ' : '' %>Pancake Robot</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .badge-base { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; }
+    .badge-gray   { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#f4f4f5; color:#52525b; }
+    .badge-blue   { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#dbeafe; color:#1d4ed8; }
+    .badge-yellow { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#fef3c7; color:#b45309; }
+    .badge-green  { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#dcfce7; color:#15803d; }
+    .badge-emerald{ display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#d1fae5; color:#047857; }
+    .badge-purple { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#ede9fe; color:#6d28d9; }
+    .badge-red    { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#fee2e2; color:#b91c1c; }
+    .badge-dim    { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#f4f4f5; color:#a1a1aa; }
+  </style>
+</head>
+<body class="h-full bg-zinc-50 text-zinc-900 antialiased">
+
+<div class="flex h-full min-h-screen">
+
+  <!-- Sidebar -->
+  <nav class="w-56 shrink-0 bg-zinc-900 text-zinc-100 flex flex-col">
+    <!-- Brand Logo -->
+    <div class="px-4 pt-5 pb-4 border-b border-zinc-800 flex flex-col items-center">
+      <img src="/logo.png" alt="Pancake Robot" class="w-36 h-36 object-contain drop-shadow-lg">
+      <div class="text-xs text-zinc-500 mt-1 tracking-widest uppercase font-medium">Music Studio</div>
+    </div>
+
+    <div class="flex-1 py-4 overflow-y-auto">
+      <div class="px-3 space-y-0.5">
+        <!-- Generate CTA — primary action -->
+        <a href="/ideas/generate"
+           class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all mb-1
+             <%= currentPath === '/ideas/generate' ? 'bg-amber-600 text-white' : 'bg-amber-500 hover:bg-amber-400 text-white' %> shadow-sm">
+          <span class="text-base">✨</span>
+          Generate Ideas
+        </a>
+
+        <% const navLinks = [['/', 'Dashboard', '◈'], ['/ideas', 'Idea Vault', '💡'], ['/songs', 'Song Catalog', '🎵'], ['/brand', 'Brand', '🎨']]; %>
+        <% for (const [href, label, icon] of navLinks) { %>
+          <a href="<%= href %>"
+             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors <%= currentPath === href || (href !== '/' && currentPath.startsWith(href) && href !== '/ideas' || currentPath === href) ? 'bg-zinc-700 text-white font-medium' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white' %>">
+            <span class="text-base"><%= icon %></span>
+            <%= label %>
+          </a>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="px-4 py-4 border-t border-zinc-800 text-xs text-zinc-600">
+      <div>TuneCore distribution</div>
+      <div class="mt-1">
+        <a href="https://www.tunecore.com" target="_blank" class="text-zinc-500 hover:text-zinc-300 transition">tunecore.com ↗</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-y-auto">
+    <%- body %>
+  </main>
+
+</div>
+
+</body>
+</html>

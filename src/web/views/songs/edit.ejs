@@ -1,0 +1,84 @@
+<% title = 'Edit Song' %>
+
+<div class="p-8 max-w-2xl">
+  <a href="/songs/<%= song.id %>" class="text-sm text-zinc-500 hover:text-zinc-700 mb-6 inline-flex items-center gap-1">
+    ← Back to Song
+  </a>
+
+  <h1 class="text-2xl font-bold mb-8">Edit Song</h1>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+  <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6"><%= error %></div>
+  <% } %>
+
+  <form method="POST" action="/songs/<%= song.id %>" class="space-y-6">
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Title</label>
+      <input type="text" name="title" value="<%= song.title || '' %>"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Status</label>
+      <select name="status"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','ready_to_publish','submitted_to_tunecore','published','paused','archived']) { %>
+          <option value="<%= s %>" <%= song.status === s ? 'selected' : '' %>><%= s.replace(/_/g,' ') %></option>
+        <% } %>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Concept</label>
+      <textarea name="concept" rows="3"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"><%= song.concept || '' %></textarea>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-zinc-700 mb-1">Target Age Range</label>
+        <input type="text" name="target_age_range" value="<%= song.target_age_range || '4-10' %>"
+          class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-zinc-700 mb-1">Release Date</label>
+        <input type="date" name="release_date" value="<%= song.release_date || '' %>"
+          class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Genre Tags</label>
+      <input type="text" name="genre_tags" value="<%= (song.genre_tags || []).join(', ') %>"
+        placeholder="e.g. children's pop, kindie, upbeat"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+      <p class="text-xs text-zinc-400 mt-1">Separate with commas</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Mood Tags</label>
+      <input type="text" name="mood_tags" value="<%= (song.mood_tags || []).join(', ') %>"
+        placeholder="e.g. silly, fun, high-energy"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-zinc-700 mb-1">Notes</label>
+      <textarea name="notes" rows="3"
+        class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"><%= song.notes || '' %></textarea>
+    </div>
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+        class="bg-zinc-900 text-white text-sm px-6 py-2.5 rounded-lg hover:bg-zinc-700 transition font-medium">
+        Save Changes
+      </button>
+      <a href="/songs/<%= song.id %>"
+        class="border border-zinc-200 text-sm px-6 py-2.5 rounded-lg hover:bg-zinc-50 transition">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+</div>

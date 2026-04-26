@@ -1,0 +1,922 @@
+/**
+ * Pancake Robot — Web UI Server
+ * Run with: npm run web  (node src/web/server.js)
+ */
+
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const _require = createRequire(import.meta.url);
+
+const dotenv = _require('dotenv');
+dotenv.config({ path: join(__dirname, '../../.env'), override: true });
+
+import express from 'express';
+import expressLayouts from 'express-ejs-layouts';
+import fs from 'fs';
+import { spawn } from 'child_process';
+
+import {
+  getAllIdeas, getIdea, createIdea, updateIdea,
+  getAllSongs, getSong, upsertSong, updateSongStatus, deleteSong,
+  getAssetsForSong, createAsset,
+  getPublishingChecklist, updateChecklistItem, getChecklistProgress,
+  getReleaseLinks, upsertReleaseLink,
+  getPerformanceSnapshots,
+  getDashboardStats,
+} from '../shared/db.js';
+import { runSuggestPipeline } from '../shared/suggest.js';
+import { generateThumbnails } from '../agents/creative-manager.js';
+
+// In-memory job store for suggest runs
+const suggestJobs = new Map(); // jobId → { status, logs, results, error }
+
+// In-memory job store for full song pipeline runs
+const pipelineJobs = new Map(); // jobId → { status, logs, songId, error, startedAt }
+
+const app = express();
+const PORT = process.env.WEB_PORT || 3737;
+
+// ── Middleware ──────────────────────────────────────────────────
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(join(__dirname, 'public')));
+// Serve generated output files (audio, thumbnails) under /media/
+app.use('/media', express.static(join(__dirname, '../../output')));
+app.set('view engine', 'ejs');
+app.set('views', join(__dirname, 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layout');
+// extractScripts: false — scripts stay inline in the view (needed for Alpine.js x-data references)
+app.set('layout extractScripts', false);
+
+// ── Helpers injected into every template ───────────────────────
+app.use((req, res, next) => {
+  res.locals.formatDate = (iso) => {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  res.locals.timeAgo = (iso) => {
+    if (!iso) return '—';
+    const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
+    if (secs < 60) return `${secs}s ago`;
+    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+    return `${Math.floor(secs / 86400)}d ago`;
+  };
+  res.locals.statusBadge = (status) => {
+    const map = {
+      new: 'badge-gray',
+      shortlisted: 'badge-blue',
+      in_review: 'badge-yellow',
+      promoted: 'badge-green',
+      archived: 'badge-dim',
+      draft: 'badge-gray',
+      writing: 'badge-yellow',
+      lyrics_ready: 'badge-blue',
+      audio_in_progress: 'badge-yellow',
+      audio_ready: 'badge-blue',
+      artwork_ready: 'badge-blue',
+      metadata_ready: 'badge-blue',
+      ready_to_publish: 'badge-green',
+      submitted_to_distrokid: 'badge-purple',
+      submitted_to_tunecore: 'badge-purple', // legacy
+      published: 'badge-emerald',
+      paused: 'badge-gray',
+      approved: 'badge-emerald',
+      rejected: 'badge-red',
+    };
+    return map[status] || 'badge-gray';
+  };
+  res.locals.currentPath = req.path;
+  next();
+});
+
+// ── DASHBOARD ──────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  const stats = getDashboardStats();
+  const recentSongs = getAllSongs().slice(0, 5).map(s => ({
+    ...s,
+    progress: getChecklistProgress(s.id),
+  }));
+  const recentIdeas = getAllIdeas().slice(0, 5);
+  res.render('dashboard', { stats, recentSongs, recentIdeas });
+});
+
+// ── IDEA GENERATOR (AI pipeline) ───────────────────────────────
+
+// Page: shows generate UI / live stream / results
+app.get('/ideas/generate', (req, res) => {
+  const { job } = req.query;
+  const jobData = job ? suggestJobs.get(job) : null;
+  res.render('ideas/generate', { jobId: job || null, jobData: jobData || null });
+});
+
+// POST: kick off a new suggest job, redirect to SSE page
+app.post('/api/suggest/run', (req, res) => {
+  const jobId = `job_${Date.now().toString(36)}`;
+  suggestJobs.set(jobId, { status: 'running', logs: [], results: null, error: null, startedAt: Date.now() });
+
+  // Run async — don't await
+  runSuggestPipeline((msg) => {
+    const job = suggestJobs.get(jobId);
+    if (job) job.logs.push(msg);
+  }).then((results) => {
+    const job = suggestJobs.get(jobId);
+    if (job) { job.status = 'done'; job.results = results; }
+  }).catch((err) => {
+    const job = suggestJobs.get(jobId);
+    if (job) { job.status = 'error'; job.error = err.message; }
+  });
+
+  res.json({ ok: true, jobId });
+});
+
+// GET SSE: stream logs + completion event
+app.get('/api/suggest/stream/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let lastLogIndex = 0;
+
+  const send = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const tick = () => {
+    const job = suggestJobs.get(jobId);
+    if (!job) { send('error', { message: 'Job not found' }); res.end(); return; }
+
+    // Send any new log lines
+    const newLogs = job.logs.slice(lastLogIndex);
+    for (const line of newLogs) {
+      send('log', { message: line });
+    }
+    lastLogIndex = job.logs.length;
+
+    if (job.status === 'done') {
+      send('complete', { results: job.results });
+      res.end();
+    } else if (job.status === 'error') {
+      send('error', { message: job.error });
+      res.end();
+    } else {
+      setTimeout(tick, 500);
+    }
+  };
+
+  req.on('close', () => { /* client disconnected */ });
+  tick();
+});
+
+// GET: job status/results (for polling fallback)
+app.get('/api/suggest/status/:jobId', (req, res) => {
+  const job = suggestJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(job);
+});
+
+// ── IDEAS ──────────────────────────────────────────────────────
+app.get('/ideas', (req, res) => {
+  let ideas = getAllIdeas();
+  const { q, status, category } = req.query;
+  if (q) {
+    const lq = q.toLowerCase();
+    ideas = ideas.filter(i =>
+      (i.title || '').toLowerCase().includes(lq) ||
+      (i.concept || '').toLowerCase().includes(lq) ||
+      (i.hook || '').toLowerCase().includes(lq) ||
+      (i.tags || []).some(t => t.toLowerCase().includes(lq))
+    );
+  }
+  if (status) ideas = ideas.filter(i => i.status === status);
+  if (category) ideas = ideas.filter(i => i.category === category);
+
+  const categories = [...new Set(getAllIdeas().map(i => i.category).filter(Boolean))].sort();
+  res.render('ideas/index', { ideas, q: q || '', filterStatus: status || '', filterCategory: category || '', categories });
+});
+
+app.get('/ideas/new', (req, res) => {
+  res.render('ideas/form', { idea: null, error: null });
+});
+
+app.post('/ideas', (req, res) => {
+  const { title, concept, hook, target_age_range, category, mood, educational_angle, tags, lyric_seed, thumbnail_seed, notes } = req.body;
+  if (!title || !title.trim()) {
+    return res.render('ideas/form', { idea: req.body, error: 'Title is required.' });
+  }
+  createIdea({
+    title: title.trim(),
+    concept: concept?.trim() || null,
+    hook: hook?.trim() || null,
+    target_age_range: target_age_range || '4-10',
+    category: category?.trim() || null,
+    mood: mood?.trim() || null,
+    educational_angle: educational_angle?.trim() || null,
+    tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    lyric_seed: lyric_seed?.trim() || null,
+    thumbnail_seed: thumbnail_seed?.trim() || null,
+    notes: notes?.trim() || null,
+    source_type: 'manual',
+  });
+  res.redirect('/ideas');
+});
+
+app.get('/ideas/:id', (req, res) => {
+  // Guard: don't catch named routes
+  if (req.params.id === 'generate' || req.params.id === 'new') return res.redirect('/ideas/' + req.params.id === 'generate' ? '/ideas/generate' : '/ideas/new');
+  const idea = getIdea(req.params.id);
+  if (!idea) return res.status(404).render('404', { message: 'Idea not found' });
+  const song = idea.promoted_song_id ? getSong(idea.promoted_song_id) : null;
+  res.render('ideas/detail', { idea, song });
+});
+
+app.get('/ideas/:id/edit', (req, res) => {
+  const idea = getIdea(req.params.id);
+  if (!idea) return res.status(404).render('404', { message: 'Idea not found' });
+  res.render('ideas/form', { idea, error: null });
+});
+
+app.post('/ideas/:id', (req, res) => {
+  const { title, concept, hook, target_age_range, category, mood, educational_angle, tags, lyric_seed, thumbnail_seed, notes } = req.body;
+  if (!title || !title.trim()) {
+    const idea = getIdea(req.params.id);
+    return res.render('ideas/form', { idea: { ...idea, ...req.body }, error: 'Title is required.' });
+  }
+  updateIdea(req.params.id, {
+    title: title.trim(),
+    concept: concept?.trim() || null,
+    hook: hook?.trim() || null,
+    target_age_range: target_age_range || '4-10',
+    category: category?.trim() || null,
+    mood: mood?.trim() || null,
+    educational_angle: educational_angle?.trim() || null,
+    tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    lyric_seed: lyric_seed?.trim() || null,
+    thumbnail_seed: thumbnail_seed?.trim() || null,
+    notes: notes?.trim() || null,
+  });
+  res.redirect(`/ideas/${req.params.id}`);
+});
+
+// API: update idea status
+app.post('/api/ideas/:id/status', (req, res) => {
+  const { status } = req.body;
+  const allowed = ['new', 'shortlisted', 'in_review', 'promoted', 'archived'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  updateIdea(req.params.id, { status });
+  res.json({ ok: true });
+});
+
+// API: duplicate idea
+app.post('/api/ideas/:id/duplicate', (req, res) => {
+  const idea = getIdea(req.params.id);
+  if (!idea) return res.status(404).json({ error: 'Not found' });
+  const newId = createIdea({
+    ...idea,
+    id: undefined,
+    title: `${idea.title} (copy)`,
+    status: 'new',
+    promoted_song_id: null,
+    source_type: 'derived',
+    source_ref: idea.id,
+  });
+  res.json({ ok: true, id: newId });
+});
+
+// Promote idea → song
+app.post('/api/ideas/:id/promote', (req, res) => {
+  const idea = getIdea(req.params.id);
+  if (!idea) return res.status(404).json({ error: 'Not found' });
+
+  const songId = `SONG_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const slug = (idea.title || 'song').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  upsertSong({
+    id: songId,
+    title: idea.title,
+    slug,
+    topic: idea.concept || idea.title,
+    status: 'draft',
+    originating_idea_id: idea.id,
+    concept: idea.concept || null,
+    target_age_range: idea.target_age_range || '4-10',
+    mood_tags: idea.mood ? [idea.mood] : [],
+    keywords: idea.tags || [],
+    notes: idea.notes || null,
+    distributor: 'TuneCore',
+  });
+
+  updateIdea(idea.id, { status: 'promoted', promoted_song_id: songId });
+
+  // Return generateUrl so the UI can redirect straight to the pipeline terminal
+  res.json({ ok: true, songId, generateUrl: `/songs/${songId}/generate` });
+});
+
+// ── SONG PIPELINE (generate song from topic) ───────────────────
+
+// Page: live terminal for song generation
+app.get('/songs/:id/generate', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).render('404', { message: 'Song not found' });
+  const job = req.query.job ? pipelineJobs.get(req.query.job) : null;
+  res.render('songs/generate', { song, jobId: req.query.job || null, job: job || null });
+});
+
+// POST: spawn the orchestrator pipeline for a song
+app.post('/api/songs/:id/generate', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+
+  const jobId = `pipe_${Date.now().toString(36)}`;
+  const topic = song.topic || song.title || 'children\'s song';
+
+  pipelineJobs.set(jobId, {
+    status: 'running',
+    logs: [],
+    songId: null,       // will be parsed from output
+    originalSongId: song.id,
+    error: null,
+    startedAt: Date.now(),
+  });
+
+  const orchestratorPath = join(__dirname, '../orchestrator.js');
+  const child = spawn('node', [orchestratorPath, '--new', topic], {
+    cwd: join(__dirname, '../..'),
+    env: { ...process.env, WEB_PIPELINE: '1', FORCE_COLOR: '0' },
+  });
+
+  const job = pipelineJobs.get(jobId);
+
+  // Aggressive ANSI + chalk artifact stripper
+  const stripAnsi = (s) => s
+    .replace(/\x1B\[[0-9;]*[mGKHFABCDEFsuhl]/g, '')
+    .replace(/\x1B\][^\x07]*\x07/g, '')
+    .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '')
+    .trim();
+
+  const processLine = (line) => {
+    const clean = stripAnsi(line);
+    if (!clean) return;
+    job.logs.push(clean);
+    // Try multiple patterns to catch Song ID
+    const idMatch = clean.match(/SONG_[A-Z0-9_]+/);
+    if (idMatch && idMatch[0].length > 8) job.songId = idMatch[0];
+  };
+
+  let stderrBuf = '';
+  let stdoutBuf = '';
+
+  child.stdout.on('data', (data) => {
+    stdoutBuf += data.toString();
+    const lines = stdoutBuf.split('\n');
+    stdoutBuf = lines.pop();
+    lines.forEach(processLine);
+  });
+
+  child.stderr.on('data', (data) => {
+    stderrBuf += data.toString();
+    const lines = stderrBuf.split('\n');
+    stderrBuf = lines.pop();
+    lines.forEach(l => {
+      const clean = stripAnsi(l);
+      if (clean && !clean.includes('DeprecationWarning') && !clean.includes('ExperimentalWarning')) {
+        job.logs.push('⚠ ' + clean);
+      }
+    });
+  });
+
+  child.on('close', (code) => {
+    if (stdoutBuf.trim()) processLine(stdoutBuf);
+
+    if (code === 0) {
+      job.status = 'done';
+      job.logs.push('✅ Pipeline complete!');
+      // DB fallback: if we still don't have a song ID, find most recently created song
+      if (!job.songId) {
+        try {
+          const recent = getAllSongs()
+            .filter(s => s.created_at > new Date(job.startedAt).toISOString())
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+          if (recent) {
+            job.songId = recent.id;
+            job.logs.push(`📀 Song ID: ${recent.id}`);
+          }
+        } catch {}
+      }
+    } else {
+      job.status = 'error';
+      job.error = `Process exited with code ${code}`;
+      job.logs.push(`❌ Pipeline failed (exit code ${code})`);
+      job.logs.push('👆 Scroll up to find the error above');
+    }
+  });
+
+  child.on('error', (err) => {
+    job.status = 'error';
+    job.error = err.message;
+    job.logs.push('❌ Failed to start: ' + err.message);
+  });
+
+  res.json({ ok: true, jobId });
+});
+
+// GET SSE: stream pipeline logs
+app.get('/api/songs/pipeline/stream/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let lastIndex = 0;
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+  const tick = () => {
+    const job = pipelineJobs.get(jobId);
+    if (!job) { send('error', { message: 'Job not found' }); res.end(); return; }
+
+    const newLogs = job.logs.slice(lastIndex);
+    for (const line of newLogs) send('log', { message: line });
+    lastIndex = job.logs.length;
+
+    if (job.status === 'done') {
+      send('complete', { songId: job.songId, originalSongId: job.originalSongId });
+      res.end();
+    } else if (job.status === 'error') {
+      send('error', { message: job.error });
+      res.end();
+    } else {
+      setTimeout(tick, 600);
+    }
+  };
+
+  req.on('close', () => {});
+  tick();
+});
+
+// ── SONGS ──────────────────────────────────────────────────────
+app.get('/songs', (req, res) => {
+  let songs = getAllSongs().map(s => {
+    const songDir = join(__dirname, '../../output/songs', s.id);
+    const fsAssets = scanSongDir(songDir);
+    const thumbs = fsAssets.thumbnails || [];
+    // Prefer youtube_landscape, then any thumbnail
+    const thumb = thumbs.find(t => t.name.includes('youtube_landscape') || t.name.includes('landscape'))
+      || thumbs.find(t => !t.name.includes('spotify_square'))
+      || thumbs[0]
+      || null;
+    const audio = (fsAssets.audioFiles || [])[0] || null;
+    return {
+      ...s,
+      progress: getChecklistProgress(s.id),
+      thumbnailUrl: thumb ? thumb.url : null,
+      hasAudio: audio !== null,
+    };
+  });
+
+  const { q, status, sort } = req.query;
+
+  // Count totals BEFORE filtering for tab badges
+  const totalCounts = {
+    all: songs.length,
+    approved: songs.filter(s => s.status === 'approved').length,
+    draft: songs.filter(s => s.status === 'draft' || s.status === 'writing').length,
+  };
+
+  if (q) {
+    const lq = q.toLowerCase();
+    songs = songs.filter(s =>
+      (s.title || '').toLowerCase().includes(lq) ||
+      (s.topic || '').toLowerCase().includes(lq)
+    );
+  }
+  if (status) songs = songs.filter(s => s.status === status);
+
+  // Always sort: approved first, then by date
+  if (sort === 'readiness') songs.sort((a, b) => b.progress.pct - a.progress.pct);
+  else if (sort === 'created') songs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  else {
+    songs.sort((a, b) => {
+      if (a.status === 'approved' && b.status !== 'approved') return -1;
+      if (b.status === 'approved' && a.status !== 'approved') return 1;
+      return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
+    });
+  }
+
+  res.render('songs/index', { songs, q: q || '', filterStatus: status || '', sort: sort || '', totalCounts });
+});
+
+app.get('/songs/:id', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).render('404', { message: 'Song not found' });
+
+  const idea = song.originating_idea_id ? getIdea(song.originating_idea_id) : null;
+  const assets = getAssetsForSong(song.id);
+  const checklist = getPublishingChecklist(song.id);
+  const progress = getChecklistProgress(song.id);
+  const links = getReleaseLinks(song.id);
+  const snapshots = getPerformanceSnapshots(song.id);
+
+  const songDir = join(__dirname, '../../output/songs', song.id);
+  const fsAssets = scanSongDir(songDir);
+
+  // Read file contents for tabs
+  const readFile = (p) => { try { return p && fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null; } catch { return null; } };
+  const lyricsContent    = readFile(fsAssets.lyrics);
+  const audioPromptContent = readFile(fsAssets.audioPrompt);
+  const metadataContent  = fsAssets.metadata ? readFile(fsAssets.metadata) : null;
+  const brandReviewContent = fsAssets.brandReview ? readFile(fsAssets.brandReview) : null;
+  const metadataParsed   = metadataContent ? (() => { try { return JSON.parse(metadataContent); } catch { return null; } })() : null;
+  const brandParsed      = brandReviewContent ? (() => { try { return JSON.parse(brandReviewContent); } catch { return null; } })() : null;
+
+  res.render('songs/detail', {
+    song, idea, assets, checklist, progress, links, snapshots, fsAssets,
+    lyricsContent, audioPromptContent, metadataParsed, brandParsed,
+  });
+});
+
+app.get('/songs/:id/edit', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).render('404', { message: 'Song not found' });
+  res.render('songs/edit', { song, error: null });
+});
+
+app.post('/songs/:id', (req, res) => {
+  const { title, status, concept, target_age_range, notes, release_date, genre_tags, mood_tags } = req.body;
+  upsertSong({
+    id: req.params.id,
+    title: title?.trim() || undefined,
+    status: status || undefined,
+    concept: concept?.trim() || undefined,
+    target_age_range: target_age_range || undefined,
+    notes: notes?.trim() || undefined,
+    release_date: release_date || undefined,
+    genre_tags: genre_tags ? genre_tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+    mood_tags: mood_tags ? mood_tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+  });
+  res.redirect(`/songs/${req.params.id}`);
+});
+
+// API: generate thumbnails on demand
+// In-memory job store for thumbnail jobs
+const thumbJobs = new Map(); // jobId → { status, logs, count, error }
+
+app.post('/api/songs/:id/thumbnails', async (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+
+  const jobId = `thumb_${song.id}_${Date.now()}`;
+  thumbJobs.set(jobId, { status: 'running', logs: [], count: 0, error: null });
+
+  // Run thumbnail generation in background via child process so we get stdout
+  const scriptPath = join(__dirname, '../scripts/generate-thumbs.js');
+  const child = spawn('node', [scriptPath, song.id], {
+    cwd: join(__dirname, '../..'),
+    env: { ...process.env, FORCE_COLOR: '0' },
+  });
+
+  const job = thumbJobs.get(jobId);
+  const stripAnsi = (s) => s
+    .replace(/\x1B\[[0-9;]*[mGKHFABCDEFsuhl]/g, '')
+    .replace(/\x1B\][^\x07]*\x07/g, '')
+    .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '')
+    .trim();
+
+  const handleLine = (line) => {
+    const clean = stripAnsi(line);
+    if (!clean) return;
+    job.logs.push(clean);
+    // Parse count from completion line
+    const m = clean.match(/Generated (\d+) thumbnail/);
+    if (m) job.count = parseInt(m[1], 10);
+  };
+
+  let stdoutBuf = '', stderrBuf = '';
+  child.stdout.on('data', (d) => {
+    stdoutBuf += d.toString();
+    const lines = stdoutBuf.split('\n');
+    stdoutBuf = lines.pop();
+    lines.forEach(handleLine);
+  });
+  child.stderr.on('data', (d) => {
+    stderrBuf += d.toString();
+    const lines = stderrBuf.split('\n');
+    stderrBuf = lines.pop();
+    lines.forEach(handleLine);
+  });
+  child.on('close', (code) => {
+    if (stdoutBuf) handleLine(stdoutBuf);
+    if (stderrBuf) handleLine(stderrBuf);
+    job.status = code === 0 ? 'done' : 'error';
+    if (code !== 0) job.error = `Process exited with code ${code}`;
+  });
+
+  res.json({ ok: true, jobId });
+});
+
+// ── SONG REVISION ──────────────────────────────────────────────
+const reviseJobs = new Map(); // jobId → { status, logs, error }
+
+app.post('/api/songs/:id/revise', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+  const { feedback } = req.body;
+  if (!feedback?.trim()) return res.status(400).json({ error: 'feedback is required' });
+
+  const jobId = `revise_${song.id}_${Date.now()}`;
+  reviseJobs.set(jobId, { status: 'running', logs: [] });
+
+  const feedbackB64 = Buffer.from(feedback.trim()).toString('base64');
+  const scriptPath = join(__dirname, '../scripts/revise-song.js');
+  const child = spawn('node', [scriptPath, song.id, feedbackB64], {
+    cwd: join(__dirname, '../..'),
+    env: { ...process.env, FORCE_COLOR: '0' },
+  });
+
+  const job = reviseJobs.get(jobId);
+  const stripAnsi = (s) => s.replace(/\x1B\[[0-9;]*[mGKHFABCDEFsuhl]/g, '').replace(/\x1B\][^\x07]*\x07/g, '').replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '').trim();
+
+  let buf = '';
+  const handleLine = (line) => { const c = stripAnsi(line); if (c) job.logs.push(c); };
+  const onData = (d) => { buf += d.toString(); const lines = buf.split('\n'); buf = lines.pop(); lines.forEach(handleLine); };
+  child.stdout.on('data', onData);
+  child.stderr.on('data', onData);
+  child.on('close', (code) => {
+    if (buf) handleLine(buf);
+    job.status = code === 0 ? 'done' : 'error';
+    if (code !== 0) job.error = `Process exited with code ${code}`;
+  });
+
+  res.json({ ok: true, jobId });
+});
+
+app.get('/api/songs/revise/stream/:jobId', (req, res) => {
+  const job = reviseJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let cursor = 0;
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const tick = () => {
+    while (cursor < job.logs.length) send('log', { message: job.logs[cursor++] });
+    if (job.status === 'done') { send('complete', {}); return res.end(); }
+    if (job.status === 'error') { send('error', { message: job.error || 'Revision failed' }); return res.end(); }
+    setTimeout(tick, 300);
+  };
+  tick();
+});
+
+app.get('/api/songs/thumbnails/stream/:jobId', (req, res) => {
+  const job = thumbJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let cursor = 0;
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+  const tick = () => {
+    while (cursor < job.logs.length) {
+      send('log', { message: job.logs[cursor++] });
+    }
+    if (job.status === 'done') {
+      send('complete', { count: job.count });
+      return res.end();
+    }
+    if (job.status === 'error') {
+      send('error', { message: job.error || 'Thumbnail generation failed' });
+      return res.end();
+    }
+    setTimeout(tick, 300);
+  };
+  tick();
+  req.on('close', () => {});
+});
+
+// API: update checklist item
+app.post('/api/songs/:id/checklist/:key', (req, res) => {
+  const { status, note } = req.body;
+  const allowed = ['not_started', 'in_progress', 'done', 'blocked'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  updateChecklistItem(req.params.id, req.params.key, { status, note });
+  const progress = getChecklistProgress(req.params.id);
+  res.json({ ok: true, progress });
+});
+
+// API: update song status
+app.post('/api/songs/:id/status', (req, res) => {
+  const { status } = req.body;
+  updateSongStatus(req.params.id, status);
+  res.json({ ok: true });
+});
+
+// API: add release link
+app.delete('/api/songs/:id', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+
+  // Delete DB record (cascades to checklist, assets, links, snapshots)
+  deleteSong(req.params.id);
+
+  // Delete files on disk
+  const songDir = join(__dirname, '../../output/songs', req.params.id);
+  try {
+    if (fs.existsSync(songDir)) fs.rmSync(songDir, { recursive: true, force: true });
+  } catch (err) {
+    // Non-fatal — DB is already cleaned up
+    console.warn(`[SERVER] Could not delete song dir ${songDir}: ${err.message}`);
+  }
+
+  res.json({ ok: true });
+});
+
+app.post('/api/songs/:id/approve', (req, res) => {
+  if (!getSong(req.params.id)) return res.status(404).json({ error: 'Song not found' });
+  updateSongStatus(req.params.id, 'approved');
+  res.json({ ok: true });
+});
+
+// Mark as submitted to DistroKid (with optional link)
+app.post('/api/songs/:id/publish', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+  const { url } = req.body;
+  updateSongStatus(req.params.id, 'submitted_to_distrokid');
+  if (url) upsertReleaseLink(req.params.id, 'DistroKid', url);
+  res.json({ ok: true });
+});
+
+// Bulk status update — must be before /:id routes
+app.post('/api/songs/bulk-status', (req, res) => {
+  const { ids, status } = req.body;
+  if (!Array.isArray(ids) || !status) return res.status(400).json({ error: 'ids[] and status required' });
+  const validStatuses = ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','ready_to_publish','submitted_to_distrokid','published','paused','archived'];
+  if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  let updated = 0;
+  for (const id of ids) {
+    try { updateSongStatus(id, status); updated++; } catch { /* skip unknown ids */ }
+  }
+  res.json({ ok: true, updated });
+});
+
+app.post('/api/songs/:id/links', (req, res) => {
+  const { platform, url } = req.body;
+  if (!platform || !url) return res.status(400).json({ error: 'platform and url required' });
+  upsertReleaseLink(req.params.id, platform, url);
+  res.json({ ok: true });
+});
+
+// ── BRAND EDITOR ───────────────────────────────────────────────
+const BRAND_BIBLE_PATH = join(__dirname, '../../output/brand/brand-bible.md');
+
+function readBrandBible() {
+  try {
+    const raw = fs.readFileSync(BRAND_BIBLE_PATH, 'utf8');
+    // Strip markdown code fence if present
+    let jsonStr = raw.replace(/^```json\s*/m, '').replace(/\s*```\s*$/, '').trim();
+
+    // Try full parse first
+    try { return JSON.parse(jsonStr); } catch (_) {}
+
+    // The file may be truncated (brand_bible_markdown string gets cut off).
+    // Extract just the brand_data object by finding its boundaries.
+    const startMarker = '"brand_data"';
+    const startIdx = jsonStr.indexOf(startMarker);
+    if (startIdx === -1) return null;
+
+    // Walk forward from the opening { of brand_data to find the matching closing }
+    const objStart = jsonStr.indexOf('{', startIdx + startMarker.length);
+    if (objStart === -1) return null;
+
+    let depth = 0, i = objStart, inStr = false, escape = false;
+    for (; i < jsonStr.length; i++) {
+      const c = jsonStr[i];
+      if (escape) { escape = false; continue; }
+      if (c === '\\' && inStr) { escape = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{') depth++;
+      else if (c === '}') { depth--; if (depth === 0) break; }
+    }
+
+    const brandDataJson = jsonStr.slice(objStart, i + 1);
+    const brandData = JSON.parse(brandDataJson);
+    return { brand_data: brandData };
+  } catch { return null; }
+}
+
+function writeBrandBible(data) {
+  const jsonStr = JSON.stringify(data, null, 2);
+  fs.writeFileSync(BRAND_BIBLE_PATH, '```json\n' + jsonStr + '\n```', 'utf8');
+}
+
+app.get('/brand', (req, res) => {
+  const brand = readBrandBible();
+  res.render('brand/edit', { brand });
+});
+
+app.post('/api/brand', express.json(), (req, res) => {
+  try {
+    const existing = readBrandBible() || { brand_data: {} };
+    const bd = existing.brand_data;
+    const b = req.body;
+
+    // Character
+    if (b.character_name !== undefined) bd.character = bd.character || {};
+    if (b.character_name !== undefined) bd.character.name = b.character_name;
+    if (b.character_backstory !== undefined) bd.character.backstory = b.character_backstory;
+    if (b.personality_traits !== undefined) bd.character.personality_traits = b.personality_traits.split('\n').map(s => s.trim()).filter(Boolean);
+    if (b.catchphrases !== undefined) bd.character.catchphrases = b.catchphrases.split('\n').map(s => s.trim()).filter(Boolean);
+
+    // Voice
+    if (b.voice_tone !== undefined) bd.voice = bd.voice || {};
+    if (b.voice_tone !== undefined) bd.voice.tone = b.voice_tone;
+    if (b.voice_formula !== undefined) bd.voice.formula = b.voice_formula;
+    if (b.recurring_themes !== undefined) bd.voice.recurring_themes = b.recurring_themes.split('\n').map(s => s.trim()).filter(Boolean);
+
+    // Rules
+    if (b.rules_always !== undefined) bd.rules = bd.rules || {};
+    if (b.rules_always !== undefined) bd.rules.always = b.rules_always.split('\n').map(s => s.trim()).filter(Boolean);
+    if (b.rules_never !== undefined) bd.rules.never = b.rules_never.split('\n').map(s => s.trim()).filter(Boolean);
+    if (b.on_brand_topics !== undefined) bd.rules.on_brand_topics = b.on_brand_topics.split('\n').map(s => s.trim()).filter(Boolean);
+    if (b.off_brand_topics !== undefined) bd.rules.off_brand_topics = b.off_brand_topics.split('\n').map(s => s.trim()).filter(Boolean);
+    if (b.age_guardrails !== undefined) bd.rules.age_guardrails = b.age_guardrails;
+
+    writeBrandBible(existing);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── 404 ────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).render('404', { message: `Page not found: ${req.path}` });
+});
+
+// ── HELPERS ────────────────────────────────────────────────────
+const OUTPUT_DIR = join(__dirname, '../../output');
+function toWebUrl(absPath) {
+  return '/media/' + absPath.replace(OUTPUT_DIR, '').replace(/\\/g, '/').replace(/^\//, '');
+}
+
+function scanSongDir(songDir) {
+  if (!fs.existsSync(songDir)) return {};
+  const result = {};
+
+  const tryFile = (path) => fs.existsSync(path) ? path : null;
+
+  result.lyrics = tryFile(join(songDir, 'lyrics.md'));
+  result.audioPrompt = tryFile(join(songDir, 'audio-prompt.md'));
+  result.metadata = tryFile(join(songDir, 'metadata.json'));
+  result.brandReview = tryFile(join(songDir, 'brand-review.json'));
+  result.qaReport = tryFile(join(songDir, 'qa-report.json'));
+
+  // Audio
+  const audioDir = join(songDir, 'audio');
+  const audioRoot = tryFile(join(songDir, 'audio.mp3')) || tryFile(join(songDir, 'audio.wav'));
+  let audioFiles = [];
+  if (audioRoot) audioFiles.push({ path: audioRoot, url: toWebUrl(audioRoot) });
+  if (fs.existsSync(audioDir)) {
+    const found = fs.readdirSync(audioDir)
+      .filter(f => f.endsWith('.mp3') || f.endsWith('.wav'))
+      .map(f => {
+        const p = join(audioDir, f);
+        return { path: p, url: toWebUrl(p), name: f, size: fs.statSync(p).size };
+      });
+    audioFiles = audioFiles.concat(found);
+  }
+  result.audioFiles = audioFiles;
+
+  // Thumbnails
+  const thumbDir = join(songDir, 'thumbnails');
+  result.thumbnails = fs.existsSync(thumbDir)
+    ? fs.readdirSync(thumbDir)
+        .filter(f => f.endsWith('.png'))
+        .map(f => {
+          const p = join(thumbDir, f);
+          return { path: p, url: toWebUrl(p), name: f };
+        })
+    : [];
+
+  return result;
+}
+
+// ── START ───────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`\n🥞  Pancake Robot UI running at http://localhost:${PORT}\n`);
+});
