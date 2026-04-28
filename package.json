@@ -9,6 +9,8 @@
     "web": "node src/web/server.js",
     "setup": "node src/orchestrator.js --setup",
     "new": "node src/orchestrator.js --new",
+    "new:paid": "MINIMAX_USE_FREE_MODEL=false MINIMAX_MUSIC_MODEL=music-2.6 node src/orchestrator.js --new",
+    "new:free": "MINIMAX_USE_FREE_MODEL=true node src/orchestrator.js --new",
     "report": "node src/orchestrator.js --report",
     "research": "node src/orchestrator.js --research",
     "schedule": "node src/orchestrator.js --schedule",
