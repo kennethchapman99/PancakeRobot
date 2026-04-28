@@ -9,8 +9,8 @@
 import fs from 'fs';
 import { join } from 'path';
 
-export const MIN_FULL_SONG_WORDS = 220;
-export const MIN_FULL_SONG_DURATION_SECONDS = 120;
+export const MIN_FULL_SONG_WORDS = 120;
+export const MIN_FULL_SONG_DURATION_SECONDS = 90;
 export const MAX_INSTRUMENTAL_INTRO_SECONDS = 5;
 export const FIRST_VOCAL_REQUIRED_BY_SECONDS = 5;
 
@@ -83,7 +83,7 @@ export function buildRenderSafetyPrompt(title) {
     'start with a sung or spoken vocal line',
     `sing the exact title "${title}" clearly in the opening vocal line`,
     `repeat the exact title "${title}" clearly in the chorus`,
-    'full-length children’s song, target 2:15 to 3:00, not a short jingle',
+    'complete children’s song, target 1:30 to 3:00, not a micro-jingle',
   ];
 }
 
@@ -152,7 +152,9 @@ export function runPreRenderQAGate({
   }
 
   if (!allowShortSongs && wordCount < MIN_FULL_SONG_WORDS) {
-    fail('Lyric length', `${wordCount} words is too short for a full render; minimum is ${MIN_FULL_SONG_WORDS}. Set PANCAKE_ALLOW_SHORT_SONGS=true only for intentional jingles.`);
+    fail('Lyric length', `${wordCount} words is too short for a 1:30+ render; minimum is ${MIN_FULL_SONG_WORDS}. Set PANCAKE_ALLOW_SHORT_SONGS=true only for intentional jingles.`);
+  } else if (wordCount < 160) {
+    warn('Lyric length', `${wordCount} words may produce a shorter song; acceptable if target is near 1:30.`);
   } else {
     pass('Lyric length', `${wordCount} words`);
   }
@@ -185,6 +187,7 @@ export function runPreRenderQAGate({
     title,
     model,
     word_count: wordCount,
+    target_duration_seconds: '90-180',
     max_instrumental_intro_seconds: MAX_INSTRUMENTAL_INTRO_SECONDS,
     first_vocal_required_by_seconds: FIRST_VOCAL_REQUIRED_BY_SECONDS,
     failures,
@@ -215,7 +218,7 @@ function buildPreRenderFailureMarkdown(report) {
     `- Exact title must appear in [CHORUS].\n` +
     `- Vocals must be prompted to start within 0–3 seconds.\n` +
     `- Non-vocal opening must be capped at ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds.\n` +
-    `- Full songs must be at least ${MIN_FULL_SONG_WORDS} words unless PANCAKE_ALLOW_SHORT_SONGS=true.\n`;
+    `- Songs should target 1:30–3:00. Lyrics must be at least ${MIN_FULL_SONG_WORDS} words unless PANCAKE_ALLOW_SHORT_SONGS=true.\n`;
 }
 
 export function runPostRenderAudioQACheck({ songId, songDir, title, audioFilePath, minDurationSeconds = MIN_FULL_SONG_DURATION_SECONDS }) {
