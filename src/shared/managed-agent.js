@@ -5,6 +5,7 @@
  * - Creates agents/environments if they don't exist, persists IDs
  * - runAgent(agentName, task) → streams session, returns full response
  * - Logs all token usage to SQLite
+ * - Applies runtime brand overrides without saving them back to config
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -14,6 +15,7 @@ import { dirname, join } from 'path';
 import fs from 'fs';
 import { calculateCost, generateRunId } from './costs.js';
 import { logRun, logError } from './db.js';
+import { applyRuntimeBrandOverride, stripRuntimeBrandFields } from './brand-profile.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = join(__dirname, '../../pancake-robot.config.json');
@@ -41,24 +43,31 @@ function getClient() {
   return _client;
 }
 
+function defaultConfig() {
+  return {
+    version: '1.0.0',
+    agents: {},
+    environment: null,
+    brand: null,
+    distribution: null,
+    schedule: {},
+    songs: [],
+  };
+}
+
 export function loadConfig() {
+  let config;
   try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   } catch {
-    return {
-      version: '1.0.0',
-      agents: {},
-      environment: null,
-      brand: null,
-      distribution: null,
-      schedule: {},
-      songs: [],
-    };
+    config = defaultConfig();
   }
+
+  return applyRuntimeBrandOverride(config);
 }
 
 export function saveConfig(config) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(stripRuntimeBrandFields(config), null, 2));
 }
 
 /**
