@@ -68,5 +68,74 @@
 
 </div>
 
+<script>
+  (() => {
+    const match = window.location.pathname.match(/^\/songs\/([^/]+)\/?$/);
+    if (!match) return;
+
+    const songId = decodeURIComponent(match[1]);
+    const metaUrl = `/media/songs/${encodeURIComponent(songId)}/audio/generation-meta.json?ts=${Date.now()}`;
+
+    const inferFromAudioDom = () => {
+      const source = document.querySelector('audio source[src*="-paid.mp3"], audio source[src*="-free.mp3"]');
+      if (!source) return null;
+      const src = source.getAttribute('src') || '';
+      const isFree = src.includes('-free.mp3');
+      return {
+        model: isFree ? 'music-2.6-free' : 'music-2.6',
+        render_tier: isFree ? 'free' : 'paid',
+        inferred_from_filename: true,
+      };
+    };
+
+    const renderBadge = (meta) => {
+      if (!meta || document.querySelector('[data-render-model-badge]')) return;
+
+      const model = meta.model || 'unknown model';
+      const tier = meta.render_tier || (model.includes('free') ? 'free' : model === 'unknown model' ? 'unknown' : 'paid');
+      const isPaid = tier === 'paid';
+      const isFree = tier === 'free';
+      const label = isPaid ? `💎 MiniMax ${model} — PAID` : isFree ? `🧪 MiniMax ${model} — FREE` : `🎵 MiniMax ${model}`;
+      const className = isPaid ? 'badge-emerald' : isFree ? 'badge-yellow' : 'badge-gray';
+
+      const badge = document.createElement('span');
+      badge.setAttribute('data-render-model-badge', 'true');
+      badge.className = `${className} ml-0.5`;
+      badge.textContent = label;
+      badge.title = meta.inferred_from_filename
+        ? 'Inferred from rendered audio filename. New renders also write audio/generation-meta.json.'
+        : `Generated ${meta.generated_at || ''}. Pre-render QA: ${meta.pre_render_qa_passed === false ? 'failed' : 'passed/unknown'}. Post-render QA: ${meta.post_render_qa_passed === false ? 'failed' : 'passed/unknown'}.`;
+
+      const headerRow = document.querySelector('main h1')?.parentElement?.querySelector('.flex.items-center.gap-2.mt-2');
+      if (headerRow) {
+        const dot = document.createElement('span');
+        dot.className = 'text-sm text-zinc-300';
+        dot.textContent = '·';
+        headerRow.appendChild(dot);
+        headerRow.appendChild(badge.cloneNode(true));
+      }
+
+      const audioCard = document.querySelector('audio')?.closest('.bg-zinc-900');
+      if (audioCard) {
+        const panel = document.createElement('div');
+        panel.className = 'mt-3 rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-xs text-zinc-200';
+        panel.setAttribute('data-render-model-badge', 'true');
+        panel.innerHTML = `
+          <div class="font-semibold text-white">${label}</div>
+          <div class="mt-0.5 text-zinc-400">${meta.generated_at ? `Rendered ${new Date(meta.generated_at).toLocaleString()}` : meta.inferred_from_filename ? 'Inferred from audio filename' : 'Render metadata available'}</div>
+          ${meta.pre_render_qa_passed !== undefined ? `<div class="mt-1">Pre-render QA: ${meta.pre_render_qa_passed ? 'passed' : 'failed'}</div>` : ''}
+          ${meta.post_render_qa_passed !== undefined ? `<div>Post-render QA: ${meta.post_render_qa_passed ? 'passed' : 'needs review'}</div>` : ''}
+        `;
+        audioCard.appendChild(panel);
+      }
+    };
+
+    fetch(metaUrl)
+      .then((res) => res.ok ? res.json() : null)
+      .then((meta) => renderBadge(meta || inferFromAudioDom()))
+      .catch(() => renderBadge(inferFromAudioDom()));
+  })();
+</script>
+
 </body>
 </html>
