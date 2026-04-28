@@ -91,11 +91,9 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     const result = await submitToMiniMax({ prompt, lyrics: cleanLyrics, apiKey, model: modelConfig.model });
 
     if (result.done) {
-      // Synchronous — audio came back immediately
       console.log('[MUSIC-GEN] ✓ Synchronous completion');
       audioHex = result.audioHex;
     } else {
-      // Async — need to poll by task ID
       const taskId = result;
       console.log(`[MUSIC-GEN] Task submitted: ${taskId}`);
       console.log(`[MUSIC-GEN] Polling for completion (up to ${MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS / 60000} min)...`);
@@ -115,7 +113,6 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     return { audioFiles: [], skipped: false, error: 'generation timed out or failed', instructionsPath, preRenderQA };
   }
 
-  // Write MP3
   const filename = `${songId}-v1-${modelConfig.tier}.mp3`;
   const filePath = join(audioDir, filename);
 
@@ -144,7 +141,6 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     postRenderQA.warnings.forEach(w => console.log(`  • ${w}`));
   }
 
-  // Save generation metadata
   const meta = {
     generated_at: new Date().toISOString(),
     song_id: songId,
@@ -166,9 +162,9 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
 }
 
 function resolveMiniMaxModelConfig() {
-  const explicitModel = process.env.MINIMAX_MUSIC_MODEL?.trim();
   const freeToggleEnabled = ['1', 'true', 'yes', 'free'].includes(String(process.env.MINIMAX_USE_FREE_MODEL || '').toLowerCase());
-  const model = explicitModel || (freeToggleEnabled ? FREE_MODEL : PAID_MODEL);
+  const explicitModel = process.env.MINIMAX_MUSIC_MODEL?.trim();
+  const model = freeToggleEnabled ? FREE_MODEL : (explicitModel || PAID_MODEL);
   const tier = model.includes('free') ? 'free' : 'paid';
 
   return {
@@ -179,14 +175,6 @@ function resolveMiniMaxModelConfig() {
   };
 }
 
-// ─────────────────────────────────────────────
-// MiniMax API helpers
-// ─────────────────────────────────────────────
-
-/**
- * Submit a music generation request to MiniMax.
- * Returns task_id if async, or resolves with audio hex if synchronous.
- */
 async function submitToMiniMax({ prompt, lyrics, apiKey, model }) {
   const body = {
     model,
@@ -283,14 +271,6 @@ function hexToBuffer(hex) {
   return buf;
 }
 
-// ─────────────────────────────────────────────
-// Prompt formatting helpers
-// ─────────────────────────────────────────────
-
-/**
- * Build a style/mood prompt for MiniMax's `prompt` field (≤2000 chars).
- * This is separate from lyrics — it describes the musical style, not the words.
- */
 function buildStylePrompt(audioPrompt, { title }) {
   let basePrompt;
 
@@ -317,9 +297,6 @@ function buildStylePrompt(audioPrompt, { title }) {
   return addRenderSafetyToPrompt(basePrompt, title);
 }
 
-/**
- * Strip everything that isn't singable before sending to MiniMax.
- */
 function stripStageDirections(lyrics) {
   if (!lyrics) return '';
 
@@ -333,22 +310,14 @@ function stripStageDirections(lyrics) {
   text = text.replace(/^#{1,6}\s+.*/gm, '');
   text = text.replace(/^\*\*[^*]+\*\*:.*/gm, '');
   text = text.replace(/^---+\s*$/gm, '');
-
   text = text.replace(/\[(?!(?:VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|HOOK|INTERLUDE|BREAKDOWN)\b)[^\]]{15,}\]/gi, '');
-
   text = text.replace(/\((?:flip|clap|stomp|jump|wave|spin|shake|raise|lift|point|wiggle|bounce)[^)]*\)/gi, '');
-
   text = text.replace(/[\u{1F300}-\u{1FFFF}]/gu, '');
   text = text.replace(/^[🤖🎵🥞⚡❌✨🎶].*/gm, '');
-
   text = text.replace(/\n{3,}/g, '\n\n').trim();
 
   return text;
 }
-
-// ─────────────────────────────────────────────
-// Manual fallback instructions
-// ─────────────────────────────────────────────
 
 function buildManualInstructions({ title, lyricsText, stylePrompt, modelConfig }) {
   const model = modelConfig?.model || PAID_MODEL;
@@ -389,7 +358,7 @@ Instrumental: OFF
 ## Acceptance rules
 - Reject if vocals do not start by 5 seconds.
 - Reject if the exact title is not sung in the opening and chorus.
-- Reject if the song is under 2:00 unless intentionally marked as a short/jingle.
+- Reject if the song is under 1:30 unless intentionally marked as a short/jingle.
 
 Full production notes: ../audio-prompt.md
 `;
