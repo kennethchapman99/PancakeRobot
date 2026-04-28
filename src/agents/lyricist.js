@@ -101,29 +101,29 @@ LYRICS RULES:
 - What makes it a Pancake Robot song is the ENERGY, WARMTH, and SILLINESS — not constant name-dropping
 
 REQUIREMENTS:
-- Full production render target: 2:15–3:00.
-- Word count: 250-450 words for normal songs. NEVER go below 220 words unless the user explicitly asked for a short/jingle.
-- Do not pad with weak filler — use repeatable choruses, call-and-response, bridge, final chorus, and sound-effect callbacks to create real length.
+- Production render target: 1:30–3:00.
+- Word count: 140-320 words for normal songs. NEVER go below 120 words unless the user explicitly asked for a short/jingle.
+- Short and punchy is good; tiny micro-jingles are not. Build length through repeatable choruses, call-and-response, bridge, final chorus, and sound-effect callbacks.
 - Chorus: 4-8 lines, simple enough for a 4-year-old to sing after one listen
-- The main hook/chorus must repeat at least three times — this IS the earworm
+- The main hook/chorus must repeat at least two times — ideally three if it feels natural
 - At least ONE physical action kids can do
 - At least ONE sound kids can copy
 - Vocabulary: mostly 1-2 syllable words. Long words only for comedy effect
 - End with an open question or forward tease — never a goodbye or resolution
 
-STRUCTURE — pick what serves the song, but keep it full-length:
+STRUCTURE — pick what serves the song, but target 1:30–3:00:
 
-OPTION A — Hook-first repeat (~2:15):
-[INTRO - VOCALS START IMMEDIATELY] → [HOOK] → [VERSE 1] → [CHORUS] → [VERSE 2] → [CHORUS] → [BRIDGE] → [FINAL CHORUS] → [OUTRO]
+OPTION A — Hook-first repeat (~1:30-2:15):
+[INTRO - VOCALS START IMMEDIATELY] → [HOOK] → [VERSE 1] → [CHORUS] → [VERSE 2] → [CHORUS] → [OUTRO]
 
-OPTION B — Classic pop (~2:30-3:00):
-[INTRO - VOCALS START IMMEDIATELY] → [VERSE 1] → [PRE-CHORUS] → [CHORUS] → [VERSE 2] → [CHORUS] → [BRIDGE] → [FINAL CHORUS x2] → [OUTRO]
+OPTION B — Classic pop (~2:00-3:00):
+[INTRO - VOCALS START IMMEDIATELY] → [VERSE 1] → [PRE-CHORUS] → [CHORUS] → [VERSE 2] → [CHORUS] → [BRIDGE] → [FINAL CHORUS] → [OUTRO]
 
-OPTION C — Call and response (~2:15):
+OPTION C — Call and response (~1:30-2:30):
 [INTRO - VOCALS START IMMEDIATELY] → [CALL/RESPONSE 1] → [CHORUS] → [CALL/RESPONSE 2] → [CHORUS] → [SILLY BREAKDOWN] → [FINAL CHORUS] → [OUTRO]
 
-OPTION D — Comedy/chaos (~2:15):
-Follow the joke, but keep enough sections for a full song. Unexpected stops, robot malfunctions, sound effects AS lyrics — all valid.
+OPTION D — Comedy/chaos (~1:30-2:30):
+Follow the joke, but keep enough sections for a complete song. Unexpected stops, robot malfunctions, sound effects AS lyrics — all valid.
 
 Output your response as a JSON object:
 {
@@ -132,7 +132,7 @@ Output your response as a JSON object:
   "chorus_lines": ["line1", "line2", "line3", "line4"],
   "physical_action_cue": "description of the main physical action",
   "funny_long_word": "the comedic long word used",
-  "word_count": 300,
+  "word_count": 220,
   "structure_used": "A|B|C|D — which structure option you chose and why",
   "key_hook": "the one line kids will still be singing tomorrow; must contain or directly reinforce the exact title",
   "audio_prompt": {
@@ -144,7 +144,7 @@ Output your response as a JSON object:
     "mood": "happy/silly/adventurous/chaotic — match the actual song",
     "voice_style": "bright, child-friendly, energetic — match the tone and topic of the song",
     "structure_note": "describe the actual structure used and say vocals start immediately",
-    "target_length": "2:15-3:00 unless intentionally marked short",
+    "target_length": "1:30-3:00 unless intentionally marked short",
     "first_vocal_by_seconds": 3,
     "max_instrumental_intro_seconds": 5,
     "exact_title_usage": "Exact title appears in opening vocal line, chorus, and final chorus",
@@ -215,8 +215,8 @@ function formatAudioPrompt(songData) {
   prompt += `**Energy:** ${ap.energy || 'high energy, bouncy'}\n`;
   prompt += `**Mood:** ${ap.mood || 'happy, silly'}\n`;
   prompt += `**Voice Style:** ${ap.voice_style || 'bright, child-friendly, slight robotic undertone'}\n`;
-  prompt += `**Structure:** ${ap.structure_note || 'vocals start immediately, verse, chorus, verse, chorus, bridge, final chorus, outro'}\n`;
-  prompt += `**Target Length:** ${ap.target_length || '2:15-3:00'}\n`;
+  prompt += `**Structure:** ${ap.structure_note || 'vocals start immediately, verse, chorus, verse, chorus, bridge/funny break if useful, final chorus, outro'}\n`;
+  prompt += `**Target Length:** ${ap.target_length || '1:30-3:00'}\n`;
   prompt += `**First Vocal By:** ${ap.first_vocal_by_seconds ?? 3} seconds\n`;
   prompt += `**Max Instrumental Intro:** ${ap.max_instrumental_intro_seconds ?? 5} seconds\n`;
   prompt += `**Exact Title Usage:** ${ap.exact_title_usage || 'Exact title appears in opening vocal line, chorus, and final chorus'}\n`;
