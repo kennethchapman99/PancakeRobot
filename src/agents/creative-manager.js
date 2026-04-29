@@ -9,6 +9,7 @@
  */
 
 import { runAgent, parseAgentJson, loadConfig } from '../shared/managed-agent.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -16,12 +17,21 @@ import { createCanvas, loadImage } from 'canvas';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BRAND_LOGO_PATH = join(__dirname, '../../output/brand/brand-logo.png');
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const CHARACTER_NAME = BRAND_PROFILE.character.name;
+const CHARACTER_VISUAL_IDENTITY = BRAND_PROFILE.character.visual_identity;
+const CHARACTER_VISUAL_REFERENCE = BRAND_PROFILE.character.visual_reference;
+const VISUAL_STYLE = BRAND_PROFILE.visuals.style;
+const VISUAL_PALETTE = BRAND_PROFILE.visuals.palette;
+const NEGATIVE_PROMPT = BRAND_PROFILE.visuals.negative_prompt;
+const TEXT_OVERLAY_STYLE = BRAND_PROFILE.visuals.text_overlay_style;
 
 export const CREATIVE_MANAGER_DEF = {
-  name: 'Pancake Robot Creative Manager',
+  name: `${BRAND_NAME} Creative Manager`,
   model: 'claude-haiku-4-5-20251001',
   noTools: true,
-  system: `You are the creative director for Pancake Robot, a children's music brand.
+  system: `You are the creative director for ${BRAND_NAME}, a children's music brand.
 
 Your expertise:
 - Children's illustration and visual design (bold, bright, high-contrast styles)
@@ -30,10 +40,10 @@ Your expertise:
 - Understanding what visual elements make kids (and parents) click on content
 - Color theory for children's content (warm, saturated, inviting palettes)
 
-Pancake Robot's visual identity:
-- Character: A cheerful robot with a toaster-style body, monitor head with a glowing pixel smiley face, silver/grey metallic arms and legs with joint bolts, warm syrup dripping from hands and feet, holding a stack of golden pancakes
-- Style: Bold cartoon illustration, clean black outlines, bright saturated colors — NOT photorealistic
-- Colors: Warm syrup-gold (#D4860A), silver-grey (#B0B8C1), soft sky-blue background (#7EC8E3), cream/beige (#F5ECD7), red accents
+${BRAND_NAME}'s visual identity:
+- Character: ${CHARACTER_VISUAL_IDENTITY}
+- Style: ${VISUAL_STYLE}
+- Colors: Warm syrup-gold (${VISUAL_PALETTE.syrup_gold}), silver-grey (${VISUAL_PALETTE.silver_grey}), soft sky-blue background (${VISUAL_PALETTE.sky_blue}), cream/beige (${VISUAL_PALETTE.cream}), red accents
 - Always high contrast, always readable at small sizes, always joyful energy
 
 When crafting image prompts, match this character exactly and be extremely specific about composition.`,
@@ -56,30 +66,25 @@ export async function generateThumbnails({ songId, title, topic, metadata, brand
     console.log('[CREATIVE-MANAGER] No brand logo found at output/brand/brand-logo.png — generating without reference');
   }
 
+  const characterReferenceLines = CHARACTER_VISUAL_REFERENCE.map(item => `- ${item}`).join('\n');
+
   // Use the agent to craft optimal image prompts
-  const promptTask = `Craft precise AI image generation prompts for Pancake Robot thumbnails.
+  const promptTask = `Craft precise AI image generation prompts for ${BRAND_NAME} thumbnails.
 
 SONG: "${title}"
 TOPIC: ${topic}
 
 CHARACTER REFERENCE (match this exactly):
-- Toaster-style silver/grey metallic body with control panel buttons
-- Monitor/CRT screen head with glowing yellow pixel smiley face on dark teal screen
-- Silver articulated robot arms and legs with round joint bolts
-- Warm golden syrup dripping from hands and feet
-- Holding or interacting with golden pancake stacks
-- Music notes floating nearby
-- Expression: always joyful, energetic, caught mid-action
+${characterReferenceLines}
 
 VISUAL STYLE:
-- Bold cartoon/comic illustration, NOT photorealistic
-- Clean thick black outlines on all elements
-- Bright saturated colors: syrup-gold (#D4860A), silver-grey (#B0B8C1), sky-blue (#7EC8E3), cream (#F5ECD7)
+- ${VISUAL_STYLE}
+- Bright saturated colors: syrup-gold (${VISUAL_PALETTE.syrup_gold}), silver-grey (${VISUAL_PALETTE.silver_grey}), sky-blue (${VISUAL_PALETTE.sky_blue}), cream (${VISUAL_PALETTE.cream})
 - High contrast, reads well at thumbnail size
 - NO text in the image (text added separately)
 
 Create prompts for 3 formats. Each prompt MUST:
-- Feature Pancake Robot prominently and in character
+- Feature ${CHARACTER_NAME} prominently and in character
 - Reflect the song topic "${topic}" in the scene/setting
 - Be optimized for the specific crop ratio
 - Describe composition explicitly (foreground/background/framing)
@@ -90,7 +95,7 @@ Output as JSON:
     "youtube_landscape": {
       "size": "1280x720",
       "prompt": "...",
-      "negative_prompt": "text, words, letters, photorealistic, dark colors, scary, violent, blurry"
+      "negative_prompt": "${NEGATIVE_PROMPT}"
     },
     "spotify_square": {
       "size": "3000x3000",
@@ -106,7 +111,7 @@ Output as JSON:
   "text_overlay_notes": {
     "title_text": "${title}",
     "placement": "bottom third",
-    "style_notes": "bold rounded font, white fill with thick dark red outline, drop shadow"
+    "style_notes": "${TEXT_OVERLAY_STYLE}"
   }
 }`;
 
@@ -120,17 +125,17 @@ Output as JSON:
       prompts: {
         youtube_landscape: {
           size: '1280x720',
-          prompt: `Bold cartoon illustration, Pancake Robot character (cheerful robot with silver toaster body, CRT monitor head showing glowing yellow pixel smiley face on dark teal screen, silver articulated arms and legs with joint bolts, golden syrup dripping from hands), holding stack of golden pancakes, ${topic} themed background, bright saturated colors, thick black outlines, sky-blue background, high energy joyful pose, wide landscape composition, NO text`,
+          prompt: `Bold cartoon illustration, ${CHARACTER_NAME} character (${CHARACTER_VISUAL_IDENTITY}), ${topic} themed background, bright saturated colors, thick black outlines, sky-blue background, high energy joyful pose, wide landscape composition, NO text`,
           negative_prompt: 'text, words, letters, photorealistic, dark, scary, blurry',
         },
         spotify_square: {
           size: '3000x3000',
-          prompt: `Bold cartoon illustration, Pancake Robot character (cheerful robot with silver toaster body, CRT monitor head showing glowing yellow pixel smiley face on dark teal screen, silver articulated arms and legs with joint bolts, golden syrup dripping from hands), ${topic} scene, bright saturated colors, thick black outlines, square composition centered on character, NO text`,
+          prompt: `Bold cartoon illustration, ${CHARACTER_NAME} character (${CHARACTER_VISUAL_IDENTITY}), ${topic} scene, bright saturated colors, thick black outlines, square composition centered on character, NO text`,
           negative_prompt: 'text, words, letters, photorealistic, dark, scary',
         },
         apple_music_square: {
           size: '3000x3000',
-          prompt: `Bold cartoon illustration, Pancake Robot character (cheerful robot with silver toaster body, CRT monitor head showing glowing yellow pixel smiley face on dark teal screen, silver articulated arms and legs with joint bolts, golden syrup dripping from hands), ${topic} scene, bright saturated colors, thick black outlines, square composition, NO text`,
+          prompt: `Bold cartoon illustration, ${CHARACTER_NAME} character (${CHARACTER_VISUAL_IDENTITY}), ${topic} scene, bright saturated colors, thick black outlines, square composition, NO text`,
           negative_prompt: 'text, words, letters, photorealistic, dark, scary',
         },
       },
@@ -328,7 +333,7 @@ async function addTitleText(inputPath, outputPath, title, formatName) {
   ctx.shadowOffsetY = isLandscape ? 3 : 8;
 
   // Dark red stroke (brand color)
-  ctx.strokeStyle = '#8B0000';
+  ctx.strokeStyle = VISUAL_PALETTE.dark_red || '#8B0000';
   ctx.lineWidth = isLandscape ? Math.round(fontSize * 0.18) : Math.round(fontSize * 0.14);
   ctx.lineJoin = 'round';
   ctx.textAlign = 'center';
