@@ -1,5 +1,5 @@
 /**
- * Pancake Robot — Song Suggester (shared, callable from CLI or web)
+ * Song Suggester (shared, callable from CLI or web)
  *
  * Generates 5 next-song recommendations using the product-manager agent.
  * Accepts an `onLog(msg)` callback so it can stream output to any consumer
@@ -19,7 +19,16 @@ dotenv.config({ path: join(__dirname, '../../.env'), override: true });
 
 import fs from 'fs';
 import { loadConfig, runAgent, parseAgentJson } from './managed-agent.js';
+import { loadBrandProfile } from './brand-profile.js';
 import { getAllSongs, createIdea } from './db.js';
+
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const AUDIENCE_AGE_RANGE = BRAND_PROFILE.audience.age_range;
+const CHARACTER_NAME = BRAND_PROFILE.character.name;
+const CHARACTER_FALLBACK_SUMMARY = BRAND_PROFILE.character.fallback_summary;
+const TITLE_EXAMPLES = BRAND_PROFILE.lyrics.title_examples;
+const TOPIC_VARIETY = BRAND_PROFILE.lyrics.topic_variety;
 
 /**
  * Run the song suggester pipeline.
@@ -59,9 +68,11 @@ export async function runSuggestPipeline(onLog = () => {}) {
 
   const brandSummary = config.brand?.voice?.recurring_themes
     ? `Brand themes: ${config.brand.voice.recurring_themes.join(', ')}`
-    : 'Brand: Pancake Robot — cheerful robot who loves pancakes and silly adventures, ages 4-10';
+    : `Brand: ${BRAND_NAME} — ${CHARACTER_FALLBACK_SUMMARY}, ages ${AUDIENCE_AGE_RANGE}`;
 
-  const task = `You are the song strategist for Pancake Robot, a children's music brand (ages 4-10).
+  const titleExamples = TITLE_EXAMPLES.map(t => `"${t}"`).join(', ');
+
+  const task = `You are the song strategist for ${BRAND_NAME}, a children's music brand (ages ${AUDIENCE_AGE_RANGE}).
 
 ${brandSummary}
 ${existingSongs}
@@ -72,12 +83,12 @@ Recommend the 5 best next song topics. For each:
 2. Prioritize high replay-ability and viral potential
 3. Consider the season/timing (current date: ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
 4. Mix educational + pure fun topics
-5. Think BIG on variety — animals, weather, space, vehicles, silly food, emotions, counting, colors, nature, dinosaurs, robots, dance
+5. Think BIG on variety — ${TOPIC_VARIETY}
 
 TITLE RULES — this is critical:
-- Most titles should be creative and topic-first: "Raining Taco Dogs", "The Counting Stomp", "Wiggle Like a Jellyfish", "Five Silly Dinosaurs"
-- Do NOT default to "Pancake Robot [topic]" — that pattern is overused
-- The character name "Pancake Robot" should appear in a title at most once per 5 songs, and only when it genuinely adds humor or meaning
+- Most titles should be creative and topic-first: ${titleExamples}
+- Do NOT default to "${CHARACTER_NAME} [topic]" — that pattern is overused
+- The character name "${CHARACTER_NAME}" should appear in a title at most once per 5 songs, and only when it genuinely adds humor or meaning
 - Great kids song titles are short, funny, or surprising — they make a child say "wait, WHAT?"
 
 Output as JSON:
@@ -85,7 +96,7 @@ Output as JSON:
   "recommendations": [
     {
       "rank": 1,
-      "title": "Creative topic-first title (NOT 'Pancake Robot ___')",
+      "title": "Creative topic-first title (NOT '${CHARACTER_NAME} ___')",
       "topic": "One-line topic description for --new command",
       "why": "Why this will work right now (2-3 sentences)",
       "hook_idea": "The key lyrical or musical hook concept",
@@ -98,7 +109,7 @@ Output as JSON:
 }`;
 
   const suggesterDef = {
-    name: 'Pancake Robot Song Suggester',
+    name: `${BRAND_NAME} Song Suggester`,
     model: 'claude-haiku-4-5-20251001',
     noTools: true,
     system: "You are a children's music strategist. You recommend song topics that maximize replay-ability, virality, and brand consistency. Always output valid JSON.",
@@ -131,7 +142,7 @@ Output as JSON:
         title: rec.title,
         concept: rec.why || null,
         hook: rec.hook_idea || null,
-        target_age_range: '4-10',
+        target_age_range: AUDIENCE_AGE_RANGE,
         category: rec.urgency === 'seasonal' ? 'seasonal' : null,
         mood: rec.bpm_target ? `upbeat, ${rec.bpm_target} BPM` : null,
         tags: [rec.urgency || 'evergreen'].filter(Boolean),

@@ -6,16 +6,30 @@
  */
 
 import { runAgent, parseAgentJson, loadConfig, saveConfig } from '../shared/managed-agent.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DISTRIBUTION_DIR = join(__dirname, '../../output/distribution');
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const AUDIENCE_AGE_RANGE = BRAND_PROFILE.audience.age_range;
+const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor;
+const LEGACY_DISTRIBUTOR = BRAND_PROFILE.distribution.legacy_distributor;
+const DEFAULT_ARTIST = BRAND_PROFILE.distribution.default_artist;
+const DEFAULT_ALBUM = BRAND_PROFILE.distribution.default_album;
+const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
+const SPOTIFY_GENRES = BRAND_PROFILE.distribution.spotify_genres;
+const YOUTUBE_TAGS_SEED = BRAND_PROFILE.distribution.youtube_tags_seed;
+const APPLE_MUSIC_GENRES = BRAND_PROFILE.distribution.apple_music_genres;
+const COPPA_STATUS = BRAND_PROFILE.distribution.coppa_status;
+const CONTENT_ADVISORY = BRAND_PROFILE.distribution.content_advisory;
 
 export const PRODUCT_MANAGER_DEF = {
-  name: 'Pancake Robot Product Manager',
-  system: `You are the product manager and distribution strategist for Pancake Robot, a children's music brand.
+  name: `${BRAND_NAME} Product Manager`,
+  system: `You are the product manager and distribution strategist for ${BRAND_NAME}, a children's music brand.
 
 Your expertise covers:
 - Music streaming distribution platforms and their economics
@@ -31,7 +45,7 @@ Always output valid JSON.`,
 
 const DISTRIBUTION_RESEARCH_TASK = `Do 1-2 web searches to compare music distribution services for a children's music brand.
 
-Focus on: RouteNote (free tier), DistroKid ($22/yr), Amuse (free tier).
+Focus on: RouteNote (free tier), ${LEGACY_DISTRIBUTOR} ($22/yr), Amuse (free tier).
 Key questions: royalty split, days to publish, YouTube Content ID included?
 
 Output compact JSON only:
@@ -103,7 +117,7 @@ export async function researchDistribution() {
   // Update config
   const config = loadConfig();
   config.distribution = {
-    recommended_service: research.recommendation?.service || 'DistroKid',
+    recommended_service: research.recommendation?.service || DEFAULT_DISTRIBUTOR,
     recommended_url: research.recommendation?.signup_url || 'https://distrokid.com',
     release_strategy: research.release_strategy,
     researched_at: new Date().toISOString(),
@@ -124,7 +138,11 @@ export async function generateMetadata({ songId, title, topic, lyrics, brandData
   const config = loadConfig();
   const releaseStrategy = config.distribution?.release_strategy;
 
-  const metadataTask = `Generate comprehensive, SEO-optimized metadata for this Pancake Robot children's song.
+  const spotifyGenresJson = JSON.stringify(SPOTIFY_GENRES);
+  const youtubeTagsJson = JSON.stringify(YOUTUBE_TAGS_SEED);
+  const appleGenresJson = JSON.stringify(APPLE_MUSIC_GENRES);
+
+  const metadataTask = `Generate comprehensive, SEO-optimized metadata for this ${BRAND_NAME} children's song.
 
 SONG DETAILS:
 Title: ${title}
@@ -142,20 +160,20 @@ Generate metadata optimized for:
 2. YouTube SEO (title must have primary keyword first, 100 YouTube tags)
 3. Apple Music categorization
 
-Rules for YouTube title: primary keyword first, max 70 chars, no clickbait. Include "Pancake Robot" only if it appears naturally and adds searchability — it is NOT required in every title. Great kids YouTube titles are topic-first and intriguing.
+Rules for YouTube title: primary keyword first, max 70 chars, no clickbait. Include "${BRAND_NAME}" only if it appears naturally and adds searchability — it is NOT required in every title. Great kids YouTube titles are topic-first and intriguing.
 Rules for YouTube tags: include at least 20 highly specific children's music search terms
 
 Output as JSON:
 {
   "title": "${title}",
-  "artist": "Pancake Robot",
-  "album": "Pancake Robot Vol. 1",
-  "genre": "Children's Music",
-  "spotify_genres": ["children's music", "kids pop", "educational"],
-  "youtube_tags": ["kids songs", "children's music", "pancake robot", "...17+ more"],
+  "artist": "${DEFAULT_ARTIST}",
+  "album": "${DEFAULT_ALBUM}",
+  "genre": "${PRIMARY_GENRE}",
+  "spotify_genres": ${spotifyGenresJson},
+  "youtube_tags": ${youtubeTagsJson},
   "youtube_title": "SEO title here",
   "youtube_description": "Full 500+ word description with timestamps placeholder, keywords naturally woven in, and call-to-action",
-  "apple_music_genres": ["Kids & Family", "Children's Music"],
+  "apple_music_genres": ${appleGenresJson},
   "mood_tags": ["happy", "energetic", "silly"],
   "bpm": ${bpm || 110},
   "key": "C major",
@@ -171,12 +189,12 @@ Output as JSON:
     "apple_music": "3000x3000"
   },
   "isrc_needed": true,
-  "content_advisory": "suitable for all ages",
-  "coppa_status": "directed to children under 13"
+  "content_advisory": "${CONTENT_ADVISORY}",
+  "coppa_status": "${COPPA_STATUS}"
 }`;
 
   // Metadata is structured JSON generation — Haiku is sufficient and cheaper
-  const metaDef = { ...PRODUCT_MANAGER_DEF, name: 'Pancake Robot Metadata Generator', model: 'claude-haiku-4-5-20251001', noTools: true };
+  const metaDef = { ...PRODUCT_MANAGER_DEF, name: `${BRAND_NAME} Metadata Generator`, model: 'claude-haiku-4-5-20251001', noTools: true };
   const result = await runAgent('product-manager', metaDef, metadataTask);
 
   let metadata;
@@ -185,7 +203,7 @@ Output as JSON:
   } catch {
     metadata = {
       title,
-      artist: 'Pancake Robot',
+      artist: DEFAULT_ARTIST,
       topic,
       parse_error: true,
       raw_text: result.text.substring(0, 500),

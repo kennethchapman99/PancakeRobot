@@ -1,11 +1,12 @@
 /**
- * Brand Manager Agent — Defines and enforces the Pancake Robot brand
+ * Brand Manager Agent — Defines and enforces the configured brand
  *
  * First run: builds the brand from scratch based on successful kids brand archetypes
  * Every song: reviews lyrics + audio prompt against brand bible, scores 0-100
  */
 
 import { runAgent, parseAgentJson, loadConfig, saveConfig } from '../shared/managed-agent.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -13,45 +14,50 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BRAND_DIR = join(__dirname, '../../output/brand');
 const BRAND_BIBLE_PATH = join(BRAND_DIR, 'brand-bible.md');
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const AUDIENCE_AGE_RANGE = BRAND_PROFILE.audience.age_range;
+const CHARACTER_NAME = BRAND_PROFILE.character.name;
+const CHARACTER_CORE_CONCEPT = BRAND_PROFILE.character.core_concept;
 
 export const BRAND_MANAGER_DEF = {
-  name: 'Pancake Robot Brand Manager',
+  name: `${BRAND_NAME} Brand Manager`,
   noTools: true, // Uses training knowledge — no web search needed, prevents runaway searches
-  system: `You are the brand guardian for Pancake Robot, a children's music brand for ages 4-10.
+  system: `You are the brand guardian for ${BRAND_NAME}, a children's music brand for ages ${AUDIENCE_AGE_RANGE}.
 
 You are the keeper of the brand's soul. You understand:
 - What makes kids' entertainment brands endure (Cocomelon, Bluey, Sesame Street)
 - The psychology of parasocial relationships between kids and characters
 - How to create a brand voice that parents approve of but kids LOVE
-- The fine line between "educational" and "boring" — Pancake Robot always stays on the fun side
+- The fine line between "educational" and "boring" — ${BRAND_NAME} always stays on the fun side
 - Visual consistency, character consistency, and musical consistency
 
 Your two modes:
-1. BRAND BUILDER: Design the complete Pancake Robot brand identity from scratch
+1. BRAND BUILDER: Design the complete ${BRAND_NAME} brand identity from scratch
 2. BRAND REVIEWER: Score songs against the brand bible and provide specific feedback
 
 When reviewing, be specific and actionable. Don't just say "off-brand" — explain exactly what needs to change and why.
 Format your output as valid JSON.`,
 };
 
-const BUILD_BRAND_TASK = `Build the complete Pancake Robot brand identity. Use your knowledge of what makes top kids brands work (Cocomelon, Bluey, Ms. Rachel, Pinkfong) to design our brand. Do not search the web — work entirely from your training knowledge and spend all your effort on the creative output.
+const BUILD_BRAND_TASK = `Build the complete ${BRAND_NAME} brand identity. Use your knowledge of what makes top kids brands work (Cocomelon, Bluey, Ms. Rachel, Pinkfong) to design our brand. Do not search the web — work entirely from your training knowledge and spend all your effort on the creative output.
 
-Pancake Robot is a children's music brand targeting ages 4-10. The central character is a cheerful robot who loves making pancakes and going on silly adventures.
+${BRAND_NAME} is a children's music brand targeting ages ${AUDIENCE_AGE_RANGE}. The central character is ${CHARACTER_CORE_CONCEPT}.
 
 Create a comprehensive brand bible covering:
 
 1. CHARACTER DESIGN
-   - Pancake Robot's full personality (not just "cheerful" — be specific and detailed)
+   - ${CHARACTER_NAME}'s full personality (not just "cheerful" — be specific and detailed)
    - Backstory, quirks, catchphrases, and recurring behaviors
    - Supporting characters or concepts (if any)
-   - What makes Pancake Robot unique vs other kids characters
+   - What makes ${CHARACTER_NAME} unique vs other kids characters
 
 2. BRAND VOICE
    - Tone and personality in lyrics and scripts
-   - Vocabulary guidelines for age 4-10 (what words to use/avoid)
-   - How Pancake Robot speaks and thinks
+   - Vocabulary guidelines for age ${AUDIENCE_AGE_RANGE} (what words to use/avoid)
+   - How ${CHARACTER_NAME} speaks and thinks
    - Recurring themes and motifs
-   - The "Pancake Robot formula" — what every song must have
+   - The "${BRAND_NAME} formula" — what every song must have
 
 3. VISUAL IDENTITY
    - Character design description (for AI image generation)
@@ -61,10 +67,10 @@ Create a comprehensive brand bible covering:
    - What to always include vs never include in thumbnails
 
 4. MUSIC DNA
-   - The "infectious replay" formula that makes Pancake Robot songs different
+   - The "infectious replay" formula that makes ${BRAND_NAME} songs different
    - Signature musical elements (sound effects, musical phrases, etc.)
-   - Energy arc for a typical Pancake Robot song
-   - What makes a song "feel like" Pancake Robot
+   - Energy arc for a typical ${BRAND_NAME} song
+   - What makes a song "feel like" ${BRAND_NAME}
 
 5. BRAND RULES
    - 10 things we ALWAYS do
@@ -79,7 +85,7 @@ Output two things:
 {
   "brand_data": {
     "character": {
-      "name": "Pancake Robot",
+      "name": "${CHARACTER_NAME}",
       "personality_traits": [...],
       "catchphrases": [...],
       "backstory": "...",
@@ -177,7 +183,7 @@ export async function reviewSong({ songId, title, topic, lyricsText, audioPrompt
   const lyricsPreview = lyricsText ? lyricsText.substring(0, 1500) : 'Not provided';
   const promptPreview = audioPromptText ? audioPromptText.substring(0, 500) : 'Not provided';
 
-  const reviewTask = `Review this song against the Pancake Robot brand bible and score it.
+  const reviewTask = `Review this song against the ${BRAND_NAME} brand bible and score it.
 
 BRAND BIBLE SUMMARY:
 ${brandSummary}
@@ -194,10 +200,10 @@ ${promptPreview}
 
 Score this song on each dimension (0-100) and provide an overall score:
 
-1. Age-Appropriateness (0-100): Is vocabulary, content, and themes right for ages 4-10?
-2. Brand Voice Consistency (0-100): Does it sound like Pancake Robot?
+1. Age-Appropriateness (0-100): Is vocabulary, content, and themes right for ages ${AUDIENCE_AGE_RANGE}?
+2. Brand Voice Consistency (0-100): Does it sound like ${BRAND_NAME}?
 3. Replay-ability (0-100): Will kids demand to hear this again? Are the hooks strong?
-4. Topic Fit (0-100): Does this topic work for Pancake Robot's world?
+4. Topic Fit (0-100): Does this topic work for ${BRAND_NAME}'s world?
 5. Lyric Craft (0-100): Is the chorus simple and memorable? Good call-and-response? Physical actions?
 
 Overall Score = weighted average (replay-ability and brand voice weighted heaviest)
@@ -222,7 +228,7 @@ Output as JSON:
 }`;
 
   // Use Haiku for scoring — it's rule-based JSON, doesn't need Sonnet
-  const reviewerDef = { ...BRAND_MANAGER_DEF, name: 'Pancake Robot Brand Reviewer', model: 'claude-haiku-4-5-20251001', noTools: true };
+  const reviewerDef = { ...BRAND_MANAGER_DEF, name: `${BRAND_NAME} Brand Reviewer`, model: 'claude-haiku-4-5-20251001', noTools: true };
   const result = await runAgent('brand-manager', reviewerDef, reviewTask);
 
   let review;
