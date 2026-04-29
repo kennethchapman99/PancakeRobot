@@ -55,6 +55,8 @@
   "distribution": {
     "default_distributor": "TuneCore",
     "legacy_distributor": "DistroKid",
+    "research_default_service": "DistroKid",
+    "research_default_url": "https://distrokid.com",
     "default_artist": "Pancake Robot",
     "default_album": "Pancake Robot Vol. 1",
     "primary_genre": "Children's Music",
