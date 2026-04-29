@@ -9,20 +9,38 @@ window.pipelineData = function() {
     jobId: null,
     completeSongId: null,
     eventSource: null,
+    renderMode: 'paid',
 
     init() {
-      this.startPipeline();
+      const params = new URLSearchParams(window.location.search);
+      this.renderMode = params.get('renderMode') === 'free' ? 'free' : 'paid';
+      if (params.get('autoStart') === '1') this.startPipeline();
+    },
+
+    setRenderMode(mode) {
+      if (this.state === 'running') return;
+      this.renderMode = mode === 'free' ? 'free' : 'paid';
+      const url = new URL(window.location.href);
+      url.searchParams.set('renderMode', this.renderMode);
+      window.history.replaceState({}, '', url.toString());
     },
 
     async startPipeline() {
       this.state = 'running';
       this.logs = [];
       this.errorMsg = '';
+      this.completeSongId = null;
+
       try {
-        const res = await fetch('/api/songs/<%= song.id %>/generate', { method: 'POST' });
+        const res = await fetch('/api/songs/<%= song.id %>/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ renderMode: this.renderMode })
+        });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Failed to start pipeline');
         this.jobId = data.jobId;
+        this.logs.push(`🎛 Render mode selected: ${this.renderMode === 'free' ? 'FREE audition / music-2.6-free' : 'PAID production / music-2.6'}`);
         this.listenToStream(data.jobId);
       } catch (err) {
         this.state = 'error';
@@ -51,20 +69,16 @@ window.pipelineData = function() {
       });
 
       this.eventSource.addEventListener('error', (e) => {
-        // Named error event from server (has e.data)
         if (e.data) {
           try { this.errorMsg = JSON.parse(e.data).message || 'Pipeline error'; }
           catch { this.errorMsg = e.data; }
           this.state = 'error';
           this.eventSource.close();
         }
-        // else: connection-level error (reconnect attempt) — handled by onerror below
       });
 
-      // Connection closed/failed — only act if we're not already done
-      this.eventSource.onerror = (e) => {
+      this.eventSource.onerror = () => {
         if (this.state === 'running') {
-          // EventSource auto-reconnects; don't panic yet — just log
           this.logs.push('⚠ Connection interrupted — reconnecting…');
         }
       };
@@ -72,6 +86,18 @@ window.pipelineData = function() {
 
     get songUrl() {
       return '/songs/' + (this.completeSongId || '<%= song.id %>');
+    },
+
+    get renderModeLabel() {
+      return this.renderMode === 'free'
+        ? '🧪 Free audition — MiniMax music-2.6-free'
+        : '💎 Paid production — MiniMax music-2.6';
+    },
+
+    get renderModeDescription() {
+      return this.renderMode === 'free'
+        ? 'Use this to audition an idea cheaply/free. Re-render paid before final approval.'
+        : 'Default mode. Uses the production MiniMax music-2.6 model.';
     },
   };
 };
@@ -81,11 +107,45 @@ window.pipelineData = function() {
 
   <a href="/songs/<%= song.id %>" class="text-sm text-zinc-500 hover:text-zinc-700 mb-6 inline-flex items-center gap-1">← Back to Song</a>
 
-  <div class="flex items-center gap-4 mb-8">
+  <div class="flex items-center gap-4 mb-6">
     <img src="/logo.png" alt="" class="w-14 h-14 object-contain">
     <div>
-      <h1 class="text-2xl font-bold">Generating Song</h1>
+      <h1 class="text-2xl font-bold">Generate Song</h1>
       <p class="text-zinc-500 mt-0.5 text-sm font-medium"><%= song.title || song.topic %></p>
+    </div>
+  </div>
+
+  <!-- Render model selector -->
+  <div class="bg-white border border-zinc-200 rounded-2xl p-5 mb-8">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1">Music Render Model</div>
+        <div class="text-base font-bold text-zinc-900" x-text="renderModeLabel"></div>
+        <div class="text-sm text-zinc-500 mt-1" x-text="renderModeDescription"></div>
+      </div>
+      <div class="flex bg-zinc-100 rounded-xl p-1 shrink-0">
+        <button @click="setRenderMode('paid')" :disabled="state === 'running'"
+          :class="renderMode === 'paid' ? 'bg-zinc-900 text-white shadow' : 'text-zinc-500 hover:text-zinc-800'"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50">
+          💎 Paid
+        </button>
+        <button @click="setRenderMode('free')" :disabled="state === 'running'"
+          :class="renderMode === 'free' ? 'bg-amber-500 text-white shadow' : 'text-zinc-500 hover:text-zinc-800'"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50">
+          🧪 Free
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-4 flex items-center gap-3">
+      <button @click="startPipeline()" :disabled="state === 'running'"
+        class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm shadow">
+        <span x-show="renderMode === 'paid'">Start Paid Render</span>
+        <span x-show="renderMode === 'free'">Start Free Audition</span>
+      </button>
+      <div class="text-xs text-zinc-400">
+        The selected mode is sent to the server and injected into the spawned pipeline env.
+      </div>
     </div>
   </div>
 
@@ -99,9 +159,8 @@ window.pipelineData = function() {
     <% } %>
   </div>
 
-  <!-- Terminal — visible in idle + running + always kept so logs persist into done/error -->
+  <!-- Terminal -->
   <div class="bg-zinc-950 rounded-2xl shadow-xl overflow-hidden mb-4">
-    <!-- Title bar -->
     <div class="flex items-center gap-2 px-4 py-3 bg-zinc-900 border-b border-zinc-800">
       <span class="w-3 h-3 rounded-full bg-red-500"></span>
       <span class="w-3 h-3 rounded-full bg-amber-500"></span>
@@ -114,16 +173,17 @@ window.pipelineData = function() {
         </span>
         <span x-show="state === 'done'">✓ Complete</span>
         <span x-show="state === 'error'">✗ Failed</span>
-        <span x-show="state === 'idle'">Starting…</span>
+        <span x-show="state === 'idle'">Ready</span>
       </span>
     </div>
 
-    <!-- Log output — always visible -->
     <div id="pipeline-log"
          class="p-5 font-mono text-sm space-y-0.5 overflow-y-auto"
          style="min-height: 320px; max-height: 520px;">
-      <div class="text-zinc-600 mb-2">$ node src/orchestrator.js --new "<%= (song.topic || song.title || '').replace(/"/g, '\\"') %>"</div>
+      <div class="text-zinc-600 mb-1">$ node src/orchestrator.js --new "<%= (song.topic || song.title || '').replace(/"/g, '\\"') %>"</div>
+      <div class="text-zinc-600 mb-2">$ render mode: <span x-text="renderMode"></span></div>
       <div class="text-zinc-700 mb-3">────────────────────────────────────────</div>
+      <div x-show="logs.length === 0 && state === 'idle'" class="text-zinc-600">Choose Paid or Free, then start generation.</div>
       <template x-for="(line, i) in logs" :key="i">
         <div class="leading-relaxed whitespace-pre-wrap break-words"
              :class="{
@@ -131,9 +191,9 @@ window.pipelineData = function() {
                'text-green-300':  line.startsWith('✓') && !line.startsWith('✅'),
                'text-amber-400':  line.startsWith('⚠') || line.includes('[WARN]'),
                'text-red-400':    line.startsWith('❌') || line.startsWith('✗'),
-               'text-cyan-300':   line.startsWith('📌') || line.startsWith('🎵') || line.startsWith('🖼') || line.startsWith('📦') || line.startsWith('📀'),
+               'text-cyan-300':   line.startsWith('📌') || line.startsWith('🎵') || line.startsWith('🖼') || line.startsWith('📦') || line.startsWith('📀') || line.startsWith('🎛'),
                'text-zinc-500':   line.startsWith('$') || line.startsWith('──'),
-               'text-zinc-300':   !line.startsWith('✅') && !line.startsWith('✓') && !line.startsWith('⚠') && !line.startsWith('❌') && !line.startsWith('✗') && !line.startsWith('📌') && !line.startsWith('🎵') && !line.startsWith('🖼') && !line.startsWith('📦') && !line.startsWith('📀') && !line.startsWith('$'),
+               'text-zinc-300':   !line.startsWith('✅') && !line.startsWith('✓') && !line.startsWith('⚠') && !line.startsWith('❌') && !line.startsWith('✗') && !line.startsWith('📌') && !line.startsWith('🎵') && !line.startsWith('🖼') && !line.startsWith('📦') && !line.startsWith('📀') && !line.startsWith('🎛') && !line.startsWith('$'),
              }"
              x-text="line">
         </div>
@@ -143,12 +203,10 @@ window.pipelineData = function() {
     </div>
   </div>
 
-  <!-- Status bar below terminal -->
   <div x-show="state === 'running'" class="text-xs text-zinc-400 text-center mb-6">
     Full pipeline takes 2–5 minutes — lyrics → music → thumbnails → packaging
   </div>
 
-  <!-- SUCCESS panel -->
   <div x-show="state === 'done'" style="display:none"
        class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex items-center justify-between gap-4">
     <div>
@@ -162,7 +220,6 @@ window.pipelineData = function() {
     </a>
   </div>
 
-  <!-- ERROR panel -->
   <div x-show="state === 'error'" style="display:none"
        class="bg-red-50 border border-red-200 rounded-2xl p-6">
     <div class="font-bold text-red-800 mb-1">❌ Pipeline Failed</div>
