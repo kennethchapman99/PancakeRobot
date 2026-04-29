@@ -6,16 +6,32 @@
  */
 
 import { runAgent, parseAgentJson, loadConfig } from '../shared/managed-agent.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const AUDIENCE_AGE_RANGE = BRAND_PROFILE.audience.age_range;
+const AUDIENCE_DESCRIPTION = BRAND_PROFILE.audience.description;
+const CHARACTER_NAME = BRAND_PROFILE.character.name;
+const CHARACTER_CLAP_NAME = BRAND_PROFILE.character.clap_name;
+const CHARACTER_FALLBACK_SUMMARY = BRAND_PROFILE.character.fallback_summary;
+const TITLE_EXAMPLES = BRAND_PROFILE.lyrics.title_examples;
+const MUSIC_TARGET_LENGTH = BRAND_PROFILE.music.target_length;
+const MUSIC_NORMAL_WORD_RANGE = BRAND_PROFILE.music.normal_word_range;
+const MUSIC_MIN_WORDS = BRAND_PROFILE.music.min_words;
+const MUSIC_DEFAULT_BPM = BRAND_PROFILE.music.default_bpm;
+const MUSIC_DEFAULT_STYLE = BRAND_PROFILE.music.default_style;
+const FIRST_VOCAL_BY_SECONDS = BRAND_PROFILE.music.first_vocal_by_seconds;
+const MAX_INSTRUMENTAL_INTRO_SECONDS = BRAND_PROFILE.music.max_instrumental_intro_seconds;
 
 export const LYRICIST_DEF = {
-  name: 'Pancake Robot Lyricist',
+  name: `${BRAND_NAME} Lyricist`,
   noTools: true,
-  system: `You are the head songwriter for Pancake Robot, a children's music brand for ages 4-10.
+  system: `You are the head songwriter for ${BRAND_NAME}, a children's music brand for ages ${AUDIENCE_AGE_RANGE}.
 
 You specialize in writing songs that kids want to hear on repeat — not because parents force them to, but because kids genuinely can't stop.
 
@@ -27,7 +43,7 @@ Your expertise:
 - Call-and-response structures that make kids feel like they're part of the song
 - The art of the "BRIDGE" — the silly/unexpected moment that makes the song memorable
 
-You follow the Pancake Robot brand voice and always stay within age-appropriate guardrails.
+You follow the ${BRAND_NAME} brand voice and always stay within age-appropriate guardrails.
 You output structured, production-ready content.`,
 };
 
@@ -57,7 +73,7 @@ export async function writeLyrics({ songId, topic, researchReport, brandData, re
         always: brandData.rules?.always?.slice(0, 5),
         never: brandData.rules?.never?.slice(0, 5),
       }, null, 2)
-    : 'Build a cheerful, playful Pancake Robot character who loves pancakes and adventure.';
+    : `Build a cheerful, playful ${CHARACTER_NAME} character who loves pancakes and adventure.`;
 
   const existingLyricsContext = existingLyrics
     ? `\n\nEXISTING LYRICS TO REVISE:\n\`\`\`\n${existingLyrics}\n\`\`\`\nRevise the above lyrics based on the feedback below. Keep what is working, fix what is asked.`
@@ -67,7 +83,9 @@ export async function writeLyrics({ songId, topic, researchReport, brandData, re
     ? `\n\n${existingLyrics ? 'EDITOR FEEDBACK' : 'REVISION NOTES FROM BRAND REVIEW'}:\n${revisionNotes}\nPlease address ALL of these specific concerns.`
     : '';
 
-  const lyricsTask = `${existingLyrics ? 'Revise' : 'Write'} a complete, production-ready children's song for the Pancake Robot brand on this topic: "${topic}"
+  const titleExamples = TITLE_EXAMPLES.map(t => `"${t}"`).join(', ');
+
+  const lyricsTask = `${existingLyrics ? 'Revise' : 'Write'} a complete, production-ready children's song for the ${BRAND_NAME} brand on this topic: "${topic}"
 ${existingLyricsContext}${revisionContext}
 
 BRAND CONTEXT:
@@ -88,30 +106,30 @@ TITLE FIDELITY RULES — HARD REQUIREMENTS:
 - The chorus must be built around the exact title, not a looser related hook.
 
 TITLE STYLE GUIDANCE:
-- The title should be creative and topic-first. Good examples: "Raining Taco Dogs", "The Counting Stomp", "Wiggle Like a Jellyfish"
-- Do NOT default to "Pancake Robot [topic]" — that pattern is overused and boring
-- Only include the character name "Pancake Robot" in the title if it genuinely adds humor or surprise for THIS specific topic
+- The title should be creative and topic-first. Good examples: ${titleExamples}
+- Do NOT default to "${CHARACTER_NAME} [topic]" — that pattern is overused and boring
+- Only include the character name "${CHARACTER_NAME}" in the title if it genuinely adds humor or surprise for THIS specific topic
 - A great title makes a child say "wait, WHAT?" — lean into that
 
 LYRICS RULES:
 - Start with [INTRO - VOCALS START IMMEDIATELY] and make the first singable line contain the exact title.
 - No long musical setup. The lyrics must make it obvious that vocals start right away.
-- The Pancake Robot Clap (two claps before each chorus drop) and an open-ending question are always required
-- The character "Pancake Robot" can appear naturally, but it is not required in every song
-- What makes it a Pancake Robot song is the ENERGY, WARMTH, and SILLINESS — not constant name-dropping
+- The ${CHARACTER_CLAP_NAME} (two claps before each chorus drop) and an open-ending question are always required
+- The character "${CHARACTER_NAME}" can appear naturally, but it is not required in every song
+- What makes it a ${BRAND_NAME} song is the ENERGY, WARMTH, and SILLINESS — not constant name-dropping
 
 REQUIREMENTS:
-- Production render target: 1:30–3:00.
-- Word count: 140-320 words for normal songs. NEVER go below 120 words unless the user explicitly asked for a short/jingle.
+- Production render target: ${MUSIC_TARGET_LENGTH}.
+- Word count: ${MUSIC_NORMAL_WORD_RANGE} words for normal songs. NEVER go below ${MUSIC_MIN_WORDS} words unless the user explicitly asked for a short/jingle.
 - Short and punchy is good; tiny micro-jingles are not. Build length through repeatable choruses, call-and-response, bridge, final chorus, and sound-effect callbacks.
 - Chorus: 4-8 lines, simple enough for a 4-year-old to sing after one listen
 - The main hook/chorus must repeat at least two times — ideally three if it feels natural
 - At least ONE physical action kids can do
 - At least ONE sound kids can copy
 - Vocabulary: mostly 1-2 syllable words. Long words only for comedy effect
-- End with an open question or forward tease — never a goodbye or resolution
+- ${BRAND_PROFILE.lyrics.required_closing}
 
-STRUCTURE — pick what serves the song, but target 1:30–3:00:
+STRUCTURE — pick what serves the song, but target ${MUSIC_TARGET_LENGTH}:
 
 OPTION A — Hook-first repeat (~1:30-2:15):
 [INTRO - VOCALS START IMMEDIATELY] → [HOOK] → [VERSE 1] → [CHORUS] → [VERSE 2] → [CHORUS] → [OUTRO]
@@ -137,16 +155,16 @@ Output your response as a JSON object:
   "key_hook": "the one line kids will still be singing tomorrow; must contain or directly reinforce the exact title",
   "audio_prompt": {
     "style": "description of musical style",
-    "tempo_bpm": 118,
-    "genre": "upbeat children's pop",
+    "tempo_bpm": ${MUSIC_DEFAULT_BPM},
+    "genre": "${MUSIC_DEFAULT_STYLE}",
     "instrumentation": "description of instruments",
     "energy": "description of energy level",
     "mood": "happy/silly/adventurous/chaotic — match the actual song",
     "voice_style": "bright, child-friendly, energetic — match the tone and topic of the song",
     "structure_note": "describe the actual structure used and say vocals start immediately",
-    "target_length": "1:30-3:00 unless intentionally marked short",
-    "first_vocal_by_seconds": 3,
-    "max_instrumental_intro_seconds": 5,
+    "target_length": "${MUSIC_TARGET_LENGTH} unless intentionally marked short",
+    "first_vocal_by_seconds": ${FIRST_VOCAL_BY_SECONDS},
+    "max_instrumental_intro_seconds": ${MAX_INSTRUMENTAL_INTRO_SECONDS},
     "exact_title_usage": "Exact title appears in opening vocal line, chorus, and final chorus",
     "special_notes": "Include: vocals begin immediately; no instrumental intro; exact title must be sung clearly in first 5 seconds and repeated in chorus; plus any sound effects, robot malfunctions, chaos moments, or musical jokes"
   }
@@ -210,15 +228,15 @@ function formatAudioPrompt(songData) {
   let prompt = `# Audio Generation Prompt\n\n`;
   prompt += `## Song: ${songData.title || 'Untitled'}\n\n`;
   prompt += `## Music Specs\n\n`;
-  prompt += `**Style:** ${ap.tempo_bpm || 118} BPM, ${ap.genre || 'upbeat children\'s pop'}\n`;
+  prompt += `**Style:** ${ap.tempo_bpm || MUSIC_DEFAULT_BPM} BPM, ${ap.genre || MUSIC_DEFAULT_STYLE}\n`;
   prompt += `**Instrumentation:** ${ap.instrumentation || 'bright synths, light percussion, fun sound effects'}\n`;
   prompt += `**Energy:** ${ap.energy || 'high energy, bouncy'}\n`;
   prompt += `**Mood:** ${ap.mood || 'happy, silly'}\n`;
   prompt += `**Voice Style:** ${ap.voice_style || 'bright, child-friendly, slight robotic undertone'}\n`;
   prompt += `**Structure:** ${ap.structure_note || 'vocals start immediately, verse, chorus, verse, chorus, bridge/funny break if useful, final chorus, outro'}\n`;
-  prompt += `**Target Length:** ${ap.target_length || '1:30-3:00'}\n`;
-  prompt += `**First Vocal By:** ${ap.first_vocal_by_seconds ?? 3} seconds\n`;
-  prompt += `**Max Instrumental Intro:** ${ap.max_instrumental_intro_seconds ?? 5} seconds\n`;
+  prompt += `**Target Length:** ${ap.target_length || MUSIC_TARGET_LENGTH}\n`;
+  prompt += `**First Vocal By:** ${ap.first_vocal_by_seconds ?? FIRST_VOCAL_BY_SECONDS} seconds\n`;
+  prompt += `**Max Instrumental Intro:** ${ap.max_instrumental_intro_seconds ?? MAX_INSTRUMENTAL_INTRO_SECONDS} seconds\n`;
   prompt += `**Exact Title Usage:** ${ap.exact_title_usage || 'Exact title appears in opening vocal line, chorus, and final chorus'}\n`;
   prompt += `**Render Safety:** Vocals begin immediately within 0-3 seconds. No instrumental intro. Maximum non-vocal opening 5 seconds. The exact title must be sung clearly in the first 5 seconds and repeated in the chorus.\n`;
   if (ap.special_notes) {
