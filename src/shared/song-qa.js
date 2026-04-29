@@ -13,6 +13,7 @@ export const MIN_FULL_SONG_WORDS = 120;
 export const MIN_FULL_SONG_DURATION_SECONDS = 90;
 export const MAX_INSTRUMENTAL_INTRO_SECONDS = 5;
 export const FIRST_VOCAL_REQUIRED_BY_SECONDS = 5;
+export const MAX_RENDER_PROMPT_CHARS = 2000;
 
 const ALLOWED_MINIMAX_MUSIC_MODELS = new Set(['music-2.6', 'music-2.6-free']);
 
@@ -90,7 +91,16 @@ export function buildRenderSafetyPrompt(title) {
 export function addRenderSafetyToPrompt(basePrompt = '', title = '') {
   const cleanBase = String(basePrompt || '').trim();
   const safety = buildRenderSafetyPrompt(title).join(', ');
-  return [cleanBase, safety].filter(Boolean).join(', ').substring(0, 2000);
+
+  // MiniMax prompt limit is 2000 chars. Safety constraints must never be
+  // appended after a long style prompt and then truncated off. Put them first
+  // and only trim the lower-priority descriptive style text.
+  if (!cleanBase) return safety.substring(0, MAX_RENDER_PROMPT_CHARS);
+
+  const separator = ', ';
+  const remainingForBase = Math.max(0, MAX_RENDER_PROMPT_CHARS - safety.length - separator.length);
+  const trimmedBase = cleanBase.substring(0, remainingForBase);
+  return [safety, trimmedBase].filter(Boolean).join(separator).substring(0, MAX_RENDER_PROMPT_CHARS);
 }
 
 export function runPreRenderQAGate({
@@ -323,7 +333,6 @@ function estimateMp3DurationSeconds(filePath) {
 }
 
 function findFirstMp3Bitrate(buffer) {
-  // MPEG1 Layer III bitrate table in bits/sec. Good enough for MiniMax CBR MP3s.
   const mpeg1Layer3Kbps = [null, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, null];
 
   for (let i = 0; i < Math.min(buffer.length - 4, 8192); i++) {
