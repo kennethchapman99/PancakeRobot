@@ -21,8 +21,10 @@ import {
   runPostRenderAudioQACheck,
   runPreRenderQAGate,
 } from '../shared/song-qa.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const BRAND_PROFILE = loadBrandProfile();
 
 const MINIMAX_BASE = 'https://api.minimax.io/v1';
 const PAID_MODEL = 'music-2.6';
@@ -275,7 +277,7 @@ function buildStylePrompt(audioPrompt, { title }) {
   let basePrompt;
 
   if (!audioPrompt) {
-    basePrompt = "Upbeat children's pop song, 118 BPM, C Major, bright and silly, fun for kids ages 4-10, hand claps, xylophone, singalong chorus, cheerful vocals";
+    basePrompt = BRAND_PROFILE.music.default_prompt;
   } else {
     const parts = [];
 
@@ -289,7 +291,7 @@ function buildStylePrompt(audioPrompt, { title }) {
     if (audioPrompt.structure_note) parts.push(audioPrompt.structure_note);
     if (audioPrompt.special_notes) parts.push(audioPrompt.special_notes);
 
-    parts.push("children's music, family friendly, ages 4-10, singalong");
+    parts.push(`children's music, family friendly, ages ${BRAND_PROFILE.audience.age_range}, singalong`);
 
     basePrompt = [...new Set(parts)].join(', ');
   }
