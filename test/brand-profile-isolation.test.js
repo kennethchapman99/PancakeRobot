@@ -4,7 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-test('Sue profile lyric prompt does not leak unrelated brand defaults', async () => {
+test('Sue profile lyric prompt uses songwriting rules without stale brand leakage', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-profile-'));
   const profilePath = path.join(tmp, 'sue.json');
 
@@ -22,7 +22,7 @@ test('Sue profile lyric prompt does not leak unrelated brand defaults', async ()
       name: 'Sue Wong',
       core_concept: 'a loving mother, wife, gardener, traveler, baker, comfort-giver, song-maker, hilarious partner, and heart of the family',
       fallback_summary: 'Sue Wong, beloved mother of Jayda, Myles, and Makena, wife of Ken, best friend to Cheddar the mini wiener dog, and the person who fills the home with love, food, laughter, songs, and care',
-      clap_name: 'unused',
+      clap_name: 'none',
       visual_identity: 'warm family memory imagery',
       visual_reference: [
         "Jayda was born on Mother's Day",
@@ -46,6 +46,21 @@ test('Sue profile lyric prompt does not leak unrelated brand defaults', async ()
       title_examples: ['Eighteen Years of You', 'The Heart of This Home'],
       topic_variety: 'motherhood, marriage, family memories, gardening, travel, humor, food as love',
       required_closing: 'End with a final emotional image of Sue surrounded by Ken, Jayda, Myles, Makena, and Cheddar.'
+    },
+    songwriting: {
+      song_type: 'adult_contemporary_personal_ballad',
+      primary_emotional_goal: 'make Sue feel deeply seen, loved, celebrated, and moved to tears',
+      voice_perspective: 'from Ken, Jayda, Myles, and Makena to Sue',
+      allowed_elements: ['specific family memories', 'warm natural humor', 'food as love', 'gardening'],
+      forbidden_elements: ['children\'s song language', 'claps', 'stomps', 'wiggles', 'call-and-response', 'robot sounds', 'pancake metaphors'],
+      structure_preferences: ['[INTRO] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]'],
+      required_elements: ['Sue Wong', 'Ken', 'Jayda', 'Myles', 'Makena', 'Cheddar'],
+      output_schema: {
+        include_physical_action_cue: false,
+        include_funny_long_word: false,
+        include_audio_prompt: true,
+        include_chorus_lines: true
+      }
     },
     visuals: {
       style: 'Warm cinematic family-memory artwork',
@@ -81,17 +96,16 @@ test('Sue profile lyric prompt does not leak unrelated brand defaults', async ()
     brandData: { character: { name: 'Pancake Robot' } }
   });
 
-  for (const forbidden of [
-    'Pancake Robot',
-    'pancake',
-    'beep boop',
-    'physical_action_cue',
-    'funny_long_word'
-  ]) {
-    assert.equal(prompt.toLowerCase().includes(forbidden.toLowerCase()), false, `prompt leaked: ${forbidden}`);
+  for (const forbiddenLeak of ['Pancake Robot', 'beep boop']) {
+    assert.equal(prompt.toLowerCase().includes(forbiddenLeak.toLowerCase()), false, `prompt leaked stale brand: ${forbiddenLeak}`);
   }
 
   for (const required of ['Sue Wong', "Mother's Day", 'tear-jerking', 'piano ballad', 'Ken', 'Jayda', 'Myles', 'Makena', 'Cheddar']) {
     assert.equal(prompt.includes(required), true, `prompt missing: ${required}`);
   }
+
+  assert.equal(prompt.includes('adult_contemporary_personal_ballad'), true, 'songwriting.song_type missing');
+  assert.equal(prompt.includes('pancake metaphors'), true, 'songwriting.forbidden_elements missing');
+  assert.equal(prompt.includes('physical_action_cue": "description'), false, 'non-children output schema leaked physical_action_cue field');
+  assert.equal(prompt.includes('funny_long_word": "the comedic'), false, 'non-children output schema leaked funny_long_word field');
 });
