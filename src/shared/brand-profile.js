@@ -1,8 +1,9 @@
 /**
  * Brand profile loader.
  *
- * Extraction-only layer: keeps Pancake Robot defaults exactly the same while
- * moving brand/content constants out of tool/agent code over time.
+ * The active brand profile is the source of truth. Custom profiles must not be
+ * deep-merged into Pancake Robot defaults, because that leaks legacy brand
+ * concepts into unrelated brands.
  */
 
 import fs from 'fs';
@@ -91,18 +92,29 @@ let cachedProfile = null;
 export function loadBrandProfile() {
   if (cachedProfile) return cachedProfile;
 
-  const profilePath = process.env.BRAND_PROFILE_PATH || DEFAULT_PROFILE_PATH;
+  const explicitProfilePath = process.env.BRAND_PROFILE_PATH;
+  const profilePath = explicitProfilePath || DEFAULT_PROFILE_PATH;
 
   try {
     if (fs.existsSync(profilePath)) {
       const loaded = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
-      cachedProfile = deepMerge(FALLBACK_PROFILE, loaded);
+      validateBrandProfile(loaded, profilePath);
+      cachedProfile = loaded;
       return cachedProfile;
     }
+
+    if (explicitProfilePath) {
+      throw new Error(`BRAND_PROFILE_PATH does not exist: ${explicitProfilePath}`);
+    }
   } catch (err) {
+    if (explicitProfilePath) {
+      throw new Error(`[BRAND-PROFILE] Failed to load required profile ${profilePath}: ${err.message}`);
+    }
+
     console.warn(`[BRAND-PROFILE] Failed to load ${profilePath}: ${err.message}`);
   }
 
+  validateBrandProfile(FALLBACK_PROFILE, 'built-in fallback profile');
   cachedProfile = FALLBACK_PROFILE;
   return cachedProfile;
 }
@@ -111,17 +123,52 @@ export function clearBrandProfileCache() {
   cachedProfile = null;
 }
 
-function deepMerge(base, override) {
-  if (Array.isArray(base) || Array.isArray(override)) return override ?? base;
-  if (!isPlainObject(base) || !isPlainObject(override)) return override ?? base;
+export function validateBrandProfile(profile, profilePath = 'brand profile') {
+  const requiredPaths = [
+    'brand_name',
+    'brand_type',
+    'brand_description',
+    'audience.age_range',
+    'audience.description',
+    'audience.guardrail',
+    'character.name',
+    'character.core_concept',
+    'character.fallback_summary',
+    'music.default_style',
+    'music.default_bpm',
+    'music.default_prompt',
+    'music.target_length',
+    'music.min_words',
+    'music.normal_word_range',
+    'music.first_vocal_by_seconds',
+    'music.max_instrumental_intro_seconds',
+    'lyrics.title_examples',
+    'lyrics.topic_variety',
+    'lyrics.required_closing',
+    'distribution.default_artist',
+    'distribution.default_album',
+    'distribution.primary_genre',
+    'ui.sidebar_subtitle',
+    'ui.logo_path',
+  ];
 
-  const result = { ...base };
-  for (const [key, value] of Object.entries(override)) {
-    result[key] = key in base ? deepMerge(base[key], value) : value;
+  const missing = requiredPaths.filter(path => isMissingPath(profile, path));
+
+  if (missing.length > 0) {
+    throw new Error(`${profilePath} is missing required field(s): ${missing.join(', ')}`);
   }
-  return result;
+
+  if (!Array.isArray(profile.lyrics.title_examples) || profile.lyrics.title_examples.length === 0) {
+    throw new Error(`${profilePath} must define lyrics.title_examples as a non-empty array`);
+  }
+
+  if (!Number.isFinite(Number(profile.music.default_bpm))) {
+    throw new Error(`${profilePath} must define music.default_bpm as a number`);
+  }
 }
 
-function isPlainObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+function isMissingPath(obj, path) {
+  const value = path.split('.').reduce((current, key) => current?.[key], obj);
+  if (Array.isArray(value)) return value.length === 0;
+  return value === undefined || value === null || value === '';
 }
