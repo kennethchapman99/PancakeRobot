@@ -1,0 +1,149 @@
+import { createRequire } from 'module';
+import {
+  getMarketingSetupItems,
+  updateMarketingSetupItem,
+  getMarketingTargets,
+  upsertMarketingTarget,
+  updateMarketingTarget,
+  getMarketingAgentRuns,
+  getMarketingAgentLogs,
+  getMarketingSummary,
+} from '../shared/marketing-db.js';
+import { runMarketingResearchImport } from '../agents/marketing-manager.js';
+
+const require = createRequire(import.meta.url);
+const express = require('express');
+const originalHandle = express.application.handle;
+
+express.application.handle = function marketingHandle(req, res, done) {
+  const pathname = new URL(req.url, 'http://local').pathname;
+  if (pathname === '/marketing' || pathname.startsWith('/marketing/') || pathname.startsWith('/api/marketing')) {
+    routeMarketing(req, res).catch((error) => {
+      if (res.headersSent) return;
+      res.statusCode = 500;
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
+      res.end(error.stack || error.message);
+    });
+    return;
+  }
+  return originalHandle.call(this, req, res, done);
+};
+
+async function routeMarketing(req, res) {
+  const url = new URL(req.url, 'http://local');
+  const pathname = url.pathname;
+
+  if (pathname === '/api/marketing/summary' && req.method === 'GET') return sendJson(res, { ok: true, summary: getMarketingSummary() });
+  if (pathname === '/api/marketing/targets' && req.method === 'GET') return sendJson(res, { ok: true, targets: getMarketingTargets(Object.fromEntries(url.searchParams.entries())) });
+
+  const logsMatch = pathname.match(/^\/api\/marketing\/runs\/([^/]+)\/logs$/);
+  if (logsMatch && req.method === 'GET') return sendJson(res, { ok: true, logs: getMarketingAgentLogs(logsMatch[1]) });
+
+  if (pathname === '/api/marketing/agents/research-import' && req.method === 'POST') {
+    const result = await runMarketingResearchImport();
+    return sendJson(res, { ok: result.status !== 'error', result });
+  }
+
+  if (pathname === '/marketing' && req.method === 'GET') {
+    return sendHtml(res, renderMarketingPage({
+      q: url.searchParams.get('q') || '',
+      status: url.searchParams.get('status') || '',
+      message: url.searchParams.get('message') || '',
+      error: url.searchParams.get('error') || '',
+    }));
+  }
+
+  const setupMatch = pathname.match(/^\/marketing\/setup\/([^/]+)$/);
+  if (setupMatch && req.method === 'POST') {
+    const body = await parseBody(req);
+    updateMarketingSetupItem(decodeURIComponent(setupMatch[1]), {
+      status: body.status || 'not_started',
+      value: body.value || '',
+      notes: body.notes || '',
+    });
+    return redirect(res, '/marketing?message=Setup%20saved');
+  }
+
+  if (pathname === '/marketing/targets' && req.method === 'POST') {
+    const body = await parseBody(req);
+    try {
+      upsertMarketingTarget({ ...body, status: 'needs_review', recommendation: body.recommendation || 'manual_review' });
+      return redirect(res, '/marketing?message=Target%20added');
+    } catch (error) {
+      return redirect(res, `/marketing?error=${encodeURIComponent(error.message)}`);
+    }
+  }
+
+  const targetStatusMatch = pathname.match(/^\/marketing\/targets\/([^/]+)\/status$/);
+  if (targetStatusMatch && req.method === 'POST') {
+    const body = await parseBody(req);
+    updateMarketingTarget(decodeURIComponent(targetStatusMatch[1]), { status: body.status || 'needs_review', notes: body.notes || '' });
+    return redirect(res, '/marketing?message=Target%20updated');
+  }
+
+  if (pathname === '/marketing/agents/research-import' && req.method === 'POST') {
+    const result = await runMarketingResearchImport();
+    return redirect(res, `/marketing?message=${encodeURIComponent(`Import ${result.status}; imported ${result.imported}; skipped ${result.skipped}`)}`);
+  }
+
+  res.statusCode = 404;
+  return sendHtml(res, shell('Marketing', '<main class="p-8">Marketing route not found.</main>'));
+}
+
+function renderMarketingPage({ q, status, message, error }) {
+  const summary = getMarketingSummary();
+  const setup = getMarketingSetupItems();
+  const targets = getMarketingTargets({ q, status });
+  const runs = getMarketingAgentRuns(10);
+  const latestLogs = runs[0] ? getMarketingAgentLogs(runs[0].id) : [];
+  const setupGroups = groupBy(setup, 'category');
+  const setupPct = summary.setup.total ? Math.round(((summary.setup.done || 0) / summary.setup.total) * 100) : 0;
+
+  const body = `
+  <main class="p-8 space-y-8">
+    <section class="bg-white border border-zinc-200 rounded-2xl p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div><h1 class="text-3xl font-extrabold">Marketing Mission Control</h1><p class="text-zinc-500 mt-2">Setup, sourced target research, approvals, and inspectable agent logs. No fake target data is created.</p></div>
+        <form method="POST" action="/marketing/agents/research-import"><button class="bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm font-semibold">Run research import</button></form>
+      </div>
+    </section>
+    ${message ? banner(message, 'emerald') : ''}${error ? banner(error, 'red') : ''}
+    <section class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      ${metric(summary.setup.done || 0, 'Setup done')} ${metric(`${setupPct}%`, 'Setup progress')} ${metric(summary.targets.total || 0, 'Sourced targets')} ${metric(summary.targets.approved || 0, 'Approved targets')} ${metric(summary.runs.total || 0, 'Agent runs')}
+    </section>
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div class="xl:col-span-2 bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold mb-4">Human setup checklist</h2>${Object.entries(setupGroups).map(([category, items]) => `<h3 class="text-xs uppercase tracking-widest text-zinc-400 mt-6 mb-2">${esc(category)}</h3>${items.map(renderSetup).join('')}`).join('')}</div>
+      <aside class="space-y-6"><div class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold">Backend thin slice</h2><ol class="text-sm text-zinc-600 mt-3 list-decimal pl-5 space-y-2"><li>Configure MARKETING_RESEARCH_SOURCE_PATH.</li><li>Importer reads only real JSON records.</li><li>Every target requires source_url.</li><li>You approve or reject before planning.</li></ol><div class="mt-4 text-xs bg-zinc-50 border border-zinc-200 rounded-lg p-3 break-all">${esc(process.env.MARKETING_RESEARCH_SOURCE_PATH || 'MARKETING_RESEARCH_SOURCE_PATH not configured')}</div></div>${renderTargetForm()}</aside>
+    </section>
+    <section class="bg-white border border-zinc-200 rounded-2xl p-6"><div class="flex items-center justify-between gap-3 mb-4"><div><h2 class="font-bold">Curator and influencer targets</h2><p class="text-sm text-zinc-500">Approve only real, sourced, AI-compatible targets.</p></div><form method="GET" action="/marketing" class="flex gap-2"><input name="q" value="${attr(q)}" placeholder="Search" class="border rounded-lg px-3 py-2 text-sm"><select name="status" class="border rounded-lg px-3 py-2 text-sm">${opt('', 'All statuses', status)}${opt('needs_review', 'Needs review', status)}${opt('approved', 'Approved', status)}${opt('rejected', 'Rejected', status)}</select><button class="bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm">Filter</button></form></div>${targets.length ? renderTargets(targets) : '<div class="border border-dashed rounded-xl p-8 text-center text-zinc-500">No sourced targets yet.</div>'}</section>
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-6"><div class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold mb-4">Recent agent runs</h2>${runs.length ? runs.map(renderRun).join('') : '<div class="text-zinc-400 text-sm">No runs yet.</div>'}</div><div class="bg-zinc-900 text-zinc-100 rounded-2xl p-6"><h2 class="font-bold mb-4">Latest run logs</h2><div class="font-mono text-xs space-y-2 max-h-96 overflow-y-auto">${latestLogs.length ? latestLogs.map(l => `<div><span class="text-zinc-500">${esc(l.level)}</span> ${esc(l.message)}</div>`).join('') : '<div class="text-zinc-500">No logs yet.</div>'}</div></div></section>
+  </main>`;
+  return shell('Marketing', body);
+}
+
+function renderSetup(item) {
+  const done = item.status === 'done';
+  return `<form method="POST" action="/marketing/setup/${encodeURIComponent(item.key)}" class="border ${done ? 'border-emerald-200 bg-emerald-50' : 'border-zinc-200 bg-white'} rounded-xl p-4 mb-3"><div class="flex gap-3"><input type="checkbox" ${done ? 'checked' : ''} onchange="this.form.status.value=this.checked?'done':'not_started';this.form.submit()"><div class="flex-1"><div class="font-semibold">${esc(item.title)} <span class="${badge(item.status)}">${esc(item.status)}</span></div><p class="text-sm text-zinc-500 mt-1">${esc(item.instructions || '')}</p>${item.reference_url ? `<a href="${attr(item.reference_url)}" target="_blank" class="text-xs text-blue-600">Instructions/source</a>` : ''}<div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mt-3"><input name="value" value="${attr(item.value || '')}" placeholder="Account, URL, handle, or config" class="border rounded-lg px-3 py-2 text-sm"><input name="notes" value="${attr(item.notes || '')}" placeholder="Notes" class="border rounded-lg px-3 py-2 text-sm"></div><input type="hidden" name="status" value="${attr(item.status || 'not_started')}"><button class="mt-2 bg-zinc-900 text-white rounded-lg px-3 py-1.5 text-xs">Save</button></div></div></form>`;
+}
+
+function renderTargetForm() {
+  return `<div class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold">Add manual target</h2><p class="text-sm text-zinc-500 mt-1">A source URL is required.</p><form method="POST" action="/marketing/targets" class="mt-4 space-y-3"><input required name="name" placeholder="Name" class="w-full border rounded-lg px-3 py-2 text-sm"><select required name="type" class="w-full border rounded-lg px-3 py-2 text-sm"><option value="">Type</option><option value="playlist">Playlist</option><option value="influencer">Influencer</option><option value="blog">Blog / media</option><option value="radio">Radio / audio</option><option value="community">Community</option></select><input required name="source_url" placeholder="Source URL" class="w-full border rounded-lg px-3 py-2 text-sm"><input name="platform" placeholder="Platform" class="w-full border rounded-lg px-3 py-2 text-sm"><input name="submission_url" placeholder="Submission/contact URL" class="w-full border rounded-lg px-3 py-2 text-sm"><select name="ai_policy" class="w-full border rounded-lg px-3 py-2 text-sm"><option value="unclear">AI unclear</option><option value="allowed">AI allowed</option><option value="disclosure_required">Disclosure required</option><option value="individual_curator_choice">Curator choice</option><option value="likely_hostile">Likely hostile</option><option value="banned">Banned</option></select><textarea name="research_summary" rows="3" placeholder="Research summary" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea><button class="w-full bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm font-semibold">Add sourced target</button></form></div>`;
+}
+
+function renderTargets(targets) {
+  return `<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-left text-xs uppercase text-zinc-400 border-b"><tr><th class="py-3 pr-4">Target</th><th class="py-3 pr-4">Type</th><th class="py-3 pr-4">AI policy</th><th class="py-3 pr-4">Research</th><th class="py-3 pr-4">Status</th><th class="py-3 pr-4">Action</th></tr></thead><tbody class="divide-y">${targets.map(t => `<tr class="align-top"><td class="py-4 pr-4"><div class="font-semibold">${esc(t.name)}</div><div class="text-xs text-zinc-400">${esc(t.platform || '')}</div><a href="${attr(t.source_url)}" target="_blank" class="text-xs text-blue-600">source</a>${t.submission_url ? ` <a href="${attr(t.submission_url)}" target="_blank" class="text-xs text-blue-600">submit/contact</a>` : ''}</td><td class="py-4 pr-4">${esc(t.type)}</td><td class="py-4 pr-4">${esc(t.ai_policy || 'unclear')}</td><td class="py-4 pr-4 max-w-xl text-zinc-600">${esc(t.research_summary || '')}</td><td class="py-4 pr-4"><span class="${badge(t.status)}">${esc(t.status)}</span></td><td class="py-4 pr-4"><form method="POST" action="/marketing/targets/${encodeURIComponent(t.id)}/status" class="space-y-2"><select name="status" class="border rounded-lg px-2 py-1 text-xs">${opt('needs_review', 'Needs review', t.status)}${opt('approved', 'Approve', t.status)}${opt('rejected', 'Reject', t.status)}</select><input name="notes" value="${attr(t.notes || '')}" placeholder="Notes" class="border rounded-lg px-2 py-1 text-xs"><button class="bg-zinc-900 text-white rounded-lg px-3 py-1 text-xs">Save</button></form></td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderRun(run) { return `<div class="border rounded-xl p-4 mb-3"><div class="font-semibold">${esc(run.run_type)} <span class="${badge(run.status)}">${esc(run.status)}</span></div><div class="text-xs text-zinc-400">${esc(run.agent_name)} — ${esc(run.id)}</div>${run.error ? `<div class="text-xs text-red-600 mt-2">${esc(run.error)}</div>` : ''}</div>`; }
+function metric(value, label) { return `<div class="bg-white rounded-xl border border-zinc-200 p-5"><div class="text-3xl font-bold">${esc(value)}</div><div class="text-sm text-zinc-500 mt-1">${esc(label)}</div></div>`; }
+function banner(text, color) { return `<div class="rounded-xl border border-${color}-200 bg-${color}-50 px-4 py-3 text-sm text-${color}-800">${esc(text)}</div>`; }
+function badge(status) { return `badge ${status === 'done' || status === 'approved' ? 'badge-ok' : status === 'rejected' || String(status).startsWith('blocked') || status === 'error' ? 'badge-bad' : 'badge-warn'}`; }
+function opt(value, label, selected) { return `<option value="${attr(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`; }
+function groupBy(items, key) { return items.reduce((acc, item) => { const group = item[key] || 'Other'; (acc[group] ||= []).push(item); return acc; }, {}); }
+function shell(title, body) { return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} — Pancake Robot</title><link rel="icon" href="/logo.png"><script src="https://cdn.tailwindcss.com"></script><style>.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;font-size:.75rem;font-weight:500}.badge-ok{background:#d1fae5;color:#047857}.badge-warn{background:#fef3c7;color:#b45309}.badge-bad{background:#fee2e2;color:#b91c1c}</style></head><body class="bg-zinc-50 text-zinc-900"><div class="flex min-h-screen"><nav class="w-56 bg-zinc-900 text-zinc-100 p-4"><img src="/logo.png" class="w-32 h-32 object-contain mx-auto"><div class="mt-5 space-y-1"><a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/">Dashboard</a><a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/ideas/generate">Generate Ideas</a><a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/ideas">Idea Vault</a><a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/songs">Song Catalog</a><a class="block rounded-lg px-3 py-2 bg-zinc-700 text-white" href="/marketing">Marketing</a><a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/brand">Brand</a></div></nav><div class="flex-1">${body}</div></div></body></html>`; }
+async function parseBody(req) { const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks).toString('utf8'); if ((req.headers['content-type'] || '').includes('json')) return raw ? JSON.parse(raw) : {}; return Object.fromEntries(new URLSearchParams(raw).entries()); }
+function sendHtml(res, content) { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(content); }
+function sendJson(res, payload) { res.setHeader('content-type', 'application/json; charset=utf-8'); res.end(JSON.stringify(payload)); }
+function redirect(res, location) { res.statusCode = 303; res.setHeader('location', location); res.end(); }
+function esc(value) { return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'", '&#39;'); }
+function attr(value) { return esc(value); }
