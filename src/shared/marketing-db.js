@@ -3,6 +3,7 @@ import path from 'path';
 import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import { getDb } from './db.js';
+import { renderMarketingTemplate } from './marketing-context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SETUP_CONFIG_PATH = path.resolve(__dirname, '../../config/marketing-setup-checklist.json');
@@ -44,6 +45,21 @@ export function initMarketingSchema() {
       notes TEXT,
       raw_json TEXT,
       UNIQUE(name, source_url)
+    );
+
+    CREATE TABLE IF NOT EXISTS marketing_campaigns (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT 'draft',
+      focus_song_id TEXT,
+      objective TEXT,
+      audience TEXT,
+      channel_mix_json TEXT,
+      approved_target_ids_json TEXT,
+      brand_context_json TEXT,
+      notes TEXT
     );
 
     CREATE TABLE IF NOT EXISTS marketing_agent_runs (
@@ -88,10 +104,10 @@ export function loadMarketingSetupConfig(configPath = process.env.MARKETING_SETU
     if (missing.length) throw new Error(`Marketing setup item ${index} missing required field(s): ${missing.join(', ')}`);
     return {
       key: String(item.key).trim(),
-      category: String(item.category).trim(),
-      title: String(item.title).trim(),
-      instructions: item.instructions ? String(item.instructions).trim() : null,
-      reference_url: item.reference_url ? String(item.reference_url).trim() : null,
+      category: renderMarketingTemplate(String(item.category).trim()),
+      title: renderMarketingTemplate(String(item.title).trim()),
+      instructions: item.instructions ? renderMarketingTemplate(String(item.instructions).trim()) : null,
+      reference_url: item.reference_url ? renderMarketingTemplate(String(item.reference_url).trim()) : null,
     };
   });
 }
@@ -159,6 +175,11 @@ export function getMarketingTargets(filters = {}) {
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   return getDb().prepare(`SELECT * FROM marketing_targets ${where} ORDER BY updated_at DESC, created_at DESC`).all(...params);
+}
+
+export function getApprovedMarketingTargets() {
+  initMarketingSchema();
+  return getDb().prepare(`SELECT * FROM marketing_targets WHERE status = 'approved' ORDER BY updated_at DESC`).all();
 }
 
 export function upsertMarketingTarget(target) {
@@ -232,6 +253,47 @@ export function updateMarketingTarget(id, fields = {}) {
   getDb().prepare(`UPDATE marketing_targets SET ${setClause} WHERE id = ?`).run(...Object.values(updates), id);
 }
 
+export function createMarketingCampaign(campaign) {
+  initMarketingSchema();
+  const now = new Date().toISOString();
+  const id = campaign.id || `MKT_CAMPAIGN_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  getDb().prepare(`
+    INSERT INTO marketing_campaigns
+      (id, created_at, updated_at, name, status, focus_song_id, objective, audience, channel_mix_json, approved_target_ids_json, brand_context_json, notes)
+    VALUES
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    now,
+    now,
+    campaign.name,
+    campaign.status || 'draft',
+    campaign.focus_song_id || null,
+    campaign.objective || null,
+    campaign.audience || null,
+    JSON.stringify(campaign.channel_mix || []),
+    JSON.stringify(campaign.approved_target_ids || []),
+    JSON.stringify(campaign.brand_context || {}),
+    campaign.notes || null,
+  );
+  return id;
+}
+
+export function getMarketingCampaigns(limit = 25) {
+  initMarketingSchema();
+  return getDb().prepare('SELECT * FROM marketing_campaigns ORDER BY created_at DESC LIMIT ?').all(limit).map(parseCampaign);
+}
+
+function parseCampaign(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    channel_mix: parseJsonArray(row.channel_mix_json),
+    approved_target_ids: parseJsonArray(row.approved_target_ids_json),
+    brand_context: parseJsonObject(row.brand_context_json),
+  };
+}
+
 export function createMarketingAgentRun({ agentName, runType, input }) {
   initMarketingSchema();
   const id = `MKT_RUN_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -288,6 +350,15 @@ export function getMarketingSummary() {
     FROM marketing_targets
   `).get();
 
+  const campaigns = db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft,
+      SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+      SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+    FROM marketing_campaigns
+  `).get();
+
   const runs = db.prepare(`
     SELECT
       COUNT(*) as total,
@@ -297,7 +368,7 @@ export function getMarketingSummary() {
     FROM marketing_agent_runs
   `).get();
 
-  return { setup, targets, runs };
+  return { setup, targets, campaigns, runs };
 }
 
 function validateTarget(target) {
@@ -322,4 +393,24 @@ function toNullableInt(value) {
   if (value === undefined || value === null || value === '') return null;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) ? n : null;
+}
+
+function parseJsonArray(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseJsonObject(value) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
