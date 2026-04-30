@@ -1,8 +1,8 @@
 /**
- * Brand Manager Agent — Defines and enforces the configured brand
+ * Brand Manager Agent — Defines and enforces the configured brand.
  *
- * First run: builds the brand from scratch based on successful kids brand archetypes
- * Every song: reviews lyrics + audio prompt against brand bible, scores 0-100
+ * Active brand profile is source of truth. Generated brand data is optional and
+ * ignored when it belongs to a different brand.
  */
 
 import { runAgent, parseAgentJson, loadConfig, saveConfig } from '../shared/managed-agent.js';
@@ -16,127 +16,64 @@ const BRAND_DIR = join(__dirname, '../../output/brand');
 const BRAND_BIBLE_PATH = join(BRAND_DIR, 'brand-bible.md');
 const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
+const BRAND_DESCRIPTION = BRAND_PROFILE.brand_description;
 const AUDIENCE_AGE_RANGE = BRAND_PROFILE.audience.age_range;
+const AUDIENCE_DESCRIPTION = BRAND_PROFILE.audience.description;
+const AUDIENCE_GUARDRAIL = BRAND_PROFILE.audience.guardrail;
 const CHARACTER_NAME = BRAND_PROFILE.character.name;
-const CHARACTER_CORE_CONCEPT = BRAND_PROFILE.character.core_concept;
 
 export const BRAND_MANAGER_DEF = {
   name: `${BRAND_NAME} Brand Manager`,
-  noTools: true, // Uses training knowledge — no web search needed, prevents runaway searches
-  system: `You are the brand guardian for ${BRAND_NAME}, a children's music brand for ages ${AUDIENCE_AGE_RANGE}.
-
-You are the keeper of the brand's soul. You understand:
-- What makes kids' entertainment brands endure (Cocomelon, Bluey, Sesame Street)
-- The psychology of parasocial relationships between kids and characters
-- How to create a brand voice that parents approve of but kids LOVE
-- The fine line between "educational" and "boring" — ${BRAND_NAME} always stays on the fun side
-- Visual consistency, character consistency, and musical consistency
-
-Your two modes:
-1. BRAND BUILDER: Design the complete ${BRAND_NAME} brand identity from scratch
-2. BRAND REVIEWER: Score songs against the brand bible and provide specific feedback
-
-When reviewing, be specific and actionable. Don't just say "off-brand" — explain exactly what needs to change and why.
-Format your output as valid JSON.`,
+  noTools: true,
+  system: `You are the brand guardian for ${BRAND_NAME}, ${BRAND_DESCRIPTION}. Audience: ${AUDIENCE_DESCRIPTION}. Guardrail: ${AUDIENCE_GUARDRAIL}. Use only the active brand profile as source of truth. Output valid JSON.`,
 };
 
-const BUILD_BRAND_TASK = `Build the complete ${BRAND_NAME} brand identity. Use your knowledge of what makes top kids brands work (Cocomelon, Bluey, Ms. Rachel, Pinkfong) to design our brand. Do not search the web — work entirely from your training knowledge and spend all your effort on the creative output.
+const BUILD_BRAND_TASK = `Build a complete brand bible for ${BRAND_NAME}.
 
-${BRAND_NAME} is a children's music brand targeting ages ${AUDIENCE_AGE_RANGE}. The central character is ${CHARACTER_CORE_CONCEPT}.
+ACTIVE BRAND PROFILE:
+${JSON.stringify(BRAND_PROFILE, null, 2)}
 
-Create a comprehensive brand bible covering:
+Create a brand bible that expands the active profile without changing its facts.
 
-1. CHARACTER DESIGN
-   - ${CHARACTER_NAME}'s full personality (not just "cheerful" — be specific and detailed)
-   - Backstory, quirks, catchphrases, and recurring behaviors
-   - Supporting characters or concepts (if any)
-   - What makes ${CHARACTER_NAME} unique vs other kids characters
-
-2. BRAND VOICE
-   - Tone and personality in lyrics and scripts
-   - Vocabulary guidelines for age ${AUDIENCE_AGE_RANGE} (what words to use/avoid)
-   - How ${CHARACTER_NAME} speaks and thinks
-   - Recurring themes and motifs
-   - The "${BRAND_NAME} formula" — what every song must have
-
-3. VISUAL IDENTITY
-   - Character design description (for AI image generation)
-   - Color palette (specific colors with hex codes if possible)
-   - Typography vibe
-   - Background and scene style
-   - What to always include vs never include in thumbnails
-
-4. MUSIC DNA
-   - The "infectious replay" formula that makes ${BRAND_NAME} songs different
-   - Signature musical elements (sound effects, musical phrases, etc.)
-   - Energy arc for a typical ${BRAND_NAME} song
-   - What makes a song "feel like" ${BRAND_NAME}
-
-5. BRAND RULES
-   - 10 things we ALWAYS do
-   - 10 things we NEVER do
-   - Age-appropriateness guardrails
-   - Topics that are on/off brand
-
-Output two things:
-1. A brand_bible_markdown field with the full human-readable brand bible in Markdown
-2. A brand_data JSON object for programmatic use:
-
+Output JSON:
 {
   "brand_data": {
+    "brand_name": "${BRAND_NAME}",
+    "brand_type": "${BRAND_PROFILE.brand_type}",
     "character": {
       "name": "${CHARACTER_NAME}",
-      "personality_traits": [...],
-      "catchphrases": [...],
-      "backstory": "...",
-      "visual_description": "...",
-      "color_palette": {"primary": "...", "secondary": "...", "accent": "..."}
+      "personality_traits": [],
+      "catchphrases": [],
+      "backstory": "",
+      "visual_description": "",
+      "color_palette": {}
     },
     "voice": {
-      "tone": "...",
-      "vocabulary_level": "...",
-      "recurring_themes": [...],
-      "formula": "..."
+      "tone": "",
+      "vocabulary_level": "",
+      "recurring_themes": [],
+      "formula": ""
     },
     "music_dna": {
-      "replay_formula": "...",
-      "signature_elements": [...],
-      "energy_arc": "..."
+      "replay_formula": "",
+      "signature_elements": [],
+      "energy_arc": ""
     },
     "rules": {
-      "always": [...],
-      "never": [...],
-      "age_guardrails": "..."
+      "always": [],
+      "never": [],
+      "age_guardrails": "${AUDIENCE_GUARDRAIL}"
     },
-    "thumbnail_prompt_base": "..."
+    "thumbnail_prompt_base": ""
   },
-  "brand_bible_markdown": "..."
+  "brand_bible_markdown": ""
 }`;
 
-/**
- * Build brand from scratch (first run only)
- */
 export async function buildBrand() {
   fs.mkdirSync(BRAND_DIR, { recursive: true });
 
-  // Inject research findings if available so brand reflects current trends
-  const researchPath = join(__dirname, '../../output/research/research-report.json');
-  let researchContext = '';
-  try {
-    const report = JSON.parse(fs.readFileSync(researchPath, 'utf8'));
-    if (report.top_topics?.length > 0) {
-      researchContext = `\n\nCURRENT MARKET RESEARCH (use this to inform brand decisions):\n` +
-        `Top topics right now: ${report.top_topics.slice(0, 5).map(t => t.topic).join(', ')}\n` +
-        `Viral signals: ${(report.viral_signals || []).slice(0, 3).join(' | ')}\n` +
-        `Avoid: ${(report.avoid || []).slice(0, 3).join(' | ')}\n` +
-        `Recommended first song ideas: ${(report.recommended_first_topics || []).slice(0, 3).map(t => t.title).join(', ')}`;
-    }
-  } catch { /* research not available yet, proceed without */ }
+  const result = await runAgent('brand-manager', BRAND_MANAGER_DEF, BUILD_BRAND_TASK);
 
-  const task = BUILD_BRAND_TASK + researchContext;
-  const result = await runAgent('brand-manager', BRAND_MANAGER_DEF, task);
-
-  // result.text is guaranteed non-empty by runAgent (throws otherwise)
   let brandData;
   try {
     const parsed = parseAgentJson(result.text);
@@ -149,16 +86,13 @@ export async function buildBrand() {
       fs.writeFileSync(BRAND_BIBLE_PATH, result.text);
     }
   } catch {
-    brandData = { raw_text: result.text };
+    brandData = { brand_name: BRAND_NAME, raw_text: result.text };
     fs.writeFileSync(BRAND_BIBLE_PATH, result.text);
   }
 
-  // Validate we have something meaningful before saving
-  if (!brandData.character && (!brandData.raw_text || brandData.raw_text.length < 100)) {
-    throw new Error('Brand build produced no usable output');
-  }
+  if (!brandData.brand_name) brandData.brand_name = BRAND_NAME;
+  if (!brandData.brand_type) brandData.brand_type = BRAND_PROFILE.brand_type;
 
-  // Save to config immediately — do this before anything else can fail
   const config = loadConfig();
   config.brand = brandData;
   config.brand.created_at = new Date().toISOString();
@@ -167,25 +101,21 @@ export async function buildBrand() {
   return brandData;
 }
 
-/**
- * Review a song against the brand bible
- * Returns: { score, approved, feedback, revision_notes }
- */
 export async function reviewSong({ songId, title, topic, lyricsText, audioPromptText }) {
   const config = loadConfig();
-  const brand = config.brand;
+  const generatedBrand = getCompatibleGeneratedBrandData(config.brand);
+  const brandForReview = {
+    active_brand_profile: BRAND_PROFILE,
+    generated_brand_data: generatedBrand || 'No compatible generated brand data. Review against active_brand_profile only.',
+  };
 
-  if (!brand) {
-    throw new Error('Brand not built yet. Run --setup first.');
-  }
+  const brandSummary = JSON.stringify(brandForReview, null, 2).substring(0, 5000);
+  const lyricsPreview = lyricsText ? lyricsText.substring(0, 3000) : 'Not provided';
+  const promptPreview = audioPromptText ? audioPromptText.substring(0, 1200) : 'Not provided';
 
-  const brandSummary = JSON.stringify(brand, null, 2).substring(0, 3000);
-  const lyricsPreview = lyricsText ? lyricsText.substring(0, 1500) : 'Not provided';
-  const promptPreview = audioPromptText ? audioPromptText.substring(0, 500) : 'Not provided';
+  const reviewTask = `Review this song against the active ${BRAND_NAME} brand profile and score it.
 
-  const reviewTask = `Review this song against the ${BRAND_NAME} brand bible and score it.
-
-BRAND BIBLE SUMMARY:
+BRAND CONTEXT:
 ${brandSummary}
 
 SONG TO REVIEW:
@@ -198,36 +128,33 @@ ${lyricsPreview}
 AUDIO GENERATION PROMPT:
 ${promptPreview}
 
-Score this song on each dimension (0-100) and provide an overall score:
+Score this song on each dimension from 0-100:
+1. Audience Fit: Is vocabulary, content, and emotional level right for ${AUDIENCE_AGE_RANGE} / ${AUDIENCE_DESCRIPTION}?
+2. Brand Voice: Does it match ${BRAND_NAME} and ${BRAND_DESCRIPTION}?
+3. Hook Strength: Is the chorus memorable and centered on the locked title?
+4. Topic Fit: Does it use the topic and profile-specific details well?
+5. Lyric Craft: Is it singable, specific, coherent, and production-ready?
 
-1. Age-Appropriateness (0-100): Is vocabulary, content, and themes right for ages ${AUDIENCE_AGE_RANGE}?
-2. Brand Voice Consistency (0-100): Does it sound like ${BRAND_NAME}?
-3. Replay-ability (0-100): Will kids demand to hear this again? Are the hooks strong?
-4. Topic Fit (0-100): Does this topic work for ${BRAND_NAME}'s world?
-5. Lyric Craft (0-100): Is the chorus simple and memorable? Good call-and-response? Physical actions?
+Overall Score = weighted average with brand voice, topic fit, and lyric craft weighted highest.
+If overall score < 75, provide specific revision instructions.
 
-Overall Score = weighted average (replay-ability and brand voice weighted heaviest)
-
-If overall score < 75, provide SPECIFIC revision instructions.
-
-Output as JSON:
+Output valid JSON:
 {
   "scores": {
-    "age_appropriateness": 0,
+    "audience_fit": 0,
     "brand_voice": 0,
-    "replayability": 0,
+    "hook_strength": 0,
     "topic_fit": 0,
     "lyric_craft": 0,
     "overall": 0
   },
-  "approved": true/false,
-  "strengths": [...],
-  "weaknesses": [...],
-  "revision_notes": "Specific instructions if score < 75, otherwise empty string",
-  "reviewer_notes": "General observations"
+  "approved": true,
+  "strengths": [],
+  "weaknesses": [],
+  "revision_notes": "",
+  "reviewer_notes": ""
 }`;
 
-  // Use Haiku for scoring — it's rule-based JSON, doesn't need Sonnet
   const reviewerDef = { ...BRAND_MANAGER_DEF, name: `${BRAND_NAME} Brand Reviewer`, model: 'claude-haiku-4-5-20251001', noTools: true };
   const result = await runAgent('brand-manager', reviewerDef, reviewTask);
 
@@ -246,13 +173,27 @@ Output as JSON:
   review.song_id = songId;
   review.reviewed_at = new Date().toISOString();
 
-  // Save review to song's output folder
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   if (fs.existsSync(songDir)) {
     fs.writeFileSync(join(songDir, 'brand-review.json'), JSON.stringify(review, null, 2));
   }
 
   return review;
+}
+
+function getCompatibleGeneratedBrandData(brandData) {
+  if (!brandData) return null;
+
+  const serialized = JSON.stringify(brandData).toLowerCase();
+  const activeBrand = BRAND_NAME.toLowerCase();
+  const activeCharacter = CHARACTER_NAME.toLowerCase();
+
+  if (!serialized.includes(activeBrand) && !serialized.includes(activeCharacter)) {
+    console.log('[BRAND] Ignoring stale generated brand bible for different brand');
+    return null;
+  }
+
+  return brandData;
 }
 
 export function loadBrandBible() {
