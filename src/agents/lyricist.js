@@ -7,6 +7,7 @@
 
 import { runAgent, parseAgentJson, loadConfig } from '../shared/managed-agent.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
+import { findNonSingableLyricMarkup, sanitizeLyricsForQA, stripEmojis } from '../shared/song-qa.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -41,7 +42,7 @@ Your expertise:
 - Age-appropriate vocabulary
 - Physical engagement cues that get kids moving
 - Call-and-response structures that make kids feel like they're part of the song
-- The art of the "BRIDGE" — the silly/unexpected moment that makes the song memorable
+- Writing a silly/unexpected bridge that is memorable without putting performance notes into the lyric text
 
 You follow the ${BRAND_NAME} brand voice and always stay within age-appropriate guardrails.
 You output structured, production-ready content.`,
@@ -98,7 +99,7 @@ TITLE FIDELITY RULES — HARD REQUIREMENTS:
 - If the topic includes an explicit title, for example "title: Something Went Wrong Again" or a quoted title, preserve that title EXACTLY in the title field.
 - If no explicit title is provided, choose one creative title — then treat it as LOCKED.
 - The locked exact title must appear word-for-word in:
-  1. the first singable line in [INTRO - VOCALS START IMMEDIATELY]
+  1. the first singable line in [INTRO]
   2. the [CHORUS]
   3. the [FINAL CHORUS] or last chorus repeat
   4. audio_prompt.special_notes
@@ -111,8 +112,16 @@ TITLE STYLE GUIDANCE:
 - Only include the character name "${CHARACTER_NAME}" in the title if it genuinely adds humor or surprise for THIS specific topic
 - A great title makes a child say "wait, WHAT?" — lean into that
 
+LYRICS CLEANLINESS RULES — HARD REQUIREMENTS:
+- No emoji anywhere in the title, lyrics, chorus_lines, key_hook, or audio_prompt.
+- Use only these plain section labels, exactly as written: [INTRO], [HOOK], [VERSE 1], [VERSE 2], [VERSE 3], [PRE-CHORUS], [CHORUS], [BRIDGE], [BREAKDOWN], [SILLY BREAKDOWN], [CALL/RESPONSE 1], [CALL/RESPONSE 2], [FINAL CHORUS], [OUTRO].
+- Never add descriptors, jokes, performance notes, or emoji inside brackets. Bad: [BRIDGE — ROBOT MALFUNCTION SEQUENCE]. Good: [BRIDGE].
+- Never write stage directions as lyric lines. Bad: *music slows down, glitchy warping sounds*. Good: Beep boop, pancake reboot, wobble wobble wow.
+- Sound effects, robot malfunctions, chaos moments, and spoken bits are allowed ONLY when written as singable/spoken lyric words, never as instructions.
+- The music service may sing any text in the lyrics field. Therefore the lyrics field must contain only section labels plus words that are safe to sing/spoken aloud.
+
 LYRICS RULES:
-- Start with [INTRO - VOCALS START IMMEDIATELY] and make the first singable line contain the exact title.
+- Start with [INTRO] and make the first singable line contain the exact title.
 - No long musical setup. The lyrics must make it obvious that vocals start right away.
 - The ${CHARACTER_CLAP_NAME} (two claps before each chorus drop) and an open-ending question are always required
 - The character "${CHARACTER_NAME}" can appear naturally, but it is not required in every song
@@ -132,21 +141,21 @@ REQUIREMENTS:
 STRUCTURE — pick what serves the song, but target ${MUSIC_TARGET_LENGTH}:
 
 OPTION A — Hook-first repeat (~1:30-2:15):
-[INTRO - VOCALS START IMMEDIATELY] → [HOOK] → [VERSE 1] → [CHORUS] → [VERSE 2] → [CHORUS] → [OUTRO]
+[INTRO] → [HOOK] → [VERSE 1] → [CHORUS] → [VERSE 2] → [CHORUS] → [OUTRO]
 
 OPTION B — Classic pop (~2:00-3:00):
-[INTRO - VOCALS START IMMEDIATELY] → [VERSE 1] → [PRE-CHORUS] → [CHORUS] → [VERSE 2] → [CHORUS] → [BRIDGE] → [FINAL CHORUS] → [OUTRO]
+[INTRO] → [VERSE 1] → [PRE-CHORUS] → [CHORUS] → [VERSE 2] → [CHORUS] → [BRIDGE] → [FINAL CHORUS] → [OUTRO]
 
 OPTION C — Call and response (~1:30-2:30):
-[INTRO - VOCALS START IMMEDIATELY] → [CALL/RESPONSE 1] → [CHORUS] → [CALL/RESPONSE 2] → [CHORUS] → [SILLY BREAKDOWN] → [FINAL CHORUS] → [OUTRO]
+[INTRO] → [CALL/RESPONSE 1] → [CHORUS] → [CALL/RESPONSE 2] → [CHORUS] → [SILLY BREAKDOWN] → [FINAL CHORUS] → [OUTRO]
 
 OPTION D — Comedy/chaos (~1:30-2:30):
-Follow the joke, but keep enough sections for a complete song. Unexpected stops, robot malfunctions, sound effects AS lyrics — all valid.
+Follow the joke, but keep enough sections for a complete song. Unexpected stops, robot malfunctions, and sound effects are valid only as lyric words, not bracket notes or stage directions.
 
 Output your response as a JSON object:
 {
   "title": "The Song Title",
-  "lyrics": "full lyrics text with section markers like [INTRO - VOCALS START IMMEDIATELY], [CHORUS], [VERSE 1], etc.",
+  "lyrics": "full lyrics text with only plain section markers like [INTRO], [CHORUS], [VERSE 1]. No emoji. No stage directions. No bracket descriptors.",
   "chorus_lines": ["line1", "line2", "line3", "line4"],
   "physical_action_cue": "description of the main physical action",
   "funny_long_word": "the comedic long word used",
@@ -166,7 +175,7 @@ Output your response as a JSON object:
     "first_vocal_by_seconds": ${FIRST_VOCAL_BY_SECONDS},
     "max_instrumental_intro_seconds": ${MAX_INSTRUMENTAL_INTRO_SECONDS},
     "exact_title_usage": "Exact title appears in opening vocal line, chorus, and final chorus",
-    "special_notes": "Include: vocals begin immediately; no instrumental intro; exact title must be sung clearly in first 5 seconds and repeated in chorus; plus any sound effects, robot malfunctions, chaos moments, or musical jokes"
+    "special_notes": "Include: vocals begin immediately; no instrumental intro; exact title must be sung clearly in first 5 seconds and repeated in chorus; no lyric stage directions, no bracket descriptors, no emoji"
   }
 }`;
 
@@ -182,6 +191,8 @@ Output your response as a JSON object:
       parse_error: true,
     };
   }
+
+  songData = sanitizeSongData(songData, topic);
 
   const lyricsContent = formatLyricsMarkdown(songData);
   const lyricsPath = join(songDir, 'lyrics.md');
@@ -206,15 +217,62 @@ Output your response as a JSON object:
   };
 }
 
+function sanitizeSongData(songData, topic) {
+  const rawLyrics = songData.lyrics || '';
+  const markupIssues = findNonSingableLyricMarkup(rawLyrics);
+  const cleanedAudioPrompt = sanitizeAudioPrompt(songData.audio_prompt || {});
+
+  const sanitized = {
+    ...songData,
+    title: stripEmojis(songData.title || topic.substring(0, 50)).trim(),
+    lyrics: sanitizeLyricsForQA(rawLyrics),
+    key_hook: songData.key_hook ? stripEmojis(songData.key_hook).trim() : songData.key_hook,
+    physical_action_cue: songData.physical_action_cue ? stripEmojis(songData.physical_action_cue).trim() : songData.physical_action_cue,
+    funny_long_word: songData.funny_long_word ? stripEmojis(songData.funny_long_word).trim() : songData.funny_long_word,
+    chorus_lines: Array.isArray(songData.chorus_lines)
+      ? songData.chorus_lines.map(line => stripEmojis(line).trim())
+      : songData.chorus_lines,
+    audio_prompt: cleanedAudioPrompt,
+  };
+
+  if (markupIssues.length > 0) {
+    sanitized.lyric_markup_warnings = markupIssues;
+  }
+
+  return sanitized;
+}
+
+function sanitizeAudioPrompt(audioPrompt) {
+  const cleaned = { ...audioPrompt };
+
+  for (const [key, value] of Object.entries(cleaned)) {
+    if (typeof value !== 'string') continue;
+    cleaned[key] = stripEmojis(value).trim();
+  }
+
+  if (cleaned.special_notes) {
+    cleaned.special_notes = cleaned.special_notes
+      .replace(/\[[^\]]+\]/g, '')
+      .replace(/\*[^*]+\*/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  return cleaned;
+}
+
 function formatLyricsMarkdown(songData) {
   const title = songData.title || 'Untitled Song';
-  const lyrics = songData.lyrics || '';
+  const lyrics = sanitizeLyricsForQA(songData.lyrics || '');
 
   let md = `# ${title}\n\n`;
   md += `**Key Hook:** ${songData.key_hook || 'TBD'}\n`;
   md += `**Physical Action:** ${songData.physical_action_cue || 'TBD'}\n`;
-  md += `**Word Count:** ~${songData.word_count || '?'}\n\n`;
-  md += `---\n\n`;
+  md += `**Word Count:** ~${songData.word_count || '?'}\n`;
+  if (songData.lyric_markup_warnings?.length) {
+    md += `**Auto-cleaned lyric markup:** ${songData.lyric_markup_warnings.length} issue(s) removed before render\n`;
+  }
+  md += `\n---\n\n`;
   md += lyrics;
   md += `\n`;
 
@@ -223,7 +281,7 @@ function formatLyricsMarkdown(songData) {
 
 function formatAudioPrompt(songData) {
   const ap = songData.audio_prompt || {};
-  const lyrics = songData.lyrics || '';
+  const lyrics = sanitizeLyricsForQA(songData.lyrics || '');
 
   let prompt = `# Audio Generation Prompt\n\n`;
   prompt += `## Song: ${songData.title || 'Untitled'}\n\n`;
@@ -238,7 +296,7 @@ function formatAudioPrompt(songData) {
   prompt += `**First Vocal By:** ${ap.first_vocal_by_seconds ?? FIRST_VOCAL_BY_SECONDS} seconds\n`;
   prompt += `**Max Instrumental Intro:** ${ap.max_instrumental_intro_seconds ?? MAX_INSTRUMENTAL_INTRO_SECONDS} seconds\n`;
   prompt += `**Exact Title Usage:** ${ap.exact_title_usage || 'Exact title appears in opening vocal line, chorus, and final chorus'}\n`;
-  prompt += `**Render Safety:** Vocals begin immediately within 0-3 seconds. No instrumental intro. Maximum non-vocal opening 5 seconds. The exact title must be sung clearly in the first 5 seconds and repeated in the chorus.\n`;
+  prompt += `**Render Safety:** Vocals begin immediately within 0-3 seconds. No instrumental intro. Maximum non-vocal opening 5 seconds. The exact title must be sung clearly in the first 5 seconds and repeated in the chorus. Lyrics sent to the renderer are cleaned to singable words only with no emoji, section labels, or stage directions.\n`;
   if (ap.special_notes) {
     prompt += `**Special Notes:** ${ap.special_notes}\n`;
   }

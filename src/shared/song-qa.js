@@ -16,6 +16,28 @@ export const FIRST_VOCAL_REQUIRED_BY_SECONDS = 5;
 export const MAX_RENDER_PROMPT_CHARS = 2000;
 
 const ALLOWED_MINIMAX_MUSIC_MODELS = new Set(['music-2.6', 'music-2.6-free']);
+const EMOJI_MATCHER = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
+const EMOJI_STRIPPER = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
+const SECTION_HEADER_PATTERN = /^\s*\[([^\]]+)\]\s*$/u;
+const KNOWN_SECTION_START_PATTERN = /^\s*\[(?:INTRO|VERSE|CHORUS|BRIDGE|OUTRO|PRE-CHORUS|HOOK|INTERLUDE|BREAKDOWN|FINAL CHORUS|CALL\/RESPONSE|CALL RESPONSE|SILLY BREAKDOWN)[^\]]*\]/imu;
+const STAGE_CUE_WORDS = /\b(?:music|vocal|vocals|sfx|sound|effect|instrumental|spoken|whisper|shout|pause|beat|tempo|slows|speeds|glitch|warping|robot voice|clap|stomp|jump|wave|spin|shake|raise|lift|point|wiggle|bounce)\b/i;
+
+const CANONICAL_SECTIONS = new Set([
+  'INTRO',
+  'HOOK',
+  'VERSE 1',
+  'VERSE 2',
+  'VERSE 3',
+  'PRE-CHORUS',
+  'CHORUS',
+  'BRIDGE',
+  'BREAKDOWN',
+  'SILLY BREAKDOWN',
+  'CALL/RESPONSE 1',
+  'CALL/RESPONSE 2',
+  'FINAL CHORUS',
+  'OUTRO',
+]);
 
 const BANNED_RENDER_PROMPT_PHRASES = [
   'cinematic intro',
@@ -28,6 +50,14 @@ const BANNED_RENDER_PROMPT_PHRASES = [
   'build anticipation',
   'establish the groove',
 ];
+
+export function stripEmojis(value = '') {
+  return String(value || '').replace(EMOJI_STRIPPER, '');
+}
+
+export function hasEmoji(value = '') {
+  return EMOJI_MATCHER.test(String(value || ''));
+}
 
 export function normalizeForMatch(value = '') {
   return String(value)
@@ -51,8 +81,130 @@ export function countWords(text = '') {
     .filter(Boolean).length;
 }
 
+export function canonicalizeSectionHeader(line = '') {
+  const match = String(line).match(SECTION_HEADER_PATTERN);
+  if (!match) return null;
+
+  const cleanInner = stripEmojis(match[1])
+    .replace(/[—–]/g, ' - ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const base = cleanInner
+    .split(/\s+-\s+|:/)[0]
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ');
+
+  if (/^VERSE\s*\d+$/.test(base)) return base.replace(/VERSE\s*/, 'VERSE ');
+  if (/^CALL\/RESPONSE\s*\d+$/.test(base)) return base.replace(/CALL\/RESPONSE\s*/, 'CALL/RESPONSE ');
+  if (/^CALL RESPONSE\s*\d+$/.test(base)) return base.replace(/CALL RESPONSE\s*/, 'CALL/RESPONSE ');
+  if (CANONICAL_SECTIONS.has(base)) return base;
+
+  return null;
+}
+
+function isPlainCanonicalSectionHeader(line = '') {
+  const canonical = canonicalizeSectionHeader(line);
+  if (!canonical) return false;
+  const match = String(line).match(SECTION_HEADER_PATTERN);
+  if (!match) return false;
+  const rawInner = stripEmojis(match[1]).replace(/\s+/g, ' ').trim().toUpperCase();
+  return rawInner === canonical;
+}
+
+function isStageDirectionLine(line = '') {
+  const trimmed = String(line || '').trim();
+  if (!trimmed) return false;
+  if (/^\*[^*\n]{3,}\*$/u.test(trimmed)) return true;
+  if (/^_[^_\n]{3,}_$/u.test(trimmed)) return true;
+  if (/^<[^>\n]+>$/u.test(trimmed)) return true;
+  if (/^\([^\n)]{3,}\)$/u.test(trimmed) && STAGE_CUE_WORDS.test(trimmed)) return true;
+  return false;
+}
+
+export function findNonSingableLyricMarkup(text = '') {
+  const issues = [];
+  const lines = String(text || '').split('\n');
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    if (hasEmoji(trimmed)) {
+      issues.push(`line ${index + 1}: emoji found in lyrics`);
+    }
+
+    if (isStageDirectionLine(trimmed)) {
+      issues.push(`line ${index + 1}: stage direction must be rewritten as singable words only: ${trimmed}`);
+    }
+
+    const sectionMatch = trimmed.match(SECTION_HEADER_PATTERN);
+    if (sectionMatch) {
+      const canonical = canonicalizeSectionHeader(trimmed);
+      if (!canonical) {
+        issues.push(`line ${index + 1}: bracketed lyric note is not allowed: ${trimmed}`);
+      } else if (!isPlainCanonicalSectionHeader(trimmed)) {
+        issues.push(`line ${index + 1}: section labels must be plain [${canonical}] with no descriptors, emoji, or performance notes`);
+      }
+    }
+  });
+
+  return [...new Set(issues)];
+}
+
+export function sanitizeLyricsForQA(lyrics = '') {
+  let text = String(lyrics || '').replace(/\r\n/g, '\n');
+
+  const firstSectionMatch = text.match(KNOWN_SECTION_START_PATTERN);
+  if (firstSectionMatch) {
+    text = text.slice(firstSectionMatch.index);
+  }
+
+  text = stripEmojis(text);
+
+  const lines = text.split('\n').map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    if (/^#{1,6}\s/.test(trimmed)) return '';
+    if (/^\*\*[^*]+\*\*:/.test(trimmed)) return '';
+    if (/^---+\s*$/.test(trimmed)) return '';
+    if (isStageDirectionLine(trimmed)) return '';
+
+    const canonical = canonicalizeSectionHeader(trimmed);
+    if (canonical) return `[${canonical}]`;
+    if (SECTION_HEADER_PATTERN.test(trimmed)) return '';
+
+    return line
+      .replace(/\[[^\]]+\]/g, '')
+      .replace(/\((?:music|vocal|vocals|sfx|sound|effect|instrumental|spoken|whisper|shout|pause|beat|tempo|glitch|warping|robot voice)[^)]*\)/gi, '')
+      .trimEnd();
+  });
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+export function prepareLyricsForRender(lyrics = '') {
+  return sanitizeLyricsForQA(lyrics)
+    .split('\n')
+    .filter(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return true;
+      return !canonicalizeSectionHeader(trimmed);
+    })
+    .join('\n')
+    .replace(/\[[^\]]+\]/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function escapeRegExp(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function extractSection(text = '', sectionName = 'CHORUS') {
-  const escaped = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapeRegExp(sectionName);
   const pattern = new RegExp(`\\[${escaped}[^\\]]*\\]([\\s\\S]*?)(?=\\n\\s*\\[[A-Z][^\\]]*\\]|$)`, 'i');
   const match = String(text).match(pattern);
   return match ? match[1].trim() : '';
@@ -67,7 +219,8 @@ export function extractFirstSingableLines(text = '', maxChars = 500) {
       if (/^#{1,6}\s/.test(trimmed)) return false;
       if (/^\*\*[^*]+\*\*:/.test(trimmed)) return false;
       if (/^---+$/.test(trimmed)) return false;
-      if (/^\[[^\]]+\]$/.test(trimmed)) return false;
+      if (SECTION_HEADER_PATTERN.test(trimmed)) return false;
+      if (isStageDirectionLine(trimmed)) return false;
       return true;
     })
     .join('\n')
@@ -85,11 +238,12 @@ export function buildRenderSafetyPrompt(title) {
     `sing the exact title "${title}" clearly in the opening vocal line`,
     `repeat the exact title "${title}" clearly in the chorus`,
     'complete children’s song, target 1:30 to 3:00, not a micro-jingle',
+    'lyrics contain no visible section labels, stage directions, or emoji',
   ];
 }
 
 export function addRenderSafetyToPrompt(basePrompt = '', title = '') {
-  const cleanBase = String(basePrompt || '').trim();
+  const cleanBase = stripEmojis(String(basePrompt || '').trim());
   const safety = buildRenderSafetyPrompt(title).join(', ');
 
   // MiniMax prompt limit is 2000 chars. Safety constraints must never be
@@ -126,8 +280,10 @@ export function runPreRenderQAGate({
     checks.push({ check, passed: true, warning: detail });
   };
 
-  const prompt = String(stylePrompt || '');
-  const lyricText = String(lyrics || '');
+  const prompt = stripEmojis(String(stylePrompt || ''));
+  const rawLyricText = String(lyrics || '');
+  const lyricText = sanitizeLyricsForQA(rawLyricText);
+  const renderLyrics = prepareLyricsForRender(rawLyricText);
   const chorus = extractSection(lyricText, 'CHORUS');
   const intro = extractSection(lyricText, 'INTRO');
   const firstSingable = extractFirstSingableLines(lyricText);
@@ -139,6 +295,21 @@ export function runPreRenderQAGate({
     warn('MiniMax model', 'Using music-2.6-free intentionally. Switch MINIMAX_USE_FREE_MODEL=false or unset it for paid production render.');
   } else {
     pass('MiniMax model', model);
+  }
+
+  const markupIssues = findNonSingableLyricMarkup(rawLyricText);
+  if (markupIssues.length > 0) {
+    fail('Non-singable lyric markup', markupIssues.slice(0, 6).join('; '));
+  } else {
+    pass('Non-singable lyric markup', 'No emoji, bracketed stage directions, or italic performance notes in lyrics');
+  }
+
+  if (!renderLyrics) {
+    fail('Renderable lyrics', 'No singable lyric text remains after removing section labels and stage directions');
+  } else if (findNonSingableLyricMarkup(renderLyrics).length > 0) {
+    fail('Renderable lyrics', 'Sanitized render lyrics still contain non-singable markup');
+  } else {
+    pass('Renderable lyrics', 'Render payload strips section labels and keeps only singable lines');
   }
 
   if (!containsExactTitle(lyricText, title)) {
@@ -182,6 +353,7 @@ export function runPreRenderQAGate({
     { check: 'Prompt requires fast vocals', terms: ['vocals begin immediately', 'within 0 3 seconds'] },
     { check: 'Prompt caps non-vocal opening', terms: ['maximum non vocal opening', `${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds`] },
     { check: 'Prompt includes exact title', terms: [normalizeForMatch(title)] },
+    { check: 'Prompt bans lyric metadata leakage', terms: ['lyrics contain no visible section labels', 'stage directions', 'emoji'] },
   ];
 
   for (const requirement of requiredPromptIdeas) {
@@ -197,6 +369,7 @@ export function runPreRenderQAGate({
     title,
     model,
     word_count: wordCount,
+    render_word_count: countWords(renderLyrics),
     target_duration_seconds: '90-180',
     max_instrumental_intro_seconds: MAX_INSTRUMENTAL_INTRO_SECONDS,
     first_vocal_required_by_seconds: FIRST_VOCAL_REQUIRED_BY_SECONDS,
@@ -226,6 +399,8 @@ function buildPreRenderFailureMarkdown(report) {
     `\n\n## Required standards\n\n` +
     `- Exact title must appear in the opening singable line / [INTRO].\n` +
     `- Exact title must appear in [CHORUS].\n` +
+    `- Lyrics must not contain emoji, bracketed performance notes, or italic stage directions.\n` +
+    `- Rendered lyrics sent to MiniMax must contain only singable words, not section labels.\n` +
     `- Vocals must be prompted to start within 0–3 seconds.\n` +
     `- Non-vocal opening must be capped at ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds.\n` +
     `- Songs should target 1:30–3:00. Lyrics must be at least ${MIN_FULL_SONG_WORDS} words unless PANCAKE_ALLOW_SHORT_SONGS=true.\n`;

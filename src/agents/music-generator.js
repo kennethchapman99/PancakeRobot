@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import {
   addRenderSafetyToPrompt,
+  prepareLyricsForRender,
   runPostRenderAudioQACheck,
   runPreRenderQAGate,
 } from '../shared/song-qa.js';
@@ -43,13 +44,13 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
 
   const modelConfig = resolveMiniMaxModelConfig();
   const prompt = buildStylePrompt(audioPromptData, { title });
-  const cleanLyrics = stripStageDirections(lyricsText);
+  const renderLyrics = prepareLyricsForRender(lyricsText);
 
   const preRenderQA = runPreRenderQAGate({
     songId,
     songDir,
     title,
-    lyrics: cleanLyrics,
+    lyrics: lyricsText,
     stylePrompt: prompt,
     model: modelConfig.model,
   });
@@ -77,7 +78,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     console.log('[MUSIC-GEN] Add MINIMAX_API_KEY=<your-key> to .env (get key at platform.minimax.io)');
 
     const instructionsPath = join(audioDir, 'MUSIC_GENERATION_INSTRUCTIONS.md');
-    fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: cleanLyrics, stylePrompt: prompt, modelConfig }));
+    fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
     console.log(`[MUSIC-GEN] Manual instructions saved to ${instructionsPath}`);
 
     return { audioFiles: [], skipped: true, instructionsPath, preRenderQA };
@@ -86,11 +87,11 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
   console.log(`\n[MUSIC-GEN] Submitting "${title}" to MiniMax Music 2.6...`);
   console.log(`[MUSIC-GEN] Model: ${modelConfig.model} (${modelConfig.tier})`);
   console.log(`[MUSIC-GEN] Style prompt: ${prompt.substring(0, 100)}...`);
-  console.log(`[MUSIC-GEN] Lyrics length: ${cleanLyrics.length} chars`);
+  console.log(`[MUSIC-GEN] Render lyrics length: ${renderLyrics.length} chars`);
 
   let audioHex;
   try {
-    const result = await submitToMiniMax({ prompt, lyrics: cleanLyrics, apiKey, model: modelConfig.model });
+    const result = await submitToMiniMax({ prompt, lyrics: renderLyrics, apiKey, model: modelConfig.model });
 
     if (result.done) {
       console.log('[MUSIC-GEN] ✓ Synchronous completion');
@@ -104,14 +105,14 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
   } catch (err) {
     console.log(`[MUSIC-GEN] MiniMax submission failed: ${err.message}`);
     const instructionsPath = join(audioDir, 'MUSIC_GENERATION_INSTRUCTIONS.md');
-    fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: cleanLyrics, stylePrompt: prompt, modelConfig }));
+    fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
     return { audioFiles: [], skipped: false, apiError: err.message, instructionsPath, preRenderQA };
   }
 
   if (!audioHex) {
     console.log('[MUSIC-GEN] No audio returned — generation timed out or failed');
     const instructionsPath = join(audioDir, 'MUSIC_GENERATION_INSTRUCTIONS.md');
-    fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: cleanLyrics, stylePrompt: prompt, modelConfig }));
+    fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
     return { audioFiles: [], skipped: false, error: 'generation timed out or failed', instructionsPath, preRenderQA };
   }
 
@@ -152,6 +153,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     render_tier: modelConfig.tier,
     free_model_toggle: modelConfig.freeToggleEnabled,
     style_prompt: prompt,
+    render_lyrics_chars: renderLyrics.length,
     pre_render_qa_passed: preRenderQA.passed,
     post_render_qa_passed: postRenderQA.passed,
     versions: [{ version: 1, tier: modelConfig.tier, model: modelConfig.model, file: filename }],
@@ -299,28 +301,6 @@ function buildStylePrompt(audioPrompt, { title }) {
   return addRenderSafetyToPrompt(basePrompt, title);
 }
 
-function stripStageDirections(lyrics) {
-  if (!lyrics) return '';
-
-  let text = lyrics;
-
-  const firstSectionMatch = text.match(/\[(INTRO|VERSE|CHORUS|BRIDGE|OUTRO|PRE-CHORUS|HOOK|INTERLUDE|BREAKDOWN)/i);
-  if (firstSectionMatch) {
-    text = text.slice(firstSectionMatch.index);
-  }
-
-  text = text.replace(/^#{1,6}\s+.*/gm, '');
-  text = text.replace(/^\*\*[^*]+\*\*:.*/gm, '');
-  text = text.replace(/^---+\s*$/gm, '');
-  text = text.replace(/\[(?!(?:VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|HOOK|INTERLUDE|BREAKDOWN)\b)[^\]]{15,}\]/gi, '');
-  text = text.replace(/\((?:flip|clap|stomp|jump|wave|spin|shake|raise|lift|point|wiggle|bounce)[^)]*\)/gi, '');
-  text = text.replace(/[\u{1F300}-\u{1FFFF}]/gu, '');
-  text = text.replace(/^[🤖🎵🥞⚡❌✨🎶].*/gm, '');
-  text = text.replace(/\n{3,}/g, '\n\n').trim();
-
-  return text;
-}
-
 function buildManualInstructions({ title, lyricsText, stylePrompt, modelConfig }) {
   const model = modelConfig?.model || PAID_MODEL;
   const tier = modelConfig?.tier || 'paid';
@@ -348,7 +328,7 @@ MINIMAX_MUSIC_MODEL=music-2.6
 ${stylePrompt.substring(0, 2000)}
 \`\`\`
 
-**Lyrics** (paste into "lyrics" field — ≤3500 chars):
+**Lyrics** (paste into "lyrics" field — cleaned to singable words only, ≤3500 chars):
 \`\`\`
 ${lyricsText}
 \`\`\`
@@ -361,6 +341,7 @@ Instrumental: OFF
 - Reject if vocals do not start by 5 seconds.
 - Reject if the exact title is not sung in the opening and chorus.
 - Reject if the song is under 1:30 unless intentionally marked as a short/jingle.
+- Reject if section labels, emoji, or stage directions are spoken/sung.
 
 Full production notes: ../audio-prompt.md
 `;
