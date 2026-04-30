@@ -45,6 +45,25 @@ function isValidPng(buf) {
   if (buf.length < 8) return false;
   return PNG_MAGIC.every((b, i) => buf[i] === b);
 }
+function hasValidPngHeader(filePath) {
+  const header = Buffer.alloc(8);
+  const fd = fs.openSync(filePath, 'r');
+  fs.readSync(fd, header, 0, 8, 0);
+  fs.closeSync(fd);
+  return isValidPng(header);
+}
+function ensureYoutubeTitle(meta, metadataPath) {
+  if (!meta.youtube_title && meta.title) {
+    meta.youtube_title = meta.title;
+    meta._qa_autofilled = {
+      ...(meta._qa_autofilled || {}),
+      youtube_title: 'Copied from title because product-manager omitted youtube_title.',
+    };
+    fs.writeFileSync(metadataPath, JSON.stringify(meta, null, 2));
+    return true;
+  }
+  return false;
+}
 
 /**
  * Run QA checklist on a completed song pipeline run.
@@ -129,12 +148,14 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
   } else {
     try {
       const meta = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      const autoFilledYoutubeTitle = ensureYoutubeTitle(meta, metadataPath);
       const tagCount = Array.isArray(meta.youtube_tags) ? meta.youtube_tags.length : 0;
       const descLen = typeof meta.youtube_description === 'string' ? meta.youtube_description.length : 0;
       if (!meta.title) fail('Metadata', 'Missing title field');
       else if (!meta.youtube_title) fail('Metadata', 'Missing youtube_title field');
       else if (tagCount < 20) warn('Metadata', `Only ${tagCount} YouTube tags (recommend 20+)`);
       else if (descLen < 200) warn('Metadata', `YouTube description short (${descLen} chars, recommend 200+)`);
+      else if (autoFilledYoutubeTitle) pass('Metadata', `youtube_title auto-filled from title, ${tagCount} tags, ${descLen} char description`);
       else pass('Metadata', `title ✓, ${tagCount} tags, ${descLen} char description`);
     } catch {
       fail('Metadata', 'metadata.json is invalid JSON');
@@ -146,7 +167,6 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
   if (!fs.existsSync(thumbDir)) {
     warn('Thumbnails', 'Directory missing — creative-manager must run');
   } else {
-    // Prefer *-final.png (title text applied) over *-base.png
     const finalPngs = fs.readdirSync(thumbDir).filter(f => f.endsWith('-final.png'));
     const basePngs = fs.readdirSync(thumbDir).filter(f => f.endsWith('-base.png'));
     const allPngs = fs.readdirSync(thumbDir).filter(f => f.endsWith('.png'));
@@ -154,26 +174,34 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
     if (allPngs.length === 0) {
       warn('Thumbnails', 'No PNG files — creative-manager must run (check CF_ACCOUNT_ID and CF_API_TOKEN in .env)');
     } else {
-      // Validate PNG magic bytes on first file
-      const sample = join(thumbDir, allPngs[0]);
-      const header = Buffer.alloc(8);
-      const fd = fs.openSync(sample, 'r');
-      fs.readSync(fd, header, 0, 8, 0);
-      fs.closeSync(fd);
+      const preferredPngs = finalPngs.length > 0 ? finalPngs : allPngs;
+      const validPreferred = preferredPngs.filter(f => {
+        try { return hasValidPngHeader(join(thumbDir, f)); } catch { return false; }
+      });
+      const invalidPreferred = preferredPngs.filter(f => !validPreferred.includes(f));
+      const invalidBasePngs = basePngs.filter(f => {
+        try { return !hasValidPngHeader(join(thumbDir, f)); } catch { return true; }
+      });
 
-      if (!isValidPng(header)) {
-        fail('Thumbnails', `${allPngs[0]} is not a valid PNG (bad magic bytes)`);
+      if (validPreferred.length === 0) {
+        fail('Thumbnails', `${preferredPngs[0]} is not a valid PNG (bad magic bytes)`);
       } else if (finalPngs.length === 0) {
-        warn('Thumbnails', `${basePngs.length} base PNG(s) present but no *-final.png with title text — title overlay may have failed`);
+        warn('Thumbnails', `${validPreferred.length} valid PNG(s) present but no *-final.png with title text — title overlay may have failed`);
       } else {
-        pass('Thumbnails', `${finalPngs.length} final PNG(s) with title text + ${basePngs.length} base PNG(s)`);
+        pass('Thumbnails', `${validPreferred.length} final PNG(s) with title text + ${basePngs.length} base PNG(s)`);
+      }
+
+      if (invalidPreferred.length > 0) {
+        warn('Thumbnails', `${invalidPreferred.length} preferred thumbnail file(s) failed PNG validation: ${invalidPreferred.join(', ')}`);
+      }
+      if (invalidBasePngs.length > 0 && finalPngs.length > 0) {
+        warn('Thumbnails', `${invalidBasePngs.length} base artifact(s) failed PNG validation but valid final thumbnail(s) exist: ${invalidBasePngs.join(', ')}`);
       }
     }
   }
 
   const passed = failures.length === 0;
 
-  // Save QA report
   const qaReport = {
     song_id: songId,
     timestamp: new Date().toISOString(),
@@ -197,7 +225,6 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
   const distributionService = config.distribution?.recommended_service || 'DistroKid';
   const distributionUrl = config.distribution?.recommended_url || 'https://distrokid.com';
 
-  // Read metadata
   let metaJson = {};
   const metadataPath = join(songDir, 'metadata.json');
   if (fs.existsSync(metadataPath)) {
@@ -212,11 +239,9 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
   const durationSec = metaJson.duration_seconds || 150;
   const durationStr = `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}`;
 
-  // ── Build distribution-ready folder ──────────────────────
   const distDir = join(__dirname, `../../output/distribution-ready/${songId}`);
   fs.mkdirSync(distDir, { recursive: true });
 
-  // Find and copy audio file
   const audioDir = join(songDir, 'audio');
   let audioSrc = null;
   let audioExt = 'mp3';
@@ -233,7 +258,6 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
     console.log(`[OPS] ✓ Audio copied → upload-this.${audioExt}`);
   }
 
-  // Find and copy thumbnails
   const thumbDir = join(songDir, 'thumbnails');
   if (fs.existsSync(thumbDir)) {
     const finalPngs = fs.readdirSync(thumbDir).filter(f => f.endsWith('-final.png'));
@@ -250,12 +274,10 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
     }
   }
 
-  // Copy metadata
   if (fs.existsSync(metadataPath)) {
     fs.copyFileSync(metadataPath, join(distDir, 'metadata.json'));
   }
 
-  // ── DISTROKID-UPLOAD.md ── pre-filled, paste-and-click ───
   const dk = `# DistroKid Upload — ${title}
 ## Generated: ${new Date().toISOString()}
 ## Everything below is pre-filled. Copy-paste each value.
@@ -316,7 +338,6 @@ Check all: ✅ Spotify ✅ Apple Music ✅ YouTube Music ✅ Amazon Music ✅ Ti
 `;
   fs.writeFileSync(join(distDir, 'DISTROKID-UPLOAD.md'), dk);
 
-  // ── YOUTUBE-UPLOAD.md ── pre-filled for YouTube Studio ───
   const yt = `# YouTube Upload — ${title}
 ## Use this AFTER DistroKid distributes (24-48 hours)
 ## Or upload a lyric video / visualizer yourself sooner
@@ -369,7 +390,6 @@ export function startScheduler({ onResearch, onFinancialReport, onDistributionCh
 
   console.log('\n[OPS-MANAGER] Starting recurring task scheduler...');
 
-  // Research: every 30 days (approximated as monthly cron)
   cron.schedule('0 9 1 * *', async () => {
     console.log('\n[OPS-MANAGER] Running scheduled research update...');
     try {
@@ -379,7 +399,6 @@ export function startScheduler({ onResearch, onFinancialReport, onDistributionCh
     }
   });
 
-  // Financial report: every 7 days (every Monday at 9am)
   cron.schedule('0 9 * * 1', async () => {
     console.log('\n[OPS-MANAGER] Running scheduled financial report...');
     try {
@@ -389,7 +408,6 @@ export function startScheduler({ onResearch, onFinancialReport, onDistributionCh
     }
   });
 
-  // Distribution check: first of month
   cron.schedule('0 10 1 * *', async () => {
     console.log('\n[OPS-MANAGER] Running scheduled distribution check...');
     try {
