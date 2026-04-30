@@ -7,14 +7,23 @@ import cron from 'node-cron';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const DEFAULT_ARTIST = BRAND_PROFILE.distribution.default_artist;
+const DEFAULT_ALBUM = BRAND_PROFILE.distribution.default_album;
+const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
+const COPPA_STATUS = BRAND_PROFILE.distribution.coppa_status;
+const CONTENT_ADVISORY = BRAND_PROFILE.distribution.content_advisory;
+const YOUTUBE_TAGS_SEED = BRAND_PROFILE.distribution.youtube_tags_seed || [];
 
 export const OPS_MANAGER_DEF = {
-  name: 'Pancake Robot Operations Manager',
+  name: `${BRAND_NAME} Operations Manager`,
   model: 'claude-haiku-4-5-20251001',
   noTools: true, // Structured markdown from provided context — no web search needed
-  system: `You are the operations manager for Pancake Robot, an autonomous children's music production pipeline.
+  system: `You are the operations manager for ${BRAND_NAME}, ${BRAND_PROFILE.brand_description}.
 
 Your role:
 1. Quality assurance — verify all pipeline outputs are complete and correct
@@ -222,8 +231,8 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
  */
 export async function generateHumanTasks({ songId, title, topic, songDir, metadata, lyricsPath, audioPromptPath, thumbnailDir, brandScore, totalCost }) {
   const config = loadConfig();
-  const distributionService = config.distribution?.recommended_service || 'DistroKid';
-  const distributionUrl = config.distribution?.recommended_url || 'https://distrokid.com';
+  const distributionService = config.distribution?.recommended_service || BRAND_PROFILE.distribution.default_distributor || 'distribution service';
+  const distributionUrl = config.distribution?.recommended_url || BRAND_PROFILE.distribution.research_default_url || '';
 
   let metaJson = {};
   const metadataPath = join(songDir, 'metadata.json');
@@ -235,7 +244,7 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
   const ytTitle = metaJson.youtube_title || title;
   const ytDescription = metaJson.youtube_description || '';
   const ytTags = Array.isArray(metaJson.youtube_tags) ? metaJson.youtube_tags.join(', ') : '';
-  const genre = metaJson.genre || "Children's Music";
+  const genre = metaJson.genre || PRIMARY_GENRE;
   const durationSec = metaJson.duration_seconds || 150;
   const durationStr = `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}`;
 
@@ -278,7 +287,7 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
     fs.copyFileSync(metadataPath, join(distDir, 'metadata.json'));
   }
 
-  const dk = `# DistroKid Upload — ${title}
+  const dk = `# ${distributionService} Upload — ${title}
 ## Generated: ${new Date().toISOString()}
 ## Everything below is pre-filled. Copy-paste each value.
 
@@ -292,7 +301,7 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
 
 ## Step-by-step
 
-1. Log in at ${distributionUrl}
+1. Log in at ${distributionUrl || distributionService}
 2. Click **Upload** → **New Release** → **Single**
 3. Upload audio: \`upload-this.${audioExt}\`
 
@@ -300,7 +309,8 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
 | Field | Value |
 |---|---|
 | Song Title | \`${title}\` |
-| Primary Artist | \`Pancake Robot\` |
+| Primary Artist | \`${metaJson.artist || DEFAULT_ARTIST}\` |
+| Album | \`${metaJson.album || DEFAULT_ALBUM}\` |
 | Genre | \`${genre}\` |
 | BPM | \`${bpm}\` |
 | Duration | \`${durationStr}\` |
@@ -310,16 +320,16 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
 ### Songwriter / Publisher
 | Field | Value |
 |---|---|
-| Songwriter | \`Pancake Robot AI\` |
-| Composer | \`Pancake Robot AI\` |
+| Songwriter | \`${metaJson.songwriter || DEFAULT_ARTIST}\` |
+| Composer | \`${metaJson.composer || DEFAULT_ARTIST}\` |
 | Publisher | *(leave blank or your name)* |
 
 ### Content Settings
 | Field | Value |
 |---|---|
-| Explicit content | \`No\` |
-| COPPA / Made for kids | \`Yes — Directed to children under 13\` |
-| Release date | *(choose Friday for best algorithmic boost)* |
+| Explicit content | \`${CONTENT_ADVISORY}\` |
+| Audience / COPPA | \`${COPPA_STATUS}\` |
+| Release date | *(choose the release date recommended in metadata)* |
 
 ### Artwork
 Upload: \`cover-art-3000x3000.png\`
@@ -333,7 +343,7 @@ Check all: ✅ Spotify ✅ Apple Music ✅ YouTube Music ✅ Amazon Music ✅ Ti
 ---
 
 ## After submission
-- DistroKid distributes within 24–48 hours
+- ${distributionService} distribution timing varies by service
 - Upload your YouTube video manually (see YOUTUBE-UPLOAD.md)
 `;
   fs.writeFileSync(join(distDir, 'DISTROKID-UPLOAD.md'), dk);
@@ -351,7 +361,7 @@ ${ytTitle}
 
 ## Description (copy exactly)
 \`\`\`
-${ytDescription || `${title} by Pancake Robot\n\n🤖🥞 Subscribe for more Pancake Robot songs!\n\n#PancakeRobot #KidsSongs #ChildrensMusic`}
+${ytDescription || `${title} by ${DEFAULT_ARTIST}\n\n${BRAND_PROFILE.brand_description}`}
 \`\`\`
 
 ## Tags (copy all)
@@ -363,14 +373,14 @@ ${ytTags}
 | Field | Value |
 |---|---|
 | Thumbnail | Upload \`youtube-thumbnail.png\` from this folder |
-| Category | **Education** or **Music** |
-| Made for kids | **Yes** |
+| Category | **Music** |
+| Audience / COPPA | **${COPPA_STATUS}** |
 | Age restriction | None |
 | Monetization | Enable if channel is monetized |
-| Playlist | Add to "Pancake Robot Songs" playlist |
+| Playlist | Add to the appropriate ${BRAND_NAME} playlist |
 
 ## Playlist
-Create or add to playlist: **Pancake Robot Songs** (Public)
+Suggested tags seed: ${YOUTUBE_TAGS_SEED.join(', ')}
 `;
   fs.writeFileSync(join(distDir, 'YOUTUBE-UPLOAD.md'), yt);
 

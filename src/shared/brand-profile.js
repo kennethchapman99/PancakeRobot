@@ -14,46 +14,37 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PROFILE_PATH = join(__dirname, '../../config/brand-profile.json');
 
 const FALLBACK_PROFILE = {
-  brand_name: 'Pancake Robot',
-  app_title: 'Pancake Robot',
-  brand_type: 'children_music',
-  brand_description: "a children's music brand",
+  brand_name: 'Default Music Brand',
+  app_title: 'Music Pipeline',
+  brand_type: 'music',
+  brand_description: 'a configurable music brand',
   audience: {
-    age_range: '4-10',
-    description: 'kids ages 4-10',
-    guardrail: 'age-appropriate for ages 4-10',
+    age_range: 'general',
+    description: 'general audience',
+    guardrail: 'appropriate for the active audience',
   },
   character: {
-    name: 'Pancake Robot',
-    core_concept: 'a cheerful robot who loves making pancakes and going on silly adventures',
-    fallback_summary: 'cheerful robot who loves pancakes and silly adventures',
-    clap_name: 'Pancake Robot Clap',
-    visual_identity: 'A cheerful robot with a toaster-style body, monitor head with a glowing pixel smiley face, silver/grey metallic arms and legs with joint bolts, warm syrup dripping from hands and feet, holding a stack of golden pancakes',
-    visual_reference: [
-      'Toaster-style silver/grey metallic body with control panel buttons',
-      'Monitor/CRT screen head with glowing yellow pixel smiley face on dark teal screen',
-      'Silver articulated robot arms and legs with round joint bolts',
-      'Warm golden syrup dripping from hands and feet',
-      'Holding or interacting with golden pancake stacks',
-      'Music notes floating nearby',
-      'Expression: always joyful, energetic, caught mid-action',
-    ],
+    name: 'Default Artist',
+    core_concept: 'a configurable artist identity',
+    fallback_summary: 'configurable artist identity',
+    visual_identity: 'profile-driven visual identity',
+    visual_reference: ['Use the active profile visual identity'],
   },
   music: {
-    default_style: "upbeat children's pop",
-    default_bpm: 118,
+    default_style: 'profile-driven pop',
+    default_bpm: 100,
     default_key: 'C Major',
-    default_prompt: "Upbeat children's pop song, 118 BPM, C Major, bright and silly, fun for kids ages 4-10, hand claps, xylophone, singalong chorus, cheerful vocals",
-    target_length: '1:30-3:00',
+    default_prompt: 'Profile-driven complete song arrangement',
+    target_length: '2:00-3:30',
     min_words: 120,
-    normal_word_range: '140-320',
-    first_vocal_by_seconds: 3,
+    normal_word_range: '160-360',
+    first_vocal_by_seconds: 5,
     max_instrumental_intro_seconds: 5,
   },
   lyrics: {
-    title_examples: ['Raining Taco Dogs', 'The Counting Stomp', 'Wiggle Like a Jellyfish', 'Five Silly Dinosaurs'],
-    topic_variety: 'animals, weather, space, vehicles, silly food, emotions, counting, colors, nature, dinosaurs, robots, dance',
-    required_closing: 'End with an open question or forward tease — never a goodbye or resolution',
+    title_examples: ['A Complete Song'],
+    topic_variety: 'profile-driven topic variety',
+    required_closing: 'End in a way that matches the active profile',
   },
   visuals: {
     style: 'Bold cartoon illustration, clean black outlines, bright saturated colors — NOT photorealistic',
@@ -68,17 +59,17 @@ const FALLBACK_PROFILE = {
     text_overlay_style: 'bold rounded font, white fill with thick dark red outline, drop shadow',
   },
   distribution: {
-    default_distributor: 'TuneCore',
-    legacy_distributor: 'DistroKid',
-    research_default_service: 'DistroKid',
-    research_default_url: 'https://distrokid.com',
-    default_artist: 'Pancake Robot',
-    default_album: 'Pancake Robot Vol. 1',
-    primary_genre: "Children's Music",
-    spotify_genres: ["children's music", 'kids pop', 'educational'],
-    youtube_tags_seed: ['kids songs', "children's music", 'pancake robot'],
-    apple_music_genres: ['Kids & Family', "Children's Music"],
-    coppa_status: 'directed to children under 13',
+    default_distributor: 'none',
+    legacy_distributor: 'none',
+    research_default_service: 'none',
+    research_default_url: 'none',
+    default_artist: 'Default Artist',
+    default_album: 'Default Album',
+    primary_genre: 'Pop',
+    spotify_genres: ['pop'],
+    youtube_tags_seed: ['music'],
+    apple_music_genres: ['Pop'],
+    coppa_status: 'profile-defined',
     content_advisory: 'suitable for all ages',
   },
   ui: {
@@ -148,6 +139,11 @@ export function validateBrandProfile(profile, profilePath = 'brand profile') {
     'distribution.default_artist',
     'distribution.default_album',
     'distribution.primary_genre',
+    'distribution.spotify_genres',
+    'distribution.youtube_tags_seed',
+    'distribution.apple_music_genres',
+    'distribution.coppa_status',
+    'distribution.content_advisory',
     'ui.sidebar_subtitle',
     'ui.logo_path',
   ];
@@ -164,6 +160,36 @@ export function validateBrandProfile(profile, profilePath = 'brand profile') {
 
   if (!Number.isFinite(Number(profile.music.default_bpm))) {
     throw new Error(`${profilePath} must define music.default_bpm as a number`);
+  }
+
+  validateStringArray(profile.distribution.spotify_genres, `${profilePath} distribution.spotify_genres`);
+  validateStringArray(profile.distribution.youtube_tags_seed, `${profilePath} distribution.youtube_tags_seed`);
+  validateStringArray(profile.distribution.apple_music_genres, `${profilePath} distribution.apple_music_genres`);
+
+  if (profile.songwriting) validateSongwriting(profile.songwriting, profilePath);
+}
+
+function validateSongwriting(songwriting, profilePath) {
+  for (const key of ['allowed_elements', 'forbidden_elements', 'required_elements', 'structure_preferences']) {
+    if (songwriting[key] !== undefined) validateStringArray(songwriting[key], `${profilePath} songwriting.${key}`);
+  }
+
+  if (songwriting.output_schema !== undefined) {
+    const schema = songwriting.output_schema;
+    if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+      throw new Error(`${profilePath} songwriting.output_schema must be an object`);
+    }
+    for (const [key, value] of Object.entries(schema)) {
+      if (typeof value !== 'boolean') {
+        throw new Error(`${profilePath} songwriting.output_schema.${key} must be boolean`);
+      }
+    }
+  }
+}
+
+function validateStringArray(value, label) {
+  if (!Array.isArray(value) || value.length === 0 || value.some(item => typeof item !== 'string' || !item.trim())) {
+    throw new Error(`${label} must be a non-empty array of strings`);
   }
 }
 

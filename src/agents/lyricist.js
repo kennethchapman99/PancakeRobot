@@ -36,21 +36,40 @@ export async function writeLyrics({ songId, topic, researchReport, brandData, re
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
 
-  const lyricsTask = buildLyricsTask({ topic, researchReport, brandData, revisionNotes, existingLyrics });
-  const result = await runAgent('lyricist', LYRICIST_DEF, lyricsTask);
-
+  let result;
   let songData;
-  try {
-    songData = parseAgentJson(result.text);
-  } catch {
-    songData = {
-      title: topic.substring(0, 50),
-      lyrics: result.text,
-      parse_error: true,
-    };
+  let qaRevisionNotes = revisionNotes;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const lyricsTask = buildLyricsTask({ topic, researchReport, brandData, revisionNotes: qaRevisionNotes, existingLyrics });
+    result = await runAgent('lyricist', LYRICIST_DEF, lyricsTask);
+
+    try {
+      songData = parseAgentJson(result.text);
+    } catch {
+      songData = {
+        title: topic.substring(0, 50),
+        lyrics: result.text,
+        parse_error: true,
+      };
+    }
+
+    songData = sanitizeSongData(songData, topic);
+    const contamination = findForbiddenElementContamination(songData);
+    if (contamination.length === 0) break;
+
+    qaRevisionNotes = [
+      revisionNotes || '',
+      'CRITICAL PROFILE QA FAILURE:',
+      `The previous draft included forbidden active-profile element(s): ${contamination.map(item => item.element).join(', ')}.`,
+      'Rewrite from scratch and remove every forbidden element. Use only allowed and required elements from the active brand profile.'
+    ].filter(Boolean).join('\n');
   }
 
-  songData = sanitizeSongData(songData, topic);
+  const contamination = findForbiddenElementContamination(songData);
+  if (contamination.length > 0) {
+    throw new Error(`Lyricist profile QA failed for "${songData.title || topic}". Forbidden element(s): ${contamination.map(item => item.element).join(', ')}`);
+  }
 
   const lyricsContent = formatLyricsMarkdown(songData);
   const lyricsPath = join(songDir, 'lyrics.md');
@@ -148,6 +167,9 @@ function formatSongwritingGuidance() {
     allowed_elements: SONGWRITING.allowed_elements || [],
     forbidden_elements: SONGWRITING.forbidden_elements || [],
     required_elements: SONGWRITING.required_elements || [],
+    structure_preferences: SONGWRITING.structure_preferences || [],
+    render_safety: SONGWRITING.render_safety || [],
+    qa_rules: SONGWRITING.qa_rules || [],
     output_schema: OUTPUT_SCHEMA,
   }, null, 2);
 }
@@ -264,6 +286,72 @@ function sanitizeAudioPrompt(audioPrompt) {
     if (typeof value === 'string') cleaned[key] = stripEmojis(value).trim();
   }
   return cleaned;
+}
+
+export function findForbiddenElementContamination(songData, forbiddenElements = SONGWRITING.forbidden_elements || []) {
+  const searchable = collectSearchableSongText(songData);
+  const normalized = normalizeForForbiddenMatch(searchable);
+
+  return forbiddenElements
+    .flatMap(element => buildForbiddenPatterns(element).map(pattern => ({ element, pattern })))
+    .filter(({ pattern }) => pattern.test(normalized))
+    .map(({ element, pattern }) => ({ element, pattern: pattern.source }));
+}
+
+function collectSearchableSongText(songData = {}) {
+  const parts = [
+    songData.title,
+    songData.lyrics,
+    songData.key_hook,
+    ...(Array.isArray(songData.chorus_lines) ? songData.chorus_lines : []),
+    flattenMetadataText(songData.audio_prompt),
+    flattenMetadataText(songData.metadata),
+  ];
+
+  return parts.filter(Boolean).join('\n');
+}
+
+function flattenMetadataText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(flattenMetadataText).join(' ');
+  if (typeof value === 'object') return Object.values(value).map(flattenMetadataText).join(' ');
+  return String(value);
+}
+
+function normalizeForForbiddenMatch(value = '') {
+  return ` ${String(value)
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()} `;
+}
+
+function buildForbiddenPatterns(element = '') {
+  const normalized = normalizeForForbiddenMatch(element).trim();
+  if (!normalized) return [];
+
+  const terms = new Set([normalized]);
+  const singular = normalized
+    .split(' ')
+    .map(word => word.endsWith('ies') ? `${word.slice(0, -3)}y` : word.replace(/s$/, ''))
+    .join(' ');
+  terms.add(singular);
+
+  if (normalized.includes('sounds')) terms.add(normalized.replace(/\bsounds\b/g, 'sound'));
+  if (normalized.includes('language')) terms.add(normalized.replace(/\blanguage\b/g, ''));
+  if (normalized.includes('metaphors')) terms.add(normalized.replace(/\bmetaphors\b/g, ''));
+
+  return [...terms]
+    .map(term => term.trim())
+    .filter(Boolean)
+    .filter(term => term.length > 2)
+    .map(term => new RegExp(`\\b${escapeRegExp(term).replace(/\s+/g, '\\s+')}\\b`, 'i'));
+}
+
+function escapeRegExp(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function formatLyricsMarkdown(songData) {

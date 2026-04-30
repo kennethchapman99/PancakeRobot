@@ -15,9 +15,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DISTRIBUTION_DIR = join(__dirname, '../../output/distribution');
 const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
-const AUDIENCE_AGE_RANGE = BRAND_PROFILE.audience.age_range;
+const BRAND_DESCRIPTION = BRAND_PROFILE.brand_description;
+const AUDIENCE = BRAND_PROFILE.audience;
+const SONGWRITING = BRAND_PROFILE.songwriting || {};
 const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor;
 const LEGACY_DISTRIBUTOR = BRAND_PROFILE.distribution.legacy_distributor;
+const RESEARCH_DEFAULT_SERVICE = BRAND_PROFILE.distribution.research_default_service;
+const RESEARCH_DEFAULT_URL = BRAND_PROFILE.distribution.research_default_url;
 const DEFAULT_ARTIST = BRAND_PROFILE.distribution.default_artist;
 const DEFAULT_ALBUM = BRAND_PROFILE.distribution.default_album;
 const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
@@ -29,23 +33,27 @@ const CONTENT_ADVISORY = BRAND_PROFILE.distribution.content_advisory;
 
 export const PRODUCT_MANAGER_DEF = {
   name: `${BRAND_NAME} Product Manager`,
-  system: `You are the product manager and distribution strategist for ${BRAND_NAME}, a children's music brand.
+  system: `You are the product manager and distribution strategist for ${BRAND_NAME}, ${BRAND_DESCRIPTION}.
 
 Your expertise covers:
 - Music streaming distribution platforms and their economics
-- YouTube SEO for children's content (a specialized and competitive field)
+- YouTube SEO for the active audience and genre
 - Metadata optimization for discoverability on Spotify, Apple Music, and YouTube
-- Children's content platform algorithms and what they reward
 - Release timing strategies for maximum algorithmic boost
-- The specific requirements of kids music (COPPA compliance considerations, family-friendly tags)
+- Content compliance requirements from the active brand profile
 
 You research thoroughly and provide specific, actionable recommendations with real numbers.
 Always output valid JSON.`,
 };
 
-const DISTRIBUTION_RESEARCH_TASK = `Do 1-2 web searches to compare music distribution services for a children's music brand.
+const DISTRIBUTION_RESEARCH_TASK = `Do 1-2 web searches to compare music distribution services for ${BRAND_NAME}, ${BRAND_DESCRIPTION}.
 
-Focus on: RouteNote (free tier), ${LEGACY_DISTRIBUTOR} ($22/yr), Amuse (free tier).
+Active audience: ${AUDIENCE.description}
+Primary genre: ${PRIMARY_GENRE}
+Preferred/default service: ${RESEARCH_DEFAULT_SERVICE}
+Legacy service to compare if relevant: ${LEGACY_DISTRIBUTOR}
+
+Focus on services appropriate to this profile. Include RouteNote, ${LEGACY_DISTRIBUTOR}, Amuse, and ${RESEARCH_DEFAULT_SERVICE} when relevant.
 Key questions: royalty split, days to publish, YouTube Content ID included?
 
 Output compact JSON only:
@@ -118,7 +126,7 @@ export async function researchDistribution() {
   const config = loadConfig();
   config.distribution = {
     recommended_service: research.recommendation?.service || DEFAULT_DISTRIBUTOR,
-    recommended_url: research.recommendation?.signup_url || 'https://distrokid.com',
+    recommended_url: research.recommendation?.signup_url || RESEARCH_DEFAULT_URL,
     release_strategy: research.release_strategy,
     researched_at: new Date().toISOString(),
   };
@@ -138,60 +146,7 @@ export async function generateMetadata({ songId, title, topic, lyrics, brandData
   const config = loadConfig();
   const releaseStrategy = config.distribution?.release_strategy;
 
-  const spotifyGenresJson = JSON.stringify(SPOTIFY_GENRES);
-  const youtubeTagsJson = JSON.stringify(YOUTUBE_TAGS_SEED);
-  const appleGenresJson = JSON.stringify(APPLE_MUSIC_GENRES);
-
-  const metadataTask = `Generate comprehensive, SEO-optimized metadata for this ${BRAND_NAME} children's song.
-
-SONG DETAILS:
-Title: ${title}
-Topic: ${topic}
-BPM: ${bpm || 'unknown'}
-
-LYRICS PREVIEW:
-${(lyrics || '').substring(0, 800)}
-
-RELEASE STRATEGY CONTEXT:
-${releaseStrategy ? JSON.stringify(releaseStrategy) : 'Friday releases typically work well for kids content'}
-
-Generate metadata optimized for:
-1. Spotify discoverability (genres, mood tags)
-2. YouTube SEO (title must have primary keyword first, 100 YouTube tags)
-3. Apple Music categorization
-
-Rules for YouTube title: primary keyword first, max 70 chars, no clickbait. Include "${BRAND_NAME}" only if it appears naturally and adds searchability — it is NOT required in every title. Great kids YouTube titles are topic-first and intriguing.
-Rules for YouTube tags: include at least 20 highly specific children's music search terms
-
-Output as JSON:
-{
-  "title": "${title}",
-  "artist": "${DEFAULT_ARTIST}",
-  "album": "${DEFAULT_ALBUM}",
-  "genre": "${PRIMARY_GENRE}",
-  "spotify_genres": ${spotifyGenresJson},
-  "youtube_tags": ${youtubeTagsJson},
-  "youtube_title": "SEO title here",
-  "youtube_description": "Full 500+ word description with timestamps placeholder, keywords naturally woven in, and call-to-action",
-  "apple_music_genres": ${appleGenresJson},
-  "mood_tags": ["happy", "energetic", "silly"],
-  "bpm": ${bpm || 110},
-  "key": "C major",
-  "duration_seconds": 145,
-  "release_strategy": {
-    "best_day": "Friday",
-    "best_time_utc": "17:00",
-    "reason": "..."
-  },
-  "thumbnail_specs": {
-    "youtube": "1280x720",
-    "spotify": "3000x3000",
-    "apple_music": "3000x3000"
-  },
-  "isrc_needed": true,
-  "content_advisory": "${CONTENT_ADVISORY}",
-  "coppa_status": "${COPPA_STATUS}"
-}`;
+  const metadataTask = buildMetadataTask({ title, topic, lyrics, bpm, releaseStrategy, researchReport, brandData });
 
   // Metadata is structured JSON generation — Haiku is sufficient and cheaper
   const metaDef = { ...PRODUCT_MANAGER_DEF, name: `${BRAND_NAME} Metadata Generator`, model: 'claude-haiku-4-5-20251001', noTools: true };
@@ -210,9 +165,100 @@ Output as JSON:
     };
   }
 
+  const qaFailures = findMetadataForbiddenElements(metadata);
+  if (qaFailures.length > 0) {
+    throw new Error(`Metadata profile QA failed for "${title}". Forbidden element(s): ${qaFailures.join(', ')}`);
+  }
+
   const metadataPath = join(songDir, 'metadata.json');
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
   console.log(`\nMetadata saved to ${metadataPath}`);
 
   return { metadata, metadataPath };
+}
+
+export function buildMetadataTask({ title, topic, lyrics, bpm, releaseStrategy, researchReport, brandData } = {}) {
+  const spotifyGenresJson = JSON.stringify(SPOTIFY_GENRES);
+  const youtubeTagsJson = JSON.stringify(YOUTUBE_TAGS_SEED);
+  const appleGenresJson = JSON.stringify(APPLE_MUSIC_GENRES);
+
+  return `Generate comprehensive, SEO-optimized metadata for this ${BRAND_NAME} song.
+
+ACTIVE BRAND PROFILE:
+${JSON.stringify({
+    brand_name: BRAND_NAME,
+    brand_description: BRAND_DESCRIPTION,
+    audience: AUDIENCE,
+    distribution: BRAND_PROFILE.distribution,
+    songwriting: SONGWRITING,
+  }, null, 2)}
+
+SONG DETAILS:
+Title: ${title}
+Topic: ${topic}
+BPM: ${bpm || 'unknown'}
+
+LYRICS PREVIEW:
+${(lyrics || '').substring(0, 800)}
+
+RELEASE STRATEGY CONTEXT:
+${releaseStrategy ? JSON.stringify(releaseStrategy) : 'Use an appropriate release strategy for the active profile audience and genre.'}
+
+RESEARCH CONTEXT:
+${researchReport ? JSON.stringify(researchReport).substring(0, 1200) : 'None supplied.'}
+
+COMPATIBLE BRAND DATA:
+${brandData ? JSON.stringify(brandData).substring(0, 1200) : 'None supplied.'}
+
+Generate metadata optimized for:
+1. Spotify discoverability using the active genre and profile audience
+2. YouTube SEO for the active profile audience
+3. Apple Music categorization
+
+Rules for YouTube title: primary keyword first, max 70 chars, no clickbait. Include "${BRAND_NAME}" only if it appears naturally and adds searchability.
+Rules for YouTube tags: start from the active profile youtube_tags_seed, then add relevant tags that do not violate forbidden_elements.
+Do not add metadata for audiences, genres, compliance statuses, playlists, or search terms that are not in the active brand profile.
+
+Output as JSON:
+{
+  "title": "${title}",
+  "artist": "${DEFAULT_ARTIST}",
+  "album": "${DEFAULT_ALBUM}",
+  "genre": "${PRIMARY_GENRE}",
+  "spotify_genres": ${spotifyGenresJson},
+  "youtube_tags": ${youtubeTagsJson},
+  "youtube_title": "SEO title here",
+  "youtube_description": "Full description with keywords naturally woven in and call-to-action appropriate to the active profile",
+  "apple_music_genres": ${appleGenresJson},
+  "mood_tags": ["profile-aligned mood"],
+  "bpm": ${bpm || BRAND_PROFILE.music.default_bpm},
+  "key": "${BRAND_PROFILE.music.default_key || 'profile-aligned key'}",
+  "duration_seconds": 180,
+  "release_strategy": {
+    "best_day": "Friday",
+    "best_time_utc": "17:00",
+    "reason": "..."
+  },
+  "thumbnail_specs": {
+    "youtube": "1280x720",
+    "spotify": "3000x3000",
+    "apple_music": "3000x3000"
+  },
+  "isrc_needed": true,
+  "content_advisory": "${CONTENT_ADVISORY}",
+  "coppa_status": "${COPPA_STATUS}"
+}`;
+}
+
+export function findMetadataForbiddenElements(metadata, forbiddenElements = SONGWRITING.forbidden_elements || []) {
+  const normalized = normalizeForMetadataMatch(JSON.stringify(metadata || {}));
+  return forbiddenElements.filter(element => {
+    const term = normalizeForMetadataMatch(element).trim();
+    if (!term || term.length < 3) return false;
+    return normalized.includes(` ${term} `);
+  });
+}
+
+function normalizeForMetadataMatch(value = '') {
+  return ` ${String(value).toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim()} `;
 }

@@ -45,12 +45,20 @@
     "primary_emotional_goal": "high-energy replayability, joy, silliness, and kid participation",
     "voice_perspective": "Pancake Robot and friends singing directly to kids",
     "allowed_elements": [
+      "claps",
+      "physical action cues",
       "simple movement cues",
       "call-and-response",
+      "silly breakdowns",
+      "funny long words",
+      "robot sounds",
+      "pancake imagery",
       "singable sound effects",
       "warm silly humor",
+      "kid-safe vocabulary",
       "kid-friendly repetition",
-      "Pancake Robot character moments"
+      "Pancake Robot character moments",
+      "open question ending"
     ],
     "forbidden_elements": [
       "unsafe or scary imagery",

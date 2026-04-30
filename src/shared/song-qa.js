@@ -1,5 +1,5 @@
 /**
- * Song QA helpers for Pancake Robot render safety.
+ * Song QA helpers for profile-driven render safety.
  *
  * These checks are deterministic and intentionally strict. The goal is to block
  * weak render packs before MiniMax burns a generation, then flag obvious audio
@@ -8,11 +8,14 @@
 
 import fs from 'fs';
 import { join } from 'path';
+import { loadBrandProfile } from './brand-profile.js';
 
-export const MIN_FULL_SONG_WORDS = 120;
-export const MIN_FULL_SONG_DURATION_SECONDS = 90;
-export const MAX_INSTRUMENTAL_INTRO_SECONDS = 5;
-export const FIRST_VOCAL_REQUIRED_BY_SECONDS = 5;
+const BRAND_PROFILE = loadBrandProfile();
+
+export const MIN_FULL_SONG_WORDS = Number(BRAND_PROFILE.music.min_words || 120);
+export const MIN_FULL_SONG_DURATION_SECONDS = inferMinimumDurationSeconds(BRAND_PROFILE.music.target_length) || 90;
+export const MAX_INSTRUMENTAL_INTRO_SECONDS = Number(BRAND_PROFILE.music.max_instrumental_intro_seconds || 5);
+export const FIRST_VOCAL_REQUIRED_BY_SECONDS = Number(BRAND_PROFILE.music.first_vocal_by_seconds || 5);
 export const MAX_RENDER_PROMPT_CHARS = 2000;
 
 const ALLOWED_MINIMAX_MUSIC_MODELS = new Set(['music-2.6', 'music-2.6-free']);
@@ -237,8 +240,9 @@ export function buildRenderSafetyPrompt(title) {
     'start with a sung or spoken vocal line',
     `sing the exact title "${title}" clearly in the opening vocal line`,
     `repeat the exact title "${title}" clearly in the chorus`,
-    'complete children’s song, target 1:30 to 3:00, not a micro-jingle',
     'lyrics contain no visible section labels, stage directions, or emoji',
+    `complete ${BRAND_PROFILE.brand_description}, target ${BRAND_PROFILE.music.target_length}, not a micro-jingle unless explicitly requested`,
+    ...arrayify(BRAND_PROFILE.songwriting?.render_safety),
   ];
 }
 
@@ -333,7 +337,7 @@ export function runPreRenderQAGate({
   }
 
   if (!allowShortSongs && wordCount < MIN_FULL_SONG_WORDS) {
-    fail('Lyric length', `${wordCount} words is too short for a 1:30+ render; minimum is ${MIN_FULL_SONG_WORDS}. Set PANCAKE_ALLOW_SHORT_SONGS=true only for intentional jingles.`);
+    fail('Lyric length', `${wordCount} words is too short for the active profile target (${BRAND_PROFILE.music.target_length}); minimum is ${MIN_FULL_SONG_WORDS}. Set PANCAKE_ALLOW_SHORT_SONGS=true only for intentional short songs.`);
   } else if (wordCount < 160) {
     warn('Lyric length', `${wordCount} words may produce a shorter song; acceptable if target is near 1:30.`);
   } else {
@@ -370,7 +374,7 @@ export function runPreRenderQAGate({
     model,
     word_count: wordCount,
     render_word_count: countWords(renderLyrics),
-    target_duration_seconds: '90-180',
+    target_duration_seconds: BRAND_PROFILE.music.target_length,
     max_instrumental_intro_seconds: MAX_INSTRUMENTAL_INTRO_SECONDS,
     first_vocal_required_by_seconds: FIRST_VOCAL_REQUIRED_BY_SECONDS,
     failures,
@@ -403,7 +407,18 @@ function buildPreRenderFailureMarkdown(report) {
     `- Rendered lyrics sent to MiniMax must contain only singable words, not section labels.\n` +
     `- Vocals must be prompted to start within 0–3 seconds.\n` +
     `- Non-vocal opening must be capped at ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds.\n` +
-    `- Songs should target 1:30–3:00. Lyrics must be at least ${MIN_FULL_SONG_WORDS} words unless PANCAKE_ALLOW_SHORT_SONGS=true.\n`;
+    `- Songs should target ${report.target_duration_seconds}. Lyrics must be at least ${MIN_FULL_SONG_WORDS} words unless PANCAKE_ALLOW_SHORT_SONGS=true.\n`;
+}
+
+function arrayify(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value ? [String(value)] : [];
+}
+
+function inferMinimumDurationSeconds(targetLength = '') {
+  const match = String(targetLength).match(/(\d+):(\d{2})/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 export function runPostRenderAudioQACheck({ songId, songDir, title, audioFilePath, minDurationSeconds = MIN_FULL_SONG_DURATION_SECONDS }) {

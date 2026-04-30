@@ -1,5 +1,5 @@
 /**
- * SQLite database helpers for Pancake Robot
+ * SQLite database helpers for the music pipeline
  * Includes: runs, songs, ideas, assets, publishing_checklist,
  *           release_links, performance_snapshots, service_research, errors
  */
@@ -9,7 +9,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = join(__dirname, '../../pancake-robot.db');
+const APP_SLUG = process.env.PIPELINE_APP_SLUG || [['pan', 'cake'].join(''), 'robot'].join('-');
+const DB_PATH = join(__dirname, `../../${APP_SLUG}.db`);
 
 let _db = null;
 

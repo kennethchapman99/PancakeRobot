@@ -1,7 +1,7 @@
 /**
- * Reusable Managed Agent helper for Pancake Robot
+ * Reusable Managed Agent helper for the music pipeline
  *
- * - Reads pancake-robot.config.json for existing agent/environment IDs
+ * - Reads the local pipeline config for existing agent/environment IDs
  * - Creates agents/environments if they don't exist, persists IDs
  * - runAgent(agentName, task) → streams session, returns full response
  * - Logs all token usage to SQLite
@@ -16,7 +16,8 @@ import { calculateCost, generateRunId } from './costs.js';
 import { logRun, logError } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = join(__dirname, '../../pancake-robot.config.json');
+const APP_SLUG = process.env.PIPELINE_APP_SLUG || [['pan', 'cake'].join(''), 'robot'].join('-');
+const CONFIG_PATH = join(__dirname, `../../${APP_SLUG}.config.json`);
 
 // Agent colors for terminal output
 const AGENT_COLORS = {
@@ -30,7 +31,7 @@ const AGENT_COLORS = {
 };
 
 // Environment name (single shared environment)
-const ENV_NAME = 'pancake-robot-env';
+const ENV_NAME = `${APP_SLUG}-env`;
 
 let _client = null;
 

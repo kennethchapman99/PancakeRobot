@@ -1,42 +1,48 @@
 /**
- * Researcher Agent — Children's music trend analysis
+ * Researcher Agent — profile-driven music trend analysis
  *
  * Performs autonomous web research on what kids 4-10 actually listen to.
  * Outputs structured research-report.json.
  */
 
 import { runAgent, parseAgentJson, loadConfig } from '../shared/managed-agent.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESEARCH_PATH = join(__dirname, '../../output/research/research-report.json');
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
 
 export const RESEARCHER_DEF = {
-  name: 'Pancake Robot Researcher',
-  system: `You are a children's music market analyst obsessed with streaming data, YouTube trends, and what makes kids replay songs until parents beg for mercy.
+  name: `${BRAND_NAME} Researcher`,
+  system: `You are a music market analyst for ${BRAND_NAME}, ${BRAND_PROFILE.brand_description}.
 
 You specialize in:
-- Analyzing what children ages 4-10 actually listen to (not what parents think they listen to)
-- Understanding the psychology of viral kids content — repetition, physical engagement, humor
+- Analyzing what the active profile audience actually listens to
+- Understanding replay, emotion, structure, specificity, and audience fit
 - Reading streaming charts, YouTube trending data, and social media signals
-- Identifying lyric patterns, tempo ranges, and song structures that dominate kids' playlists
-- Competitive analysis of top kids music brands (Cocomelon, Pinkfong, Blippi, etc.)
+- Identifying lyric patterns, tempo ranges, and song structures for the active genre
+- Competitive analysis of comparable artists or content brands
 
 You produce structured, actionable research reports that inform music creation decisions.
 Always cite specific examples with real songs and their approximate stream counts when available.
 Format your final output as valid JSON.`,
 };
 
-const RESEARCH_TASK = `Research children's music trends for a new brand called "Pancake Robot" (ages 4-10).
+const RESEARCH_TASK = `Research music trends for ${BRAND_NAME}.
+
+ACTIVE BRAND PROFILE:
+${JSON.stringify(BRAND_PROFILE, null, 2)}
 
 Do 2-3 targeted web searches maximum, then synthesize. Focus on:
-1. TOP TOPICS: 5 themes dominating kids music + why each works psychologically
+1. TOP TOPICS: 5 themes relevant to the active audience + why each works psychologically
 2. LYRIC PATTERNS: 3 techniques that drive replay (repetition, call-and-response, etc.)
-3. SONG SPECS: ideal length, BPM range, key signatures for kids
+3. SONG SPECS: ideal length, BPM range, key signatures for this profile
 4. AVOID: top 3 mistakes that kill replay
-5. FIRST SONG IDEAS: 3 specific concepts well-suited for a brand-new channel
+5. FIRST SONG IDEAS: 3 specific concepts well-suited for this profile
 
 Output compact JSON only:
 {

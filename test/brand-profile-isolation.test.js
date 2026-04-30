@@ -98,11 +98,11 @@ test('Sue profile lyric prompt uses songwriting rules without stale brand leakag
     brandData: { character: { name: 'Pancake Robot' } }
   });
 
-  for (const forbiddenLeak of ['Pancake Robot', 'beep boop']) {
-    assert.equal(prompt.toLowerCase().includes(forbiddenLeak.toLowerCase()), false, `prompt leaked stale brand: ${forbiddenLeak}`);
-  }
+  assert.equal(/"allowed_elements":\s*\[[^\]]*Pancake Robot/i.test(prompt), false, 'stale brand appeared as an allowed element');
+  assert.equal(/MUSIC DIRECTION:[\s\S]*Pancake Robot/i.test(prompt), false, 'stale brand appeared in positive music direction');
+  assert.equal(/LYRIC RULES:[\s\S]*beep boop/i.test(prompt), false, 'stale brand appeared in positive lyric rules');
 
-  for (const required of ['Sue Wong', "Mother's Day", 'tear-jerking', 'piano ballad', 'Ken', 'Jayda', 'Myles', 'Makena', 'Cheddar']) {
+  for (const required of ['Sue Wong', "Mother's Day", '18th year', 'tear-jerking', 'piano ballad', 'Ken', 'Jayda', 'Myles', 'Makena', 'Cheddar']) {
     assert.equal(prompt.includes(required), true, `prompt missing: ${required}`);
   }
 

@@ -31,20 +31,20 @@ export const CREATIVE_MANAGER_DEF = {
   name: `${BRAND_NAME} Creative Manager`,
   model: 'claude-haiku-4-5-20251001',
   noTools: true,
-  system: `You are the creative director for ${BRAND_NAME}, a children's music brand.
+  system: `You are the creative director for ${BRAND_NAME}, ${BRAND_PROFILE.brand_description}.
 
 Your expertise:
-- Children's illustration and visual design (bold, bright, high-contrast styles)
-- Thumbnail optimization for YouTube CTR in kids content
+- Visual design for the active profile audience
+- Thumbnail optimization for YouTube CTR in the active genre
 - Crafting precise AI image generation prompts that produce consistent character results
-- Understanding what visual elements make kids (and parents) click on content
-- Color theory for children's content (warm, saturated, inviting palettes)
+- Understanding what visual elements make the active audience click
+- Color theory for profile-aligned content
 
 ${BRAND_NAME}'s visual identity:
 - Character: ${CHARACTER_VISUAL_IDENTITY}
 - Style: ${VISUAL_STYLE}
-- Colors: Warm syrup-gold (${VISUAL_PALETTE.syrup_gold}), silver-grey (${VISUAL_PALETTE.silver_grey}), soft sky-blue background (${VISUAL_PALETTE.sky_blue}), cream/beige (${VISUAL_PALETTE.cream}), red accents
-- Always high contrast, always readable at small sizes, always joyful energy
+- Colors: ${JSON.stringify(VISUAL_PALETTE)}
+- Always match the active brand profile and remain readable at small sizes
 
 When crafting image prompts, match this character exactly and be extremely specific about composition.`,
 };
@@ -79,7 +79,7 @@ ${characterReferenceLines}
 
 VISUAL STYLE:
 - ${VISUAL_STYLE}
-- Bright saturated colors: syrup-gold (${VISUAL_PALETTE.syrup_gold}), silver-grey (${VISUAL_PALETTE.silver_grey}), sky-blue (${VISUAL_PALETTE.sky_blue}), cream (${VISUAL_PALETTE.cream})
+- Profile palette: ${JSON.stringify(VISUAL_PALETTE)}
 - High contrast, reads well at thumbnail size
 - NO text in the image (text added separately)
 
@@ -125,24 +125,24 @@ Output as JSON:
       prompts: {
         youtube_landscape: {
           size: '1280x720',
-          prompt: `Bold cartoon illustration, ${CHARACTER_NAME} character (${CHARACTER_VISUAL_IDENTITY}), ${topic} themed background, bright saturated colors, thick black outlines, sky-blue background, high energy joyful pose, wide landscape composition, NO text`,
-          negative_prompt: 'text, words, letters, photorealistic, dark, scary, blurry',
+          prompt: `${VISUAL_STYLE}, ${CHARACTER_NAME} (${CHARACTER_VISUAL_IDENTITY}), ${topic} themed background, profile palette ${JSON.stringify(VISUAL_PALETTE)}, wide landscape composition, NO text`,
+          negative_prompt: NEGATIVE_PROMPT,
         },
         spotify_square: {
           size: '3000x3000',
-          prompt: `Bold cartoon illustration, ${CHARACTER_NAME} character (${CHARACTER_VISUAL_IDENTITY}), ${topic} scene, bright saturated colors, thick black outlines, square composition centered on character, NO text`,
-          negative_prompt: 'text, words, letters, photorealistic, dark, scary',
+          prompt: `${VISUAL_STYLE}, ${CHARACTER_NAME} (${CHARACTER_VISUAL_IDENTITY}), ${topic} scene, profile palette ${JSON.stringify(VISUAL_PALETTE)}, square composition centered on the subject, NO text`,
+          negative_prompt: NEGATIVE_PROMPT,
         },
         apple_music_square: {
           size: '3000x3000',
-          prompt: `Bold cartoon illustration, ${CHARACTER_NAME} character (${CHARACTER_VISUAL_IDENTITY}), ${topic} scene, bright saturated colors, thick black outlines, square composition, NO text`,
-          negative_prompt: 'text, words, letters, photorealistic, dark, scary',
+          prompt: `${VISUAL_STYLE}, ${CHARACTER_NAME} (${CHARACTER_VISUAL_IDENTITY}), ${topic} scene, profile palette ${JSON.stringify(VISUAL_PALETTE)}, square composition, NO text`,
+          negative_prompt: NEGATIVE_PROMPT,
         },
       },
       text_overlay_notes: {
         title_text: title,
         placement: 'bottom third',
-        style_notes: 'bold rounded font, white with dark red outline',
+        style_notes: TEXT_OVERLAY_STYLE,
       },
     };
   }

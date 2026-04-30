@@ -25,10 +25,12 @@ import { getAllSongs, createIdea } from './db.js';
 const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
 const AUDIENCE_AGE_RANGE = BRAND_PROFILE.audience.age_range;
+const AUDIENCE_DESCRIPTION = BRAND_PROFILE.audience.description;
 const CHARACTER_NAME = BRAND_PROFILE.character.name;
 const CHARACTER_FALLBACK_SUMMARY = BRAND_PROFILE.character.fallback_summary;
 const TITLE_EXAMPLES = BRAND_PROFILE.lyrics.title_examples;
 const TOPIC_VARIETY = BRAND_PROFILE.lyrics.topic_variety;
+const SONGWRITING = BRAND_PROFILE.songwriting || {};
 
 /**
  * Run the song suggester pipeline.
@@ -68,15 +70,18 @@ export async function runSuggestPipeline(onLog = () => {}) {
 
   const brandSummary = config.brand?.voice?.recurring_themes
     ? `Brand themes: ${config.brand.voice.recurring_themes.join(', ')}`
-    : `Brand: ${BRAND_NAME} — ${CHARACTER_FALLBACK_SUMMARY}, ages ${AUDIENCE_AGE_RANGE}`;
+    : `Brand: ${BRAND_NAME} — ${CHARACTER_FALLBACK_SUMMARY}; audience: ${AUDIENCE_DESCRIPTION}`;
 
   const titleExamples = TITLE_EXAMPLES.map(t => `"${t}"`).join(', ');
 
-  const task = `You are the song strategist for ${BRAND_NAME}, a children's music brand (ages ${AUDIENCE_AGE_RANGE}).
+  const task = `You are the song strategist for ${BRAND_NAME}, ${BRAND_PROFILE.brand_description}.
 
 ${brandSummary}
 ${existingSongs}
 ${researchSummary}
+
+ACTIVE SONGWRITING RULES:
+${JSON.stringify(SONGWRITING, null, 2)}
 
 Recommend the 5 best next song topics. For each:
 1. Pick topics that are NOT already covered by existing songs
@@ -89,7 +94,7 @@ TITLE RULES — this is critical:
 - Most titles should be creative and topic-first: ${titleExamples}
 - Do NOT default to "${CHARACTER_NAME} [topic]" — that pattern is overused
 - The character name "${CHARACTER_NAME}" should appear in a title at most once per 5 songs, and only when it genuinely adds humor or meaning
-- Great kids song titles are short, funny, or surprising — they make a child say "wait, WHAT?"
+- Great titles are specific, memorable, and aligned to the active brand profile.
 
 Output as JSON:
 {
@@ -100,7 +105,7 @@ Output as JSON:
       "topic": "One-line topic description for --new command",
       "why": "Why this will work right now (2-3 sentences)",
       "hook_idea": "The key lyrical or musical hook concept",
-      "physical_action": "Suggested body movement kids can do",
+      "profile_specific_element": "A profile-aligned detail, motif, memory, or mechanic",
       "bpm_target": 110,
       "urgency": "evergreen|seasonal|trending"
     }
@@ -112,7 +117,7 @@ Output as JSON:
     name: `${BRAND_NAME} Song Suggester`,
     model: 'claude-haiku-4-5-20251001',
     noTools: true,
-    system: "You are a children's music strategist. You recommend song topics that maximize replay-ability, virality, and brand consistency. Always output valid JSON.",
+    system: "You are a music content strategist. You recommend song topics that maximize profile fit, replay value, and brand consistency. Always output valid JSON.",
   };
 
   log('🤖 Asking the AI strategist for recommendations...');
@@ -147,7 +152,7 @@ Output as JSON:
         mood: rec.bpm_target ? `upbeat, ${rec.bpm_target} BPM` : null,
         tags: [rec.urgency || 'evergreen'].filter(Boolean),
         lyric_seed: rec.hook_idea || null,
-        notes: rec.physical_action ? `Physical action: ${rec.physical_action}` : null,
+        notes: rec.profile_specific_element || rec.physical_action || null,
         source_type: 'generated',
         source_ref: `suggest_${new Date().toISOString().slice(0, 10)}`,
       });
