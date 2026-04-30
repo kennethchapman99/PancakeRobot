@@ -17,6 +17,8 @@ const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
 const CHARACTER_NAME = BRAND_PROFILE.character.name;
 const MUSIC = BRAND_PROFILE.music;
+const SONGWRITING = BRAND_PROFILE.songwriting || {};
+const OUTPUT_SCHEMA = SONGWRITING.output_schema || {};
 const MUSIC_TARGET_LENGTH = MUSIC.target_length;
 const MUSIC_DEFAULT_BPM = MUSIC.default_bpm;
 const MUSIC_DEFAULT_STYLE = MUSIC.default_style;
@@ -89,6 +91,9 @@ ${existingLyricsContext}${revisionContext}
 ACTIVE BRAND PROFILE — SOURCE OF TRUTH:
 ${JSON.stringify(BRAND_PROFILE, null, 2)}
 
+SONGWRITING DIRECTION:
+${formatSongwritingGuidance()}
+
 COMPATIBLE GENERATED BRAND DATA:
 ${JSON.stringify(getCompatibleGeneratedBrandData(brandData), null, 2)}
 
@@ -96,7 +101,7 @@ RESEARCH / CONTEXT INSIGHTS:
 ${JSON.stringify(summarizeResearch(researchReport), null, 2)}
 
 MUSIC DIRECTION:
-${MUSIC.default_prompt}
+${MUSIC_DEFAULT_PROMPT}
 
 TITLE RULES:
 - If the topic includes an explicit title, preserve that title exactly in the title field.
@@ -109,6 +114,8 @@ LYRIC RULES:
 - Use only the active brand profile as brand truth.
 - Make the song specific to ${BRAND_NAME}, ${CHARACTER_NAME}, and the topic details.
 - Do not import characters, references, sound effects, structures, genre rules, or motifs from unrelated brands.
+- Follow every forbidden element in SONGWRITING DIRECTION.
+- Include required elements naturally when they fit the topic.
 - Keep the tone aligned to this guardrail: ${BRAND_PROFILE.audience.guardrail}.
 - Use specific memories, images, names, relationships, and emotional details from the active profile.
 - Follow the required closing: ${BRAND_PROFILE.lyrics.required_closing}.
@@ -123,19 +130,61 @@ REQUIREMENTS:
 - The lyrics field may be sung by the renderer; include only section labels and words safe to sing or speak aloud.
 
 STRUCTURE OPTIONS:
-A. [INTRO] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]
-B. [INTRO] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [PRE-CHORUS] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]
-C. [INTRO] -> [VERSE 1] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]
+${formatStructurePreferences()}
 
 Output valid JSON only:
-{
-  "title": "The Song Title",
-  "lyrics": "full lyrics text with section markers",
-  "chorus_lines": ["line1", "line2", "line3", "line4"],
-  "word_count": 320,
-  "structure_used": "A|B|C",
-  "key_hook": "the memorable hook line",
-  "audio_prompt": {
+${formatOutputSchema()}`;
+}
+
+function formatSongwritingGuidance() {
+  if (!Object.keys(SONGWRITING).length) {
+    return 'No dedicated songwriting section provided. Infer songwriting direction from music, lyrics, audience, and character fields.';
+  }
+
+  return JSON.stringify({
+    song_type: SONGWRITING.song_type,
+    primary_emotional_goal: SONGWRITING.primary_emotional_goal,
+    voice_perspective: SONGWRITING.voice_perspective,
+    allowed_elements: SONGWRITING.allowed_elements || [],
+    forbidden_elements: SONGWRITING.forbidden_elements || [],
+    required_elements: SONGWRITING.required_elements || [],
+    output_schema: OUTPUT_SCHEMA,
+  }, null, 2);
+}
+
+function formatStructurePreferences() {
+  const structures = SONGWRITING.structure_preferences;
+  const defaults = [
+    '[INTRO] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]',
+    '[INTRO] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [PRE-CHORUS] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]',
+    '[INTRO] -> [VERSE 1] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]'
+  ];
+
+  return (Array.isArray(structures) && structures.length ? structures : defaults)
+    .map((structure, index) => `${index + 1}. ${structure}`)
+    .join('\n');
+}
+
+function formatOutputSchema() {
+  const fields = [
+    '  "title": "The Song Title"',
+    '  "lyrics": "full lyrics text with section markers"',
+    '  "chorus_lines": ["line1", "line2", "line3", "line4"]',
+    '  "word_count": 320',
+    '  "structure_used": "which structure option was used"',
+    '  "key_hook": "the memorable hook line"'
+  ];
+
+  if (OUTPUT_SCHEMA.include_physical_action_cue) {
+    fields.push('  "physical_action_cue": "description of the main physical action"');
+  }
+
+  if (OUTPUT_SCHEMA.include_funny_long_word) {
+    fields.push('  "funny_long_word": "the comedic long word used if any"');
+  }
+
+  if (OUTPUT_SCHEMA.include_audio_prompt !== false) {
+    fields.push(`  "audio_prompt": {
     "style": "${MUSIC.default_style}",
     "tempo_bpm": ${MUSIC.default_bpm},
     "genre": "${MUSIC.default_style}",
@@ -149,7 +198,11 @@ Output valid JSON only:
     "max_instrumental_intro_seconds": ${MUSIC.max_instrumental_intro_seconds},
     "exact_title_usage": "Exact title appears in opening vocal line, chorus, and final chorus",
     "special_notes": "Vocals begin immediately; exact title must be sung clearly early and repeated in chorus; follow the active brand profile only."
+  }`);
   }
+
+  return `{
+${fields.join(',\n')}
 }`;
 }
 
@@ -188,7 +241,7 @@ function summarizeResearch(researchReport) {
 }
 
 function sanitizeSongData(songData, topic) {
-  return {
+  const sanitized = {
     ...songData,
     title: stripEmojis(songData.title || topic.substring(0, 50)).trim(),
     lyrics: sanitizeLyricsForQA(songData.lyrics || ''),
@@ -198,6 +251,11 @@ function sanitizeSongData(songData, topic) {
       : songData.chorus_lines,
     audio_prompt: sanitizeAudioPrompt(songData.audio_prompt || {}),
   };
+
+  if (!OUTPUT_SCHEMA.include_physical_action_cue) delete sanitized.physical_action_cue;
+  if (!OUTPUT_SCHEMA.include_funny_long_word) delete sanitized.funny_long_word;
+
+  return sanitized;
 }
 
 function sanitizeAudioPrompt(audioPrompt) {
@@ -214,6 +272,9 @@ function formatLyricsMarkdown(songData) {
 
   let md = `# ${title}\n\n`;
   md += `**Key Hook:** ${songData.key_hook || 'TBD'}\n`;
+  if (OUTPUT_SCHEMA.include_physical_action_cue) {
+    md += `**Physical Action:** ${songData.physical_action_cue || 'TBD'}\n`;
+  }
   md += `**Word Count:** ~${songData.word_count || '?'}\n\n`;
   md += `---\n\n`;
   md += lyrics;
