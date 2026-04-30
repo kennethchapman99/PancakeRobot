@@ -1,85 +1,11 @@
+import fs from 'fs';
+import path from 'path';
 import { createHash } from 'crypto';
+import { fileURLToPath } from 'url';
 import { getDb } from './db.js';
 
-const SETUP_ITEMS = [
-  {
-    key: 'gmail_account',
-    category: 'Identity',
-    title: 'Create dedicated Pancake Robot Gmail account',
-    instructions: 'Create a new Gmail account used only for Pancake Robot marketing and creator/curator replies. Store the email address here after it exists. Do not connect auto-send until the inbox labels and escalation rules are verified.',
-    reference_url: 'https://accounts.google.com/signup',
-  },
-  {
-    key: 'gmail_labels',
-    category: 'Identity',
-    title: 'Create Gmail labels for agent workflow',
-    instructions: 'Create labels: PR/New, PR/Needs Ken, PR/Safe Reply, PR/Auto-Replied, PR/Approved Target, PR/Rejected Target, PR/Do Not Contact. The agent should never delete messages; it should label and archive only after rules are tested.',
-    reference_url: 'https://support.google.com/mail/answer/118708',
-  },
-  {
-    key: 'spotify_for_artists',
-    category: 'Streaming profiles',
-    title: 'Claim Spotify for Artists profile',
-    instructions: 'Use Spotify for Artists to claim the Pancake Robot artist profile after at least one release is live. Record the profile URL and the login account used.',
-    reference_url: 'https://artists.spotify.com/get-access',
-  },
-  {
-    key: 'spotify_pitching',
-    category: 'Streaming profiles',
-    title: 'Prepare Spotify editorial pitching process',
-    instructions: 'Spotify editorial pitching must be done inside Spotify for Artists before release. Record the intended pitch owner, default positioning, and release lead time target.',
-    reference_url: 'https://support.spotify.com/us/artists/article/pitching-music-to-playlist-editors/',
-  },
-  {
-    key: 'tiktok_artist_account',
-    category: 'Short-form video',
-    title: 'Set up TikTok Artist Account through DistroKid path',
-    instructions: 'Connect Pancake Robot to TikTok as an artist so released songs can be used as sounds and appear on the Music Tab. Record the TikTok handle and artist profile URL.',
-    reference_url: 'https://support.distrokid.com/hc/en-us/articles/35148606237587-How-Do-I-Get-an-Official-TikTok-Artist-Account',
-  },
-  {
-    key: 'youtube_channel',
-    category: 'Short-form video',
-    title: 'Create or confirm YouTube channel for Shorts',
-    instructions: 'Create a Pancake Robot channel for Shorts and music videos. Record the channel URL. Use this for hook clips, visualizers, and album content.',
-    reference_url: 'https://support.google.com/youtube/answer/1646861',
-  },
-  {
-    key: 'instagram_account',
-    category: 'Short-form video',
-    title: 'Create or confirm Instagram account',
-    instructions: 'Create a Pancake Robot Instagram account for Reels and creator discovery. Record handle and profile URL.',
-    reference_url: 'https://help.instagram.com/182492381886913',
-  },
-  {
-    key: 'hyperfollow_links',
-    category: 'Smart links',
-    title: 'Create DistroKid HyperFollow links',
-    instructions: 'Create or capture HyperFollow links for released and upcoming songs. These links should be used in curator pitches, creator outreach, bios, and posts.',
-    reference_url: 'https://support.distrokid.com/hc/en-us/articles/360013647913-What-Is-HyperFollow',
-  },
-  {
-    key: 'target_research_source',
-    category: 'Agent infrastructure',
-    title: 'Configure real target research source',
-    instructions: 'Set MARKETING_RESEARCH_SOURCE_PATH to a JSON file produced by OpenClaw, Firecrawl, or manual research. The importer refuses unsourced targets. Required target fields: name, type, source_url.',
-    reference_url: '',
-  },
-  {
-    key: 'openclaw_gmail_dry_run',
-    category: 'Agent infrastructure',
-    title: 'Run Gmail/OpenClaw in dry-run first',
-    instructions: 'Before full-auto replies, run inbox classification and draft generation without sending. Auto-send should stay disabled until safe reply categories, escalation categories, unsubscribe/suppression handling, and daily send limits are tested.',
-    reference_url: '',
-  },
-  {
-    key: 'compliance_guardrails',
-    category: 'Compliance',
-    title: 'Confirm anti-spam and AI disclosure rules',
-    instructions: 'Do not contact AI-hostile targets. Do not use guaranteed-stream or paid-placement vendors. Outbound messages must be targeted, truthful, include the Pancake Robot identity, and respect do-not-contact responses.',
-    reference_url: 'https://artists.spotify.com/artificial-streaming',
-  },
-];
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEFAULT_SETUP_CONFIG_PATH = path.resolve(__dirname, '../../config/marketing-setup-checklist.json');
 
 export function initMarketingSchema() {
   const db = getDb();
@@ -143,20 +69,51 @@ export function initMarketingSchema() {
     );
   `);
 
-  seedMarketingSetupItems();
+  syncMarketingSetupItemsFromConfig();
 }
 
-function seedMarketingSetupItems() {
+export function loadMarketingSetupConfig(configPath = process.env.MARKETING_SETUP_CONFIG_PATH || DEFAULT_SETUP_CONFIG_PATH) {
+  const resolvedPath = path.resolve(configPath);
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`Marketing setup config not found: ${resolvedPath}`);
+  }
+
+  const parsed = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+  if (!Array.isArray(parsed)) {
+    throw new Error('Marketing setup config must be a JSON array.');
+  }
+
+  return parsed.map((item, index) => {
+    const missing = ['key', 'category', 'title'].filter(field => !item[field] || !String(item[field]).trim());
+    if (missing.length) throw new Error(`Marketing setup item ${index} missing required field(s): ${missing.join(', ')}`);
+    return {
+      key: String(item.key).trim(),
+      category: String(item.category).trim(),
+      title: String(item.title).trim(),
+      instructions: item.instructions ? String(item.instructions).trim() : null,
+      reference_url: item.reference_url ? String(item.reference_url).trim() : null,
+    };
+  });
+}
+
+function syncMarketingSetupItemsFromConfig() {
   const db = getDb();
   const now = new Date().toISOString();
+  const configItems = loadMarketingSetupConfig();
   const stmt = db.prepare(`
-    INSERT OR IGNORE INTO marketing_setup_items
+    INSERT INTO marketing_setup_items
       (key, category, title, instructions, reference_url, status, updated_at)
     VALUES (?, ?, ?, ?, ?, 'not_started', ?)
+    ON CONFLICT(key) DO UPDATE SET
+      category = excluded.category,
+      title = excluded.title,
+      instructions = excluded.instructions,
+      reference_url = excluded.reference_url,
+      updated_at = excluded.updated_at
   `);
 
-  for (const item of SETUP_ITEMS) {
-    stmt.run(item.key, item.category, item.title, item.instructions, item.reference_url || null, now);
+  for (const item of configItems) {
+    stmt.run(item.key, item.category, item.title, item.instructions, item.reference_url, now);
   }
 }
 
