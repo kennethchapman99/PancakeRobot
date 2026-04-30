@@ -89,6 +89,8 @@ test('Sue profile lyric prompt uses songwriting rules without stale brand leakag
   }, null, 2));
 
   process.env.BRAND_PROFILE_PATH = profilePath;
+  const { clearBrandProfileCache } = await import('../src/shared/brand-profile.js');
+  clearBrandProfileCache();
 
   const { buildLyricsTask } = await import(`../src/agents/lyricist.js?cacheBust=${Date.now()}`);
   const prompt = buildLyricsTask({
