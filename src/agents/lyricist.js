@@ -17,6 +17,12 @@ const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
 const CHARACTER_NAME = BRAND_PROFILE.character.name;
 const MUSIC = BRAND_PROFILE.music;
+const MUSIC_TARGET_LENGTH = MUSIC.target_length;
+const MUSIC_DEFAULT_BPM = MUSIC.default_bpm;
+const MUSIC_DEFAULT_STYLE = MUSIC.default_style;
+const MUSIC_DEFAULT_PROMPT = MUSIC.default_prompt;
+const FIRST_VOCAL_BY_SECONDS = MUSIC.first_vocal_by_seconds;
+const MAX_INSTRUMENTAL_INTRO_SECONDS = MUSIC.max_instrumental_intro_seconds;
 
 export const LYRICIST_DEF = {
   name: `${BRAND_NAME} Lyricist`,
