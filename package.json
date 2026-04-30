@@ -18,7 +18,8 @@
     "list": "node src/orchestrator.js --list",
     "verify-song": "node src/orchestrator.js --verify",
     "approve": "node src/orchestrator.js --approve",
-    "reject": "node src/orchestrator.js --reject"
+    "reject": "node src/orchestrator.js --reject",
+    "test": "node --test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",
