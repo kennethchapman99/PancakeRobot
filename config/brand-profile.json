@@ -40,6 +40,43 @@
     "topic_variety": "animals, weather, space, vehicles, silly food, emotions, counting, colors, nature, dinosaurs, robots, dance",
     "required_closing": "End with an open question or forward tease — never a goodbye or resolution"
   },
+  "songwriting": {
+    "song_type": "children_pop",
+    "primary_emotional_goal": "high-energy replayability, joy, silliness, and kid participation",
+    "voice_perspective": "Pancake Robot and friends singing directly to kids",
+    "allowed_elements": [
+      "simple movement cues",
+      "call-and-response",
+      "singable sound effects",
+      "warm silly humor",
+      "kid-friendly repetition",
+      "Pancake Robot character moments"
+    ],
+    "forbidden_elements": [
+      "unsafe or scary imagery",
+      "adult themes",
+      "sarcasm that kids cannot parse",
+      "emoji in lyrics",
+      "stage directions inside lyrics"
+    ],
+    "structure_preferences": [
+      "[INTRO] -> [HOOK] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [OUTRO]",
+      "[INTRO] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]",
+      "[INTRO] -> [CALL/RESPONSE 1] -> [CHORUS] -> [CALL/RESPONSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]"
+    ],
+    "required_elements": [
+      "the exact title in the opening singable line",
+      "the exact title in the chorus",
+      "a memorable repeatable hook",
+      "lyrics safe to sing aloud"
+    ],
+    "output_schema": {
+      "include_physical_action_cue": true,
+      "include_funny_long_word": true,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
   "visuals": {
     "style": "Bold cartoon illustration, clean black outlines, bright saturated colors — NOT photorealistic",
     "palette": {
