@@ -1,0 +1,145 @@
+{
+  "brand_name": "Mother's Day Ballad for Sue",
+  "app_title": "Mother's Day Ballad for Sue",
+  "brand_type": "personal_family_ballad",
+  "brand_description": "a deeply emotional Mother's Day ballad celebrating Sue Wong's 18th year of being a mother",
+  "audience": {
+    "age_range": "family",
+    "description": "Sue Wong, Ken, Jayda, Myles, Makena, Cheddar, and the family",
+    "guardrail": "heartfelt, sincere, emotional, family-safe, deeply personal, loving, grateful, and tear-jerking"
+  },
+  "character": {
+    "name": "Sue Wong",
+    "core_concept": "a loving mother, wife, gardener, traveler, baker, comfort-giver, song-maker, hilarious partner, and heart of the family",
+    "fallback_summary": "Sue Wong, beloved mother of Jayda, Myles, and Makena, wife of Ken, best friend to Cheddar the mini wiener dog, and the person who fills the home with love, food, laughter, songs, and care",
+    "clap_name": "none",
+    "visual_identity": "Warm, emotional, intimate family-memory imagery centered on Sue as a mother whose love shows up through songs, food, gardening, travel, humor, comfort, and everyday devotion",
+    "visual_reference": [
+      "Sue Wong as the emotional center of the family",
+      "Celebrating her 18th year of motherhood",
+      "Jayda being born on Mother's Day",
+      "Myles being born at home",
+      "Makena as the youngest, always happy",
+      "Cheddar the mini wiener dog as Sue's best friend",
+      "Sue loving gardening and bringing life to everything around her",
+      "Sue having travelled all over the place and always being up for anything",
+      "Sue being hilarious and making everyone laugh",
+      "Sue always making up little songs about whatever someone is doing",
+      "Sue making up songs to help the family understand things",
+      "Food as love: baking, soups, bread, and snacks as hugs and kisses",
+      "Sue deeply loving and caring for everyone around her",
+      "Ken and Sue together 24/7 since they met",
+      "Family humor: the kids need to do the dishes",
+      "Sue sometimes being called Lil Pie"
+    ]
+  },
+  "music": {
+    "default_style": "tear-jerking emotional piano ballad",
+    "default_bpm": 72,
+    "default_key": "D Major",
+    "default_prompt": "Create a deeply emotional, tear-jerking Mother's Day piano ballad for Sue Wong, celebrating her 18th year as a mother. Working title: Eighteen Years of You. The song should feel intimate, sincere, cinematic, personal, and grateful, with warm vocals, piano, soft strings, gentle acoustic guitar, and a swelling final chorus. Make it sound like a love letter from Ken and the kids to Sue. Include specific family memories and details: Jayda was born on Mother's Day, Myles was born at home, Makena is the youngest and always happy, Cheddar the mini wiener dog is Sue's best friend, Sue loves gardening and brings life to everything around her, Sue has travelled all over the place and is always up for anything, Sue is hilarious, Sue always makes up little songs about whatever someone is doing, Sue makes up songs to help the family understand things, the kids need to do the dishes, Sue shows love through baking, soups, bread, and snacks that feel like hugs and kisses, Sue is sometimes called Lil Pie, and Ken and Sue have been together 24/7 since they met. The emotional message: Sue's everyday love built the whole family, and after 18 years of motherhood, she is still the heart of the home. The song should make her feel seen, cherished, and deeply appreciated because she deserves the absolute best.",
+    "target_length": "3:00-4:00",
+    "min_words": 240,
+    "normal_word_range": "280-460",
+    "first_vocal_by_seconds": 5,
+    "max_instrumental_intro_seconds": 8
+  },
+  "lyrics": {
+    "title_examples": ["Eighteen Years of You", "The Heart of This Home", "Every Snack Is a Kiss", "The Songs You Make Up", "Lil Pie's Garden"],
+    "topic_variety": "motherhood, marriage, family memories, children growing up, gardening, travel, humor, food as love, homemade songs, home, gratitude, funny family details, dogs, lifelong partnership, everyday devotion",
+    "required_closing": "End with a final emotional image of Sue surrounded by Ken, Jayda, Myles, Makena, and Cheddar, making clear that her love is the reason the family feels like home and that she deserves the absolute best"
+  },
+  "songwriting": {
+    "song_type": "adult_contemporary_personal_ballad",
+    "primary_emotional_goal": "make Sue feel deeply seen, loved, celebrated, and moved to tears through specific family memories and mature gratitude",
+    "voice_perspective": "from Ken, Jayda, Myles, and Makena to Sue",
+    "allowed_elements": [
+      "specific family memories",
+      "warm natural humor",
+      "emotional imagery",
+      "food as love",
+      "gardening as a metaphor for care and growth",
+      "travel and adventure imagery",
+      "little made-up songs Sue sings around the house",
+      "Cheddar as Sue's best friend",
+      "intimate love-letter language from Ken and the kids"
+    ],
+    "forbidden_elements": [
+      "children's song language",
+      "audience participation",
+      "claps",
+      "stomps",
+      "wiggles",
+      "call-and-response",
+      "silly breakdowns",
+      "robot sounds",
+      "pancake metaphors",
+      "educational prompts",
+      "emoji",
+      "stage directions inside lyrics",
+      "novelty comedy sections",
+      "open question ending"
+    ],
+    "structure_preferences": [
+      "[INTRO] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]",
+      "[INTRO] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [PRE-CHORUS] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]",
+      "[INTRO] -> [VERSE 1] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]"
+    ],
+    "required_elements": [
+      "Sue Wong",
+      "Ken",
+      "Jayda",
+      "Myles",
+      "Makena",
+      "Cheddar",
+      "18th year of motherhood",
+      "Jayda born on Mother's Day",
+      "Myles born at home",
+      "Makena as the youngest and always happy",
+      "Sue's little made-up songs",
+      "food as love through baking, soups, bread, and snacks",
+      "gardening",
+      "travel and being up for anything",
+      "Sue being hilarious",
+      "Ken and Sue together 24/7 since they met",
+      "the kids need to do the dishes",
+      "Sue deserves the absolute best"
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Warm cinematic family-memory artwork, soft natural light, emotional and intimate, with subtle garden, kitchen, travel, and home imagery; not cartoonish unless specifically requested",
+    "palette": {
+      "warm_gold": "#D9A441",
+      "soft_cream": "#F7E8C9",
+      "motherhood_rose": "#C96F7B",
+      "garden_green": "#6C8F5A",
+      "gentle_blue": "#8FB7D5"
+    },
+    "negative_prompt": "cold, distant, generic, sad without hope, photorealistic unless requested, text, words, letters, blurry",
+    "text_overlay_style": "elegant serif or handwritten-style title treatment, warm cream or white text with subtle shadow"
+  },
+  "distribution": {
+    "default_distributor": "personal_use",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Ken for Sue",
+    "default_album": "Mother's Day",
+    "primary_genre": "Singer-Songwriter",
+    "spotify_genres": ["singer-songwriter", "adult contemporary", "piano ballad"],
+    "youtube_tags_seed": ["mother's day song", "song for wife", "family ballad", "motherhood song"],
+    "apple_music_genres": ["Singer/Songwriter", "Adult Contemporary"],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "suitable for all ages"
+  },
+  "ui": {
+    "sidebar_subtitle": "Mother's Day Ballad Studio",
+    "logo_path": "/logo.png"
+  }
+}
