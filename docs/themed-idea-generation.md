@@ -1,1 +1,0 @@
-Themed idea generation notes.
