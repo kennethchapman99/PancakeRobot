@@ -72,6 +72,48 @@ test('Sue metadata prompt uses active distribution profile and avoids positive k
   assert.equal(/Generate metadata optimized for:[\s\S]*kids action/i.test(prompt), false);
 });
 
+test('metadata QA ignores internal compliance notes and negated checklist language', async () => {
+  process.env.BRAND_PROFILE_PATH = defaultProfilePath;
+  const { clearBrandProfileCache } = await import('../src/shared/brand-profile.js');
+  clearBrandProfileCache();
+
+  const { findMetadataForbiddenElements } = await import(`../src/agents/product-manager.js?metadataQa=${Date.now()}`);
+
+  const metadataWithInternalChecklist = {
+    title: 'Smooth In The Morning',
+    artist: 'Pancake Robot',
+    youtube_title: 'Morning Routine Song for Kids | Pancake Robot',
+    youtube_description: 'A cheerful routine song for movement and breakfast time.',
+    compliance_checklist: {
+      youtube_kids_verification: [
+        'No unsafe or scary imagery',
+        'No adult themes',
+        'No sarcasm that kids cannot parse',
+      ],
+    },
+    rationale: 'This avoids unsafe or scary imagery and avoids adult themes.',
+    performance_benchmarks: {
+      note: 'No sarcasm that kids cannot parse.',
+    },
+  };
+
+  assert.deepEqual(findMetadataForbiddenElements(metadataWithInternalChecklist), []);
+
+  const publicFailure = {
+    title: 'Smooth In The Morning',
+    artist: 'Pancake Robot',
+    youtube_description: 'This video includes unsafe or scary imagery.',
+  };
+  assert.deepEqual(findMetadataForbiddenElements(publicFailure), ['unsafe or scary imagery']);
+
+  const negatedPublicCopy = {
+    title: 'Smooth In The Morning',
+    artist: 'Pancake Robot',
+    youtube_description: 'No unsafe or scary imagery, no adult themes, and no sarcasm that kids cannot parse.',
+  };
+  assert.deepEqual(findMetadataForbiddenElements(negatedPublicCopy), []);
+});
+
 test('runtime static leak scan blocks hard-coded legacy assumptions in generic modules', () => {
   const targets = [
     'src/agents/lyricist.js',
