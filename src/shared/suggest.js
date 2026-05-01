@@ -35,14 +35,22 @@ const SONGWRITING = BRAND_PROFILE.songwriting || {};
 /**
  * Run the song suggester pipeline.
  * @param {function} onLog  - called with each log line string
+ * @param {object} options  - optional controls, including { themePrompt }
  * @returns {object}        - { recommendations, recommended_next }
  */
-export async function runSuggestPipeline(onLog = () => {}) {
+export async function runSuggestPipeline(onLog = () => {}, options = {}) {
   const log = (msg) => onLog(msg);
+  const themePrompt = typeof options.themePrompt === 'string'
+    ? options.themePrompt.trim()
+    : '';
 
   log('🔍 Loading config and catalog...');
   const config = loadConfig();
   const songs = getAllSongs();
+
+  if (themePrompt) {
+    log(`🎯 Theme guidance: ${themePrompt}`);
+  }
 
   // Load research if available
   let researchSummary = '';
@@ -73,12 +81,16 @@ export async function runSuggestPipeline(onLog = () => {}) {
     : `Brand: ${BRAND_NAME} — ${CHARACTER_FALLBACK_SUMMARY}; audience: ${AUDIENCE_DESCRIPTION}`;
 
   const titleExamples = TITLE_EXAMPLES.map(t => `"${t}"`).join(', ');
+  const themeGuidance = themePrompt
+    ? `\nUSER THEME / VIBE GUIDANCE:\nThe user wants this batch of ideas to share this common theme, vibe, or creative lane:\n"${themePrompt}"\n\nUse this to create thematic consistency across the 5 ideas. Do not hard-code or overfit to fixed categories. Do not ignore brand rules, audience fit, title rules, or duplicate-topic avoidance. Each idea should still feel distinct, replayable, and song-worthy.`
+    : '\nUSER THEME / VIBE GUIDANCE:\nNo theme was provided. Generate unrelated fresh ideas with strong variety.';
 
   const task = `You are the song strategist for ${BRAND_NAME}, ${BRAND_PROFILE.brand_description}.
 
 ${brandSummary}
 ${existingSongs}
 ${researchSummary}
+${themeGuidance}
 
 ACTIVE SONGWRITING RULES:
 ${JSON.stringify(SONGWRITING, null, 2)}
@@ -89,6 +101,7 @@ Recommend the 5 best next song topics. For each:
 3. Consider the season/timing (current date: ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
 4. Mix educational + pure fun topics
 5. Think BIG on variety — ${TOPIC_VARIETY}
+6. If theme guidance is provided, keep all 5 ideas aligned to that theme while making each idea distinct
 
 TITLE RULES — this is critical:
 - Most titles should be creative and topic-first: ${titleExamples}
@@ -135,7 +148,7 @@ Output as JSON:
   // Save to file
   const outPath = join(__dirname, '../../output/suggestions.json');
   fs.mkdirSync(join(__dirname, '../../output'), { recursive: true });
-  fs.writeFileSync(outPath, JSON.stringify({ generated_at: new Date().toISOString(), ...suggestions }, null, 2));
+  fs.writeFileSync(outPath, JSON.stringify({ generated_at: new Date().toISOString(), theme_prompt: themePrompt || null, ...suggestions }, null, 2));
   log('💾 Saved to output/suggestions.json');
 
   // Auto-save each to Idea Vault
@@ -150,11 +163,13 @@ Output as JSON:
         target_age_range: AUDIENCE_AGE_RANGE,
         category: rec.urgency === 'seasonal' ? 'seasonal' : null,
         mood: rec.bpm_target ? `upbeat, ${rec.bpm_target} BPM` : null,
-        tags: [rec.urgency || 'evergreen'].filter(Boolean),
+        tags: [rec.urgency || 'evergreen', themePrompt ? `theme:${themePrompt}` : null].filter(Boolean),
         lyric_seed: rec.hook_idea || null,
-        notes: rec.profile_specific_element || rec.physical_action || null,
+        notes: [rec.profile_specific_element || rec.physical_action || null, themePrompt ? `Theme guidance: ${themePrompt}` : null].filter(Boolean).join('\n') || null,
         source_type: 'generated',
-        source_ref: `suggest_${new Date().toISOString().slice(0, 10)}`,
+        source_ref: themePrompt
+          ? `suggest_${new Date().toISOString().slice(0, 10)}_${themePrompt.slice(0, 40)}`
+          : `suggest_${new Date().toISOString().slice(0, 10)}`,
       });
       savedIds.push({ rank: rec.rank, ideaId });
       savedCount++;
