@@ -6,11 +6,12 @@
   "main": "src/orchestrator.js",
   "scripts": {
     "start": "node src/orchestrator.js",
-    "web": "node --import ./src/web/render-mode-preload.js src/web/server.js",
+    "web": "node --import ./src/web/render-mode-preload.js --import ./src/web/marketing-preload.js src/web/server.js",
     "setup": "node src/orchestrator.js --setup",
     "new": "node src/orchestrator.js --new",
     "new:paid": "MINIMAX_USE_FREE_MODEL=false MINIMAX_MUSIC_MODEL=music-2.6 node src/orchestrator.js --new",
     "new:free": "MINIMAX_USE_FREE_MODEL=true node src/orchestrator.js --new",
+    "marketing": "node src/scripts/build-marketing-pack.js",
     "report": "node src/orchestrator.js --report",
     "research": "node src/orchestrator.js --research",
     "schedule": "node src/orchestrator.js --schedule",
