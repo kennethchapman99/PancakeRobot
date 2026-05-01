@@ -2,13 +2,17 @@
  * Song QA helpers for profile-driven render safety.
  *
  * These checks are deterministic and intentionally strict. The goal is to block
- * weak render packs before MiniMax burns a generation, then flag obvious audio
- * problems after render.
+ * weak render packs before a paid render burns a generation, then flag obvious
+ * audio problems after render.
  */
 
 import fs from 'fs';
 import { join } from 'path';
 import { loadBrandProfile } from './brand-profile.js';
+import {
+  buildLockedTitlePromptLines,
+  buildLockedTitleQaRequirements,
+} from './locked-title-policy.js';
 
 const BRAND_PROFILE = loadBrandProfile();
 
@@ -232,16 +236,14 @@ export function extractFirstSingableLines(text = '', maxChars = 500) {
 
 export function buildRenderSafetyPrompt(title) {
   return [
-    `exact song title: "${title}"`,
     'vocals begin immediately within 0-3 seconds',
     `first vocal must start by ${FIRST_VOCAL_REQUIRED_BY_SECONDS} seconds`,
     'no instrumental intro',
     `maximum non-vocal opening ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds`,
     'start with a sung or spoken vocal line',
-    `sing the exact title "${title}" clearly in the opening vocal line`,
-    `repeat the exact title "${title}" clearly in the chorus`,
     'lyrics contain no visible section labels, stage directions, or emoji',
     `complete ${BRAND_PROFILE.brand_description}, target ${BRAND_PROFILE.music.target_length}, not a micro-jingle unless explicitly requested`,
+    ...buildLockedTitlePromptLines(title, BRAND_PROFILE),
     ...arrayify(BRAND_PROFILE.songwriting?.render_safety),
   ];
 }
@@ -250,9 +252,6 @@ export function addRenderSafetyToPrompt(basePrompt = '', title = '') {
   const cleanBase = stripEmojis(String(basePrompt || '').trim());
   const safety = buildRenderSafetyPrompt(title).join(', ');
 
-  // MiniMax prompt limit is 2000 chars. Safety constraints must never be
-  // appended after a long style prompt and then truncated off. Put them first
-  // and only trim the lower-priority descriptive style text.
   if (!cleanBase) return safety.substring(0, MAX_RENDER_PROMPT_CHARS);
 
   const separator = ', ';
@@ -284,6 +283,7 @@ export function runPreRenderQAGate({
     checks.push({ check, passed: true, warning: detail });
   };
 
+  const titlePolicy = buildLockedTitleQaRequirements(title, BRAND_PROFILE);
   const prompt = stripEmojis(String(stylePrompt || ''));
   const rawLyricText = String(lyrics || '');
   const lyricText = sanitizeLyricsForQA(rawLyricText);
@@ -316,24 +316,36 @@ export function runPreRenderQAGate({
     pass('Renderable lyrics', 'Render payload strips section labels and keeps only singable lines');
   }
 
-  if (!containsExactTitle(lyricText, title)) {
-    fail('Title in lyrics', `Exact title "${title}" is missing from lyrics`);
+  if (titlePolicy.requireInLyrics) {
+    if (!containsExactTitle(lyricText, title)) {
+      fail('Title in lyrics', `Exact title "${title}" is missing from lyrics`);
+    } else {
+      pass('Title in lyrics', `Exact title "${title}" found`);
+    }
   } else {
-    pass('Title in lyrics', `Exact title "${title}" found`);
+    pass('Title in lyrics', 'Not required by active brand profile');
   }
 
-  if (!containsExactTitle(firstSingable, title) && !containsExactTitle(intro, title)) {
-    fail('Opening vocal title', `Exact title "${title}" must appear in the opening singable line / [INTRO] section`);
+  if (titlePolicy.requireInOpening) {
+    if (!containsExactTitle(firstSingable, title) && !containsExactTitle(intro, title)) {
+      fail('Opening vocal title', `Exact title "${title}" must appear in the opening per active brand profile`);
+    } else {
+      pass('Opening vocal title', 'Exact title appears in opening per active brand profile');
+    }
   } else {
-    pass('Opening vocal title', 'Exact title appears early enough to force a fast vocal start');
+    pass('Opening vocal title', 'Not required by active brand profile');
   }
 
-  if (!chorus) {
-    fail('Chorus section', 'Missing [CHORUS] section');
-  } else if (!containsExactTitle(chorus, title)) {
-    fail('Title in chorus', `Exact title "${title}" is missing from [CHORUS]`);
+  if (titlePolicy.requireInChorus) {
+    if (!chorus) {
+      fail('Chorus section', 'Missing [CHORUS] section required by active brand profile title policy');
+    } else if (!containsExactTitle(chorus, title)) {
+      fail('Title in chorus', `Exact title "${title}" is missing from [CHORUS]`);
+    } else {
+      pass('Title in chorus', 'Exact title appears in [CHORUS] per active brand profile');
+    }
   } else {
-    pass('Title in chorus', 'Exact title appears in [CHORUS]');
+    pass('Title in chorus', 'Not required by active brand profile');
   }
 
   if (!allowShortSongs && wordCount < MIN_FULL_SONG_WORDS) {
@@ -356,8 +368,11 @@ export function runPreRenderQAGate({
     { check: 'Prompt bans instrumental intro', terms: ['no instrumental intro'] },
     { check: 'Prompt requires fast vocals', terms: ['vocals begin immediately', 'within 0 3 seconds'] },
     { check: 'Prompt caps non-vocal opening', terms: ['maximum non vocal opening', `${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds`] },
-    { check: 'Prompt includes exact title', terms: [normalizeForMatch(title)] },
     { check: 'Prompt bans lyric metadata leakage', terms: ['lyrics contain no visible section labels', 'stage directions', 'emoji'] },
+    ...titlePolicy.promptTerms.map((term, index) => ({
+      check: `Prompt title policy ${index + 1}`,
+      terms: [normalizeForMatch(term)],
+    })),
   ];
 
   for (const requirement of requiredPromptIdeas) {
@@ -377,6 +392,7 @@ export function runPreRenderQAGate({
     target_duration_seconds: BRAND_PROFILE.music.target_length,
     max_instrumental_intro_seconds: MAX_INSTRUMENTAL_INTRO_SECONDS,
     first_vocal_required_by_seconds: FIRST_VOCAL_REQUIRED_BY_SECONDS,
+    locked_title_policy: titlePolicy,
     failures,
     warnings,
     checks,
@@ -394,17 +410,21 @@ export function runPreRenderQAGate({
 }
 
 function buildPreRenderFailureMarkdown(report) {
+  const titlePolicyLines = [];
+  if (report.locked_title_policy?.requireInOpening) titlePolicyLines.push('- Exact title must appear in the opening per active brand profile.');
+  if (report.locked_title_policy?.requireInChorus) titlePolicyLines.push('- Exact title must appear in the chorus per active brand profile.');
+  if (report.locked_title_policy?.requireInLyrics) titlePolicyLines.push('- Exact title must appear in the lyrics per active brand profile.');
+
   return `# Pre-Render QA Failed — ${report.title}\n\n` +
-    `Rendering was blocked before MiniMax was called. Fix these issues, then rerun the song pipeline.\n\n` +
+    `Rendering was blocked before the music provider was called. Fix these issues, then rerun the song pipeline.\n\n` +
     `## Blocking issues\n\n` +
     report.failures.map(issue => `- ${issue}`).join('\n') +
     `\n\n## Warnings\n\n` +
     (report.warnings.length ? report.warnings.map(issue => `- ${issue}`).join('\n') : '- None') +
     `\n\n## Required standards\n\n` +
-    `- Exact title must appear in the opening singable line / [INTRO].\n` +
-    `- Exact title must appear in [CHORUS].\n` +
+    (titlePolicyLines.length ? `${titlePolicyLines.join('\n')}\n` : '') +
     `- Lyrics must not contain emoji, bracketed performance notes, or italic stage directions.\n` +
-    `- Rendered lyrics sent to MiniMax must contain only singable words, not section labels.\n` +
+    `- Rendered lyrics sent to the music provider must contain only singable words, not section labels.\n` +
     `- Vocals must be prompted to start within 0–3 seconds.\n` +
     `- Non-vocal opening must be capped at ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds.\n` +
     `- Songs should target ${report.target_duration_seconds}. Lyrics must be at least ${MIN_FULL_SONG_WORDS} words unless PANCAKE_ALLOW_SHORT_SONGS=true.\n`;
@@ -425,6 +445,7 @@ export function runPostRenderAudioQACheck({ songId, songDir, title, audioFilePat
   const failures = [];
   const warnings = [];
   const checks = [];
+  const titlePolicy = buildLockedTitleQaRequirements(title, BRAND_PROFILE);
 
   const pass = (check, detail) => checks.push({ check, passed: true, detail });
   const fail = (check, detail) => {
@@ -454,15 +475,17 @@ export function runPostRenderAudioQACheck({ songId, songDir, title, audioFilePat
   }
 
   const transcriptPath = songDir ? join(songDir, 'audio', 'transcript.txt') : null;
-  if (transcriptPath && fs.existsSync(transcriptPath)) {
+  if (titlePolicy.requireInLyrics && transcriptPath && fs.existsSync(transcriptPath)) {
     const transcript = fs.readFileSync(transcriptPath, 'utf8');
     if (!containsExactTitle(transcript, title)) {
       fail('Transcript title check', `Exact title "${title}" missing from transcript`);
     } else {
-      pass('Transcript title check', 'Exact title found in transcript');
+      pass('Transcript title check', 'Exact title found in transcript per active brand profile');
     }
-  } else {
+  } else if (titlePolicy.requireInLyrics) {
     warn('Transcript title check', 'No audio/transcript.txt found yet. Add a transcript to verify actual sung title.');
+  } else {
+    pass('Transcript title check', 'Not required by active brand profile');
   }
 
   const vocalTimingPath = songDir ? join(songDir, 'audio', 'vocal-timing.json') : null;
@@ -492,6 +515,7 @@ export function runPostRenderAudioQACheck({ songId, songDir, title, audioFilePat
     audio_file: audioFilePath,
     min_duration_seconds: minDurationSeconds,
     first_vocal_required_by_seconds: FIRST_VOCAL_REQUIRED_BY_SECONDS,
+    locked_title_policy: titlePolicy,
     failures,
     warnings,
     checks,
