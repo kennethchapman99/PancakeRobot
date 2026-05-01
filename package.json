@@ -6,7 +6,7 @@
   "main": "src/orchestrator.js",
   "scripts": {
     "start": "node src/orchestrator.js",
-    "web": "node --import ./src/web/render-mode-preload.js --import ./src/web/marketing-preload.js src/web/server.js",
+    "web": "node --import ./src/web/render-mode-preload.js --import ./src/web/marketing-preload.js --import ./src/web/marketing-song-detail-preload.js src/web/server.js",
     "setup": "node src/orchestrator.js --setup",
     "new": "node src/orchestrator.js --new",
     "new:paid": "MINIMAX_USE_FREE_MODEL=false MINIMAX_MUSIC_MODEL=music-2.6 node src/orchestrator.js --new",
@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",
+    "archiver": "^7.0.1",
     "better-sqlite3": "^9.0.0",
     "canvas": "^2.11.0",
     "chalk": "^5.0.0",
