@@ -12,6 +12,7 @@ window.generatorData = function() {
     errorMsg: '',
     jobId: null,
     eventSource: null,
+    themePrompt: '',
 
     get topPickId() {
       if (!this.results?.recommendations) return null;
@@ -31,7 +32,12 @@ window.generatorData = function() {
       this.decisions = {};
       this.errorMsg = '';
       try {
-        const res = await fetch('/api/suggest/run', { method: 'POST' });
+        const themePrompt = (this.themePrompt || '').trim();
+        const res = await fetch('/api/suggest/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ themePrompt }),
+        });
         const { jobId } = await res.json();
         this.jobId = jobId;
         this.listenToStream(jobId);
@@ -110,9 +116,25 @@ window.generatorData = function() {
     <div class="bg-white border border-zinc-200 rounded-2xl p-10 text-center shadow-sm">
       <div class="text-6xl mb-5">🤖</div>
       <h2 class="text-xl font-semibold mb-2">Ready to brainstorm?</h2>
-      <p class="text-sm text-zinc-500 mb-8 max-w-sm mx-auto leading-relaxed">
+      <p class="text-sm text-zinc-500 mb-6 max-w-sm mx-auto leading-relaxed">
         The AI strategist reviews your existing catalog, market research, and brand guidelines — then recommends 5 high-potential song topics.
       </p>
+
+      <div class="mb-6 max-w-md mx-auto text-left">
+        <label class="block text-sm font-semibold text-zinc-700 mb-2">
+          Optional theme or vibe
+        </label>
+        <input
+          type="text"
+          x-model="themePrompt"
+          placeholder="e.g. summer, chores, bedtime, robot dance party"
+          class="w-full border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+        >
+        <p class="text-xs text-zinc-400 mt-2">
+          Leave blank for unrelated fresh ideas.
+        </p>
+      </div>
+
       <button @click="startGenerate()"
         class="bg-amber-500 hover:bg-amber-600 text-white px-10 py-3.5 rounded-xl font-bold text-base transition shadow">
         ✨ Generate Ideas
