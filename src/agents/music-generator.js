@@ -1,16 +1,9 @@
 /**
  * Music Generator Agent — MiniMax Music 2.6
  *
- * Converts the lyricist's audio-prompt.md into an actual audio file via MiniMax.
- * Falls back to human instructions if MINIMAX_API_KEY is not set.
- *
- * MiniMax Music API docs: https://platform.minimax.io/docs/api-reference/music-generation
- * Set MINIMAX_API_KEY in .env to enable automated generation.
- *
- * Model toggle:
- * - Default production model: music-2.6
- * - Free audition model: set MINIMAX_USE_FREE_MODEL=true
- * - Explicit override: set MINIMAX_MUSIC_MODEL=music-2.6 or music-2.6-free
+ * Final rule: MiniMax and any future provider receive only singable lyric lines.
+ * Section labels, markdown, stage directions, emoji, prompt artifacts, and active
+ * profile contamination are blocked before any paid render call.
  */
 
 import fs from 'fs';
@@ -18,11 +11,11 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import {
   addRenderSafetyToPrompt,
-  prepareLyricsForRender,
   runPostRenderAudioQACheck,
   runPreRenderQAGate,
 } from '../shared/song-qa.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
+import { sanitizeLyricsForProvider } from '../shared/lyrics-sanitizer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BRAND_PROFILE = loadBrandProfile();
@@ -30,13 +23,9 @@ const BRAND_PROFILE = loadBrandProfile();
 const MINIMAX_BASE = 'https://api.minimax.io/v1';
 const PAID_MODEL = 'music-2.6';
 const FREE_MODEL = 'music-2.6-free';
-const POLL_INTERVAL_MS = 8000;    // 8s between status checks
-const MAX_POLL_ATTEMPTS = 45;     // 6 minutes max wait
+const POLL_INTERVAL_MS = 8000;
+const MAX_POLL_ATTEMPTS = 45;
 
-/**
- * Generate music for a song using MiniMax Music 2.6.
- * Returns { audioFiles, skipped, instructionsPath }
- */
 export async function generateMusic({ songId, title, lyricsText, audioPromptData }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   const audioDir = join(songDir, 'audio');
@@ -44,7 +33,6 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
 
   const modelConfig = resolveMiniMaxModelConfig();
   const prompt = buildStylePrompt(audioPromptData, { title });
-  const renderLyrics = prepareLyricsForRender(lyricsText);
 
   const preRenderQA = runPreRenderQAGate({
     songId,
@@ -71,6 +59,8 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     console.log('[MUSIC-GEN] ✓ Pre-render QA passed');
   }
 
+  const providerLyricsReport = buildProviderLyricsPayload({ songDir, title, lyricsText });
+  const renderLyrics = providerLyricsReport.lyrics;
   const apiKey = process.env.MINIMAX_API_KEY;
 
   if (!apiKey) {
@@ -81,13 +71,13 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
     console.log(`[MUSIC-GEN] Manual instructions saved to ${instructionsPath}`);
 
-    return { audioFiles: [], skipped: true, instructionsPath, preRenderQA };
+    return { audioFiles: [], skipped: true, instructionsPath, preRenderQA, providerLyricsReport };
   }
 
   console.log(`\n[MUSIC-GEN] Submitting "${title}" to MiniMax Music 2.6...`);
   console.log(`[MUSIC-GEN] Model: ${modelConfig.model} (${modelConfig.tier})`);
   console.log(`[MUSIC-GEN] Style prompt: ${prompt.substring(0, 100)}...`);
-  console.log(`[MUSIC-GEN] Render lyrics length: ${renderLyrics.length} chars`);
+  console.log(`[MUSIC-GEN] Provider lyrics length: ${renderLyrics.length} chars`);
 
   let audioHex;
   try {
@@ -106,14 +96,14 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     console.log(`[MUSIC-GEN] MiniMax submission failed: ${err.message}`);
     const instructionsPath = join(audioDir, 'MUSIC_GENERATION_INSTRUCTIONS.md');
     fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
-    return { audioFiles: [], skipped: false, apiError: err.message, instructionsPath, preRenderQA };
+    return { audioFiles: [], skipped: false, apiError: err.message, instructionsPath, preRenderQA, providerLyricsReport };
   }
 
   if (!audioHex) {
     console.log('[MUSIC-GEN] No audio returned — generation timed out or failed');
     const instructionsPath = join(audioDir, 'MUSIC_GENERATION_INSTRUCTIONS.md');
     fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
-    return { audioFiles: [], skipped: false, error: 'generation timed out or failed', instructionsPath, preRenderQA };
+    return { audioFiles: [], skipped: false, error: 'generation timed out or failed', instructionsPath, preRenderQA, providerLyricsReport };
   }
 
   const filename = `${songId}-v1-${modelConfig.tier}.mp3`;
@@ -125,7 +115,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     console.log(`[MUSIC-GEN] ✓ Saved ${filename} (${(buffer.length / 1024).toFixed(0)} KB)`);
   } catch (err) {
     console.log(`[MUSIC-GEN] Failed to write audio file: ${err.message}`);
-    return { audioFiles: [], skipped: false, error: err.message, preRenderQA };
+    return { audioFiles: [], skipped: false, error: err.message, preRenderQA, providerLyricsReport };
   }
 
   const postRenderQA = runPostRenderAudioQACheck({
@@ -153,7 +143,8 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     render_tier: modelConfig.tier,
     free_model_toggle: modelConfig.freeToggleEnabled,
     style_prompt: prompt,
-    render_lyrics_chars: renderLyrics.length,
+    provider_lyrics_chars: renderLyrics.length,
+    provider_lyrics_removed_count: providerLyricsReport.removed.length,
     pre_render_qa_passed: preRenderQA.passed,
     post_render_qa_passed: postRenderQA.passed,
     versions: [{ version: 1, tier: modelConfig.tier, model: modelConfig.model, file: filename }],
@@ -162,7 +153,47 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
 
   const audioFiles = [{ path: filePath, version: 1, model: modelConfig.model, tier: modelConfig.tier }];
   console.log(`[MUSIC-GEN] ✓ Generated ${audioFiles.length} audio file(s)`);
-  return { audioFiles, skipped: false, preRenderQA, postRenderQA };
+  return { audioFiles, skipped: false, preRenderQA, postRenderQA, providerLyricsReport };
+}
+
+export function buildProviderLyricsPayload({ songDir, title, lyricsText }) {
+  const report = sanitizeLyricsForProvider(lyricsText, {
+    forbiddenElements: BRAND_PROFILE.songwriting?.forbidden_elements || [],
+    blockBrandContamination: true,
+  });
+
+  const persistedReport = {
+    checked_at: new Date().toISOString(),
+    title,
+    blocked: report.blocked,
+    block_reason: report.blockReason,
+    provider_lyrics_chars: report.lyrics.length,
+    removed: report.removed,
+    residual_issues: report.residualIssues,
+    forbidden_hits: report.forbiddenHits,
+  };
+
+  if (songDir) {
+    fs.writeFileSync(join(songDir, 'provider-lyrics-sanitization.json'), JSON.stringify(persistedReport, null, 2));
+  }
+
+  if (report.removed.length > 0) {
+    console.log('[MUSIC-GEN] Provider lyrics sanitizer removed:');
+    report.removed.forEach(item => {
+      console.log(`  • line ${item.line}: ${item.reason}: ${item.content}`);
+    });
+  }
+
+  if (report.blockReason) {
+    throw new Error(report.blockReason);
+  }
+
+  if (report.residualIssues.length > 0) {
+    throw new Error(`Provider lyric payload blocked: ${report.residualIssues.join('; ')}`);
+  }
+
+  console.log('[MUSIC-GEN] ✓ Provider lyrics sanitized for singable-only payload');
+  return report;
 }
 
 function resolveMiniMaxModelConfig() {
@@ -171,16 +202,11 @@ function resolveMiniMaxModelConfig() {
   const model = freeToggleEnabled ? FREE_MODEL : (explicitModel || PAID_MODEL);
   const tier = model.includes('free') ? 'free' : 'paid';
 
-  return {
-    model,
-    tier,
-    explicitModel: Boolean(explicitModel),
-    freeToggleEnabled,
-  };
+  return { model, tier, explicitModel: Boolean(explicitModel), freeToggleEnabled };
 }
 
-async function submitToMiniMax({ prompt, lyrics, apiKey, model }) {
-  const body = {
+export function buildMiniMaxRequestBody({ prompt, lyrics, model }) {
+  return {
     model,
     prompt,
     lyrics,
@@ -193,6 +219,10 @@ async function submitToMiniMax({ prompt, lyrics, apiKey, model }) {
       sample_rate: 44100,
     },
   };
+}
+
+async function submitToMiniMax({ prompt, lyrics, apiKey, model }) {
+  const body = buildMiniMaxRequestBody({ prompt, lyrics, model });
 
   const res = await fetch(`${MINIMAX_BASE}/music_generation`, {
     method: 'POST',
@@ -214,14 +244,10 @@ async function submitToMiniMax({ prompt, lyrics, apiKey, model }) {
     throw new Error(`MiniMax error ${data.base_resp.status_code}: ${data.base_resp.status_msg}`);
   }
 
-  if (data.data?.status === 2 && data.data?.audio) {
-    return { done: true, audioHex: data.data.audio };
-  }
+  if (data.data?.status === 2 && data.data?.audio) return { done: true, audioHex: data.data.audio };
 
   const taskId = data.data?.task_id || data.task_id;
-  if (!taskId) {
-    throw new Error(`Unexpected MiniMax response: ${JSON.stringify(data).substring(0, 200)}`);
-  }
+  if (!taskId) throw new Error(`Unexpected MiniMax response: ${JSON.stringify(data).substring(0, 200)}`);
   return taskId;
 }
 
@@ -251,12 +277,12 @@ async function pollUntilComplete({ taskId, apiKey }) {
       if (status === 2 && audio) {
         console.log(`[MUSIC-GEN] ✓ Complete after ${attempt + 1} poll(s)`);
         return audio;
-      } else if (status === 3) {
+      }
+      if (status === 3) {
         console.log(`[MUSIC-GEN] ✗ Task failed: ${data.data?.err_msg || 'unknown error'}`);
         return null;
-      } else {
-        if (attempt % 3 === 0) console.log(`[MUSIC-GEN] Poll ${attempt + 1}: status=${status ?? '?'} — still processing...`);
       }
+      if (attempt % 3 === 0) console.log(`[MUSIC-GEN] Poll ${attempt + 1}: status=${status ?? '?'} — still processing...`);
     } catch (err) {
       console.log(`[MUSIC-GEN] Poll error: ${err.message}`);
     }
@@ -275,14 +301,25 @@ function hexToBuffer(hex) {
   return buf;
 }
 
-function buildStylePrompt(audioPrompt, { title }) {
-  let basePrompt;
+export function buildStylePrompt(audioPrompt, { title } = {}) {
+  const adultBallad = isAdultBalladDirection(audioPrompt, title);
+  const parts = [];
+
+  if (adultBallad) {
+    parts.push('slow heartfelt adult dedication ballad');
+    parts.push('72-82 BPM');
+    parts.push('piano-led arrangement');
+    parts.push('gentle strings');
+    parts.push('warm intimate lead vocal');
+    parts.push('no dance beat');
+    parts.push('no call-and-response');
+    parts.push("no children's-song energy");
+    parts.push('no novelty sound effects');
+  }
 
   if (!audioPrompt) {
-    basePrompt = BRAND_PROFILE.music.default_prompt;
+    parts.push(BRAND_PROFILE.music.default_prompt);
   } else {
-    const parts = [];
-
     if (audioPrompt.genre) parts.push(audioPrompt.genre);
     if (audioPrompt.tempo_bpm) parts.push(`${audioPrompt.tempo_bpm} BPM`);
     if (audioPrompt.key) parts.push(audioPrompt.key);
@@ -292,15 +329,29 @@ function buildStylePrompt(audioPrompt, { title }) {
     if (audioPrompt.energy) parts.push(audioPrompt.energy);
     if (audioPrompt.structure_note) parts.push(audioPrompt.structure_note);
     if (audioPrompt.special_notes) parts.push(audioPrompt.special_notes);
-
-    parts.push(BRAND_PROFILE.music.default_style);
-    parts.push(`audience: ${BRAND_PROFILE.audience.description}`);
-    parts.push(BRAND_PROFILE.audience.guardrail);
-
-    basePrompt = [...new Set(parts)].join(', ');
   }
 
+  parts.push(BRAND_PROFILE.music.default_style);
+  parts.push(BRAND_PROFILE.brand_description);
+  parts.push(`audience: ${BRAND_PROFILE.audience.description || BRAND_PROFILE.audience.age_range}`);
+  parts.push(`guardrail: ${BRAND_PROFILE.audience.guardrail}`);
+
+  const basePrompt = [...new Set(parts.filter(Boolean).map(part => String(part).trim()).filter(Boolean))].join(', ');
   return addRenderSafetyToPrompt(basePrompt, title);
+}
+
+function isAdultBalladDirection(audioPrompt, title) {
+  const text = [
+    title,
+    BRAND_PROFILE.brand_name,
+    BRAND_PROFILE.brand_type,
+    BRAND_PROFILE.brand_description,
+    BRAND_PROFILE.music.default_style,
+    BRAND_PROFILE.music.default_prompt,
+    audioPrompt ? JSON.stringify(audioPrompt) : '',
+  ].join(' ').toLowerCase();
+
+  return /\b(ballad|slow|mother'?s day|adult dedication|dedication|personal_family_ballad|sue)\b/i.test(text);
 }
 
 function buildManualInstructions({ title, lyricsText, stylePrompt, modelConfig }) {
@@ -330,7 +381,7 @@ MINIMAX_MUSIC_MODEL=music-2.6
 ${stylePrompt.substring(0, 2000)}
 \`\`\`
 
-**Lyrics** (paste into "lyrics" field — cleaned to singable words only, ≤3500 chars):
+**Lyrics** (paste into "lyrics" field — final provider-safe singable lines only, ≤3500 chars):
 \`\`\`
 ${lyricsText}
 \`\`\`
@@ -343,7 +394,7 @@ Instrumental: OFF
 - Reject if vocals do not start by ${BRAND_PROFILE.music.first_vocal_by_seconds} seconds.
 - Reject if the exact title is not sung in the opening and chorus.
 - Reject if the song is outside the active profile target length (${BRAND_PROFILE.music.target_length}) unless intentionally marked as a short/jingle.
-- Reject if section labels, emoji, or stage directions are spoken/sung.
+- Reject if section labels, emoji, markdown, prompt artifacts, or stage directions are spoken/sung.
 
 Full production notes: ../audio-prompt.md
 `;
