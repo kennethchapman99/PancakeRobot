@@ -11,16 +11,31 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
 import express from 'express';
-import { buildMarketingReleasePack } from '../marketing/release-agent.js';
-import { getAllSongs } from '../shared/db.js';
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const dotenv = require('dotenv');
+dotenv.config({ path: join(__dirname, '../../.env'), override: true });
+
 const REPO_ROOT = join(__dirname, '../..');
 const OUTPUT_ROOT = join(REPO_ROOT, process.env.MARKETING_OUTPUT_DIR || 'output/marketing-ready');
 const MARKETING_ROUTES_KEY = Symbol.for('pancakeRobot.marketingRoutesRegistered');
 
 const marketingJobs = new Map();
+let depsPromise = null;
+
+async function getDeps() {
+  if (!depsPromise) {
+    depsPromise = Promise.all([
+      import('../marketing/release-agent.js'),
+      import('../shared/db.js'),
+    ]).then(([marketing, db]) => ({
+      buildMarketingReleasePack: marketing.buildMarketingReleasePack,
+      getAllSongs: db.getAllSongs,
+    }));
+  }
+  return depsPromise;
+}
 
 function htmlEscape(value) {
   return String(value ?? '')
@@ -38,9 +53,9 @@ function readJson(path) {
 function listMarketingPacks() {
   if (!fs.existsSync(OUTPUT_ROOT)) return [];
   return fs.readdirSync(OUTPUT_ROOT)
-    .map(name => {
+    .map((name) => {
       const dir = join(OUTPUT_ROOT, name);
-      if (!fs.statSync(dir).isDirectory()) return null;
+      try { if (!fs.statSync(dir).isDirectory()) return null; } catch { return null; }
       const meta = readJson(join(dir, 'metadata.json')) || {};
       return {
         songId: name,
@@ -54,7 +69,8 @@ function listMarketingPacks() {
     .sort((a, b) => String(b.generatedAt || '').localeCompare(String(a.generatedAt || '')));
 }
 
-function renderMarketingDashboard() {
+async function renderMarketingDashboard() {
+  const { getAllSongs } = await getDeps();
   const packs = listMarketingPacks();
   const songs = getAllSongs().slice(0, 80);
   const packIds = new Set(packs.map(p => p.songId));
@@ -156,7 +172,7 @@ function renderMarketingDashboard() {
         es.close();
         window.location.href = payload.dashboardUrl;
       });
-      es.addEventListener('error', e => { log('Error building marketing pack.'); es.close(); });
+      es.addEventListener('error', () => { log('Error building marketing pack.'); es.close(); });
     }
   </script>
 </body>
@@ -167,8 +183,9 @@ function registerMarketingRoutes(app, originalGet, originalPost) {
   if (app[MARKETING_ROUTES_KEY]) return;
   app[MARKETING_ROUTES_KEY] = true;
 
-  originalGet.call(app, '/marketing', (req, res) => {
-    res.type('html').send(renderMarketingDashboard());
+  originalGet.call(app, '/marketing', async (req, res) => {
+    try { res.type('html').send(await renderMarketingDashboard()); }
+    catch (err) { res.status(500).send(`Marketing dashboard failed: ${htmlEscape(err.message)}`); }
   });
 
   originalPost.call(app, '/api/marketing/:songId/build', (req, res) => {
@@ -178,6 +195,7 @@ function registerMarketingRoutes(app, originalGet, originalPost) {
     marketingJobs.set(jobId, job);
 
     Promise.resolve().then(async () => {
+      const { buildMarketingReleasePack } = await getDeps();
       job.logs.push(`[MARKETING] Building pack for ${songId}`);
       const result = await buildMarketingReleasePack(songId);
       job.result = result;
