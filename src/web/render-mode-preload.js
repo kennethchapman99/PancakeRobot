@@ -13,6 +13,7 @@
  * Paid remains the default.
  */
 
+import '../shared/themed-idea-generation.js';
 import { createRequire, syncBuiltinESMExports } from 'module';
 import childProcess from 'child_process';
 
