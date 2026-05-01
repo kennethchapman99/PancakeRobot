@@ -23,7 +23,7 @@ const EMOJI_MATCHER = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
 const EMOJI_STRIPPER = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
 const SECTION_HEADER_PATTERN = /^\s*\[([^\]]+)\]\s*$/u;
 const KNOWN_SECTION_START_PATTERN = /^\s*\[(?:INTRO|VERSE|CHORUS|BRIDGE|OUTRO|PRE-CHORUS|HOOK|INTERLUDE|BREAKDOWN|FINAL CHORUS|CALL\/RESPONSE|CALL RESPONSE|SILLY BREAKDOWN)[^\]]*\]/imu;
-const STAGE_CUE_WORDS = /\b(?:music|vocal|vocals|sfx|sound|effect|instrumental|spoken|whisper|shout|pause|beat|tempo|slows|speeds|glitch|warping|robot voice|clap|stomp|jump|wave|spin|shake|raise|lift|point|wiggle|bounce)\b/i;
+const STAGE_CUE_WORDS = /\b(?:music|vocal|vocals|sfx|sound|effect|instrumental|spoken|whisper|shout|pause|beat|tempo|slows|speeds|glitch|warping|clap|stomp|jump|wave|spin|shake|raise|lift|point|wiggle|bounce)\b/i;
 
 const CANONICAL_SECTIONS = new Set([
   'INTRO',
@@ -180,7 +180,7 @@ export function sanitizeLyricsForQA(lyrics = '') {
 
     return line
       .replace(/\[[^\]]+\]/g, '')
-      .replace(/\((?:music|vocal|vocals|sfx|sound|effect|instrumental|spoken|whisper|shout|pause|beat|tempo|glitch|warping|robot voice)[^)]*\)/gi, '')
+      .replace(/\((?:music|vocal|vocals|sfx|sound|effect|instrumental|spoken|whisper|shout|pause|beat|tempo|glitch|warping)[^)]*\)/gi, '')
       .trimEnd();
   });
 
@@ -268,7 +268,7 @@ export function runPreRenderQAGate({
   lyrics,
   stylePrompt,
   model,
-  allowShortSongs = process.env.PANCAKE_ALLOW_SHORT_SONGS === 'true',
+  allowShortSongs = process.env.PIPELINE_ALLOW_SHORT_SONGS === 'true',
 }) {
   const failures = [];
   const warnings = [];
@@ -337,7 +337,7 @@ export function runPreRenderQAGate({
   }
 
   if (!allowShortSongs && wordCount < MIN_FULL_SONG_WORDS) {
-    fail('Lyric length', `${wordCount} words is too short for the active profile target (${BRAND_PROFILE.music.target_length}); minimum is ${MIN_FULL_SONG_WORDS}. Set PANCAKE_ALLOW_SHORT_SONGS=true only for intentional short songs.`);
+    fail('Lyric length', `${wordCount} words is too short for the active profile target (${BRAND_PROFILE.music.target_length}); minimum is ${MIN_FULL_SONG_WORDS}. Set PIPELINE_ALLOW_SHORT_SONGS=true only for intentional short songs.`);
   } else if (wordCount < 160) {
     warn('Lyric length', `${wordCount} words may produce a shorter song; acceptable if target is near 1:30.`);
   } else {
@@ -407,7 +407,7 @@ function buildPreRenderFailureMarkdown(report) {
     `- Rendered lyrics sent to MiniMax must contain only singable words, not section labels.\n` +
     `- Vocals must be prompted to start within 0–3 seconds.\n` +
     `- Non-vocal opening must be capped at ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds.\n` +
-    `- Songs should target ${report.target_duration_seconds}. Lyrics must be at least ${MIN_FULL_SONG_WORDS} words unless PANCAKE_ALLOW_SHORT_SONGS=true.\n`;
+    `- Songs should target ${report.target_duration_seconds}. Lyrics must be at least ${MIN_FULL_SONG_WORDS} words unless PIPELINE_ALLOW_SHORT_SONGS=true.\n`;
 }
 
 function arrayify(value) {

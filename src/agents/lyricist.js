@@ -32,7 +32,7 @@ export const LYRICIST_DEF = {
   system: `You are the head songwriter for ${BRAND_NAME}. Follow the active brand profile exactly. Do not import characters, references, sound effects, structures, genre rules, or motifs from unrelated brands. Output valid production-ready JSON.`,
 };
 
-export async function writeLyrics({ songId, topic, researchReport, brandData, revisionNotes, existingLyrics }) {
+export async function writeLyrics({ songId, topic, researchReport, revisionNotes, existingLyrics }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
 
@@ -41,7 +41,7 @@ export async function writeLyrics({ songId, topic, researchReport, brandData, re
   let qaRevisionNotes = revisionNotes;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const lyricsTask = buildLyricsTask({ topic, researchReport, brandData, revisionNotes: qaRevisionNotes, existingLyrics });
+    const lyricsTask = buildLyricsTask({ topic, researchReport, revisionNotes: qaRevisionNotes, existingLyrics });
     result = await runAgent('lyricist', LYRICIST_DEF, lyricsTask);
 
     try {
@@ -95,7 +95,7 @@ export async function writeLyrics({ songId, topic, researchReport, brandData, re
   };
 }
 
-export function buildLyricsTask({ topic, researchReport, brandData, revisionNotes, existingLyrics }) {
+export function buildLyricsTask({ topic, researchReport, revisionNotes, existingLyrics }) {
   const existingLyricsContext = existingLyrics
     ? `\n\nEXISTING LYRICS TO REVISE:\n\`\`\`\n${existingLyrics}\n\`\`\`\nRevise based on the feedback below. Keep what works and fix what is requested.`
     : '';
@@ -112,9 +112,6 @@ ${JSON.stringify(BRAND_PROFILE, null, 2)}
 
 SONGWRITING DIRECTION:
 ${formatSongwritingGuidance()}
-
-COMPATIBLE GENERATED BRAND DATA:
-${JSON.stringify(getCompatibleGeneratedBrandData(brandData), null, 2)}
 
 RESEARCH / CONTEXT INSIGHTS:
 ${JSON.stringify(summarizeResearch(researchReport), null, 2)}
@@ -226,29 +223,6 @@ function formatOutputSchema() {
   return `{
 ${fields.join(',\n')}
 }`;
-}
-
-function getCompatibleGeneratedBrandData(brandData) {
-  if (!brandData) return 'None supplied.';
-
-  const serialized = JSON.stringify(brandData).toLowerCase();
-  const activeBrand = BRAND_NAME.toLowerCase();
-  const activeCharacter = CHARACTER_NAME.toLowerCase();
-
-  if (!serialized.includes(activeBrand) && !serialized.includes(activeCharacter)) {
-    console.log('[BRAND] Ignoring stale generated brand bible for different brand');
-    return 'Ignored stale generated brand bible for different brand.';
-  }
-
-  return {
-    personality_traits: brandData.character?.personality_traits,
-    catchphrases: brandData.character?.catchphrases,
-    voice_tone: brandData.voice?.tone,
-    formula: brandData.voice?.formula,
-    replay_formula: brandData.music_dna?.replay_formula,
-    always: brandData.rules?.always?.slice(0, 5),
-    never: brandData.rules?.never?.slice(0, 5),
-  };
 }
 
 function summarizeResearch(researchReport) {

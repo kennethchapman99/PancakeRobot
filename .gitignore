@@ -5,4 +5,8 @@ pancake-robot.db
 pancake-robot.db-shm
 pancake-robot.db-wal
 pancake-robot.db.backup-*
+music-pipeline.db
+music-pipeline.db-shm
+music-pipeline.db-wal
+music-pipeline.db.backup-*
 output/

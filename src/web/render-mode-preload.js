@@ -13,7 +13,6 @@
  * Paid remains the default.
  */
 
-import '../shared/themed-idea-generation.js';
 import { createRequire, syncBuiltinESMExports } from 'module';
 import childProcess from 'child_process';
 
@@ -33,8 +32,8 @@ function normalizeRenderMode(value) {
 function envForRenderMode(renderMode) {
   const mode = normalizeRenderMode(renderMode);
   return {
-    PANCAKE_RENDER_MODE_SOURCE: 'web-ui',
-    PANCAKE_RENDER_MODE: mode,
+    PIPELINE_RENDER_MODE_SOURCE: 'web-ui',
+    PIPELINE_RENDER_MODE: mode,
     MINIMAX_USE_FREE_MODEL: mode === 'free' ? 'true' : 'false',
     MINIMAX_MUSIC_MODEL: mode === 'free' ? FREE_MODEL : PAID_MODEL,
   };
@@ -70,7 +69,12 @@ childProcess.spawn = function patchedSpawn(command, args = [], options = {}) {
   const isSongPipelineSpawn = isNode && argList.some(arg => String(arg).includes('orchestrator.js')) && argList.includes('--new');
 
   if (isSongPipelineSpawn) {
-    const renderMode = normalizeRenderMode(activeRenderMode || options.env?.PANCAKE_RENDER_MODE || process.env.PANCAKE_RENDER_MODE || 'paid');
+    const renderMode = normalizeRenderMode(
+      activeRenderMode ||
+      options.env?.PIPELINE_RENDER_MODE ||
+      process.env.PIPELINE_RENDER_MODE ||
+      'paid'
+    );
     const renderEnv = envForRenderMode(renderMode);
 
     options = {

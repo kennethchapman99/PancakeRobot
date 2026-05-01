@@ -1,7 +1,7 @@
 {
-  "name": "pancake-robot",
+  "name": "music-pipeline",
   "version": "1.0.0",
-  "description": "Autonomous kids music production pipeline",
+  "description": "Profile-driven autonomous music production pipeline",
   "type": "module",
   "main": "src/orchestrator.js",
   "scripts": {
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",
-    "better-sqlite3": "^9.0.0",
+    "better-sqlite3": "^12.9.0",
     "canvas": "^2.11.0",
     "chalk": "^5.0.0",
     "chart.js": "^4.0.0",

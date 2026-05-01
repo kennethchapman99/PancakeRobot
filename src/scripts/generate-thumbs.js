@@ -36,7 +36,6 @@ try {
     title: song.title || song.topic,
     topic: song.topic || song.title,
     metadata: metadataParsed || {},
-    brandData: {},
   });
   const count = result.generatedThumbnails?.length || 0;
   console.log(`\n✅ Generated ${count} thumbnail(s) successfully`);

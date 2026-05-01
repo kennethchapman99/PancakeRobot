@@ -391,9 +391,9 @@ Lyrics optimizer: OFF
 Instrumental: OFF
 
 ## Acceptance rules
-- Reject if vocals do not start by 5 seconds.
+- Reject if vocals do not start by ${BRAND_PROFILE.music.first_vocal_by_seconds} seconds.
 - Reject if the exact title is not sung in the opening and chorus.
-- Reject if the song is under 1:30 unless intentionally marked as a short/jingle.
+- Reject if the song is outside the active profile target length (${BRAND_PROFILE.music.target_length}) unless intentionally marked as a short/jingle.
 - Reject if section labels, emoji, markdown, prompt artifacts, or stage directions are spoken/sung.
 
 Full production notes: ../audio-prompt.md

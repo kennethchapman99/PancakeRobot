@@ -3,10 +3,10 @@
 <div class="p-8">
   <!-- Hero header -->
   <div class="flex items-center gap-6 mb-10 bg-white border border-zinc-200 rounded-2xl px-8 py-6 shadow-sm">
-    <img src="/logo.png" alt="Pancake Robot" class="w-24 h-24 object-contain shrink-0 drop-shadow">
+    <img src="<%= logoPath || '/logo.png' %>" alt="<%= brandName || 'Music Pipeline' %>" class="w-24 h-24 object-contain shrink-0 drop-shadow">
     <div>
-      <h1 class="text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight">Pancake Robot</h1>
-      <p class="text-zinc-500 mt-1">Your AI-powered kids music studio — from idea to streaming.</p>
+      <h1 class="text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight"><%= appTitle || brandName || 'Music Pipeline' %></h1>
+      <p class="text-zinc-500 mt-1">Your AI-powered music studio — from idea to streaming.</p>
       <div class="flex gap-3 mt-3">
         <a href="/ideas/generate" class="text-sm bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg transition font-semibold">✨ Generate Ideas</a>
         <a href="/songs" class="text-sm bg-zinc-900 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 transition font-medium">🎵 Song Catalog</a>

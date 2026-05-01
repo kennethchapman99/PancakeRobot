@@ -9,8 +9,11 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { formatCost, formatTokens } from '../shared/costs.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
 
 // Register Chart.js components
 Chart.register(
@@ -211,7 +214,7 @@ function buildHtmlReport({ totals, byAgent, dailyCosts, serviceData, agentChartB
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pancake Robot — Financial Report</title>
+  <title>${BRAND_NAME} — Financial Report</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
@@ -238,7 +241,7 @@ function buildHtmlReport({ totals, byAgent, dailyCosts, serviceData, agentChartB
 </head>
 <body>
 <div class="container">
-  <h1>🥞 Pancake Robot — Financial Report</h1>
+  <h1>${BRAND_NAME} — Financial Report</h1>
   <div class="generated">Generated: ${new Date().toLocaleString()}</div>
 
   <div class="cards">

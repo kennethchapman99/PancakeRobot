@@ -1,5 +1,5 @@
 /**
- * Pancake Robot — Web UI Server
+ * Music Pipeline — Web UI Server
  * Run with: npm run web  (node src/web/server.js)
  */
 
@@ -21,6 +21,7 @@ import { spawn } from 'child_process';
 
 import {
   getAllIdeas, getIdea, createIdea, updateIdea,
+  deleteIdeas,
   getAllSongs, getSong, upsertSong, updateSongStatus, deleteSong,
   getAssetsForSong, createAsset,
   getPublishingChecklist, updateChecklistItem, getChecklistProgress,
@@ -29,6 +30,13 @@ import {
   getDashboardStats,
 } from '../shared/db.js';
 import { runSuggestPipeline } from '../shared/suggest.js';
+import {
+  DEFAULT_PROFILE_ID,
+  listBrandProfiles,
+  loadBrandProfile,
+  loadBrandProfileById,
+  saveBrandProfileById,
+} from '../shared/brand-profile.js';
 import { generateThumbnails } from '../agents/creative-manager.js';
 
 // In-memory job store for suggest runs
@@ -39,6 +47,13 @@ const pipelineJobs = new Map(); // jobId → { status, logs, songId, error, star
 
 const app = express();
 const PORT = process.env.WEB_PORT || 3737;
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const APP_TITLE = BRAND_PROFILE.app_title || BRAND_NAME;
+const DEFAULT_AUDIENCE_RANGE = BRAND_PROFILE.audience.age_range;
+const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor || 'Distributor';
+const DISTRIBUTOR_URL = BRAND_PROFILE.distribution.research_default_url || '';
+const SUBMITTED_STATUS = 'submitted_to_distributor';
 
 // ── Middleware ──────────────────────────────────────────────────
 app.use(express.json());
@@ -82,8 +97,7 @@ app.use((req, res, next) => {
       artwork_ready: 'badge-blue',
       metadata_ready: 'badge-blue',
       ready_to_publish: 'badge-green',
-      submitted_to_distrokid: 'badge-purple',
-      submitted_to_tunecore: 'badge-purple', // legacy
+      submitted_to_distributor: 'badge-purple',
       published: 'badge-emerald',
       paused: 'badge-gray',
       approved: 'badge-emerald',
@@ -92,6 +106,15 @@ app.use((req, res, next) => {
     return map[status] || 'badge-gray';
   };
   res.locals.currentPath = req.path;
+  res.locals.brandProfile = BRAND_PROFILE;
+  res.locals.brandName = BRAND_NAME;
+  res.locals.appTitle = APP_TITLE;
+  res.locals.logoPath = BRAND_PROFILE.ui.logo_path || '/logo.png';
+  res.locals.sidebarSubtitle = BRAND_PROFILE.ui.sidebar_subtitle || 'Music Studio';
+  res.locals.defaultAudienceRange = DEFAULT_AUDIENCE_RANGE;
+  res.locals.defaultDistributor = DEFAULT_DISTRIBUTOR;
+  res.locals.distributorUrl = DISTRIBUTOR_URL;
+  res.locals.submittedStatus = SUBMITTED_STATUS;
   next();
 });
 
@@ -118,13 +141,17 @@ app.get('/ideas/generate', (req, res) => {
 // POST: kick off a new suggest job, redirect to SSE page
 app.post('/api/suggest/run', (req, res) => {
   const jobId = `job_${Date.now().toString(36)}`;
-  suggestJobs.set(jobId, { status: 'running', logs: [], results: null, error: null, startedAt: Date.now() });
+  const themePrompt = typeof req.body?.themePrompt === 'string'
+    ? req.body.themePrompt.trim()
+    : '';
+
+  suggestJobs.set(jobId, { status: 'running', logs: [], results: null, error: null, startedAt: Date.now(), themePrompt });
 
   // Run async — don't await
   runSuggestPipeline((msg) => {
     const job = suggestJobs.get(jobId);
     if (job) job.logs.push(msg);
-  }).then((results) => {
+  }, { themePrompt }).then((results) => {
     const job = suggestJobs.get(jobId);
     if (job) { job.status = 'done'; job.results = results; }
   }).catch((err) => {
@@ -215,7 +242,7 @@ app.post('/ideas', (req, res) => {
     title: title.trim(),
     concept: concept?.trim() || null,
     hook: hook?.trim() || null,
-    target_age_range: target_age_range || '4-10',
+    target_age_range: target_age_range || DEFAULT_AUDIENCE_RANGE,
     category: category?.trim() || null,
     mood: mood?.trim() || null,
     educational_angle: educational_angle?.trim() || null,
@@ -253,7 +280,7 @@ app.post('/ideas/:id', (req, res) => {
     title: title.trim(),
     concept: concept?.trim() || null,
     hook: hook?.trim() || null,
-    target_age_range: target_age_range || '4-10',
+    target_age_range: target_age_range || DEFAULT_AUDIENCE_RANGE,
     category: category?.trim() || null,
     mood: mood?.trim() || null,
     educational_angle: educational_angle?.trim() || null,
@@ -263,6 +290,24 @@ app.post('/ideas/:id', (req, res) => {
     notes: notes?.trim() || null,
   });
   res.redirect(`/ideas/${req.params.id}`);
+});
+
+// API: permanently delete selected ideas
+app.post('/api/ideas/bulk-delete', (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.map(id => String(id || '').trim()).filter(Boolean)
+      : [];
+
+    if (ids.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Select at least one idea to delete.' });
+    }
+
+    const deleted = deleteIdeas(ids);
+    res.json({ ok: true, deleted, requested: new Set(ids).size });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 // API: update idea status
@@ -306,11 +351,11 @@ app.post('/api/ideas/:id/promote', (req, res) => {
     status: 'draft',
     originating_idea_id: idea.id,
     concept: idea.concept || null,
-    target_age_range: idea.target_age_range || '4-10',
+    target_age_range: idea.target_age_range || DEFAULT_AUDIENCE_RANGE,
     mood_tags: idea.mood ? [idea.mood] : [],
     keywords: idea.tags || [],
     notes: idea.notes || null,
-    distributor: 'TuneCore',
+    distributor: DEFAULT_DISTRIBUTOR,
   });
 
   updateIdea(idea.id, { status: 'promoted', promoted_song_id: songId });
@@ -335,7 +380,7 @@ app.post('/api/songs/:id/generate', (req, res) => {
   if (!song) return res.status(404).json({ error: 'Song not found' });
 
   const jobId = `pipe_${Date.now().toString(36)}`;
-  const topic = song.topic || song.title || 'children\'s song';
+  const topic = song.topic || song.title || `${BRAND_PROFILE.music.default_style} song`;
 
   pipelineJobs.set(jobId, {
     status: 'running',
@@ -750,13 +795,18 @@ app.post('/api/songs/:id/approve', (req, res) => {
   res.json({ ok: true });
 });
 
-// Mark as submitted to DistroKid (with optional link)
+// Mark as submitted to the active profile distributor (with optional link)
 app.post('/api/songs/:id/publish', (req, res) => {
   const song = getSong(req.params.id);
   if (!song) return res.status(404).json({ error: 'Song not found' });
   const { url } = req.body;
-  updateSongStatus(req.params.id, 'submitted_to_distrokid');
-  if (url) upsertReleaseLink(req.params.id, 'DistroKid', url);
+  updateSongStatus(req.params.id, SUBMITTED_STATUS);
+  upsertSong({
+    id: req.params.id,
+    distributor: song.distributor || DEFAULT_DISTRIBUTOR,
+    distributor_submission_date: new Date().toISOString().slice(0, 10),
+  });
+  if (url) upsertReleaseLink(req.params.id, DEFAULT_DISTRIBUTOR, url);
   res.json({ ok: true });
 });
 
@@ -764,7 +814,7 @@ app.post('/api/songs/:id/publish', (req, res) => {
 app.post('/api/songs/bulk-status', (req, res) => {
   const { ids, status } = req.body;
   if (!Array.isArray(ids) || !status) return res.status(400).json({ error: 'ids[] and status required' });
-  const validStatuses = ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','ready_to_publish','submitted_to_distrokid','published','paused','archived'];
+  const validStatuses = ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','ready_to_publish','submitted_to_distributor','published','paused','archived'];
   if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
   let updated = 0;
   for (const id of ids) {
@@ -781,87 +831,95 @@ app.post('/api/songs/:id/links', (req, res) => {
 });
 
 // ── BRAND EDITOR ───────────────────────────────────────────────
-const BRAND_BIBLE_PATH = join(__dirname, '../../output/brand/brand-bible.md');
-
-function readBrandBible() {
-  try {
-    const raw = fs.readFileSync(BRAND_BIBLE_PATH, 'utf8');
-    // Strip markdown code fence if present
-    let jsonStr = raw.replace(/^```json\s*/m, '').replace(/\s*```\s*$/, '').trim();
-
-    // Try full parse first
-    try { return JSON.parse(jsonStr); } catch (_) {}
-
-    // The file may be truncated (brand_bible_markdown string gets cut off).
-    // Extract just the brand_data object by finding its boundaries.
-    const startMarker = '"brand_data"';
-    const startIdx = jsonStr.indexOf(startMarker);
-    if (startIdx === -1) return null;
-
-    // Walk forward from the opening { of brand_data to find the matching closing }
-    const objStart = jsonStr.indexOf('{', startIdx + startMarker.length);
-    if (objStart === -1) return null;
-
-    let depth = 0, i = objStart, inStr = false, escape = false;
-    for (; i < jsonStr.length; i++) {
-      const c = jsonStr[i];
-      if (escape) { escape = false; continue; }
-      if (c === '\\' && inStr) { escape = true; continue; }
-      if (c === '"') { inStr = !inStr; continue; }
-      if (inStr) continue;
-      if (c === '{') depth++;
-      else if (c === '}') { depth--; if (depth === 0) break; }
-    }
-
-    const brandDataJson = jsonStr.slice(objStart, i + 1);
-    const brandData = JSON.parse(brandDataJson);
-    return { brand_data: brandData };
-  } catch { return null; }
-}
-
-function writeBrandBible(data) {
-  const jsonStr = JSON.stringify(data, null, 2);
-  fs.writeFileSync(BRAND_BIBLE_PATH, '```json\n' + jsonStr + '\n```', 'utf8');
-}
-
 app.get('/brand', (req, res) => {
-  const brand = readBrandBible();
-  res.render('brand/edit', { brand });
+  const activeProfileId = normalizeProfileId(req.query.profile);
+  const profiles = listBrandProfiles();
+  const profile = loadBrandProfileById(activeProfileId);
+
+  res.render('brand/edit', {
+    brand: profileToBrandEditorShape(profile),
+    profile,
+    profiles,
+    activeProfileId,
+  });
 });
 
 app.post('/api/brand', express.json(), (req, res) => {
   try {
-    const existing = readBrandBible() || { brand_data: {} };
-    const bd = existing.brand_data;
-    const b = req.body;
+    const profileId = normalizeProfileId(req.body.profileId);
+    const profile = loadBrandProfileById(profileId);
+    const updated = applyBrandEditorForm(profile, req.body);
 
-    // Character
-    if (b.character_name !== undefined) bd.character = bd.character || {};
-    if (b.character_name !== undefined) bd.character.name = b.character_name;
-    if (b.character_backstory !== undefined) bd.character.backstory = b.character_backstory;
-    if (b.personality_traits !== undefined) bd.character.personality_traits = b.personality_traits.split('\n').map(s => s.trim()).filter(Boolean);
-    if (b.catchphrases !== undefined) bd.character.catchphrases = b.catchphrases.split('\n').map(s => s.trim()).filter(Boolean);
+    saveBrandProfileById(profileId, updated);
 
-    // Voice
-    if (b.voice_tone !== undefined) bd.voice = bd.voice || {};
-    if (b.voice_tone !== undefined) bd.voice.tone = b.voice_tone;
-    if (b.voice_formula !== undefined) bd.voice.formula = b.voice_formula;
-    if (b.recurring_themes !== undefined) bd.voice.recurring_themes = b.recurring_themes.split('\n').map(s => s.trim()).filter(Boolean);
-
-    // Rules
-    if (b.rules_always !== undefined) bd.rules = bd.rules || {};
-    if (b.rules_always !== undefined) bd.rules.always = b.rules_always.split('\n').map(s => s.trim()).filter(Boolean);
-    if (b.rules_never !== undefined) bd.rules.never = b.rules_never.split('\n').map(s => s.trim()).filter(Boolean);
-    if (b.on_brand_topics !== undefined) bd.rules.on_brand_topics = b.on_brand_topics.split('\n').map(s => s.trim()).filter(Boolean);
-    if (b.off_brand_topics !== undefined) bd.rules.off_brand_topics = b.off_brand_topics.split('\n').map(s => s.trim()).filter(Boolean);
-    if (b.age_guardrails !== undefined) bd.rules.age_guardrails = b.age_guardrails;
-
-    writeBrandBible(existing);
-    res.json({ ok: true });
+    res.json({ ok: true, profileId });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
+function normalizeProfileId(value) {
+  const raw = String(value || '').trim();
+  return raw || DEFAULT_PROFILE_ID;
+}
+
+function profileToBrandEditorShape(profile) {
+  return {
+    brand_data: {
+      character: {
+        name: profile.character?.name || '',
+        backstory: profile.character?.backstory || profile.character?.fallback_summary || '',
+        personality_traits: profile.character?.personality_traits || [],
+        catchphrases: profile.character?.catchphrases || [],
+      },
+      voice: {
+        tone: profile.voice?.tone || profile.songwriting?.primary_emotional_goal || '',
+        formula: profile.voice?.formula || '',
+        recurring_themes: profile.voice?.recurring_themes || [],
+      },
+      rules: {
+        age_guardrails: profile.rules?.age_guardrails || profile.audience?.guardrail || '',
+        always: profile.rules?.always || profile.songwriting?.required_elements || [],
+        never: profile.rules?.never || profile.songwriting?.forbidden_elements || [],
+        on_brand_topics: profile.rules?.on_brand_topics || [],
+        off_brand_topics: profile.rules?.off_brand_topics || [],
+      },
+    },
+    profile,
+  };
+}
+
+function lines(value) {
+  return String(value || '')
+    .split('\n')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function applyBrandEditorForm(profile, body) {
+  const updated = structuredClone(profile);
+
+  updated.character ||= {};
+  updated.voice ||= {};
+  updated.rules ||= {};
+
+  updated.character.name = String(body.character_name || '').trim();
+  updated.character.backstory = String(body.character_backstory || '').trim();
+  updated.character.personality_traits = lines(body.personality_traits);
+  updated.character.catchphrases = lines(body.catchphrases);
+
+  updated.voice.tone = String(body.voice_tone || '').trim();
+  updated.voice.formula = String(body.voice_formula || '').trim();
+  updated.voice.recurring_themes = lines(body.recurring_themes);
+
+  updated.rules.age_guardrails = String(body.age_guardrails || '').trim();
+  updated.rules.always = lines(body.rules_always);
+  updated.rules.never = lines(body.rules_never);
+  updated.rules.on_brand_topics = lines(body.on_brand_topics);
+  updated.rules.off_brand_topics = lines(body.off_brand_topics);
+
+  return updated;
+}
 
 // ── 404 ────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -918,5 +976,5 @@ function scanSongDir(songDir) {
 
 // ── START ───────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🥞  Pancake Robot UI running at http://localhost:${PORT}\n`);
+  console.log(`\n${APP_TITLE} UI running at http://localhost:${PORT}\n`);
 });

@@ -5,59 +5,70 @@
 
 import fs from 'fs';
 import { join } from 'path';
+import { loadBrandProfile } from '../shared/brand-profile.js';
+
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const BRAND_DESCRIPTION = BRAND_PROFILE.brand_description;
+const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
+const TAG_SEED = BRAND_PROFILE.distribution.youtube_tags_seed || [];
 
 function normalizeTitle(title) {
   return String(title || 'New Song').trim();
 }
 
 function withoutAt(handle) {
-  return String(handle || '@pancakerobotmusic').replace(/^@/, '');
+  return String(handle || '').replace(/^@/, '');
 }
 
 export function getDefaultHashtags() {
-  return [
-    '#kidsmusic',
-    '#childrensmusic',
-    '#familymusic',
-    '#kidssongs',
-    '#pancakerobot',
-    '#sillysongs',
-    '#songsforkids',
-    '#parentsoftiktok',
-    '#parentsofinstagram',
-    '#danceparty',
+  const tags = [
+    BRAND_NAME,
+    PRIMARY_GENRE,
+    ...TAG_SEED,
+    'new music',
+    'independent music',
   ];
+
+  return [...new Set(tags)]
+    .map(tag => String(tag || '').toLowerCase().replace(/[^a-z0-9]+/g, ''))
+    .filter(Boolean)
+    .slice(0, 10)
+    .map(tag => `#${tag}`);
 }
 
 export function generateCaptions(assets) {
   const title = normalizeTitle(assets.title);
-  const handle = assets.handle || '@pancakerobotmusic';
+  const handle = assets.handle || '';
   const cta = assets.cta || 'Listen everywhere - link in bio';
   const hashtags = getDefaultHashtags();
   const tagLine = hashtags.join(' ');
   const noAt = withoutAt(handle);
+  const artist = assets.artist || BRAND_PROFILE.distribution.default_artist || BRAND_NAME;
+  const handleText = handle ? ` from ${handle}` : ` from ${artist}`;
+  const searchText = noAt || artist;
 
   const instagram = [
-    `${title} is out now from ${handle}.\n\n${cta}.\n\n${tagLine}`,
-    `New Pancake Robot song: ${title}.\n\nBuilt for car rides, kitchen dance breaks, and tiny repeat-button energy.\n\n${cta}.\n\n${tagLine}`,
-    `Syrup-powered robot music for kids.\n\n${title} is ready to play now.\n\n${cta}.\n\n${tagLine}`,
+    `${title} is out now${handleText}.\n\n${cta}.\n\n${tagLine}`,
+    `New ${PRIMARY_GENRE} release: ${title}.\n\n${BRAND_DESCRIPTION}.\n\n${cta}.\n\n${tagLine}`,
+    `${title} is ready to play now.\n\n${cta}.\n\n${tagLine}`,
   ];
 
   const tiktok = [
-    `${title} is out now. Search ${noAt} or tap the link in bio. ${tagLine}`,
-    `New silly song for kids: ${title}. ${tagLine}`,
-    `Pancake Robot just dropped ${title}. Kitchen dance party required. ${tagLine}`,
+    `${title} is out now. Search ${searchText} or tap the link in bio. ${tagLine}`,
+    `New ${PRIMARY_GENRE} song: ${title}. ${tagLine}`,
+    `${artist} just released ${title}. ${tagLine}`,
   ];
 
   const variants = {
-    short_launch: `${title} is out now from ${handle}. ${cta}.`,
-    parent_friendly: `A new silly kids song for car rides, kitchens, and family dance breaks: ${title}. ${cta}.`,
-    funny_kid_chaos: `A toaster robot, a stack of pancakes, and one very catchy song: ${title}. ${cta}.`,
+    short_launch: `${title} is out now${handleText}. ${cta}.`,
+    genre_focused: `A new ${PRIMARY_GENRE} release: ${title}. ${cta}.`,
+    brand_voice: `${BRAND_DESCRIPTION}. ${title} is out now. ${cta}.`,
   };
 
   const markdown = `# Social Captions — ${title}
 
-Handle: ${handle}
+Handle: ${handle || 'not set'}
 CTA: ${cta}
 
 ## Recommended Instagram caption
@@ -77,11 +88,11 @@ ${tiktok.map((caption, index) => `### TikTok ${index + 1}\n\n${caption}`).join('
 ### Short launch
 ${variants.short_launch}
 
-### Parent-friendly
-${variants.parent_friendly}
+### Genre-focused
+${variants.genre_focused}
 
-### Funny kid-chaos
-${variants.funny_kid_chaos}
+### Brand voice
+${variants.brand_voice}
 `;
 
   const tiktokMarkdown = `# TikTok Caption Options — ${title}

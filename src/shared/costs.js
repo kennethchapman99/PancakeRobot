@@ -1,5 +1,5 @@
 /**
- * Cost tracking for Pancake Robot API calls
+ * Cost tracking for pipeline API calls
  * Sonnet 4.6: $3/MTok input, $15/MTok output
  */
 

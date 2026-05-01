@@ -12,7 +12,7 @@
         <span class="<%= statusBadge(song.status) %>"><%= song.status %></span>
         <span class="text-sm text-zinc-400">Created <%= formatDate(song.created_at) %></span>
         <span class="text-sm text-zinc-300">·</span>
-        <span class="text-sm text-zinc-500">📦 DistroKid</span>
+        <span class="text-sm text-zinc-500">📦 <%= song.distributor || defaultDistributor || 'Distributor' %></span>
         <% if (song.brand_score) { %>
         <span class="text-sm text-zinc-300">·</span>
         <span class="text-sm text-zinc-500">Brand: <%= song.brand_score %>/100</span>
@@ -40,9 +40,9 @@
       <a href="/songs/<%= song.id %>/edit" class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg hover:bg-zinc-50 transition">Edit Details</a>
       <select onchange="updateStatus('<%= song.id %>', this.value)"
         class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg focus:outline-none bg-white">
-        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','submitted_to_distrokid','published','paused','archived']) { %>
+        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','submitted_to_distributor','published','paused','archived']) { %>
           <option value="<%= s %>" <%= song.status === s ? 'selected' : '' %>>
-            <%= s === 'approved' ? '✅ approved' : s === 'submitted_to_distrokid' ? '📤 submitted to distrokid' : s === 'published' ? '🎵 published' : s.replace(/_/g,' ') %>
+            <%= s === 'approved' ? '✅ approved' : s === 'submitted_to_distributor' ? '📤 submitted to distributor' : s === 'published' ? '🎵 published' : s.replace(/_/g,' ') %>
           </option>
         <% } %>
       </select>
@@ -69,11 +69,11 @@
         <div class="grid grid-cols-2 gap-3">
           <% const suggestions = [
             'Fewer lyrics — cut it by a third',
-            'Add more counting / numbers',
             'Make the chorus simpler and catchier',
-            'More physical action cues for kids',
-            'Make it sillier and more absurd',
             'Stronger opening hook',
+            'Make it more emotionally specific',
+            'Tighten the second verse',
+            'Make the final chorus hit harder',
           ]; %>
           <% for (const s of suggestions) { %>
           <button @click="feedback = '<%= s %>'"
@@ -82,7 +82,7 @@
           </button>
           <% } %>
         </div>
-        <textarea x-model="feedback" rows="3" placeholder="Tell the AI what to change… e.g. 'less lyrics overall', 'more mention of tacos', 'make the chorus rhyme better', 'add a robot sound effect moment'"
+        <textarea x-model="feedback" rows="3" placeholder="Tell the AI what to change… e.g. 'less lyrics overall', 'make the chorus rhyme better', 'add more concrete detail', 'make it more serious'"
           class="w-full bg-violet-900 border border-violet-700 rounded-xl px-4 py-3 text-sm text-white placeholder-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"></textarea>
         <div class="flex items-center justify-between">
           <p class="text-xs text-violet-400">The current lyrics.md will be overwritten. The audio will need to be regenerated separately.</p>
@@ -114,29 +114,29 @@
   </div>
   <% } %>
 
-  <!-- DistroKid submit banner — approved songs only -->
+  <!-- Distributor submit banner — approved songs only -->
   <% if (song.status === 'approved') { %>
-  <div class="bg-gradient-to-r from-emerald-600 to-green-500 rounded-2xl p-5 mb-6 text-white flex items-center justify-between gap-4" x-data="distrokidSubmit()">
+  <div class="bg-gradient-to-r from-emerald-600 to-green-500 rounded-2xl p-5 mb-6 text-white flex items-center justify-between gap-4" x-data="distributorSubmit()">
     <div>
       <div class="font-bold text-lg mb-0.5">✅ Ready to Distribute</div>
-      <div class="text-emerald-100 text-sm">Upload to DistroKid to publish on Spotify, Apple Music, YouTube Music & more.</div>
+      <div class="text-emerald-100 text-sm">Upload to <%= defaultDistributor || 'your distributor' %> to publish on streaming platforms.</div>
     </div>
     <button @click="open = true" class="shrink-0 bg-white text-emerald-700 font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-50 transition text-sm shadow">
-      📤 Submit to DistroKid
+      📤 Submit to <%= defaultDistributor || 'Distributor' %>
     </button>
 
     <!-- Submit modal -->
     <div x-show="open" x-cloak class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-8">
       <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" @click.stop>
-        <h3 class="text-lg font-bold text-zinc-900 mb-1">📤 Submit to DistroKid</h3>
+        <h3 class="text-lg font-bold text-zinc-900 mb-1">📤 Submit to <%= defaultDistributor || 'Distributor' %></h3>
         <p class="text-sm text-zinc-500 mb-4"><%= song.title || song.topic %></p>
         <div class="bg-zinc-50 rounded-xl p-4 mb-5 text-xs text-zinc-600 space-y-2">
-          <p>1. Go to <a href="https://distrokid.com" target="_blank" class="text-blue-600 underline">distrokid.com</a> and upload your MP3 and cover art</p>
+          <p>1. Go to <% if (distributorUrl) { %><a href="<%= distributorUrl %>" target="_blank" class="text-blue-600 underline"><%= defaultDistributor || 'your distributor' %></a><% } else { %><%= defaultDistributor || 'your distributor' %><% } %> and upload your audio and cover art</p>
           <p>2. Complete the release form using the song metadata</p>
-          <p>3. Paste your DistroKid release URL below (optional)</p>
+          <p>3. Paste your release URL below (optional)</p>
         </div>
-        <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">DistroKid Release URL (optional)</label>
-        <input x-model="url" type="url" placeholder="https://distrokid.com/…"
+        <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">Release URL (optional)</label>
+        <input x-model="url" type="url" placeholder="https://…"
           class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-zinc-900">
         <div class="flex gap-3">
           <button @click="submit('<%= song.id %>')" :disabled="saving"
@@ -148,12 +148,12 @@
       </div>
     </div>
   </div>
-  <% } else if (song.status === 'submitted_to_distrokid') { %>
+  <% } else if (song.status === 'submitted_to_distributor') { %>
   <div class="bg-purple-50 border border-purple-200 rounded-2xl p-5 mb-6 flex items-center gap-4">
     <div class="text-3xl">📤</div>
     <div>
-      <div class="font-bold text-purple-800">Submitted to DistroKid</div>
-      <% if (song.tunecore_submission_date) { %><div class="text-sm text-purple-600">Submitted on <%= song.tunecore_submission_date %></div><% } %>
+      <div class="font-bold text-purple-800">Submitted to <%= song.distributor || defaultDistributor || 'Distributor' %></div>
+      <% if (song.distributor_submission_date) { %><div class="text-sm text-purple-600">Submitted on <%= song.distributor_submission_date %></div><% } %>
     </div>
   </div>
   <% } %>
@@ -161,7 +161,7 @@
   <!-- Checklist progress banner -->
   <div class="bg-white border border-zinc-200 rounded-xl p-5 mb-6">
     <div class="flex items-center justify-between mb-2">
-      <span class="text-sm font-medium text-zinc-700">DistroKid Publishing Progress</span>
+      <span class="text-sm font-medium text-zinc-700">Publishing Progress</span>
       <span class="text-sm font-bold text-zinc-900" id="pct-label"><%= progress.pct %>%</span>
     </div>
     <div class="h-2 bg-zinc-100 rounded-full overflow-hidden">
@@ -258,7 +258,7 @@
         <span class="w-3 h-3 rounded-full bg-red-500 cursor-pointer" onclick="closeThumbTerminal()"></span>
         <span class="w-3 h-3 rounded-full bg-amber-500"></span>
         <span class="w-3 h-3 rounded-full bg-green-500"></span>
-        <span class="ml-3 text-xs text-zinc-500 font-mono">pancake-robot — thumbnail generator</span>
+        <span class="ml-3 text-xs text-zinc-500 font-mono"><%= appTitle || brandName || 'music pipeline' %> — thumbnail generator</span>
         <span id="thumb-status-badge" class="ml-auto text-xs font-semibold font-mono text-green-400">
           <span class="inline-flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Running
@@ -385,13 +385,13 @@
           <% } %>
           <% if (song.target_age_range) { %>
           <div>
-            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Age Range</div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Audience</div>
             <div class="text-zinc-800"><%= song.target_age_range %></div>
           </div>
           <% } %>
           <div>
             <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Distributor</div>
-            <div class="text-zinc-800 font-medium">DistroKid</div>
+            <div class="text-zinc-800 font-medium"><%= song.distributor || defaultDistributor || 'Distributor' %></div>
           </div>
           <% if (song.release_date) { %>
           <div>
@@ -399,10 +399,10 @@
             <div class="text-zinc-800"><%= song.release_date %></div>
           </div>
           <% } %>
-          <% if (song.tunecore_submission_date) { %>
+          <% if (song.distributor_submission_date) { %>
           <div>
-            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">DistroKid Submitted</div>
-            <div class="text-zinc-800"><%= song.tunecore_submission_date %></div>
+            <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Distributor Submitted</div>
+            <div class="text-zinc-800"><%= song.distributor_submission_date %></div>
           </div>
           <% } %>
         </div>
@@ -440,7 +440,7 @@
       <!-- Publishing Checklist -->
       <section class="bg-white border border-zinc-200 rounded-xl">
         <div class="px-5 py-4 border-b border-zinc-100">
-          <h2 class="font-semibold text-sm text-zinc-700">DistroKid Publishing Checklist</h2>
+          <h2 class="font-semibold text-sm text-zinc-700">Publishing Checklist</h2>
           <p class="text-xs text-zinc-400 mt-0.5">Click a status to update it</p>
         </div>
         <div class="divide-y divide-zinc-50">
@@ -592,7 +592,7 @@
           <button @click="show = !show" class="text-xs text-zinc-500 hover:text-zinc-700">+ Add link</button>
           <div x-show="show" x-cloak class="mt-2 space-y-2">
             <select id="link-platform" class="w-full text-xs border border-zinc-200 rounded px-2 py-1.5 focus:outline-none">
-              <% for (const p of ['Spotify','YouTube','Apple Music','YouTube Music','DistroKid','Amazon Music','Tidal']) { %>
+              <% for (const p of ['Spotify','YouTube','Apple Music','YouTube Music', defaultDistributor || 'Distributor','Amazon Music','Tidal']) { %>
               <option><%= p %></option>
               <% } %>
             </select>
@@ -698,7 +698,7 @@ function songDetail() {
   };
 }
 
-window.distrokidSubmit = function() {
+window.distributorSubmit = function() {
   return {
     open: false, url: '', saving: false,
     async submit(songId) {

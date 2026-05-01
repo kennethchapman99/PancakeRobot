@@ -7,9 +7,23 @@ import fs from 'fs';
 import { basename, dirname, extname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { getSong } from '../shared/db.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '../..');
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const DEFAULT_ARTIST = BRAND_PROFILE.distribution.default_artist || BRAND_NAME;
+
+function defaultHandle() {
+  return `@${DEFAULT_ARTIST.toLowerCase().replace(/[^a-z0-9]+/g, '')}`;
+}
+
+function logoAssetPath() {
+  const logoPath = BRAND_PROFILE.ui.logo_path || '/logo.png';
+  if (logoPath.startsWith('/')) return join(REPO_ROOT, 'src/web/public', logoPath.replace(/^\//, ''));
+  return join(REPO_ROOT, logoPath);
+}
 
 function exists(path) {
   return path && fs.existsSync(path);
@@ -132,8 +146,7 @@ export function collectMarketingAssets(songId, options = {}) {
 
   const characterPath = firstExisting([
     process.env.MARKETING_CHARACTER_ASSET,
-    join(REPO_ROOT, 'assets/pancake-robot-character.png'),
-    join(REPO_ROOT, 'assets/pancake-robot-avatar.png'),
+    logoAssetPath(),
     join(REPO_ROOT, 'src/web/public/logo.png'),
     coverPath,
   ]);
@@ -147,8 +160,8 @@ export function collectMarketingAssets(songId, options = {}) {
   const lyricsClean = cleanLyrics(lyricsRaw);
 
   const title = song?.title || metadata.title || metadata.youtube_title || song?.topic || songId;
-  const artist = metadata.artist || metadata.primary_artist || process.env.MARKETING_DEFAULT_ARTIST || 'Pancake Robot';
-  const handle = process.env.MARKETING_DEFAULT_HANDLE || '@pancakerobotmusic';
+  const artist = metadata.artist || metadata.primary_artist || process.env.MARKETING_DEFAULT_ARTIST || DEFAULT_ARTIST;
+  const handle = process.env.MARKETING_DEFAULT_HANDLE || defaultHandle();
   const cta = process.env.MARKETING_DEFAULT_CTA || 'Listen everywhere - link in bio';
   const hyperfollowUrl = metadata.hyperfollow_url || metadata.hyperfollow || metadata.streaming_link || metadata.link_in_bio_url || '';
 

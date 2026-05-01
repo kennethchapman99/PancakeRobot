@@ -4,6 +4,10 @@
 
 import fs from 'fs';
 import { join, relative } from 'path';
+import { loadBrandProfile } from '../shared/brand-profile.js';
+
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
 
 function rel(assets, path) {
   return path ? relative(assets.outputDir, path) : null;
@@ -17,7 +21,7 @@ export function generateUploadChecklist(assets, hook, captions, qaReport, render
   const warnings = (qaReport.warnings || []).map(w => `- ${w}`).join('\n') || '- None';
   const failures = (qaReport.failures || []).map(f => `- ${f}`).join('\n') || '- None';
 
-  const md = `# Pancake Robot Release Upload Checklist
+  const md = `# ${BRAND_NAME} Release Upload Checklist
 
 Song: ${title}
 Handle: ${handle}
