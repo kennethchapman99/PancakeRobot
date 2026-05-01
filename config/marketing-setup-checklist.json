@@ -1,0 +1,79 @@
+[
+  {
+    "key": "gmail_account",
+    "category": "Identity",
+    "title": "Create dedicated Pancake Robot Gmail account",
+    "instructions": "Create a new Gmail account used only for Pancake Robot marketing and creator/curator replies. Store the email address here after it exists. Do not connect auto-send until inbox labels and escalation rules are verified.",
+    "reference_url": "https://accounts.google.com/signup"
+  },
+  {
+    "key": "gmail_labels",
+    "category": "Identity",
+    "title": "Create Gmail labels for agent workflow",
+    "instructions": "Create labels: PR/New, PR/Needs Ken, PR/Safe Reply, PR/Auto-Replied, PR/Approved Target, PR/Rejected Target, PR/Do Not Contact. The agent should never delete messages; it should label and archive only after rules are tested.",
+    "reference_url": "https://support.google.com/mail/answer/118708"
+  },
+  {
+    "key": "spotify_for_artists",
+    "category": "Streaming profiles",
+    "title": "Claim Spotify for Artists profile",
+    "instructions": "Use Spotify for Artists to claim the Pancake Robot artist profile after at least one release is live. Record the profile URL and the login account used.",
+    "reference_url": "https://artists.spotify.com/get-access"
+  },
+  {
+    "key": "spotify_pitching",
+    "category": "Streaming profiles",
+    "title": "Prepare Spotify editorial pitching process",
+    "instructions": "Spotify editorial pitching must be done inside Spotify for Artists before release. Record the intended pitch owner, default positioning, and release lead time target.",
+    "reference_url": "https://support.spotify.com/us/artists/article/pitching-music-to-playlist-editors/"
+  },
+  {
+    "key": "tiktok_artist_account",
+    "category": "Short-form video",
+    "title": "Set up TikTok Artist Account through DistroKid path",
+    "instructions": "Connect Pancake Robot to TikTok as an artist so released songs can be used as sounds and appear on the Music Tab. Record the TikTok handle and artist profile URL.",
+    "reference_url": "https://support.distrokid.com/hc/en-us/articles/35148606237587-How-Do-I-Get-an-Official-TikTok-Artist-Account"
+  },
+  {
+    "key": "youtube_channel",
+    "category": "Short-form video",
+    "title": "Create or confirm YouTube channel for Shorts",
+    "instructions": "Create a Pancake Robot channel for Shorts and music videos. Record the channel URL. Use this for hook clips, visualizers, and album content.",
+    "reference_url": "https://support.google.com/youtube/answer/1646861"
+  },
+  {
+    "key": "instagram_account",
+    "category": "Short-form video",
+    "title": "Create or confirm Instagram account",
+    "instructions": "Create a Pancake Robot Instagram account for Reels and creator discovery. Record handle and profile URL.",
+    "reference_url": "https://help.instagram.com/182492381886913"
+  },
+  {
+    "key": "hyperfollow_links",
+    "category": "Smart links",
+    "title": "Create DistroKid HyperFollow links",
+    "instructions": "Create or capture HyperFollow links for released and upcoming songs. These links should be used in curator pitches, creator outreach, bios, and posts.",
+    "reference_url": "https://support.distrokid.com/hc/en-us/articles/360013647913-What-Is-HyperFollow"
+  },
+  {
+    "key": "target_research_source",
+    "category": "Agent infrastructure",
+    "title": "Configure real target research source",
+    "instructions": "Set MARKETING_RESEARCH_SOURCE_PATH to a JSON file produced by OpenClaw, Firecrawl, or manual research. The importer refuses unsourced targets. Required target fields: name, type, source_url.",
+    "reference_url": ""
+  },
+  {
+    "key": "openclaw_gmail_dry_run",
+    "category": "Agent infrastructure",
+    "title": "Run Gmail/OpenClaw in dry-run first",
+    "instructions": "Before full-auto replies, run inbox classification and draft generation without sending. Auto-send should stay disabled until safe reply categories, escalation categories, unsubscribe/suppression handling, and daily send limits are tested.",
+    "reference_url": ""
+  },
+  {
+    "key": "compliance_guardrails",
+    "category": "Compliance",
+    "title": "Confirm anti-spam and AI disclosure rules",
+    "instructions": "Do not contact AI-hostile targets. Do not use guaranteed-stream or paid-placement vendors. Outbound messages must be targeted, truthful, include the Pancake Robot identity, and respect do-not-contact responses.",
+    "reference_url": "https://artists.spotify.com/artificial-streaming"
+  }
+]

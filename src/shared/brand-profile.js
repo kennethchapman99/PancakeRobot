@@ -7,11 +7,7 @@
  */
 
 import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_PROFILE_PATH = join(__dirname, '../../config/brand-profile.json');
+import { resolveActiveBrandProfilePath, DEFAULT_BRAND_PROFILE_PATH } from './brand-profile-switcher.js';
 
 const FALLBACK_PROFILE = {
   brand_name: 'Default Music Brand',
@@ -83,30 +79,56 @@ let cachedProfile = null;
 export function loadBrandProfile() {
   if (cachedProfile) return cachedProfile;
 
-  const explicitProfilePath = process.env.BRAND_PROFILE_PATH;
-  const profilePath = explicitProfilePath || DEFAULT_PROFILE_PATH;
+  const selection = resolveActiveBrandProfilePath();
+  const profilePath = selection.profilePath;
 
   try {
     if (fs.existsSync(profilePath)) {
       const loaded = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
       validateBrandProfile(loaded, profilePath);
-      cachedProfile = loaded;
+      cachedProfile = {
+        ...loaded,
+        __profile_path: profilePath,
+        __profile_relative_path: selection.relativePath,
+        __profile_source: selection.source,
+      };
       return cachedProfile;
     }
 
-    if (explicitProfilePath) {
-      throw new Error(`BRAND_PROFILE_PATH does not exist: ${explicitProfilePath}`);
+    if (selection.source === 'env') {
+      throw new Error(`BRAND_PROFILE_PATH does not exist: ${profilePath}`);
     }
   } catch (err) {
-    if (explicitProfilePath) {
+    if (selection.source === 'env') {
       throw new Error(`[BRAND-PROFILE] Failed to load required profile ${profilePath}: ${err.message}`);
     }
 
-    console.warn(`[BRAND-PROFILE] Failed to load ${profilePath}: ${err.message}`);
+    console.warn(`[BRAND-PROFILE] Failed to load active profile ${profilePath}: ${err.message}`);
+  }
+
+  try {
+    if (fs.existsSync(DEFAULT_BRAND_PROFILE_PATH)) {
+      const loaded = JSON.parse(fs.readFileSync(DEFAULT_BRAND_PROFILE_PATH, 'utf8'));
+      validateBrandProfile(loaded, DEFAULT_BRAND_PROFILE_PATH);
+      cachedProfile = {
+        ...loaded,
+        __profile_path: DEFAULT_BRAND_PROFILE_PATH,
+        __profile_relative_path: 'brand-profile.json',
+        __profile_source: 'default_fallback',
+      };
+      return cachedProfile;
+    }
+  } catch (err) {
+    console.warn(`[BRAND-PROFILE] Failed to load ${DEFAULT_BRAND_PROFILE_PATH}: ${err.message}`);
   }
 
   validateBrandProfile(FALLBACK_PROFILE, 'built-in fallback profile');
-  cachedProfile = FALLBACK_PROFILE;
+  cachedProfile = {
+    ...FALLBACK_PROFILE,
+    __profile_path: null,
+    __profile_relative_path: null,
+    __profile_source: 'built_in_fallback',
+  };
   return cachedProfile;
 }
 

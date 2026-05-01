@@ -6,3 +6,4 @@ pancake-robot.db-shm
 pancake-robot.db-wal
 pancake-robot.db.backup-*
 output/
+config/active-brand-profile.json
