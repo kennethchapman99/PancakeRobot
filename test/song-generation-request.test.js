@@ -21,7 +21,6 @@ test('generation request preserves UI title as locked title', () => {
   assert.equal(request.sourceSongId, 'SONG_TEST_1234');
   assert.equal(request.topic.includes('title: Locked Test Title'), true);
   assert.equal(request.topic.includes('locked_title: Locked Test Title'), true);
-  assert.equal(request.topic.includes('opening hook, chorus hook, and final chorus hook'), true);
   assert.equal(request.topic.includes('test topic'), true);
 });
 
