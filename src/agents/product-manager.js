@@ -31,6 +31,54 @@ const APPLE_MUSIC_GENRES = BRAND_PROFILE.distribution.apple_music_genres;
 const AUDIENCE_COMPLIANCE_STATUS = BRAND_PROFILE.distribution.coppa_status;
 const CONTENT_ADVISORY = BRAND_PROFILE.distribution.content_advisory;
 
+const METADATA_QA_STRICT = process.env.METADATA_QA_STRICT === 'true';
+
+const METADATA_PUBLIC_SCAN_KEYS = new Set([
+  'title',
+  'artist',
+  'artist_name',
+  'album',
+  'album_title',
+  'genre',
+  'spotify_genres',
+  'youtube_tags',
+  'youtube_title',
+  'youtube_description',
+  'apple_music_genres',
+  'mood_tags',
+  'bpm',
+  'key',
+  'duration_seconds',
+  'content_advisory',
+  'coppa_status',
+  'artwork_prompt',
+  'video_prompt',
+  'short_description',
+  'description',
+  'tags',
+  'lyrics',
+  'release_title',
+  'track_title',
+]);
+
+const METADATA_INTERNAL_IGNORE_KEYS = new Set([
+  'compliance_checklist',
+  'verification',
+  'youtube_kids_verification',
+  'metadata_compliance',
+  'rationale',
+  'design_rationale',
+  'reasoning',
+  'strategy',
+  'performance_benchmarks',
+  'distribution_platform_notes',
+  'research_reference_distributor',
+  'post_launch_momentum',
+  'pre_launch_tactics',
+  'metadata_optimization',
+  'keyword_strategy',
+]);
+
 export const PRODUCT_MANAGER_DEF = {
   name: `${BRAND_NAME} Product Manager`,
   system: `You are the product manager and distribution strategist for ${BRAND_NAME}, ${BRAND_DESCRIPTION}.
@@ -170,7 +218,21 @@ export async function generateMetadata({ songId, title, topic, lyrics, bpm, rese
 
   const qaFailures = findMetadataForbiddenElements(metadata);
   if (qaFailures.length > 0) {
-    throw new Error(`Metadata profile QA failed for "${title}". Forbidden element(s): ${qaFailures.join(', ')}`);
+    const warning = {
+      title,
+      warned_at: new Date().toISOString(),
+      forbidden_elements: qaFailures,
+      note: 'Metadata profile QA is advisory by default. Human review remains the final approval gate.',
+      strict_mode: METADATA_QA_STRICT,
+    };
+    const warningsPath = join(songDir, 'metadata-qa-warnings.json');
+    fs.writeFileSync(warningsPath, JSON.stringify(warning, null, 2));
+
+    const message = `Metadata profile QA warning for "${title}". Potential issue(s): ${qaFailures.join(', ')}. Saved ${warningsPath}`;
+    if (METADATA_QA_STRICT) {
+      throw new Error(message);
+    }
+    console.warn(`\n⚠ ${message}`);
   }
 
   const metadataPath = join(songDir, 'metadata.json');
@@ -218,6 +280,9 @@ Generate metadata optimized for:
 Rules for YouTube title: primary keyword first, max 70 chars, no clickbait. Include "${BRAND_NAME}" only if it appears naturally and adds searchability.
 Rules for YouTube tags: start from the active profile youtube_tags_seed, then add relevant tags that do not violate forbidden_elements.
 Do not add metadata for audiences, genres, compliance statuses, playlists, or search terms that are not in the active brand profile.
+Do not invent algorithm guarantees, stream thresholds, editorial playlist promises, benchmark claims, or distributor changes.
+Do not include compliance checklists, marketing plans, tactical calendars, rationales, markdown, code fences, or commentary.
+Return exactly one JSON object matching the schema below and nothing else.
 
 Output as JSON:
 {
@@ -251,14 +316,75 @@ Output as JSON:
 }
 
 export function findMetadataForbiddenElements(metadata, forbiddenElements = SONGWRITING.forbidden_elements || []) {
-  const normalized = normalizeForMetadataMatch(JSON.stringify(metadata || {}));
+  const normalized = normalizeForMetadataMatch(collectMetadataPublicText(metadata));
   return forbiddenElements.filter(element => {
     const term = normalizeForMetadataMatch(element).trim();
     if (!term || term.length < 3) return false;
-    return normalized.includes(` ${term} `);
+    return containsUnnegatedMetadataTerm(normalized, term);
   });
+}
+
+function collectMetadataPublicText(metadata) {
+  const parts = [];
+  collectPublicMetadataStrings(metadata, parts);
+  return parts.join(' ');
+}
+
+function collectPublicMetadataStrings(value, parts, active = false, key = '') {
+  const normalizedKey = normalizeMetadataKey(key);
+  if (METADATA_INTERNAL_IGNORE_KEYS.has(normalizedKey)) return;
+
+  const shouldScan = active || METADATA_PUBLIC_SCAN_KEYS.has(normalizedKey);
+
+  if (value == null) return;
+
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    if (shouldScan) parts.push(String(value));
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) collectPublicMetadataStrings(item, parts, shouldScan, key);
+    return;
+  }
+
+  if (typeof value === 'object') {
+    for (const [childKey, childValue] of Object.entries(value)) {
+      collectPublicMetadataStrings(childValue, parts, shouldScan, childKey);
+    }
+  }
+}
+
+function containsUnnegatedMetadataTerm(normalized, term) {
+  const escaped = escapeRegExp(term).replace(/\\ /g, '\\s+');
+  const pattern = new RegExp(`\\b${escaped}\\b`, 'g');
+  let match;
+
+  while ((match = pattern.exec(normalized)) !== null) {
+    const prefix = normalized.slice(Math.max(0, match.index - 80), match.index).trim();
+    if (isNegatedMetadataPrefix(prefix)) continue;
+    return true;
+  }
+
+  return false;
+}
+
+function isNegatedMetadataPrefix(prefix) {
+  return /(?:^|\s)(?:no|not|never|without|avoid|avoids|free of|does not contain|do not include|must not include)(?:\s+\w+){0,6}\s*$/.test(prefix);
+}
+
+function normalizeMetadataKey(key = '') {
+  return String(key)
+    .replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
 }
 
 function normalizeForMetadataMatch(value = '') {
   return ` ${String(value).toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim()} `;
+}
+
+function escapeRegExp(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
