@@ -28,7 +28,7 @@ const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
 const SPOTIFY_GENRES = BRAND_PROFILE.distribution.spotify_genres;
 const YOUTUBE_TAGS_SEED = BRAND_PROFILE.distribution.youtube_tags_seed;
 const APPLE_MUSIC_GENRES = BRAND_PROFILE.distribution.apple_music_genres;
-const COPPA_STATUS = BRAND_PROFILE.distribution.coppa_status;
+const AUDIENCE_COMPLIANCE_STATUS = BRAND_PROFILE.distribution.coppa_status;
 const CONTENT_ADVISORY = BRAND_PROFILE.distribution.content_advisory;
 
 export const PRODUCT_MANAGER_DEF = {
@@ -53,7 +53,7 @@ Primary genre: ${PRIMARY_GENRE}
 Preferred/default service: ${RESEARCH_DEFAULT_SERVICE}
 Legacy service to compare if relevant: ${LEGACY_DISTRIBUTOR}
 
-Focus on services appropriate to this profile. Include RouteNote, ${LEGACY_DISTRIBUTOR}, Amuse, and ${RESEARCH_DEFAULT_SERVICE} when relevant.
+Focus on services appropriate to this profile. Compare the preferred/default service, legacy service when present, and credible alternatives when relevant.
 Key questions: royalty split, days to publish, YouTube Content ID included?
 
 Output compact JSON only:
@@ -125,6 +125,7 @@ export async function researchDistribution() {
   // Update config
   const config = loadConfig();
   config.distribution = {
+    profile_brand_name: BRAND_NAME,
     recommended_service: research.recommendation?.service || DEFAULT_DISTRIBUTOR,
     recommended_url: research.recommendation?.signup_url || RESEARCH_DEFAULT_URL,
     release_strategy: research.release_strategy,
@@ -139,14 +140,16 @@ export async function researchDistribution() {
 /**
  * Generate SEO-optimized metadata for a song
  */
-export async function generateMetadata({ songId, title, topic, lyrics, brandData, bpm, researchReport }) {
+export async function generateMetadata({ songId, title, topic, lyrics, bpm, researchReport }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
 
   const config = loadConfig();
-  const releaseStrategy = config.distribution?.release_strategy;
+  const releaseStrategy = config.distribution?.profile_brand_name === BRAND_NAME
+    ? config.distribution.release_strategy
+    : null;
 
-  const metadataTask = buildMetadataTask({ title, topic, lyrics, bpm, releaseStrategy, researchReport, brandData });
+  const metadataTask = buildMetadataTask({ title, topic, lyrics, bpm, releaseStrategy, researchReport });
 
   // Metadata is structured JSON generation — Haiku is sufficient and cheaper
   const metaDef = { ...PRODUCT_MANAGER_DEF, name: `${BRAND_NAME} Metadata Generator`, model: 'claude-haiku-4-5-20251001', noTools: true };
@@ -177,7 +180,7 @@ export async function generateMetadata({ songId, title, topic, lyrics, brandData
   return { metadata, metadataPath };
 }
 
-export function buildMetadataTask({ title, topic, lyrics, bpm, releaseStrategy, researchReport, brandData } = {}) {
+export function buildMetadataTask({ title, topic, lyrics, bpm, releaseStrategy, researchReport } = {}) {
   const spotifyGenresJson = JSON.stringify(SPOTIFY_GENRES);
   const youtubeTagsJson = JSON.stringify(YOUTUBE_TAGS_SEED);
   const appleGenresJson = JSON.stringify(APPLE_MUSIC_GENRES);
@@ -206,9 +209,6 @@ ${releaseStrategy ? JSON.stringify(releaseStrategy) : 'Use an appropriate releas
 
 RESEARCH CONTEXT:
 ${researchReport ? JSON.stringify(researchReport).substring(0, 1200) : 'None supplied.'}
-
-COMPATIBLE BRAND DATA:
-${brandData ? JSON.stringify(brandData).substring(0, 1200) : 'None supplied.'}
 
 Generate metadata optimized for:
 1. Spotify discoverability using the active genre and profile audience
@@ -246,7 +246,7 @@ Output as JSON:
   },
   "isrc_needed": true,
   "content_advisory": "${CONTENT_ADVISORY}",
-  "coppa_status": "${COPPA_STATUS}"
+  "coppa_status": "${AUDIENCE_COMPLIANCE_STATUS}"
 }`;
 }
 

@@ -29,7 +29,7 @@
         <option value="">Change status to…</option>
         <option value="approved">✅ approved</option>
         <option value="draft">draft</option>
-        <option value="submitted_to_distrokid">submitted to distrokid</option>
+        <option value="submitted_to_distributor">submitted to distributor</option>
         <option value="published">published</option>
         <option value="paused">paused</option>
         <option value="archived">archived</option>
@@ -56,9 +56,9 @@
       <div>
         <div class="flex items-center gap-2 mb-1">
           <span class="text-2xl">🎵</span>
-          <h2 class="text-xl font-bold"><%= approvedSongs.length %> song<%= approvedSongs.length !== 1 ? 's' : '' %> ready for TuneCore</h2>
+          <h2 class="text-xl font-bold"><%= approvedSongs.length %> song<%= approvedSongs.length !== 1 ? 's' : '' %> ready for <%= defaultDistributor || 'distribution' %></h2>
         </div>
-        <p class="text-emerald-100 text-sm">These songs have passed the full pipeline — lyrics, audio, thumbnails, and brand review. Export them to TuneCore to publish.</p>
+        <p class="text-emerald-100 text-sm">These songs have passed the full pipeline — lyrics, audio, thumbnails, and brand review. Export them to your active distributor to publish.</p>
         <div class="flex flex-wrap gap-2 mt-3">
           <% for (const s of approvedSongs.slice(0, 5)) { %>
           <span class="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium"><%= s.title || s.topic %></span>

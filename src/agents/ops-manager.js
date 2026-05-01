@@ -15,7 +15,7 @@ const BRAND_NAME = BRAND_PROFILE.brand_name;
 const DEFAULT_ARTIST = BRAND_PROFILE.distribution.default_artist;
 const DEFAULT_ALBUM = BRAND_PROFILE.distribution.default_album;
 const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
-const COPPA_STATUS = BRAND_PROFILE.distribution.coppa_status;
+const AUDIENCE_COMPLIANCE_STATUS = BRAND_PROFILE.distribution.coppa_status;
 const CONTENT_ADVISORY = BRAND_PROFILE.distribution.content_advisory;
 const YOUTUBE_TAGS_SEED = BRAND_PROFILE.distribution.youtube_tags_seed || [];
 
@@ -227,12 +227,13 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
 /**
  * Build a distribution-ready package folder after human approval.
  * Copies/renames all files to a clean folder with pre-filled upload instructions.
- * Human just opens DistroKid, pastes values, uploads 2 files — done.
+ * Human opens the active distributor, pastes values, uploads files, and submits.
  */
 export async function generateHumanTasks({ songId, title, topic, songDir, metadata, lyricsPath, audioPromptPath, thumbnailDir, brandScore, totalCost }) {
   const config = loadConfig();
-  const distributionService = config.distribution?.recommended_service || BRAND_PROFILE.distribution.default_distributor || 'distribution service';
-  const distributionUrl = config.distribution?.recommended_url || BRAND_PROFILE.distribution.research_default_url || '';
+  const activeProfileDistribution = config.distribution?.profile_brand_name === BRAND_NAME ? config.distribution : null;
+  const distributionService = activeProfileDistribution?.recommended_service || BRAND_PROFILE.distribution.default_distributor || 'distribution service';
+  const distributionUrl = activeProfileDistribution?.recommended_url || BRAND_PROFILE.distribution.research_default_url || '';
 
   let metaJson = {};
   const metadataPath = join(songDir, 'metadata.json');
@@ -315,7 +316,7 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
 | BPM | \`${bpm}\` |
 | Duration | \`${durationStr}\` |
 | Language | \`English\` |
-| ISRC | *(DistroKid auto-assigns)* |
+| ISRC | *(auto-assigned by distributor if applicable)* |
 
 ### Songwriter / Publisher
 | Field | Value |
@@ -328,7 +329,7 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
 | Field | Value |
 |---|---|
 | Explicit content | \`${CONTENT_ADVISORY}\` |
-| Audience / COPPA | \`${COPPA_STATUS}\` |
+| Audience / Compliance | \`${AUDIENCE_COMPLIANCE_STATUS}\` |
 | Release date | *(choose the release date recommended in metadata)* |
 
 ### Artwork
@@ -346,11 +347,10 @@ Check all: ✅ Spotify ✅ Apple Music ✅ YouTube Music ✅ Amazon Music ✅ Ti
 - ${distributionService} distribution timing varies by service
 - Upload your YouTube video manually (see YOUTUBE-UPLOAD.md)
 `;
-  fs.writeFileSync(join(distDir, 'DISTROKID-UPLOAD.md'), dk);
+  fs.writeFileSync(join(distDir, 'DISTRIBUTOR-UPLOAD.md'), dk);
 
   const yt = `# YouTube Upload — ${title}
-## Use this AFTER DistroKid distributes (24-48 hours)
-## Or upload a lyric video / visualizer yourself sooner
+## Use this after ${distributionService} distributes, or upload a visualizer yourself sooner
 
 ---
 
@@ -374,7 +374,7 @@ ${ytTags}
 |---|---|
 | Thumbnail | Upload \`youtube-thumbnail.png\` from this folder |
 | Category | **Music** |
-| Audience / COPPA | **${COPPA_STATUS}** |
+| Audience / Compliance | **${AUDIENCE_COMPLIANCE_STATUS}** |
 | Age restriction | None |
 | Monetization | Enable if channel is monetized |
 | Playlist | Add to the appropriate ${BRAND_NAME} playlist |
@@ -385,7 +385,7 @@ Suggested tags seed: ${YOUTUBE_TAGS_SEED.join(', ')}
   fs.writeFileSync(join(distDir, 'YOUTUBE-UPLOAD.md'), yt);
 
   console.log(`[OPS] ✓ Distribution package built → ${distDir}`);
-  console.log(`[OPS] ✓ DISTROKID-UPLOAD.md — all values pre-filled`);
+  console.log(`[OPS] ✓ DISTRIBUTOR-UPLOAD.md — all values pre-filled`);
   console.log(`[OPS] ✓ YOUTUBE-UPLOAD.md — title, description, tags ready`);
 
   return { distDir, taskPath: distDir };

@@ -1,5 +1,5 @@
 /**
- * Pancake Robot — Master Orchestrator
+ * Music Pipeline — Master Orchestrator
  *
  * Commands:
  *   node src/orchestrator.js --setup                         First-time setup
@@ -26,10 +26,11 @@ import chalk from 'chalk';
 import ora from 'ora';
 import fs from 'fs';
 
-import { loadConfig, saveConfig, runAgent, parseAgentJson } from './shared/managed-agent.js';
-import { upsertSong, getSong, getAllSongs, createIdea } from './shared/db.js';
+import { upsertSong, getSong, getAllSongs } from './shared/db.js';
 import { approveSong } from './shared/approval-gate.js';
 import { formatCost } from './shared/costs.js';
+import { loadBrandProfile } from './shared/brand-profile.js';
+import { runSuggestPipeline } from './shared/suggest.js';
 
 import { runResearcher, loadResearchReport } from './agents/researcher.js';
 import { buildBrand, reviewSong, loadBrandBible } from './agents/brand-manager.js';
@@ -39,6 +40,12 @@ import { researchServices, updateFinancialReport, generateFullReport } from './a
 import { generateThumbnails } from './agents/creative-manager.js';
 import { runQAChecklist, generateHumanTasks, startScheduler } from './agents/ops-manager.js';
 import { generateMusic } from './agents/music-generator.js';
+
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const APP_TITLE = BRAND_PROFILE.app_title || BRAND_NAME;
+const AUDIENCE_DESCRIPTION = BRAND_PROFILE.audience.description;
+const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor;
 
 // ─────────────────────────────────────────────────────────────
 // UTILITIES
@@ -52,7 +59,7 @@ function generateSongId() {
 
 function printBanner() {
   console.log(chalk.bgYellow.black('\n ══════════════════════════════════════════ '));
-  console.log(chalk.bgYellow.black(' 🥞  PANCAKE ROBOT — Autonomous Music Pipeline '));
+  console.log(chalk.bgYellow.black(` ${APP_TITLE.toUpperCase()} — Autonomous Music Pipeline `));
   console.log(chalk.bgYellow.black(' ══════════════════════════════════════════ \n'));
 }
 
@@ -89,8 +96,6 @@ async function runSetup() {
   printBanner();
   console.log(chalk.bold.cyan('SETUP MODE — Building brand, research, and distribution config\n'));
 
-  const config = loadConfig();
-
   // Step 1: Research FIRST — brand builder will use these findings as context
   const researchPath = join(__dirname, '../output/research/research-report.json');
   const researchFresh = fs.existsSync(researchPath) && (() => {
@@ -102,24 +107,19 @@ async function runSetup() {
   if (researchFresh) {
     console.log(chalk.green('✓ Research already exists — skipping'));
   } else {
-    console.log(chalk.bold('\n📌 Step 1/4: Researching kids music trends (feeds into brand)...\n'));
+    console.log(chalk.bold(`\n📌 Step 1/4: Researching music trends for ${AUDIENCE_DESCRIPTION}...\n`));
     await runResearcher();
     console.log(chalk.green('\n✓ Research complete'));
   }
 
-  // Step 2: Build brand — informed by research findings
+  // Step 2: Build optional human-readable brand bible from the active profile
   const brandBiblePath = join(__dirname, '../output/brand/brand-bible.md');
   const brandBibleExists = fs.existsSync(brandBiblePath) && fs.statSync(brandBiblePath).size > 500;
-  if ((config.brand?.character || config.brand?.raw_text?.length > 100) || brandBibleExists) {
-    if (brandBibleExists && !config.brand) {
-      config.brand = { raw_text: fs.readFileSync(brandBiblePath, 'utf8'), created_at: new Date().toISOString(), recovered: true };
-      saveConfig(config);
-      console.log(chalk.yellow('⚠ Brand recovered from brand-bible.md file'));
-    }
-    console.log(chalk.green('✓ Brand already exists — skipping brand builder'));
-    console.log(chalk.dim('  (Delete config.brand in pancake-robot.config.json to rebuild)\n'));
+  if (brandBibleExists) {
+    console.log(chalk.green('✓ Brand bible already exists — skipping brand bible builder'));
+    console.log(chalk.dim('  (Active brand truth still comes from config/brand-profile*.json)\n'));
   } else {
-    console.log(chalk.bold('\n📌 Step 2/4: Building Pancake Robot brand identity...\n'));
+    console.log(chalk.bold(`\n📌 Step 2/4: Building ${BRAND_NAME} brand bible from active profile...\n`));
     await buildBrand();
     console.log(chalk.green('\n✓ Brand created and saved'));
   }
@@ -155,7 +155,7 @@ async function runSetup() {
   console.log('  1. Review output/brand/brand-bible.md');
   console.log('  2. Review output/research/research-report.json');
   console.log('  3. Review output/distribution/distribution-research.md');
-  console.log('  4. Run: node src/orchestrator.js --new "a robot who loves making pancakes"');
+  console.log('  4. Run: node src/orchestrator.js --new "song topic here"');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -175,7 +175,6 @@ async function runNewSongPipeline(topic) {
   const songDir = join(__dirname, `../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
 
-  const config = loadConfig();
   let totalCost = 0;
 
   // Initialize song in DB
@@ -183,7 +182,7 @@ async function runNewSongPipeline(topic) {
     id: songId,
     topic,
     status: 'draft',
-    distributor: 'TuneCore',
+    distributor: DEFAULT_DISTRIBUTOR,
     total_cost_usd: 0,
   });
 
@@ -196,14 +195,6 @@ async function runNewSongPipeline(topic) {
     researchReport = await runResearcher();
   } else {
     console.log(chalk.green('✓ Using cached research report\n'));
-  }
-
-  // Ensure brand exists
-  if (!config.brand) {
-    console.log(chalk.bold('\n📌 Building brand first (required)...\n'));
-    await buildBrand();
-    const updatedConfig = loadConfig();
-    config.brand = updatedConfig.brand;
   }
 
   // ─────────────────────────────
@@ -225,7 +216,6 @@ async function runNewSongPipeline(topic) {
       songId,
       topic,
       researchReport,
-      brandData: config.brand,
       revisionNotes,
     });
     totalCost += lyricsResult.costUsd || 0;
@@ -282,7 +272,6 @@ async function runNewSongPipeline(topic) {
     title: lyricsResult.title,
     topic,
     lyrics: lyricsResult.lyricsText,
-    brandData: config.brand,
     bpm: lyricsResult.songData?.audio_prompt?.tempo_bpm,
     researchReport,
   });
@@ -329,7 +318,6 @@ async function runNewSongPipeline(topic) {
     title: lyricsResult.title,
     topic,
     metadata,
-    brandData: config.brand,
   });
 
   // Block if thumbnails were skipped (no CF credentials)
@@ -411,7 +399,7 @@ async function runNewSongPipeline(topic) {
       total_cost_usd: totalCost,
     });
 
-    // Build distribution package — pre-organized folder for DistroKid upload
+    // Build distribution package with active-profile metadata and upload instructions
     console.log(chalk.bold('\n📌 Step 9/9: Building distribution package...\n'));
     const { distDir } = await generateHumanTasks({
       songId,
@@ -428,7 +416,7 @@ async function runNewSongPipeline(topic) {
 
     console.log(chalk.bgGreen.black('\n ✓ SONG APPROVED — READY FOR DISTRIBUTION \n'));
     console.log(`  Distribution package: ${chalk.bold(distDir)}`);
-    console.log(`  Open DISTROKID-UPLOAD.md for pre-filled upload values`);
+    console.log(`  Open DISTRIBUTOR-UPLOAD.md for pre-filled upload values`);
 
   } else if (approval.decision === 'revise') {
     console.log(chalk.yellow('\n↺ Song sent for revision'));
@@ -466,120 +454,25 @@ async function runNewSongPipeline(topic) {
 
 async function suggestNextSong() {
   printBanner();
-  console.log(chalk.bold.cyan('SONG SUGGESTER — What should Pancake Robot make next?\n'));
+  console.log(chalk.bold.cyan(`SONG SUGGESTER — What should ${BRAND_NAME} make next?\n`));
 
-  const config = loadConfig();
-  const songs = getAllSongs();
-  const researchPath = join(__dirname, '../output/research/research-report.json');
-
-  // Load research if available
-  let researchSummary = '';
-  try {
-    const report = JSON.parse(fs.readFileSync(researchPath, 'utf8'));
-    const topics = (report.top_topics || []).slice(0, 5).map(t => `- ${t.topic}: ${t.pancake_robot_angle || t.why_it_works || ''}`).join('\n');
-    const viral = (report.viral_signals || []).slice(0, 3).join('; ');
-    researchSummary = `\nMARKET RESEARCH:\nTop topics:\n${topics}\nViral signals: ${viral}`;
-  } catch { /* no research yet */ }
-
-  // Summarize existing songs
-  const existingSongs = songs.length > 0
-    ? `\nEXISTING SONGS (avoid repeating these themes):\n${songs.map(s => `- "${s.title}" (${s.topic}) — score: ${s.brand_score || '?'}`).join('\n')}`
-    : '\nEXISTING SONGS: None yet — this will be the first!';
-
-  // Brand context
-  const brandSummary = config.brand?.voice?.recurring_themes
-    ? `Brand themes: ${config.brand.voice.recurring_themes.join(', ')}`
-    : 'Brand: Pancake Robot — cheerful robot who loves pancakes and silly adventures, ages 4-10';
-
-  const task = `You are the song strategist for Pancake Robot, a children's music brand (ages 4-10).
-
-${brandSummary}
-${existingSongs}
-${researchSummary}
-
-Recommend the 5 best next song topics for Pancake Robot. For each:
-1. Pick topics that are NOT already covered by existing songs
-2. Prioritize high replay-ability and viral potential
-3. Consider the season/timing (current date: ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
-4. Mix educational + pure fun topics
-
-Output as JSON:
-{
-  "recommendations": [
-    {
-      "rank": 1,
-      "title": "Suggested song title",
-      "topic": "One-line topic description for --new command",
-      "why": "Why this will work for Pancake Robot right now (2-3 sentences)",
-      "hook_idea": "The key lyrical or musical hook concept",
-      "physical_action": "Suggested body movement kids can do",
-      "bpm_target": 110,
-      "urgency": "evergreen|seasonal|trending"
-    }
-  ],
-  "recommended_next": "topic string to paste directly into --new command"
-}`;
-
-  const suggesterDef = {
-    name: 'Pancake Robot Song Suggester',
-    model: 'claude-haiku-4-5-20251001',
-    noTools: true,
-    system: 'You are a children\'s music strategist. You recommend song topics that maximize replay-ability, virality, and brand consistency. Always output valid JSON.',
-  };
-
-  const result = await runAgent('product-manager', suggesterDef, task);
-
-  let suggestions;
-  try {
-    suggestions = parseAgentJson(result.text);
-  } catch {
-    console.log('\n' + result.text);
-    return;
-  }
+  const suggestions = await runSuggestPipeline((msg) => console.log(msg));
 
   console.log(chalk.bold('\n🎵 Next Song Recommendations:\n'));
   for (const rec of suggestions.recommendations || []) {
     const urgencyColor = rec.urgency === 'trending' ? chalk.red : rec.urgency === 'seasonal' ? chalk.yellow : chalk.green;
     console.log(chalk.bold(`${rec.rank}. ${rec.title}`));
     console.log(`   Topic: ${chalk.cyan(rec.topic)}`);
-    console.log(`   ${rec.why}`);
-    console.log(`   Hook: ${chalk.italic(rec.hook_idea)}`);
-    console.log(`   Action: ${rec.physical_action} | BPM: ${rec.bpm_target} | ${urgencyColor(rec.urgency)}`);
+    if (rec.why) console.log(`   ${rec.why}`);
+    if (rec.hook_idea) console.log(`   Hook: ${chalk.italic(rec.hook_idea)}`);
+    const detail = [rec.profile_specific_element, rec.bpm_target ? `${rec.bpm_target} BPM` : null, rec.urgency ? urgencyColor(rec.urgency) : null].filter(Boolean).join(' | ');
+    if (detail) console.log(`   ${detail}`);
     console.log('');
   }
 
   if (suggestions.recommended_next) {
     console.log(chalk.bgCyan.black(' ▶ TOP PICK — run this command: '));
     console.log(chalk.bold(`\n  node src/orchestrator.js --new "${suggestions.recommended_next}"\n`));
-  }
-
-  // Save suggestions to file
-  const outPath = join(__dirname, '../output/suggestions.json');
-  fs.writeFileSync(outPath, JSON.stringify({ generated_at: new Date().toISOString(), ...suggestions }, null, 2));
-  console.log(chalk.dim(`Suggestions saved to output/suggestions.json`));
-
-  // Auto-save each suggestion to Idea Vault
-  let savedCount = 0;
-  for (const rec of suggestions.recommendations || []) {
-    try {
-      createIdea({
-        title: rec.title,
-        concept: rec.why || null,
-        hook: rec.hook_idea || null,
-        target_age_range: '4-10',
-        category: rec.urgency === 'seasonal' ? 'seasonal' : null,
-        mood: rec.bpm_target ? `upbeat, ${rec.bpm_target} BPM` : null,
-        tags: [rec.urgency || 'evergreen'].filter(Boolean),
-        lyric_seed: rec.hook_idea || null,
-        notes: rec.physical_action ? `Physical action: ${rec.physical_action}` : null,
-        source_type: 'generated',
-        source_ref: `suggest_${new Date().toISOString().slice(0, 10)}`,
-      });
-      savedCount++;
-    } catch { /* idea may already exist */ }
-  }
-  if (savedCount > 0) {
-    console.log(chalk.dim(`✓ ${savedCount} idea(s) saved to Idea Vault (view at http://localhost:3737/ideas)`));
   }
 }
 

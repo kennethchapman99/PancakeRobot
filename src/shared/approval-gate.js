@@ -11,8 +11,11 @@ import chalk from 'chalk';
 import fs from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { loadBrandProfile } from './brand-profile.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const BRAND_PROFILE = loadBrandProfile();
+const APP_TITLE = BRAND_PROFILE.app_title || BRAND_PROFILE.brand_name || 'Music Pipeline';
 
 /**
  * Present QA results + song info, then ask human to approve/reject/revise.
@@ -31,7 +34,7 @@ export async function approveSong({
 
   const resolvedSongDir = songDir || join(__dirname, `../../output/songs/${songId}`);
 
-  console.log('\n' + chalk.bgCyan.black(' PANCAKE ROBOT — FINAL SONG REVIEW '));
+  console.log('\n' + chalk.bgCyan.black(` ${APP_TITLE.toUpperCase()} — FINAL SONG REVIEW `));
   console.log('');
 
   // ── QA Results ────────────────────────────────────────────

@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "agents": {},
+  "environment": null,
+  "distribution": null,
+  "schedule": {
+    "research_interval_days": 30,
+    "financial_report_interval_days": 7,
+    "distribution_check_interval_days": 30
+  },
+  "last_research": null,
+  "last_financial_report": null,
+  "songs": []
+}

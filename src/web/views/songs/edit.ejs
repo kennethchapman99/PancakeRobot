@@ -23,7 +23,7 @@
       <label class="block text-sm font-medium text-zinc-700 mb-1">Status</label>
       <select name="status"
         class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','ready_to_publish','submitted_to_tunecore','published','paused','archived']) { %>
+        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','ready_to_publish','submitted_to_distributor','published','paused','archived']) { %>
           <option value="<%= s %>" <%= song.status === s ? 'selected' : '' %>><%= s.replace(/_/g,' ') %></option>
         <% } %>
       </select>
@@ -37,8 +37,8 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-zinc-700 mb-1">Target Age Range</label>
-        <input type="text" name="target_age_range" value="<%= song.target_age_range || '4-10' %>"
+        <label class="block text-sm font-medium text-zinc-700 mb-1">Target Audience</label>
+        <input type="text" name="target_age_range" value="<%= song.target_age_range || defaultAudienceRange || '' %>"
           class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
       </div>
       <div>
@@ -51,7 +51,7 @@
     <div>
       <label class="block text-sm font-medium text-zinc-700 mb-1">Genre Tags</label>
       <input type="text" name="genre_tags" value="<%= (song.genre_tags || []).join(', ') %>"
-        placeholder="e.g. children's pop, kindie, upbeat"
+        placeholder="e.g. singer-songwriter, boom bap, indie pop"
         class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
       <p class="text-xs text-zinc-400 mt-1">Separate with commas</p>
     </div>
@@ -59,7 +59,7 @@
     <div>
       <label class="block text-sm font-medium text-zinc-700 mb-1">Mood Tags</label>
       <input type="text" name="mood_tags" value="<%= (song.mood_tags || []).join(', ') %>"
-        placeholder="e.g. silly, fun, high-energy"
+        placeholder="e.g. intimate, gritty, high-energy"
         class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900">
     </div>
 

@@ -18,7 +18,7 @@ const dotenv = _require('dotenv');
 dotenv.config({ path: join(__dirname, '../../.env'), override: true });
 
 import fs from 'fs';
-import { loadConfig, runAgent, parseAgentJson } from './managed-agent.js';
+import { runAgent, parseAgentJson } from './managed-agent.js';
 import { loadBrandProfile } from './brand-profile.js';
 import { getAllSongs, createIdea } from './db.js';
 
@@ -44,8 +44,7 @@ export async function runSuggestPipeline(onLog = () => {}, options = {}) {
     ? options.themePrompt.trim()
     : '';
 
-  log('🔍 Loading config and catalog...');
-  const config = loadConfig();
+  log('🔍 Loading brand profile and catalog...');
   const songs = getAllSongs();
 
   if (themePrompt) {
@@ -58,7 +57,7 @@ export async function runSuggestPipeline(onLog = () => {}, options = {}) {
   try {
     const report = JSON.parse(fs.readFileSync(researchPath, 'utf8'));
     const topics = (report.top_topics || []).slice(0, 5)
-      .map(t => `- ${t.topic}: ${t.pancake_robot_angle || t.why_it_works || ''}`)
+      .map(t => `- ${t.topic}: ${t.profile_angle || t.why_it_works || ''}`)
       .join('\n');
     const viral = (report.viral_signals || []).slice(0, 3).join('; ');
     researchSummary = `\nMARKET RESEARCH:\nTop topics:\n${topics}\nViral signals: ${viral}`;
@@ -76,9 +75,7 @@ export async function runSuggestPipeline(onLog = () => {}, options = {}) {
     log(`📀 Found ${songs.length} existing song(s) — avoiding duplicate topics.`);
   }
 
-  const brandSummary = config.brand?.voice?.recurring_themes
-    ? `Brand themes: ${config.brand.voice.recurring_themes.join(', ')}`
-    : `Brand: ${BRAND_NAME} — ${CHARACTER_FALLBACK_SUMMARY}; audience: ${AUDIENCE_DESCRIPTION}`;
+  const brandSummary = `Brand: ${BRAND_NAME} — ${CHARACTER_FALLBACK_SUMMARY}; audience: ${AUDIENCE_DESCRIPTION}`;
 
   const titleExamples = TITLE_EXAMPLES.map(t => `"${t}"`).join(', ');
   const themeGuidance = themePrompt
@@ -165,7 +162,7 @@ Output as JSON:
         mood: rec.bpm_target ? `upbeat, ${rec.bpm_target} BPM` : null,
         tags: [rec.urgency || 'evergreen', themePrompt ? `theme:${themePrompt}` : null].filter(Boolean),
         lyric_seed: rec.hook_idea || null,
-        notes: [rec.profile_specific_element || rec.physical_action || null, themePrompt ? `Theme guidance: ${themePrompt}` : null].filter(Boolean).join('\n') || null,
+        notes: [rec.profile_specific_element || null, themePrompt ? `Theme guidance: ${themePrompt}` : null].filter(Boolean).join('\n') || null,
         source_type: 'generated',
         source_ref: themePrompt
           ? `suggest_${new Date().toISOString().slice(0, 10)}_${themePrompt.slice(0, 40)}`

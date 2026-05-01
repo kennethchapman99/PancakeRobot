@@ -11,15 +11,18 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
 import express from 'express';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dotenv = require('dotenv');
 dotenv.config({ path: join(__dirname, '../../.env'), override: true });
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
 
 const REPO_ROOT = join(__dirname, '../..');
 const OUTPUT_ROOT = join(REPO_ROOT, process.env.MARKETING_OUTPUT_DIR || 'output/marketing-ready');
-const MARKETING_ROUTES_KEY = Symbol.for('pancakeRobot.marketingRoutesRegistered');
+const MARKETING_ROUTES_KEY = Symbol.for('musicPipeline.marketingRoutesRegistered');
 
 const marketingJobs = new Map();
 let depsPromise = null;
@@ -102,7 +105,7 @@ async function renderMarketingDashboard() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Marketing — Pancake Robot</title>
+  <title>Marketing — ${htmlEscape(BRAND_NAME)}</title>
   <style>
     body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f8fafc; color:#18181b; }
     header { padding:32px; background:#18181b; color:white; }

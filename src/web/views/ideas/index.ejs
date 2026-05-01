@@ -1,6 +1,59 @@
 <% title = 'Idea Vault' %>
 
-<div class="p-8" x-data="{ view: 'list' }">
+<script>
+window.ideaVault = function() {
+  return {
+    visibleIdeaIds: <%- JSON.stringify(ideas.map(idea => idea.id)) %>,
+    selected: {},
+    deleting: false,
+
+    get selectedIds() {
+      return this.visibleIdeaIds.filter(id => this.selected[id]);
+    },
+
+    get selectedCount() {
+      return this.selectedIds.length;
+    },
+
+    get allVisibleSelected() {
+      return this.visibleIdeaIds.length > 0 && this.visibleIdeaIds.every(id => this.selected[id]);
+    },
+
+    toggleAll(checked) {
+      for (const id of this.visibleIdeaIds) this.selected[id] = checked;
+    },
+
+    clearSelection() {
+      this.selected = {};
+    },
+
+    async deleteSelected() {
+      const ids = this.selectedIds;
+      if (ids.length === 0) return;
+      const noun = ids.length === 1 ? 'idea' : 'ideas';
+      if (!confirm(`Permanently delete ${ids.length} selected ${noun}? This cannot be undone.`)) return;
+
+      this.deleting = true;
+      try {
+        const res = await fetch('/api/ideas/bulk-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Delete failed');
+        window.location.reload();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        this.deleting = false;
+      }
+    },
+  };
+};
+</script>
+
+<div class="p-8" x-data="ideaVault()">
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold">Idea Vault</h1>
@@ -58,11 +111,40 @@
     <% const statCounts = {}; for (const i of ideas) statCounts[i.status] = (statCounts[i.status]||0)+1; %>
   </div>
 
+  <div class="flex items-center justify-between gap-4 mb-3">
+    <label class="inline-flex items-center gap-2 text-sm text-zinc-500">
+      <input type="checkbox"
+        class="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+        :checked="allVisibleSelected"
+        @change="toggleAll($event.target.checked)">
+      <span>Select all visible</span>
+    </label>
+
+    <div x-show="selectedCount > 0" x-cloak class="flex items-center gap-3">
+      <span class="text-sm text-zinc-500" x-text="selectedCount + ' selected'"></span>
+      <button type="button" @click="clearSelection()"
+        class="text-sm text-zinc-500 hover:text-zinc-700">Clear</button>
+      <button type="button" @click="deleteSelected()" :disabled="deleting"
+        class="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg font-semibold transition">
+        <span x-show="!deleting">Delete selected</span>
+        <span x-show="deleting">Deleting...</span>
+      </button>
+    </div>
+  </div>
+
   <div class="space-y-2">
     <% for (const idea of ideas) { %>
     <div x-data="{ open: false, status: '<%= idea.status %>' }"
          class="bg-white border border-zinc-200 rounded-xl overflow-hidden">
       <div class="flex items-center gap-4 px-5 py-4">
+        <!-- Select -->
+        <input type="checkbox"
+          class="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 shrink-0"
+          :checked="!!selected['<%= idea.id %>']"
+          @click.stop
+          @change="selected['<%= idea.id %>'] = $event.target.checked"
+          aria-label="Select idea <%= idea.title %>">
+
         <!-- Expand toggle -->
         <button @click="open = !open" class="text-zinc-400 hover:text-zinc-600 shrink-0">
           <span x-text="open ? '▾' : '▸'" class="text-sm"></span>

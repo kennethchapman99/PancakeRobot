@@ -15,7 +15,6 @@ const dotenv = _require('dotenv');
 dotenv.config({ path: join(__dirname, '../../.env'), override: true });
 
 import { writeLyrics } from '../agents/lyricist.js';
-import { loadConfig } from '../shared/managed-agent.js';
 import { getSong } from '../shared/db.js';
 
 const [,, songId, feedbackB64] = process.argv;
@@ -40,13 +39,6 @@ if (fs.existsSync(lyricsPath)) {
   console.log(`📄 Loaded existing lyrics (${existingLyrics.split('\n').length} lines)`);
 }
 
-// Load brand data
-let brandData = null;
-try {
-  const config = loadConfig();
-  brandData = config.brand || null;
-} catch { /* continue without brand */ }
-
 // Load research if available
 let researchReport = null;
 try {
@@ -60,7 +52,6 @@ try {
     songId,
     topic: song.topic || song.title,
     researchReport,
-    brandData,
     revisionNotes: feedback,
     existingLyrics,
   });

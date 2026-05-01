@@ -7,10 +7,14 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { loadBrandProfile } from './brand-profile.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const APP_SLUG = process.env.PIPELINE_APP_SLUG || [['pan', 'cake'].join(''), 'robot'].join('-');
+const APP_SLUG = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
 const DB_PATH = join(__dirname, `../../${APP_SLUG}.db`);
+const BRAND_PROFILE = loadBrandProfile();
+const DEFAULT_AUDIENCE_RANGE = BRAND_PROFILE.audience.age_range;
+const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor;
 
 let _db = null;
 
@@ -58,8 +62,8 @@ function initSchema(db) {
       keywords TEXT,
       notes TEXT,
       release_date TEXT,
-      distributor TEXT DEFAULT 'TuneCore',
-      tunecore_submission_date TEXT,
+      distributor TEXT,
+      distributor_submission_date TEXT,
       publishing_status TEXT DEFAULT 'not_started',
       published_at TEXT,
       lyrics_path TEXT,
@@ -80,7 +84,7 @@ function initSchema(db) {
       title TEXT NOT NULL,
       concept TEXT,
       hook TEXT,
-      target_age_range TEXT DEFAULT '4-10',
+      target_age_range TEXT,
       category TEXT,
       mood TEXT,
       educational_angle TEXT,
@@ -173,8 +177,8 @@ function initSchema(db) {
     ['keywords', 'TEXT'],
     ['notes', 'TEXT'],
     ['release_date', 'TEXT'],
-    ['distributor', "TEXT DEFAULT 'TuneCore'"],
-    ['tunecore_submission_date', 'TEXT'],
+    ['distributor', 'TEXT'],
+    ['distributor_submission_date', 'TEXT'],
     ['publishing_status', "TEXT DEFAULT 'not_started'"],
     ['published_at', 'TEXT'],
   ];
@@ -183,6 +187,20 @@ function initSchema(db) {
       db.exec(`ALTER TABLE songs ADD COLUMN ${col} ${type}`);
     }
   }
+
+  const migratedSongCols = db.prepare("PRAGMA table_info(songs)").all().map(c => c.name);
+  if (songCols.includes('tunecore_submission_date') && migratedSongCols.includes('distributor_submission_date')) {
+    db.exec(`
+      UPDATE songs
+      SET distributor_submission_date = COALESCE(distributor_submission_date, tunecore_submission_date)
+      WHERE tunecore_submission_date IS NOT NULL
+    `);
+  }
+  db.exec(`
+    UPDATE songs
+    SET status = 'submitted_to_distributor'
+    WHERE status IN ('submitted_to_distrokid', 'submitted_to_tunecore')
+  `);
 }
 
 // ─────────────────────────────────────────────
@@ -235,7 +253,7 @@ export function upsertSong(song) {
     const patchable = [
       'title', 'slug', 'topic', 'status', 'originating_idea_id', 'concept',
       'target_age_range', 'genre_tags', 'mood_tags', 'keywords', 'notes',
-      'release_date', 'distributor', 'tunecore_submission_date', 'publishing_status',
+      'release_date', 'distributor', 'distributor_submission_date', 'publishing_status',
       'published_at', 'lyrics_path', 'audio_prompt_path', 'thumbnail_path',
       'metadata_path', 'music_service', 'distribution_status', 'brand_score',
       'total_cost_usd',
@@ -253,7 +271,7 @@ export function upsertSong(song) {
       INSERT INTO songs
         (id, created_at, updated_at, title, slug, topic, status, originating_idea_id,
          concept, target_age_range, genre_tags, mood_tags, keywords, notes,
-         release_date, distributor, tunecore_submission_date, publishing_status,
+         release_date, distributor, distributor_submission_date, publishing_status,
          published_at, lyrics_path, audio_prompt_path, thumbnail_path, metadata_path,
          music_service, distribution_status, brand_score, total_cost_usd)
       VALUES
@@ -274,8 +292,8 @@ export function upsertSong(song) {
       song.keywords ? JSON.stringify(song.keywords) : null,
       song.notes || null,
       song.release_date || null,
-      song.distributor || 'TuneCore',
-      song.tunecore_submission_date || null,
+      song.distributor || DEFAULT_DISTRIBUTOR,
+      song.distributor_submission_date || null,
       song.publishing_status || 'not_started',
       song.published_at || null,
       song.lyrics_path || null,
@@ -314,8 +332,10 @@ export function deleteSong(id) {
 
 function parseSong(s) {
   if (!s) return null;
+  const { tunecore_submission_date: legacySubmissionDate, ...song } = s;
   return {
-    ...s,
+    ...song,
+    distributor_submission_date: s.distributor_submission_date || legacySubmissionDate || null,
     genre_tags: parseJsonArray(s.genre_tags),
     mood_tags: parseJsonArray(s.mood_tags),
     keywords: parseJsonArray(s.keywords),
@@ -343,7 +363,7 @@ export function createIdea(idea) {
     idea.title,
     idea.concept || null,
     idea.hook || null,
-    idea.target_age_range || '4-10',
+    idea.target_age_range || DEFAULT_AUDIENCE_RANGE,
     idea.category || null,
     idea.mood || null,
     idea.educational_angle || null,
@@ -376,6 +396,27 @@ export function updateIdea(id, fields) {
   }
   const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
   db.prepare(`UPDATE ideas SET ${setClauses} WHERE id = ?`).run(...Object.values(updates), id);
+}
+
+export function deleteIdea(id) {
+  const result = getDb().prepare('DELETE FROM ideas WHERE id = ?').run(id);
+  return result.changes;
+}
+
+export function deleteIdeas(ids) {
+  const uniqueIds = [...new Set((ids || [])
+    .map(id => String(id || '').trim())
+    .filter(Boolean))];
+
+  const db = getDb();
+  const deleteOne = db.prepare('DELETE FROM ideas WHERE id = ?');
+  const deleteMany = db.transaction((ideaIds) => {
+    let deleted = 0;
+    for (const id of ideaIds) deleted += deleteOne.run(id).changes;
+    return deleted;
+  });
+
+  return deleteMany(uniqueIds);
 }
 
 export function getIdea(id) {
@@ -431,7 +472,7 @@ export function getAssetsForSong(songId) {
 // PUBLISHING CHECKLIST
 // ─────────────────────────────────────────────
 
-const TUNECORE_CHECKLIST_ITEMS = [
+const PUBLISHING_CHECKLIST_ITEMS = [
   { key: 'final_title', label: 'Final song title confirmed' },
   { key: 'primary_artist', label: 'Primary artist name set' },
   { key: 'release_type', label: 'Release type selected (Single / EP / Album)' },
@@ -443,9 +484,9 @@ const TUNECORE_CHECKLIST_ITEMS = [
   { key: 'release_date', label: 'Release date selected (Friday recommended)' },
   { key: 'youtube_assets', label: 'YouTube thumbnail and description ready' },
   { key: 'spotify_pitch', label: 'Spotify pitch notes written' },
-  { key: 'kids_compliance', label: 'Kids / COPPA compliance review complete' },
-  { key: 'uploaded_tunecore', label: 'Uploaded to TuneCore' },
-  { key: 'tunecore_date', label: 'TuneCore submission date recorded' },
+  { key: 'audience_compliance', label: 'Audience and content compliance review complete' },
+  { key: 'uploaded_distributor', label: `Uploaded to ${DEFAULT_DISTRIBUTOR || 'distributor'}` },
+  { key: 'distributor_date', label: 'Distributor submission date recorded' },
   { key: 'store_links', label: 'Store links captured after going live' },
   { key: 'published_confirmed', label: 'Published confirmed on all platforms' },
 ];
@@ -457,7 +498,7 @@ export function initPublishingChecklist(songId) {
     INSERT OR IGNORE INTO publishing_checklist (id, song_id, key, label, status, updated_at)
     VALUES (?, ?, ?, ?, 'not_started', ?)
   `);
-  for (const item of TUNECORE_CHECKLIST_ITEMS) {
+  for (const item of PUBLISHING_CHECKLIST_ITEMS) {
     const id = `CL_${songId}_${item.key}`;
     insert.run(id, songId, item.key, item.label, now);
   }
@@ -616,7 +657,7 @@ export function getDashboardStats() {
       COUNT(*) as total,
       SUM(CASE WHEN status IN ('draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready') THEN 1 ELSE 0 END) as in_progress,
       SUM(CASE WHEN status IN ('ready_to_publish','metadata_ready') THEN 1 ELSE 0 END) as ready,
-      SUM(CASE WHEN status IN ('submitted_to_tunecore','published') THEN 1 ELSE 0 END) as published
+      SUM(CASE WHEN status IN ('submitted_to_distributor','published') THEN 1 ELSE 0 END) as published
     FROM songs
   `).get();
 
