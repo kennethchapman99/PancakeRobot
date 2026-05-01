@@ -1,16 +1,9 @@
 import { stripEmojis } from './song-qa.js';
+import { buildLockedTitleRequestLines } from './locked-title-policy.js';
 
-/**
- * Build the content request passed into the song generation pipeline.
- *
- * This keeps brand/content/context separate from tooling:
- * - Brand rules still come from the active brand profile.
- * - Song-specific content comes from the song record.
- * - The web/tooling layer only transports this request into the pipeline.
- */
 export function buildLockedSongGenerationRequest(song = {}) {
   const lockedTitle = cleanTitle(song.title || '');
-  const coreTopic = cleanText(song.topic || song.concept || song.notes || lockedTitle || "children's song");
+  const coreTopic = cleanText(song.topic || song.concept || song.notes || lockedTitle || 'song');
   const concept = cleanText(song.concept || '');
   const notes = cleanText(song.notes || '');
   const ageRange = cleanText(song.target_age_range || '');
@@ -19,12 +12,7 @@ export function buildLockedSongGenerationRequest(song = {}) {
   const keywords = arrayText(song.keywords);
 
   const lines = [];
-
-  if (lockedTitle) {
-    lines.push(`title: ${lockedTitle}`);
-    lines.push(`locked_title: ${lockedTitle}`);
-    lines.push(`title_requirement: Use the exact locked title as the song title, opening hook, chorus hook, and final chorus hook where musically natural.`);
-  }
+  if (lockedTitle) lines.push(...buildLockedTitleRequestLines(lockedTitle));
 
   lines.push(`song_topic: ${coreTopic}`);
   if (concept && concept !== coreTopic) lines.push(`concept: ${concept}`);
