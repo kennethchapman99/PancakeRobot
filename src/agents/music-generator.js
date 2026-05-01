@@ -302,7 +302,20 @@ function hexToBuffer(hex) {
 }
 
 export function buildStylePrompt(audioPrompt, { title } = {}) {
+  const adultBallad = isAdultBalladDirection(audioPrompt, title);
   const parts = [];
+
+  if (adultBallad) {
+    parts.push('slow heartfelt adult dedication ballad');
+    parts.push('72-82 BPM');
+    parts.push('piano-led arrangement');
+    parts.push('gentle strings');
+    parts.push('warm intimate lead vocal');
+    parts.push('no dance beat');
+    parts.push('no call-and-response');
+    parts.push("no children's-song energy");
+    parts.push('no novelty sound effects');
+  }
 
   if (!audioPrompt) {
     parts.push(BRAND_PROFILE.music.default_prompt);
@@ -322,18 +335,6 @@ export function buildStylePrompt(audioPrompt, { title } = {}) {
   parts.push(BRAND_PROFILE.brand_description);
   parts.push(`audience: ${BRAND_PROFILE.audience.description || BRAND_PROFILE.audience.age_range}`);
   parts.push(`guardrail: ${BRAND_PROFILE.audience.guardrail}`);
-
-  if (isAdultBalladDirection(audioPrompt, title)) {
-    parts.push('slow heartfelt adult dedication ballad');
-    parts.push('72-82 BPM');
-    parts.push('piano-led arrangement');
-    parts.push('gentle strings');
-    parts.push('warm intimate lead vocal');
-    parts.push('no dance beat');
-    parts.push('no call-and-response');
-    parts.push("no children's-song energy");
-    parts.push('no novelty sound effects');
-  }
 
   const basePrompt = [...new Set(parts.filter(Boolean).map(part => String(part).trim()).filter(Boolean))].join(', ');
   return addRenderSafetyToPrompt(basePrompt, title);
