@@ -13,7 +13,9 @@ const DEFAULT_POLICY = {
 };
 
 export function getLockedTitlePolicy(profile = loadBrandProfile()) {
-  const policy = profile.songwriting?.locked_title_policy || {};
+  const explicitPolicy = profile.songwriting?.locked_title_policy;
+  const policy = explicitPolicy || inferPolicyFromBrandProfile(profile);
+
   return {
     ...DEFAULT_POLICY,
     ...policy,
@@ -88,8 +90,45 @@ export function buildLockedTitleQaRequirements(title, profile = loadBrandProfile
   };
 }
 
+function inferPolicyFromBrandProfile(profile) {
+  const required = Array.isArray(profile.songwriting?.required_elements)
+    ? profile.songwriting.required_elements
+    : [];
+  const renderSafety = Array.isArray(profile.songwriting?.render_safety)
+    ? profile.songwriting.render_safety
+    : [];
+
+  const allPolicyText = [...required, ...renderSafety].map(normalize).join(' | ');
+  const mentionsExactTitle = allPolicyText.includes('exact title') || allPolicyText.includes('locked title');
+  const requireOpening = mentionsExactTitle && (allPolicyText.includes('opening') || allPolicyText.includes('first singable'));
+  const requireChorus = mentionsExactTitle && allPolicyText.includes('chorus');
+
+  if (!mentionsExactTitle) return DEFAULT_POLICY;
+
+  return {
+    enabled: true,
+    instruction: 'Use the exact locked title "{{title}}" according to the active brand profile songwriting requirements.',
+    preferred_usage: required.filter(item => normalize(item).includes('exact title')),
+    render_safety_prompts: renderSafety.filter(item => normalize(item).includes('exact title')),
+    qa_checks: {
+      require_in_lyrics: mentionsExactTitle,
+      require_in_opening: requireOpening,
+      require_in_chorus: requireChorus,
+    },
+  };
+}
+
 function renderPolicyTemplate(value, title) {
   return String(value || '').replaceAll('{{title}}', title);
+}
+
+function normalize(value = '') {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function cleanValue(value = '') {
