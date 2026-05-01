@@ -127,7 +127,7 @@ window.generatorData = function() {
         <input
           type="text"
           x-model="themePrompt"
-          placeholder="e.g. summer, chores, bedtime, robot dance party"
+          placeholder="e.g. summer, heartbreak, old-school cypher, late-night drive"
           class="w-full border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
         >
         <p class="text-xs text-zinc-400 mt-2">
@@ -247,10 +247,10 @@ window.generatorData = function() {
                 <span class="text-zinc-400 block mb-0.5">Hook</span>
                 <span class="text-zinc-700 font-medium" x-text="rec.hook_idea"></span>
               </div>
-              <template x-if="rec.physical_action">
+              <template x-if="rec.profile_specific_element">
                 <div class="bg-zinc-50 rounded-lg px-3 py-1.5">
-                  <span class="text-zinc-400 block mb-0.5">Physical Action</span>
-                  <span class="text-zinc-700 font-medium" x-text="rec.physical_action"></span>
+                  <span class="text-zinc-400 block mb-0.5">Profile Detail</span>
+                  <span class="text-zinc-700 font-medium" x-text="rec.profile_specific_element"></span>
                 </div>
               </template>
             </div>

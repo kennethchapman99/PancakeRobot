@@ -111,7 +111,8 @@ export async function runMarketingQA(assets, renderResult, hook, captionResult) 
   const warn = (check, detail = '') => { warnings.push(`${check}: ${detail}`); checks.push({ check, passed: true, warning: detail }); };
 
   if (!assets.title) fail('Title', 'missing title'); else pass('Title', assets.title);
-  if (assets.handle !== '@pancakerobotmusic') warn('Handle', `Using ${assets.handle}; expected @pancakerobotmusic`); else pass('Handle', assets.handle);
+  if (!assets.handle) warn('Handle', 'No social handle configured.');
+  else pass('Handle', assets.handle);
 
   if (!assets.source.audioPath) warn('Audio', 'No final audio found. Static images were generated; MP4 exports are skipped until audio exists.');
   else pass('Audio', basename(assets.source.audioPath));

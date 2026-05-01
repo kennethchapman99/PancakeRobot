@@ -1,6 +1,6 @@
-# Pancake Robot — Autonomous Kids Music Pipeline
+# Profile-Driven Autonomous Music Pipeline
 
-An autonomous multi-agent system that researches trends, writes lyrics, generates thumbnails, and prepares children's songs for distribution — with one human gate: you approve before anything publishes.
+An autonomous multi-agent system that researches trends, writes lyrics, generates thumbnails, and prepares songs for distribution from the active brand profile — with one human gate: you approve before anything publishes.
 
 ## How It Works
 
@@ -12,7 +12,7 @@ Seven specialized agents handle the pipeline:
 
 | Agent | Role |
 |---|---|
-| Researcher | Market trends, trending topics for ages 4–10 |
+| Researcher | Market trends and audience/genre context from the active profile |
 | Brand Manager | Brand bible guardian, scores every song 0–100 |
 | Lyricist | Writes lyrics + Suno/Udio audio generation prompts |
 | Product Manager | YouTube/Spotify metadata, SEO, distribution research |
@@ -32,7 +32,7 @@ Seven specialized agents handle the pipeline:
 ### 2. Install dependencies
 
 ```bash
-cd PancakeRobot
+cd <repo-dir>
 npm install
 ```
 
@@ -64,10 +64,10 @@ This will:
 1. Create and store a shared Managed Agents environment (workspace container)
 2. Create and store agent configs for all 7 agents
 3. Run financial service research (free/cheap service comparison)
-4. Research distribution services (DistroKid, RouteNote, etc.)
-5. Build the Pancake Robot brand bible
+4. Research distribution services appropriate to the active profile
+5. Build the active profile brand bible
 
-Agent IDs and environment IDs are stored in `pancake-robot.config.json` — they persist across runs so agents are never recreated unnecessarily.
+Agent IDs and environment IDs are stored in `music-pipeline.config.json` — they persist across runs and are recreated automatically when an agent definition changes.
 
 ---
 
@@ -132,7 +132,7 @@ node src/orchestrator.js --schedule
 | **AI pipeline total** | **~$0.50–$0.70** | |
 | Thumbnail generation | **$0.00** | Cloudflare free tier (100k/day) |
 | Music generation | **$0.00–$0.10** | Suno free tier or paid |
-| Distribution | **$0.00** | RouteNote free tier |
+| Distribution | varies | Based on the active profile's distributor |
 | **Total per song** | **~$0.50–$0.80** | |
 
 Costs are tracked per-agent in SQLite and visualized in the financial report. Run `node src/orchestrator.js --report` at any time to see the breakdown.
@@ -234,7 +234,7 @@ node src/orchestrator.js --schedule
 
 | Task | Schedule | What it does |
 |---|---|---|
-| Market Research | 1st of every month, 9am | Refreshes trending topics and children's music market data |
+| Market Research | 1st of every month, 9am | Refreshes trend and audience data for the active profile |
 | Financial Report | Every Monday, 9am | Regenerates cost analysis + service research |
 | Distribution Check | 1st of every month, 10am | Checks distribution platform pricing/terms |
 
@@ -243,7 +243,7 @@ The scheduler blocks the terminal. Use a process manager (PM2, systemd, launchd)
 ```bash
 # PM2 example
 npm install -g pm2
-pm2 start "node src/orchestrator.js --schedule" --name pancake-scheduler
+pm2 start "node src/orchestrator.js --schedule" --name music-pipeline-scheduler
 pm2 save
 pm2 startup
 ```
@@ -255,18 +255,15 @@ pm2 startup
 Just pass any topic to `--new`:
 
 ```bash
-node src/orchestrator.js --new "counting to 10"
-node src/orchestrator.js --new "farm animals"
-node src/orchestrator.js --new "getting dressed in the morning"
-node src/orchestrator.js --new "why we sleep"
-node src/orchestrator.js --new "being kind to bugs"
+node src/orchestrator.js --new "a serious piano ballad about leaving home"
+node src/orchestrator.js --new "old-school cypher about building something from nothing"
+node src/orchestrator.js --new "late-night synth pop song about starting over"
 ```
 
 Topics work best when they are:
-- Concrete and visual (animals, objects, actions)
-- Part of a child's daily life or curiosity
-- Educational but not preachy
-- 2–5 words
+- Concrete, specific, and emotionally or visually clear
+- Aligned with the selected brand profile's audience, genre, and rules
+- Focused enough for one song
 
 The researcher will have surfaced trending topics during `--setup` and monthly refreshes. Check `output/research/research-report.json` for the current list.
 
@@ -275,7 +272,7 @@ The researcher will have surfaced trending topics during `--setup` and monthly r
 ## Project Structure
 
 ```
-PancakeRobot/
+MusicPipeline/
 ├── src/
 │   ├── orchestrator.js          # Main CLI entry point
 │   ├── agents/
@@ -294,7 +291,7 @@ PancakeRobot/
 │   └── reports/
 │       └── financial-report.js  # Chart.js + HTML report generator
 ├── output/                      # All generated content (gitignored)
-├── pancake-robot.config.json    # Agent IDs, environment ID, brand data
+├── music-pipeline.config.json   # Generic runtime IDs only; brand source is config/brand-profile*.json
 ├── .env                         # API keys (never commit)
 ├── .env.example                 # Template
 └── package.json
@@ -312,7 +309,7 @@ The session event stream must be opened *before* sending the user message, or ea
 
 **2. Agent IDs are permanent**
 
-Agent configs are stored objects — they don't expire. `pancake-robot.config.json` stores IDs across runs. If an agent call 404s (rare, e.g. after account changes), the orchestrator clears the stored ID and recreates automatically on the next run.
+Agent configs are stored objects — they don't expire. `music-pipeline.config.json` stores IDs across runs, and `managed-agent.js` recreates agents when the stored definition fingerprint no longer matches the current profile-driven definition. If an agent call 404s (rare, e.g. after account changes), the orchestrator clears the stored ID and recreates automatically on the next run.
 
 **3. `session.status_idle` vs `requires_action`**
 
@@ -334,11 +331,11 @@ Chart generation uses `canvas` (node-canvas), a native Node.js addon. It must be
 
 ## Database
 
-Song runs and costs are stored in `output/pancake-robot.db` (SQLite, created automatically).
+Song runs and costs are stored in the local SQLite database for the current pipeline slug.
 
 ```bash
 # Inspect directly
-sqlite3 output/pancake-robot.db
+sqlite3 music-pipeline.db
 
 # Useful queries
 SELECT agent_name, COUNT(*) as runs, SUM(cost_usd) as total_cost FROM runs GROUP BY agent_name;

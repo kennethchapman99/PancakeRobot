@@ -1,7 +1,7 @@
 /**
  * Researcher Agent — profile-driven music trend analysis
  *
- * Performs autonomous web research on what kids 4-10 actually listen to.
+ * Performs autonomous web research for the active profile audience and genre.
  * Outputs structured research-report.json.
  */
 

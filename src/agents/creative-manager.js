@@ -2,7 +2,7 @@
  * Creative Manager Agent — Thumbnail generation via Cloudflare Workers AI
  *
  * Generates thumbnails using Flux Schnell (free tier on Cloudflare).
- * Always grounded to the brand logo in output/brand/brand-logo.png.
+ * Uses the active brand profile for visual direction.
  *
  * Cloudflare response format: { result: { image: "<base64>" }, success: true }
  * NOT raw binary — previous version was writing garbage. Fixed.
@@ -52,12 +52,12 @@ When crafting image prompts, match this character exactly and be extremely speci
 /**
  * Generate thumbnails for a song using Cloudflare Workers AI (Flux Schnell)
  */
-export async function generateThumbnails({ songId, title, topic, metadata, brandData }) {
+export async function generateThumbnails({ songId, title, topic, metadata }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   const thumbDir = join(songDir, 'thumbnails');
   fs.mkdirSync(thumbDir, { recursive: true });
 
-  // Load brand logo for grounding (base64 encode it)
+  // Load optional brand logo for grounding/reference.
   let brandLogoBase64 = null;
   if (fs.existsSync(BRAND_LOGO_PATH)) {
     brandLogoBase64 = fs.readFileSync(BRAND_LOGO_PATH).toString('base64');
@@ -332,8 +332,8 @@ async function addTitleText(inputPath, outputPath, title, formatName) {
   ctx.shadowOffsetX = isLandscape ? 3 : 8;
   ctx.shadowOffsetY = isLandscape ? 3 : 8;
 
-  // Dark red stroke (brand color)
-  ctx.strokeStyle = VISUAL_PALETTE.dark_red || '#8B0000';
+  const paletteValues = Object.values(VISUAL_PALETTE || {}).filter(value => typeof value === 'string');
+  ctx.strokeStyle = VISUAL_PALETTE.text_outline || VISUAL_PALETTE.dark || paletteValues[0] || '#111827';
   ctx.lineWidth = isLandscape ? Math.round(fontSize * 0.18) : Math.round(fontSize * 0.14);
   ctx.lineJoin = 'round';
   ctx.textAlign = 'center';
@@ -357,7 +357,9 @@ async function addTitleText(inputPath, outputPath, title, formatName) {
 function buildManualInstructions(promptData, title) {
   let md = `# Manual Thumbnail Generation Instructions\n\n`;
   md += `Use these prompts with any AI image generator (Midjourney, DALL-E, Leonardo AI, etc.)\n\n`;
-  md += `**Brand Reference:** Use \`output/brand/brand-logo.png\` as the character reference image.\n\n`;
+  if (fs.existsSync(BRAND_LOGO_PATH)) {
+    md += `**Brand Reference:** Use \`output/brand/brand-logo.png\` as the reference image.\n\n`;
+  }
 
   for (const [format, spec] of Object.entries(promptData.prompts || {})) {
     md += `## ${format} (${spec.size})\n\n`;

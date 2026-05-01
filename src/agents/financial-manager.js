@@ -6,15 +6,21 @@ import { runAgent, parseAgentJson, loadConfig } from '../shared/managed-agent.js
 import { getTotalCosts, getServiceResearch, upsertServiceResearch } from '../shared/db.js';
 import { formatCost } from '../shared/costs.js';
 import { generateFinancialReport } from '../reports/financial-report.js';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name;
+const BRAND_DESCRIPTION = BRAND_PROFILE.brand_description;
+const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
+const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor;
 
 export const FINANCIAL_MANAGER_DEF = {
-  name: 'Pancake Robot Financial Manager',
-  system: `You are the financial analyst for Pancake Robot, an autonomous children's music production pipeline.
+  name: `${BRAND_NAME} Financial Manager`,
+  system: `You are the financial analyst for ${BRAND_NAME}, ${BRAND_DESCRIPTION}.
 
 Your job is to:
 1. Track every dollar spent in the production pipeline
@@ -24,20 +30,20 @@ Your job is to:
 
 You are aggressive about finding cost savings. Your default assumption is that there's always a cheaper or free alternative.
 
-Key services to always evaluate:
+Key services to evaluate when relevant:
 - Music generation: Suno, Udio, Stability Audio, MusicGen (open source), Riffusion
 - Image generation: Cloudflare Workers AI (already free), Stable Diffusion, DALL-E, Midjourney
-- Distribution: RouteNote (free), Amuse (free tier), DistroKid ($22/year)
+- Distribution services appropriate for ${PRIMARY_GENRE}; include ${DEFAULT_DISTRIBUTOR} when relevant
 - Any other services in the pipeline
 
 Always provide specific URLs, pricing tiers, and free tier limits when researching services.
 Output valid JSON.`,
 };
 
-const SERVICE_RESEARCH_TASK = `Do 2-3 web searches to find current pricing for music production services. Research:
+const SERVICE_RESEARCH_TASK = `Do 2-3 web searches to find current pricing for music production services for ${BRAND_NAME}, ${BRAND_DESCRIPTION}. Research:
 
 1. Music generation: Suno and Udio free tier limits + cost per song on paid
-2. Distribution: RouteNote free tier details, DistroKid annual cost
+2. Distribution: services appropriate for ${PRIMARY_GENRE}, including ${DEFAULT_DISTRIBUTOR} when relevant
 3. Images: Cloudflare Workers AI Flux Schnell free tier confirmation
 
 Output compact JSON only:
@@ -120,7 +126,7 @@ export async function generateFullReport() {
 
   // If we have substantial cost data, also get AI recommendations
   if (costData.totals?.total_runs > 0) {
-    const analysisTask = `Analyze this cost data for Pancake Robot's autonomous music pipeline and provide recommendations.
+    const analysisTask = `Analyze this cost data for ${BRAND_NAME}'s autonomous music pipeline and provide recommendations.
 
 TOTAL COSTS:
 - Total Spent: ${formatCost(costData.totals?.total_cost || 0)}
@@ -138,7 +144,7 @@ Provide:
 1. Which agent is most expensive and why?
 2. What's the actual cost per song?
 3. Top 3 specific ways to reduce cost (with estimated savings)
-4. Is the current cost per song sustainable for a kids music brand?
+4. Is the current cost per song sustainable for this active profile and genre?
 
 Keep response concise and actionable.`;
 

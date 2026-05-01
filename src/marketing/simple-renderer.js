@@ -8,14 +8,19 @@ import { dirname, join } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { createCanvas, loadImage } from 'canvas';
+import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const execFileAsync = promisify(execFile);
-const INK = '#1F1A17';
-const CREAM = '#FFF3D7';
-const BLUE = '#95E0EF';
-const BLUE_DARK = '#155E75';
-const AMBER = '#F59E0B';
-const ORANGE = '#EA580C';
+const BRAND_PROFILE = loadBrandProfile();
+const BRAND_NAME = BRAND_PROFILE.brand_name || 'Music Pipeline';
+const PALETTE = BRAND_PROFILE.visual_style?.color_palette || {};
+const INK = PALETTE.text_outline || PALETTE.dark || '#1F1A17';
+const BACKGROUND = PALETTE.background || PALETTE.light || '#F8FAFC';
+const BACKGROUND_ALT = PALETTE.background_alt || PALETTE.secondary || '#E0F2FE';
+const ACCENT = PALETTE.primary || '#0EA5E9';
+const ACCENT_DARK = PALETTE.accent_dark || PALETTE.dark || '#155E75';
+const HIGHLIGHT = PALETTE.highlight || PALETTE.secondary || '#F59E0B';
+const BUTTON = PALETTE.button || PALETTE.accent || '#EA580C';
 
 async function commandWorks(command) {
   try { await execFileAsync(command, ['-version'], { timeout: 5000 }); return true; }
@@ -70,7 +75,13 @@ function wrap(text, max = 18, maxLines = 3) {
     if (lines.length >= maxLines) break;
   }
   if (line && lines.length < maxLines) lines.push(line);
-  return lines.length ? lines : ['PANCAKE ROBOT'];
+  return lines.length ? lines : [BRAND_NAME];
+}
+
+function brandHeadline() {
+  const words = clean(BRAND_NAME).split(' ').filter(Boolean);
+  if (words.length <= 2) return words.length ? words : ['NEW', 'MUSIC'];
+  return wrap(BRAND_NAME, 14, 2);
 }
 
 async function drawContain(ctx, imagePath, x, y, w, h) {
@@ -112,13 +123,13 @@ async function poster({ assets, outputPath, width, height, headline, subhead, ly
   const character = assets.source.copiedCharacter || assets.source.characterPath || cover;
 
   const grad = ctx.createLinearGradient(0, 0, width, height);
-  grad.addColorStop(0, CREAM);
-  grad.addColorStop(1, platform === 'tiktok' ? '#C8F2FF' : '#FDE7B0');
+  grad.addColorStop(0, BACKGROUND);
+  grad.addColorStop(1, BACKGROUND_ALT);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
   await drawCover(ctx, cover, width, height);
 
-  ctx.fillStyle = BLUE;
+  ctx.fillStyle = ACCENT;
   ctx.beginPath();
   ctx.arc(width / 2, height * 0.49, Math.min(width * 0.43, height * 0.30), 0, Math.PI * 2);
   ctx.fill();
@@ -129,7 +140,7 @@ async function poster({ assets, outputPath, width, height, headline, subhead, ly
   let y = height * 0.08;
   for (const line of Array.isArray(headline) ? headline : wrap(headline)) {
     fitFont(ctx, line.toUpperCase(), width * 0.88, width * 0.145, 40);
-    outline(ctx, line.toUpperCase(), width / 2, y, line.toLowerCase().includes('new') ? AMBER : '#FFFFFF', INK, width * 0.012);
+    outline(ctx, line.toUpperCase(), width / 2, y, line.toLowerCase().includes('new') ? HIGHLIGHT : '#FFFFFF', INK, width * 0.012);
     y += width * 0.13;
   }
 
@@ -138,7 +149,7 @@ async function poster({ assets, outputPath, width, height, headline, subhead, ly
     const pw = width * 0.68;
     const px = (width - pw) / 2;
     const py = height * 0.245;
-    ctx.fillStyle = platform === 'tiktok' ? '#DC2626' : ORANGE;
+    ctx.fillStyle = BUTTON;
     roundRect(ctx, px, py, pw, ph, ph / 2);
     ctx.fill();
     ctx.strokeStyle = INK;
@@ -159,9 +170,9 @@ async function poster({ assets, outputPath, width, height, headline, subhead, ly
     ctx.strokeStyle = INK;
     ctx.lineWidth = 8;
     ctx.stroke();
-    fitFont(ctx, 'PANCAKE ROBOT', width * 0.52, width * 0.065, 26);
+    fitFont(ctx, BRAND_NAME, width * 0.52, width * 0.065, 26);
     ctx.fillStyle = INK;
-    ctx.fillText('PANCAKE ROBOT', width / 2, height * 0.49);
+    ctx.fillText(BRAND_NAME, width / 2, height * 0.49);
   }
 
   if (lyricText) {
@@ -177,12 +188,12 @@ async function poster({ assets, outputPath, width, height, headline, subhead, ly
     const sy = by + bh / 2 - ((lines.length - 1) * lh / 2);
     for (let i = 0; i < lines.length; i++) {
       fitFont(ctx, lines[i], bw - 60, width * 0.058, 30);
-      outline(ctx, lines[i], width / 2, sy + i * lh, BLUE_DARK, '#FFFFFF', 5);
+      outline(ctx, lines[i], width / 2, sy + i * lh, ACCENT_DARK, '#FFFFFF', 5);
     }
   }
 
   const fh = height * 0.052, fw = width * 0.72, fx = (width - fw) / 2, fy = height - height * 0.115;
-  ctx.fillStyle = BLUE_DARK;
+  ctx.fillStyle = ACCENT_DARK;
   roundRect(ctx, fx, fy, fw, fh, fh / 2);
   ctx.fill();
   ctx.strokeStyle = '#FFFFFF';
@@ -227,15 +238,16 @@ export async function renderMarketingAssets(assets, hook) {
   const generated = [];
   const skipped = [];
   const work = assets.dirs.workingDir;
+  const profileHeadline = brandHeadline();
 
   const jobs = [
     ['igHook', join(work, 'ig-reel-hook-base.jpg'), 1080, 1920, ['LISTEN', 'EVERYWHERE'], 'link in bio', null, 'instagram'],
-    ['igLyrics', join(work, 'ig-reel-lyrics-base.jpg'), 1080, 1920, [assets.title], 'sing along', lyric, 'instagram'],
-    ['igCharacter', join(work, 'ig-reel-character-base.jpg'), 1080, 1920, ['PANCAKE', 'ROBOT'], 'new music', null, 'instagram'],
+    ['igLyrics', join(work, 'ig-reel-lyrics-base.jpg'), 1080, 1920, [assets.title], 'new release', lyric, 'instagram'],
+    ['igCharacter', join(work, 'ig-reel-character-base.jpg'), 1080, 1920, profileHeadline, 'new music', null, 'instagram'],
     ['igStory', join(work, 'ig-story-base.jpg'), 1080, 1920, ['NEW SONG', 'OUT NOW'], 'tap link in bio', null, 'instagram'],
     ['tiktokHook', join(work, 'tiktok-hook-base.jpg'), 1080, 1920, ['NEW SONG', 'OUT NOW'], 'listen now', null, 'tiktok'],
-    ['tiktokLyrics', join(work, 'tiktok-lyrics-base.jpg'), 1080, 1920, [assets.title], 'sing along', lyric, 'tiktok'],
-    ['tiktokLoop', join(work, 'tiktok-loop-base.jpg'), 1080, 1920, ['PANCAKE', 'ROBOT'], 'dance loop', null, 'tiktok'],
+    ['tiktokLyrics', join(work, 'tiktok-lyrics-base.jpg'), 1080, 1920, [assets.title], 'new release', lyric, 'tiktok'],
+    ['tiktokLoop', join(work, 'tiktok-loop-base.jpg'), 1080, 1920, profileHeadline, 'official sound', null, 'tiktok'],
     ['ig-feed-announcement-1080x1350.png', join(assets.dirs.instagramDir, 'ig-feed-announcement-1080x1350.png'), 1080, 1350, ['NEW SONG', 'OUT NOW'], 'Listen everywhere', null, 'instagram'],
     ['ig-square-post-1080x1080.png', join(assets.dirs.instagramDir, 'ig-square-post-1080x1080.png'), 1080, 1080, ['NEW SONG'], 'Link in bio', null, 'instagram'],
     ['ig-reel-cover.jpg', join(assets.dirs.instagramDir, 'ig-reel-cover.jpg'), 1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio', null, 'instagram'],

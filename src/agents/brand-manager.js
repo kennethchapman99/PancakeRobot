@@ -5,7 +5,7 @@
  * ignored when it belongs to a different brand.
  */
 
-import { runAgent, parseAgentJson, loadConfig, saveConfig } from '../shared/managed-agent.js';
+import { runAgent, parseAgentJson } from '../shared/managed-agent.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -74,10 +74,10 @@ export async function buildBrand() {
 
   const result = await runAgent('brand-manager', BRAND_MANAGER_DEF, BUILD_BRAND_TASK);
 
-  let brandData;
+  let generatedBrand;
   try {
     const parsed = parseAgentJson(result.text);
-    brandData = parsed.brand_data || parsed;
+    generatedBrand = parsed.brand_data || parsed;
 
     if (parsed.brand_bible_markdown) {
       fs.writeFileSync(BRAND_BIBLE_PATH, parsed.brand_bible_markdown);
@@ -86,30 +86,18 @@ export async function buildBrand() {
       fs.writeFileSync(BRAND_BIBLE_PATH, result.text);
     }
   } catch {
-    brandData = { brand_name: BRAND_NAME, raw_text: result.text };
+    generatedBrand = { brand_name: BRAND_NAME, raw_text: result.text };
     fs.writeFileSync(BRAND_BIBLE_PATH, result.text);
   }
 
-  if (!brandData.brand_name) brandData.brand_name = BRAND_NAME;
-  if (!brandData.brand_type) brandData.brand_type = BRAND_PROFILE.brand_type;
+  if (!generatedBrand.brand_name) generatedBrand.brand_name = BRAND_NAME;
+  if (!generatedBrand.brand_type) generatedBrand.brand_type = BRAND_PROFILE.brand_type;
 
-  const config = loadConfig();
-  config.brand = brandData;
-  config.brand.created_at = new Date().toISOString();
-  saveConfig(config);
-
-  return brandData;
+  return generatedBrand;
 }
 
 export async function reviewSong({ songId, title, topic, lyricsText, audioPromptText }) {
-  const config = loadConfig();
-  const generatedBrand = getCompatibleGeneratedBrandData(config.brand);
-  const brandForReview = {
-    active_brand_profile: BRAND_PROFILE,
-    generated_brand_data: generatedBrand || 'No compatible generated brand data. Review against active_brand_profile only.',
-  };
-
-  const brandSummary = JSON.stringify(brandForReview, null, 2).substring(0, 5000);
+  const brandSummary = JSON.stringify({ active_brand_profile: BRAND_PROFILE }, null, 2).substring(0, 5000);
   const lyricsPreview = lyricsText ? lyricsText.substring(0, 3000) : 'Not provided';
   const promptPreview = audioPromptText ? audioPromptText.substring(0, 1200) : 'Not provided';
 
@@ -179,21 +167,6 @@ Output valid JSON:
   }
 
   return review;
-}
-
-function getCompatibleGeneratedBrandData(brandData) {
-  if (!brandData) return null;
-
-  const serialized = JSON.stringify(brandData).toLowerCase();
-  const activeBrand = BRAND_NAME.toLowerCase();
-  const activeCharacter = CHARACTER_NAME.toLowerCase();
-
-  if (!serialized.includes(activeBrand) && !serialized.includes(activeCharacter)) {
-    console.log('[BRAND] Ignoring stale generated brand bible for different brand');
-    return null;
-  }
-
-  return brandData;
 }
 
 export function loadBrandBible() {

@@ -12,11 +12,12 @@ import chalk from 'chalk';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import { createHash } from 'crypto';
 import { calculateCost, generateRunId } from './costs.js';
 import { logRun, logError } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const APP_SLUG = process.env.PIPELINE_APP_SLUG || [['pan', 'cake'].join(''), 'robot'].join('-');
+const APP_SLUG = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
 const CONFIG_PATH = join(__dirname, `../../${APP_SLUG}.config.json`);
 
 // Agent colors for terminal output
@@ -50,7 +51,6 @@ export function loadConfig() {
       version: '1.0.0',
       agents: {},
       environment: null,
-      brand: null,
       distribution: null,
       schedule: {},
       songs: [],
@@ -99,12 +99,14 @@ async function getOrCreateEnvironment(config) {
 async function getOrCreateAgent(agentName, agentDef, config) {
   const client = getClient();
   const model = agentDef.model || 'claude-sonnet-4-6';
-  // Use name+model as config key so Haiku/Sonnet variants are stored separately
-  const configKey = [
-    agentName,
-    agentDef.model?.includes('haiku') ? 'haiku' : null,
-    agentDef.noTools ? 'notool' : null,
-  ].filter(Boolean).join('-');
+  const configKey = getAgentConfigKey(agentName, agentDef);
+  const definitionHash = hashAgentDefinition(agentDef, model);
+
+  if (config.agents[configKey] && config.agents[configKey].definition_hash !== definitionHash) {
+    console.log(chalk.dim(`Agent ${configKey} definition changed, recreating...`));
+    delete config.agents[configKey];
+    saveConfig(config);
+  }
 
   if (config.agents[configKey]?.id) {
     try {
@@ -134,11 +136,32 @@ async function getOrCreateAgent(agentName, agentDef, config) {
     version: agent.version,
     name: agentDef.name,
     model,
+    definition_hash: definitionHash,
     created_at: new Date().toISOString(),
   };
   saveConfig(config);
   console.log(chalk.dim(`Agent created: ${agent.id}`));
   return { id: agent.id, version: agent.version };
+}
+
+function getAgentConfigKey(agentName, agentDef) {
+  // Use name+model as config key so Haiku/Sonnet variants are stored separately.
+  return [
+    agentName,
+    agentDef.model?.includes('haiku') ? 'haiku' : null,
+    agentDef.noTools ? 'notool' : null,
+  ].filter(Boolean).join('-');
+}
+
+function hashAgentDefinition(agentDef, model) {
+  return createHash('sha256')
+    .update(JSON.stringify({
+      name: agentDef.name,
+      model,
+      noTools: Boolean(agentDef.noTools),
+      system: agentDef.system,
+    }))
+    .digest('hex');
 }
 
 /**
@@ -412,7 +435,7 @@ export async function runAgent(agentName, agentDef, task, options = {}) {
       // If agent ID is stale (404), clear it and retry
       if (err.status === 404 || err.message?.includes('not_found')) {
         const cfg = loadConfig();
-        delete cfg.agents[agentName];
+        delete cfg.agents[getAgentConfigKey(agentName, agentDef)];
         saveConfig(cfg);
       }
     }

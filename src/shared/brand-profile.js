@@ -2,7 +2,7 @@
  * Brand profile loader.
  *
  * The active brand profile is the source of truth. Custom profiles must not be
- * deep-merged into Pancake Robot defaults, because that leaks legacy brand
+ * deep-merged into default profile values, because that leaks brand
  * concepts into unrelated brands.
  */
 
@@ -12,6 +12,9 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PROFILE_PATH = join(__dirname, '../../config/brand-profile.json');
+const BRAND_PROFILES_DIR = join(__dirname, '../../config/brand-profiles');
+export const DEFAULT_PROFILE_ID = 'default';
+const SAFE_PROFILE_ID = /^[a-zA-Z0-9._-]+$/;
 
 const FALLBACK_PROFILE = {
   brand_name: 'Default Music Brand',
@@ -49,11 +52,10 @@ const FALLBACK_PROFILE = {
   visuals: {
     style: 'Bold cartoon illustration, clean black outlines, bright saturated colors — NOT photorealistic',
     palette: {
-      syrup_gold: '#D4860A',
-      silver_grey: '#B0B8C1',
-      sky_blue: '#7EC8E3',
-      cream: '#F5ECD7',
-      dark_red: '#8B0000',
+      primary: '#111827',
+      secondary: '#E5E7EB',
+      accent: '#2563EB',
+      background: '#F9FAFB',
     },
     negative_prompt: 'text, words, letters, photorealistic, dark colors, scary, violent, blurry',
     text_overlay_style: 'bold rounded font, white fill with thick dark red outline, drop shadow',
@@ -79,6 +81,83 @@ const FALLBACK_PROFILE = {
 };
 
 let cachedProfile = null;
+
+export function getDefaultBrandProfilePath() {
+  return DEFAULT_PROFILE_PATH;
+}
+
+export function getBrandProfilesDir() {
+  return BRAND_PROFILES_DIR;
+}
+
+export function listBrandProfiles() {
+  const defaultProfile = loadBrandProfileById(DEFAULT_PROFILE_ID);
+  const profiles = [{
+    id: DEFAULT_PROFILE_ID,
+    name: defaultProfile.brand_name || defaultProfile.character?.name || 'Default profile',
+    path: DEFAULT_PROFILE_PATH,
+    isDefault: true,
+  }];
+
+  if (!fs.existsSync(BRAND_PROFILES_DIR)) return profiles;
+
+  const files = fs.readdirSync(BRAND_PROFILES_DIR)
+    .filter(file => file.endsWith('.json'))
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const file of files) {
+    const id = file.slice(0, -'.json'.length);
+
+    try {
+      const profilePath = resolveBrandProfilePath(id);
+      const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+        throw new Error('profile must be a JSON object');
+      }
+
+      profiles.push({
+        id,
+        name: profile.brand_name || id,
+        path: profilePath,
+        isDefault: false,
+      });
+    } catch (err) {
+      console.warn(`[BRAND-PROFILE] Skipping invalid profile ${file}: ${err.message}`);
+    }
+  }
+
+  return profiles;
+}
+
+export function resolveBrandProfilePath(profileId = DEFAULT_PROFILE_ID) {
+  const raw = String(profileId || '').trim();
+  if (!raw || raw === DEFAULT_PROFILE_ID) return DEFAULT_PROFILE_PATH;
+
+  if (
+    raw.includes('/') ||
+    raw.includes('\\') ||
+    raw.includes('..') ||
+    !SAFE_PROFILE_ID.test(raw)
+  ) {
+    throw new Error(`Unsafe brand profile id: ${raw}`);
+  }
+
+  return join(BRAND_PROFILES_DIR, `${raw}.json`);
+}
+
+export function loadBrandProfileById(profileId = DEFAULT_PROFILE_ID) {
+  const profilePath = resolveBrandProfilePath(profileId);
+  const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+  validateBrandProfile(profile, profilePath);
+  return profile;
+}
+
+export function saveBrandProfileById(profileId, profile) {
+  const profilePath = resolveBrandProfilePath(profileId);
+  validateBrandProfile(profile, profilePath);
+  fs.mkdirSync(dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2) + '\n');
+}
 
 export function loadBrandProfile() {
   if (cachedProfile) return cachedProfile;
