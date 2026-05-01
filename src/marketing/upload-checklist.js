@@ -48,22 +48,28 @@ ${captions.recommended_tiktok_caption}
 ## Instagram manual upload
 
 1. Open Instagram for ${handle}
-2. Upload \`instagram/ig-reel-hook.mp4\` as the first Reel
-3. Use \`instagram/ig-reel-cover.jpg\` as the cover
-4. Paste the recommended Instagram caption from \`captions.md\`
+2. Upload \`instagram/instagram_reel_hook_1080x1920_15s.mp4\` as the first Reel
+3. Use \`instagram/instagram_reel_cover_1080x1920.jpg\` as the cover
+4. Paste the recommended Instagram caption from \`captions_instagram.md\`
 5. Confirm the song title and handle are readable in the first 3 seconds
-6. Post \`instagram/ig-story-new-song.mp4\` to Stories
-7. Post \`instagram/ig-feed-announcement-1080x1350.png\` to feed
+6. Post \`instagram/instagram_story_new_song_1080x1920_15s.mp4\` to Stories
+7. Post \`instagram/instagram_feed_announcement_1080x1350.png\` to feed
 8. Pin the launch Reel if it performs best
 
 ## TikTok manual upload
 
-1. Upload \`tiktok/tiktok-hook.mp4\` first
-2. Use \`tiktok/tiktok-cover.jpg\` as cover if available
-3. Paste TikTok caption option #1 from \`tiktok/tiktok-caption-options.md\`
-4. Post \`tiktok/tiktok-lyric-karaoke.mp4\` as a second variant later
-5. Post \`tiktok/tiktok-character-loop.mp4\` as a short repeatable post
+1. Upload \`tiktok/tiktok_hook_1080x1920_15s.mp4\` first
+2. Use \`tiktok/tiktok_cover_1080x1920.jpg\` as cover if available
+3. Paste TikTok caption option #1 from \`captions_tiktok.md\`
+4. Post \`tiktok/tiktok_lyric_karaoke_1080x1920_15s.mp4\` as a second variant later
+5. Post \`tiktok/tiktok_character_loop_1080x1920_10s.mp4\` as a short repeatable post
 6. If the official song is available in TikTok sounds, manually select it for a later native-sound post
+
+## Best first assets
+
+- First Instagram Reel: \`instagram/instagram_reel_hook_1080x1920_15s.mp4\`
+- First TikTok: \`tiktok/tiktok_hook_1080x1920_15s.mp4\`
+- Best static backup: \`instagram/instagram_feed_announcement_1080x1350.png\`
 
 ## Hook info
 
@@ -85,6 +91,7 @@ ${(renderResult.generated || []).map(item => `- ${item.platform} / ${item.type}:
 - Do not post if any text looks cropped or wrong
 `;
 
+  fs.writeFileSync(join(assets.outputDir, 'upload_checklist.md'), md);
   fs.writeFileSync(join(assets.outputDir, 'upload-checklist.md'), md);
   fs.writeFileSync(join(assets.dirs.tiktokDir, 'tiktok-upload-notes.md'), md);
   return md;
