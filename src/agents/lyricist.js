@@ -25,45 +25,73 @@ const MUSIC_DEFAULT_STYLE = MUSIC.default_style;
 const MUSIC_DEFAULT_PROMPT = MUSIC.default_prompt;
 const FIRST_VOCAL_BY_SECONDS = MUSIC.first_vocal_by_seconds;
 const MAX_INSTRUMENTAL_INTRO_SECONDS = MUSIC.max_instrumental_intro_seconds;
+const LYRICIST_MAX_TOKENS = readPositiveInt(process.env.LYRICIST_MAX_TOKENS || process.env.ANTHROPIC_DIRECT_MAX_TOKENS, 20000);
+const LYRICIST_MAX_ATTEMPTS = readPositiveInt(process.env.LYRICIST_MAX_ATTEMPTS, 3);
+const LYRICIST_RETRY_DELAY_MS = readPositiveInt(process.env.LYRICIST_RETRY_DELAY_MS, 5000);
 
 export const LYRICIST_DEF = {
   name: `${BRAND_NAME} Lyricist`,
   noTools: true,
-  system: `You are the head songwriter for ${BRAND_NAME}. Follow the active brand profile exactly. Do not import characters, references, sound effects, structures, genre rules, or motifs from unrelated brands. Output valid production-ready JSON.`,
+  maxTokens: LYRICIST_MAX_TOKENS,
+  maxRetries: 1,
+  retryDelayMs: LYRICIST_RETRY_DELAY_MS,
+  system: `You are the head songwriter for ${BRAND_NAME}. Follow the active brand profile exactly. Do not import characters, references, sound effects, structures, genre rules, or motifs from unrelated brands. Output valid production-ready JSON only. Never wrap JSON in markdown fences.`,
 };
 
 export async function writeLyrics({ songId, topic, researchReport, revisionNotes, existingLyrics }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
 
-  let result;
-  let songData;
+  let result = { costUsd: 0 };
+  let songData = null;
   let qaRevisionNotes = revisionNotes;
+  let lastFailure = null;
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= LYRICIST_MAX_ATTEMPTS; attempt++) {
     const lyricsTask = buildLyricsTask({ topic, researchReport, revisionNotes: qaRevisionNotes, existingLyrics });
-    result = await runAgent('lyricist', LYRICIST_DEF, lyricsTask);
+    result = await runAgent('lyricist', LYRICIST_DEF, lyricsTask, {
+      maxTokens: LYRICIST_MAX_TOKENS,
+      maxRetries: 1,
+      retryDelayMs: LYRICIST_RETRY_DELAY_MS,
+    });
 
+    let parsedSongData;
     try {
-      songData = parseAgentJson(result.text);
-    } catch {
-      songData = {
-        title: topic.substring(0, 50),
-        lyrics: result.text,
-        parse_error: true,
-      };
+      parsedSongData = parseAgentJson(result.text);
+    } catch (err) {
+      lastFailure = `attempt ${attempt}: invalid or incomplete JSON (${err.message})`;
+      persistFailedLyricistOutput({ songDir, attempt, rawText: result.text, reason: lastFailure });
+      qaRevisionNotes = buildRetryRevisionNotes({ revisionNotes, lastFailure, rawText: result.text });
+      continue;
     }
 
-    songData = sanitizeSongData(songData, topic);
-    const contamination = findForbiddenElementContamination(songData);
-    if (contamination.length === 0) break;
+    const validationFailures = validateSongDataShape(parsedSongData);
+    if (validationFailures.length > 0) {
+      lastFailure = `attempt ${attempt}: malformed lyricist JSON (${validationFailures.join('; ')})`;
+      persistFailedLyricistOutput({ songDir, attempt, rawText: result.text, reason: lastFailure });
+      qaRevisionNotes = buildRetryRevisionNotes({ revisionNotes, lastFailure, rawText: result.text });
+      continue;
+    }
 
+    const candidate = sanitizeSongData(parsedSongData, topic);
+    const contamination = findForbiddenElementContamination(candidate);
+    if (contamination.length === 0) {
+      songData = candidate;
+      break;
+    }
+
+    lastFailure = `attempt ${attempt}: forbidden active-profile element(s): ${contamination.map(item => item.element).join(', ')}`;
     qaRevisionNotes = [
       revisionNotes || '',
       'CRITICAL PROFILE QA FAILURE:',
       `The previous draft included forbidden active-profile element(s): ${contamination.map(item => item.element).join(', ')}.`,
-      'Rewrite from scratch and remove every forbidden element. Use only allowed and required elements from the active brand profile.'
+      'Rewrite from scratch and remove every forbidden element. Use only allowed and required elements from the active brand profile.',
+      'Keep the JSON complete and valid. Do not shorten long hip-hop verses; instead keep metadata concise.'
     ].filter(Boolean).join('\n');
+  }
+
+  if (!songData) {
+    throw new Error(`Lyricist failed after ${LYRICIST_MAX_ATTEMPTS} attempt(s). Last failure: ${lastFailure || 'unknown'}. Check lyricist-attempt-*-failed.txt in the song output folder.`);
   }
 
   const contamination = findForbiddenElementContamination(songData);
@@ -139,17 +167,83 @@ LYRIC RULES:
 REQUIREMENTS:
 - Production render target: ${MUSIC.target_length}.
 - Word count: ${MUSIC.normal_word_range}. Never go below ${MUSIC.min_words} words unless explicitly requested.
-- Start with [INTRO].
+- Full-length hip-hop support is required. Do not shorten rap verses to protect JSON size; prioritize complete lyrics and keep metadata concise.
+- Start with a plain [INTRO] label followed immediately by the first singable line.
 - First singable line must contain the exact title.
+- Use only plain canonical section labels such as [INTRO], [VERSE 1], [CHORUS], [VERSE 2], [BRIDGE], [FINAL CHORUS], and [OUTRO].
+- Do not include performer names, descriptors, em dashes, stage notes, production notes, or mood notes inside section labels.
 - Chorus: 4-8 lines, memorable, and built around the exact title.
 - Main hook/chorus repeats at least two times.
-- The lyrics field may be sung by the renderer; include only section labels and words safe to sing or speak aloud.
+- The lyrics field may be sung by the renderer after deterministic sanitization; include only plain section labels and singable words. No markdown, no cues, no commentary.
 
 STRUCTURE OPTIONS:
 ${formatStructurePreferences()}
 
-Output valid JSON only:
+Output valid JSON only. No markdown fences. No trailing commas. Do not stop until the final closing } has been written:
 ${formatOutputSchema()}`;
+}
+
+function readPositiveInt(value, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function buildRetryRevisionNotes({ revisionNotes, lastFailure, rawText = '' }) {
+  const tail = String(rawText || '').slice(-700);
+  return [
+    revisionNotes || '',
+    'CRITICAL LYRICIST RETRY:',
+    lastFailure,
+    'Return one complete valid JSON object only. No markdown fences. No trailing commas. The JSON must end with the final closing brace.',
+    'Long hip-hop lyrics are allowed and expected; do not shorten verses. Keep metadata fields concise if space is needed.',
+    tail ? `Previous output tail for debugging:\n${tail}` : ''
+  ].filter(Boolean).join('\n');
+}
+
+function persistFailedLyricistOutput({ songDir, attempt, rawText, reason }) {
+  try {
+    fs.writeFileSync(
+      join(songDir, `lyricist-attempt-${attempt}-failed.txt`),
+      `Reason: ${reason}\n\n${rawText || ''}`
+    );
+  } catch {
+    // Do not let debug persistence hide the real lyricist failure.
+  }
+}
+
+function validateSongDataShape(songData = {}) {
+  const failures = [];
+
+  if (!songData || typeof songData !== 'object' || Array.isArray(songData)) {
+    return ['response is not a JSON object'];
+  }
+
+  if (!songData.title || typeof songData.title !== 'string') {
+    failures.push('missing string field: title');
+  }
+
+  if (!songData.lyrics || typeof songData.lyrics !== 'string') {
+    failures.push('missing string field: lyrics');
+  } else {
+    const wordCount = countApproxWords(songData.lyrics);
+    const minWords = Number(MUSIC.min_words || 0);
+    if (minWords > 0 && wordCount < minWords) {
+      failures.push(`lyrics too short: ${wordCount} words; minimum is ${minWords}`);
+    }
+  }
+
+  if (songData.audio_prompt && (typeof songData.audio_prompt !== 'object' || Array.isArray(songData.audio_prompt))) {
+    failures.push('audio_prompt must be an object when present');
+  }
+
+  return failures;
+}
+
+function countApproxWords(text = '') {
+  return String(text)
+    .replace(/\[[^\]]+\]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
 }
 
 function formatSongwritingGuidance() {
@@ -187,7 +281,7 @@ function formatStructurePreferences() {
 function formatOutputSchema() {
   const fields = [
     '  "title": "The Song Title"',
-    '  "lyrics": "full lyrics text with section markers"',
+    '  "lyrics": "full lyrics text with plain canonical section labels only; no performer descriptors or stage directions"',
     '  "chorus_lines": ["line1", "line2", "line3", "line4"]',
     '  "word_count": 320',
     '  "structure_used": "which structure option was used"',
