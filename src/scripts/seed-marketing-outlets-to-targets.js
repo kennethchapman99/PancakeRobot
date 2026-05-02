@@ -25,6 +25,7 @@ import {
   initMarketingSchema,
   upsertMarketingTarget,
   addSuppressionRule,
+  getSuppressionRules,
   getMarketingTargetStats,
 } from '../shared/marketing-db.js';
 import { getActiveProfileId } from '../shared/brand-profile.js';
@@ -187,6 +188,12 @@ if (!outlets.length) {
   process.exit(1);
 }
 
+const existingSuppressionTargetIds = new Set(
+  getSuppressionRules(brandProfileId)
+    .filter(rule => rule.target_id)
+    .map(rule => rule.target_id)
+);
+
 let imported = 0;
 let suppressed = 0;
 let skipped = 0;
@@ -197,7 +204,7 @@ for (const outlet of outlets) {
     upsertMarketingTarget(target);
     imported++;
 
-    if (target.status === 'do_not_contact') {
+    if (target.status === 'do_not_contact' && !existingSuppressionTargetIds.has(target.id)) {
       addSuppressionRule({
         brand_profile_id: brandProfileId,
         target_id: target.id,
@@ -205,6 +212,7 @@ for (const outlet of outlets) {
         reason: target.rejected_reason || 'Seeded do-not-contact outlet',
         source: 'marketing_outlets_seed',
       });
+      existingSuppressionTargetIds.add(target.id);
       suppressed++;
     }
   } catch (err) {
