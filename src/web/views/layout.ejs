@@ -18,6 +18,7 @@
     .badge-purple { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#ede9fe; color:#6d28d9; }
     .badge-red    { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#fee2e2; color:#b91c1c; }
     .badge-dim    { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:0.75rem; font-weight:500; background:#f4f4f5; color:#a1a1aa; }
+    html.songs-detail-page main > div[x-data="songDetail()"] { max-width: 88rem !important; width: 100%; }
   </style>
 </head>
 <body class="h-full bg-zinc-50 text-zinc-900 antialiased">
@@ -69,6 +70,55 @@
   </main>
 
 </div>
+
+<script>
+  (() => {
+    const isSongDetailPage = /^\/songs\/[^/]+\/?$/.test(window.location.pathname);
+    if (!isSongDetailPage) return;
+
+    document.documentElement.classList.add('songs-detail-page');
+
+    const removeClosest = (element, selector) => {
+      const node = element?.closest(selector);
+      if (node) node.remove();
+    };
+
+    const run = () => {
+      const detailRoot = document.querySelector('main > div[x-data="songDetail()"]');
+      if (detailRoot) {
+        detailRoot.classList.remove('max-w-4xl');
+        detailRoot.classList.add('max-w-7xl', 'w-full');
+      }
+
+      removeClosest(document.getElementById('pct-label'), '.bg-white.border.border-zinc-200.rounded-xl.p-5.mb-6');
+
+      const emptyThumbnailNode = Array.from(document.querySelectorAll('div, button'))
+        .find((node) => {
+          const text = node.textContent || '';
+          return text.includes('No thumbnails yet') || text.includes('Generate Thumbnails');
+        });
+
+      if (emptyThumbnailNode) {
+        const thumbnailColumn = emptyThumbnailNode.closest('.col-span-2') || emptyThumbnailNode.closest('.bg-zinc-50.border.border-dashed');
+        const mediaGrid = thumbnailColumn?.closest('.grid');
+        thumbnailColumn?.remove();
+
+        const audioColumn = mediaGrid?.querySelector('.col-span-1');
+        if (audioColumn && !mediaGrid.querySelector('.col-span-2')) {
+          audioColumn.classList.remove('col-span-1');
+          audioColumn.classList.add('col-span-full');
+        }
+      }
+
+      const checklistHeading = Array.from(document.querySelectorAll('h2'))
+        .find((heading) => heading.textContent?.trim() === 'Publishing Checklist');
+      removeClosest(checklistHeading, 'section');
+    };
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+    else run();
+  })();
+</script>
 
 <script>
   (() => {
