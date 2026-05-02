@@ -60,8 +60,9 @@ function writeTempProfile(profile) {
   return profilePath;
 }
 
-async function clearProfileCache() {
-  const { clearBrandProfileCache } = await import(`../src/shared/brand-profile.js?clear=${Date.now()}`);
+async function setActiveProfileForTest(profile) {
+  process.env.BRAND_PROFILE_PATH = writeTempProfile(profile);
+  const { clearBrandProfileCache } = await import('../src/shared/brand-profile.js');
   clearBrandProfileCache();
 }
 
@@ -73,8 +74,7 @@ test('active profile forbidden-element QA is driven by profile data only', async
       forbidden_elements: forbiddenElements,
     },
   });
-  process.env.BRAND_PROFILE_PATH = writeTempProfile(profile);
-  await clearProfileCache();
+  await setActiveProfileForTest(profile);
 
   const { findForbiddenElementContamination } = await import(`../src/agents/lyricist.js?profileQa=${Date.now()}`);
 
@@ -137,8 +137,7 @@ test('metadata prompt uses active distribution profile without importing inactiv
     },
   });
 
-  process.env.BRAND_PROFILE_PATH = writeTempProfile(profile);
-  await clearProfileCache();
+  await setActiveProfileForTest(profile);
 
   const { buildMetadataTask } = await import(`../src/agents/product-manager.js?profileMeta=${Date.now()}`);
   const prompt = buildMetadataTask({
@@ -189,8 +188,7 @@ test('metadata QA ignores internal compliance notes and negated checklist langua
     },
   });
 
-  process.env.BRAND_PROFILE_PATH = writeTempProfile(profile);
-  await clearProfileCache();
+  await setActiveProfileForTest(profile);
 
   const { findMetadataForbiddenElements } = await import(`../src/agents/product-manager.js?metadataQa=${Date.now()}`);
 
