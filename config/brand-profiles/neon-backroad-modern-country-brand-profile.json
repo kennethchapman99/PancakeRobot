@@ -1,0 +1,260 @@
+{
+  "brand_name": "Neon Backroad",
+  "app_title": "Neon Backroad",
+  "brand_type": "modern_country_artist",
+  "brand_description": "a polished modern country artist brand built around driving hooks, emotionally direct lyrics, small-town imagery, arena-ready choruses, and a clean Nashville-pop/rock production lane",
+  "audience": {
+    "age_range": "16+",
+    "description": "country-pop and modern country listeners who like heartfelt stories, memorable hooks, road-trip energy, and relatable everyday emotion",
+    "guardrail": "mainstream-safe modern country; adult enough to feel real, but avoid explicit sexual content, graphic violence, hateful content, or real-person references"
+  },
+  "character": {
+    "name": "Neon Backroad",
+    "core_concept": "a grounded, charismatic modern country narrator who turns ordinary places, relationships, regrets, and Friday-night moments into big singable anthems",
+    "fallback_summary": "heart-on-sleeve country-pop storyteller with road-worn warmth and arena-ready hooks",
+    "clap_name": "Backroad Clap",
+    "personality_traits": [
+      "Warm and grounded — sounds like someone you would trust at the end of a long night",
+      "Emotionally direct — says the real thing plainly instead of hiding behind cleverness",
+      "Polished but not plastic — modern production is allowed, but the lyric should still feel human",
+      "Road-trip romantic — trucks, highways, porch lights, small towns, bars, rivers, fields, and neon signs are emotional symbols, not props",
+      "Hook-first — every song needs a chorus that can land in a short clip and still feel complete",
+      "Self-aware without irony — can admit mistakes, heartbreak, pride, hope, and stubbornness without sounding cynical",
+      "Big-hearted — even sad songs should leave a little light on"
+    ],
+    "catchphrases": [
+      "Turn it up on the backroad",
+      "Leave a little neon on",
+      "One more mile, one more song",
+      "That old town still knows my name",
+      "Somewhere between gone and home",
+      "Raise it up, let it ride"
+    ],
+    "visual_identity": "Modern country-pop visual world: golden-hour roads, neon signs, denim, worn leather, guitars, pickup headlights, small-town streets, festival stages, and cinematic open skies",
+    "visual_reference": [
+      "Hero image should feel like a modern country single cover, not an old western poster",
+      "Golden-hour light, night neon, or rain-on-asphalt glow",
+      "Clear central subject: artist silhouette, guitar, truck, bar sign, highway, porch, river, or open field",
+      "Color palette should mix earthy browns and denim blues with electric neon accents",
+      "Wardrobe: denim, boots, casual jacket, plain tee, leather, workwear, modern but not fashion-runway",
+      "Expression: reflective, confident, hopeful, heartbroken, or ready to play a big chorus",
+      "Composition should read well as a streaming thumbnail and social post"
+    ]
+  },
+  "music": {
+    "default_style": "modern country-pop with heartland rock energy",
+    "default_bpm": 96,
+    "default_key": "G Major",
+    "default_prompt": "Modern country-pop with heartland rock energy, 96 BPM, G Major, strong acoustic guitar foundation, clean electric guitars, warm bass, steady drums, subtle banjo or mandolin texture if useful, polished Nashville production, emotionally direct male lead vocal, huge singable chorus, no spoken production directions",
+    "target_length": "2:45-3:35",
+    "min_words": 180,
+    "normal_word_range": "220-420",
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 10
+  },
+  "lyrics": {
+    "title_examples": [
+      "Neon on the Gravel",
+      "Last Call Sunrise",
+      "Tailgate Prayers",
+      "Somewhere Between Gone and Home",
+      "Porch Light Promise",
+      "Whiskey Weather",
+      "Backroad Radio",
+      "Small Town Thunder",
+      "Blue Jean Friday",
+      "The One That Got the Map"
+    ],
+    "topic_variety": "love, breakup, reconciliation, small-town memory, Friday night release, road trips, family roots, working hard, leaving home, coming back, summer nights, barroom reflection, hopeful regret, rural imagery, friendship, resilience, growing up, second chances",
+    "required_closing": "End with a final hook repeat, emotional image, or unresolved road/home image — avoid novelty endings and avoid fading into vague sentiment"
+  },
+  "songwriting": {
+    "song_type": "modern_country_pop_anthem",
+    "primary_emotional_goal": "relatable emotional payoff, strong chorus lift, repeatable hook, and a balance of heart, grit, and polish",
+    "voice_perspective": "a modern country narrator singing from lived experience, usually directly to a romantic partner, hometown, younger self, friend, or the listener",
+    "character_voice": {
+      "person": "First person is preferred; second person works for direct emotional address; third person only when telling a compact story",
+      "tone": "Plainspoken, warm, confident, emotionally open, slightly rugged, never corny or over-explained",
+      "vocabulary": "Concrete everyday words; sensory details; short emotional phrases; avoid academic language, dense metaphors, and forced rural slang",
+      "signature_sounds": [
+        "hey",
+        "whoa",
+        "yeah",
+        "mmm",
+        "alright",
+        "come on"
+      ],
+      "comedy_mode": "Light smile lines are allowed in upbeat songs, but the brand is not a comedy act",
+      "kid_relationship": "Not a children's brand; keep content mainstream-safe and broadly listenable for mixed audiences"
+    },
+    "earworm_stack": [
+      "1. Start with a concrete image, not a vague emotion",
+      "2. Establish the emotional situation within the first verse",
+      "3. Use a short title phrase that can survive as the chorus anchor",
+      "4. Make the chorus melody lift clearly above the verse",
+      "5. Repeat the title phrase in the same rhythmic shape every time",
+      "6. Use a pre-chorus to create tension, then release into a big plainspoken chorus",
+      "7. Add one memorable physical detail per verse: headlights, boots, porch light, rain, dust, radio, glass, field, river, jacket, dashboard",
+      "8. End with a final chorus that feels bigger through harmony, doubled vocal, or a repeated tag line"
+    ],
+    "hook_design_rules": [
+      "Title phrase should be 2-6 words and easy to sing",
+      "Chorus hook should be emotionally clear without needing the full story",
+      "Avoid overly clever wordplay that makes the song feel written instead of felt",
+      "Use strong vowels and open-ended phrases that can be held over a big chorus",
+      "The hook should work as a 15-second social clip",
+      "The first chorus should arrive quickly, ideally by 45-60 seconds",
+      "The title phrase should appear in the chorus and ideally be teased in verse 1 or the pre-chorus"
+    ],
+    "energy_arc": {
+      "pattern": "COLD IMAGE → VERSE STORY → PRE-CHORUS LIFT → BIG CHORUS → SECOND VERSE DETAIL → BIGGER CHORUS → BRIDGE/TURN → FINAL CHORUS/TAG",
+      "rules": [
+        "Start with voice or a recognizable guitar figure within 10 seconds",
+        "Verse 1 should be intimate and concrete",
+        "Pre-chorus should build emotional or melodic momentum",
+        "First chorus should deliver the main title hook clearly",
+        "Verse 2 should add consequence, not repeat verse 1",
+        "Bridge should reveal the twist, regret, decision, or emotional turn",
+        "Final chorus should feel wider and more communal",
+        "End with a memorable tag line or final image"
+      ]
+    },
+    "participation_patterns": [
+      "Crowd-ready whoa/yeah refrain after the chorus",
+      "Repeatable title phrase at the end of each chorus",
+      "Hand-clap or stomp rhythm in upbeat tracks",
+      "Call-and-response line for live performance",
+      "Final chorus tag that can be shouted by a crowd",
+      "Simple bridge drop where the vocal carries the emotional turn",
+      "Last-line repeat with harmony or gang vocal"
+    ],
+    "allowed_elements": [
+      "modern country-pop production",
+      "heartland rock guitars",
+      "acoustic guitar",
+      "clean electric guitar hooks",
+      "banjo or mandolin texture used tastefully",
+      "big chorus lift",
+      "drums with clap or stomp accents",
+      "romantic and reflective lyrics",
+      "small-town and road imagery",
+      "barroom and neon imagery",
+      "family and hometown references",
+      "hopeful heartbreak",
+      "plainspoken emotional language",
+      "festival-ready singalong moments",
+      "radio-friendly polish",
+      "bridge with emotional turn",
+      "final chorus with vocal doubles or harmonies"
+    ],
+    "forbidden_elements": [
+      "direct reference to any real artist name",
+      "direct reference to any existing song title",
+      "copying a living artist's exact voice, melodies, lyrics, flow, or signature arrangement",
+      "fake rural clichés that feel pasted on",
+      "overuse of trucks, beer, boots, girls, and dirt roads without emotional purpose",
+      "graphic violence",
+      "hate or demeaning stereotypes",
+      "explicit sexual content",
+      "slurs",
+      "political slogans",
+      "brand names unless specifically requested",
+      "emoji in lyrics",
+      "stage directions inside lyrics",
+      "markdown in lyrics",
+      "metadata labels in lyrics",
+      "parenthetical production notes in lyrics",
+      "overly long instrumental intros",
+      "novelty comedy framing unless explicitly requested",
+      "melody or lyric structures that imitate a specific real song"
+    ],
+    "render_safety": [
+      "lyrics field must contain only words safe to sing or speak aloud",
+      "no markdown formatting in the lyrics field",
+      "no stage directions in the lyrics field",
+      "no metadata labels in the lyrics field",
+      "no emoji in the lyrics field",
+      "section labels are allowed only as structural markers and must be stripped before audio render",
+      "sound effects are allowed only when written as singable words",
+      "do not include production cues such as guitar solo, beat drops, vocal starts, harmony enters, or music slows inside the final lyrics payload"
+    ],
+    "structure_preferences": [
+      "[INTRO] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [PRE-CHORUS] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [TAG]",
+      "[COLD OPEN HOOK] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS]",
+      "[VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BREAKDOWN] -> [FINAL CHORUS] -> [OUTRO TAG]"
+    ],
+    "required_elements": [
+      "one clear emotional premise",
+      "concrete opening image",
+      "title phrase in the chorus",
+      "chorus hook that works as a short social clip",
+      "plainspoken singable lyrics with no production notes",
+      "at least one sensory detail per verse",
+      "bridge or final-chorus turn that deepens the emotional payoff",
+      "ending with a strong tag line or image"
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    },
+    "qa_rules": [
+      "Central emotional premise must be understandable by the end of verse 1",
+      "Chorus hook must be 2-8 words",
+      "Title must appear in the chorus",
+      "Song should reach the first chorus by 45-60 seconds",
+      "No markdown formatting in lyrics field",
+      "No stage directions in lyrics field",
+      "No emoji in lyrics field",
+      "Must include concrete sensory imagery",
+      "Must not reference real artist names or existing song titles",
+      "Must not imitate a specific real artist, melody, lyric, or arrangement",
+      "Must end with a memorable tag line, final hook, or emotional image"
+    ]
+  },
+  "visuals": {
+    "style": "Cinematic modern country single-cover photography or illustration: golden-hour highways, neon bar signs, denim texture, guitars, pickup headlights, open fields, rain, dust, and stage lights; polished but grounded",
+    "palette": {
+      "dusty_gold": "#C9963E",
+      "denim_blue": "#315C7C",
+      "neon_red": "#E63946",
+      "warm_ivory": "#F4E9D8",
+      "midnight_black": "#121417"
+    },
+    "negative_prompt": "text, words, letters, fake logos, celebrity likeness, direct artist resemblance, photorealistic injury, horror, gore, hateful symbols, cluttered background, blurry, low-resolution, childish cartoon style",
+    "text_overlay_style": "bold condensed country-modern title treatment, cream or white lettering, subtle shadow, clean high-contrast placement, minimal words, strong streaming-thumbnail readability"
+  },
+  "distribution": {
+    "default_distributor": "DistroKid",
+    "legacy_distributor": "TuneCore",
+    "research_default_service": "DistroKid",
+    "research_default_url": "https://distrokid.com",
+    "default_artist": "Neon Backroad",
+    "default_album": "Neon Backroad Vol. 1",
+    "primary_genre": "Country",
+    "spotify_genres": [
+      "modern country",
+      "country pop",
+      "heartland rock",
+      "contemporary country"
+    ],
+    "youtube_tags_seed": [
+      "modern country",
+      "country pop",
+      "country rock",
+      "new country music",
+      "road trip country"
+    ],
+    "apple_music_genres": [
+      "Country",
+      "Country Pop"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "mainstream-safe; explicit content disabled unless intentionally overridden"
+  },
+  "ui": {
+    "sidebar_subtitle": "Country Studio",
+    "logo_path": "/logo.png"
+  }
+}

@@ -226,16 +226,6 @@
           <% } %>
         </div>
       </div>
-      <% } else { %>
-      <div class="bg-zinc-50 border border-dashed border-zinc-300 rounded-2xl p-6 text-center text-zinc-400">
-        <div class="text-3xl mb-2">🖼️</div>
-        <div class="text-sm font-medium">No thumbnails yet</div>
-        <div class="text-xs mt-1 mb-3">Run the pipeline or generate artwork now</div>
-        <button onclick="generateThumbnails('<%= song.id %>')" id="thumb-btn"
-          class="text-xs bg-zinc-900 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 transition font-medium">
-          🖼️ Generate Thumbnails
-        </button>
-      </div>
       <% } %>
     </div>
   </div>
@@ -287,9 +277,8 @@
     </div>
   </div>
 
-  <!-- ── CONTENT TABS: Lyrics / Audio Prompt / Metadata ── -->
-  <% if (lyricsContent || audioPromptContent || metadataParsed) { %>
-  <div class="mb-6" x-data="{ tab: '<%= lyricsContent ? 'lyrics' : audioPromptContent ? 'prompt' : 'meta' %>' }">
+  <!-- ── CONTENT TABS: Lyrics / Audio Prompt / Metadata / Marketing / Preview ── -->
+  <div class="mb-6" x-data="{ tab: '<%= lyricsContent ? 'lyrics' : audioPromptContent ? 'prompt' : metadataParsed ? 'meta' : 'marketing' %>' }" @switch-tab="tab = $event.detail">
     <!-- Tab bar -->
     <div class="flex gap-1 border-b border-zinc-200 mb-4">
       <% if (lyricsContent) { %>
@@ -306,6 +295,14 @@
       <button @click="tab='meta'"
         :class="tab==='meta' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
         class="px-4 py-2.5 text-sm transition">📋 Metadata</button>
+      <% } %>
+      <button @click="tab='marketing'"
+        :class="tab==='marketing' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
+        class="px-4 py-2.5 text-sm transition">📦 Marketing</button>
+      <% if (marketingPack && marketingPack.dashboardUrl) { %>
+      <button @click="tab='preview'"
+        :class="tab==='preview' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
+        class="px-4 py-2.5 text-sm transition">🎬 Preview</button>
       <% } %>
     </div>
 
@@ -357,8 +354,102 @@
       <% } %>
     </div>
     <% } %>
+
+    <!-- Marketing tab -->
+    <div x-show="tab==='marketing'" x-cloak>
+      <section class="bg-white border border-zinc-200 rounded-xl" x-data="marketingPack('<%= song.id %>')">
+        <div class="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-zinc-700">Marketing Pack</h2>
+          <% if (marketingPack && marketingPack.status === 'built') { %>
+          <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Built</span>
+          <% } else { %>
+          <span class="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full font-medium">Not built</span>
+          <% } %>
+        </div>
+        <div class="px-4 py-3 space-y-3">
+
+          <!-- Readiness checks -->
+          <div class="space-y-1 text-xs">
+            <% const r = (marketingPack && marketingPack.readiness) || {}; %>
+            <% const checks = [['finalAudio','Final audio'],['coverArt','Cover art'],['characterAsset','Character asset'],['baseImagePresent','Base image'],['linkPresent','Release link']]; %>
+            <% for (const [key, label] of checks) { %>
+            <div class="flex items-center gap-2">
+              <span class="<%= r[key] ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
+              <span class="text-zinc-600"><%= label %></span>
+              <span class="ml-auto text-zinc-400"><%= r[key] ? '✓' : '—' %></span>
+            </div>
+            <% } %>
+          </div>
+
+          <!-- Base image -->
+          <div class="border-t border-zinc-100 pt-3">
+            <div class="text-xs font-medium text-zinc-600 mb-2">Base Image</div>
+            <% if (baseImage) { %>
+            <div class="relative mb-2">
+              <img src="<%= baseImage.url %>" alt="Base image" class="w-full h-28 object-cover rounded-lg border border-zinc-200">
+              <button onclick="clearBaseImage('<%= song.id %>')" class="absolute top-1 right-1 bg-white/90 text-red-500 rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-50" title="Clear base image">✕</button>
+            </div>
+            <% } %>
+            <label class="flex flex-col gap-1 cursor-pointer">
+              <span class="text-xs text-zinc-500"><%= baseImage ? 'Replace' : 'Upload' %> base image (png/jpg/webp)</span>
+              <input type="file" accept=".png,.jpg,.jpeg,.webp" class="hidden" onchange="uploadBaseImage('<%= song.id %>', this)">
+              <span class="inline-flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs px-3 py-1.5 rounded-lg transition">📷 <%= baseImage ? 'Replace Image' : 'Upload Image' %></span>
+            </label>
+          </div>
+
+          <!-- Build options -->
+          <div class="border-t border-zinc-100 pt-3 space-y-2 text-xs">
+            <div class="text-xs font-medium text-zinc-600">Build options</div>
+            <select id="pack-mode-<%= song.id %>" class="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none">
+              <option value="">Default</option>
+              <option value="full_social_pack">Full social pack</option>
+              <option value="render_from_existing_visuals">Render from existing visuals</option>
+              <option value="captions_checklist_only">Captions & checklist only</option>
+              <option value="generate_new_base_art">Generate new base art</option>
+            </select>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="pack-regen-<%= song.id %>"> <span class="text-zinc-600">Regenerate base art</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="pack-novideos-<%= song.id %>"> <span class="text-zinc-600">Skip video render</span>
+            </label>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-2 pt-1">
+            <button @click="buildPack('<%= song.id %>')" :disabled="packState === 'running'"
+              class="flex-1 bg-zinc-900 hover:bg-zinc-700 text-white text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50">
+              <span x-show="packState !== 'running'"><%= (marketingPack && marketingPack.status === 'built') ? '🔄 Rebuild Pack' : '🚀 Build Pack' %></span>
+              <span x-show="packState === 'running'">⏳ Building…</span>
+            </button>
+            <% if (marketingPack && marketingPack.dashboardUrl) { %>
+            <button @click="$dispatch('switch-tab', 'preview')"
+              class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg transition">Open Preview</button>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Pack terminal -->
+        <div x-show="packState !== 'idle'" x-cloak class="border-t border-zinc-200 bg-zinc-950 rounded-b-xl overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+            <span class="text-zinc-300 text-xs font-mono">Marketing Pack Build</span>
+            <span x-html="packBadge" class="text-xs"></span>
+          </div>
+          <div id="pack-log-<%= song.id %>" class="font-mono text-xs p-4 max-h-48 overflow-y-auto space-y-0.5 text-zinc-300">
+          </div>
+          <div class="px-4 py-2 text-xs text-zinc-500" x-text="packFooter"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Preview tab -->
+    <% if (marketingPack && marketingPack.dashboardUrl) { %>
+    <div x-show="tab==='preview'" x-cloak class="bg-white border border-zinc-200 rounded-xl overflow-hidden" style="height:82vh;">
+      <iframe src="<%= marketingPack.dashboardUrl %>" class="w-full h-full border-0" title="Marketing Pack Preview"></iframe>
+    </div>
+    <% } %>
+
   </div>
-  <% } %>
 
   <div class="grid grid-cols-3 gap-6">
 
@@ -436,31 +527,6 @@
         </div>
       </section>
       <% } %>
-
-      <!-- Publishing Checklist -->
-      <section class="bg-white border border-zinc-200 rounded-xl">
-        <div class="px-5 py-4 border-b border-zinc-100">
-          <h2 class="font-semibold text-sm text-zinc-700">Publishing Checklist</h2>
-          <p class="text-xs text-zinc-400 mt-0.5">Click a status to update it</p>
-        </div>
-        <div class="divide-y divide-zinc-50">
-          <% for (const item of checklist) { %>
-          <div class="px-5 py-3 flex items-center gap-3" id="cl-<%= item.key %>">
-            <% const clColors = { done: 'text-emerald-500', in_progress: 'text-amber-500', blocked: 'text-red-500', not_started: 'text-zinc-300' }; %>
-            <span class="text-lg shrink-0 <%= clColors[item.status] || 'text-zinc-300' %>">
-              <%= item.status === 'done' ? '✓' : item.status === 'in_progress' ? '◐' : item.status === 'blocked' ? '✗' : '○' %>
-            </span>
-            <div class="flex-1 text-sm text-zinc-700"><%= item.label %></div>
-            <select class="text-xs border border-zinc-200 rounded-md px-2 py-1 focus:outline-none"
-              onchange="updateChecklist('<%= song.id %>', '<%= item.key %>', this.value)">
-              <% for (const s of ['not_started','in_progress','done','blocked']) { %>
-                <option value="<%= s %>" <%= item.status === s ? 'selected' : '' %>><%= s.replace(/_/g,' ') %></option>
-              <% } %>
-            </select>
-          </div>
-          <% } %>
-        </div>
-      </section>
 
       <!-- Performance -->
       <section class="bg-white border border-zinc-200 rounded-xl">
@@ -848,4 +914,79 @@ function closeLightbox() {
   document.body.style.overflow = '';
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// Marketing Pack (Phase 6)
+function marketingPack(songId) {
+  return {
+    packState: 'idle',  // idle | running | done | error
+    packFooter: '',
+    packBadge: '',
+    buildPack(id) {
+      const mode = document.getElementById('pack-mode-' + id)?.value || '';
+      const regenerateBaseArt = document.getElementById('pack-regen-' + id)?.checked || false;
+      const noVideos = document.getElementById('pack-novideos-' + id)?.checked || false;
+      this.packState = 'running';
+      this.packFooter = 'Starting build…';
+      this.packBadge = '<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Running</span>';
+      const log = document.getElementById('pack-log-' + id);
+      if (log) log.innerHTML = '';
+
+      fetch('/api/songs/' + id + '/social-assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, regenerateBaseArt, renderVideos: !noVideos }),
+      }).then(r => r.json()).then(d => {
+        if (!d.jobId) throw new Error(d.error || 'No job ID');
+        const es = new EventSource('/api/songs/social-assets/stream/' + d.jobId);
+        const append = (msg, cls) => {
+          if (!log) return;
+          const div = document.createElement('div');
+          div.className = 'leading-relaxed whitespace-pre-wrap break-words ' + (cls || '');
+          div.textContent = msg;
+          log.appendChild(div);
+          log.scrollTop = log.scrollHeight;
+        };
+        es.addEventListener('log', e => {
+          const { message } = JSON.parse(e.data);
+          const cls = message.startsWith('✅') || message.startsWith('✓') ? 'text-emerald-400' : message.startsWith('❌') ? 'text-red-400' : message.startsWith('⚠') ? 'text-amber-400' : 'text-zinc-300';
+          append(message, cls);
+        });
+        es.addEventListener('complete', e => {
+          es.close();
+          this.packState = 'done';
+          this.packBadge = '<span class="text-emerald-400">✓ Done</span>';
+          const { dashboardUrl } = JSON.parse(e.data);
+          this.packFooter = dashboardUrl ? '✅ Pack ready — ' + dashboardUrl : '✅ Build complete';
+          setTimeout(() => window.location.reload(), 2000);
+        });
+        es.addEventListener('error', e => {
+          if (e.data) {
+            es.close();
+            this.packState = 'error';
+            this.packBadge = '<span class="text-red-400">✗ Failed</span>';
+            try { this.packFooter = '❌ ' + JSON.parse(e.data).message; } catch { this.packFooter = '❌ Build failed'; }
+          }
+        });
+      }).catch(err => { this.packState = 'error'; this.packFooter = '❌ ' + err.message; });
+    },
+  };
+}
+
+function uploadBaseImage(songId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const form = new FormData();
+  form.append('base_image', file);
+  fetch('/api/songs/' + songId + '/base-image', { method: 'POST', body: form })
+    .then(r => r.json())
+    .then(d => { if (d.ok) window.location.reload(); else alert('Upload failed: ' + (d.error || 'unknown')); })
+    .catch(err => alert('Upload error: ' + err.message));
+}
+
+function clearBaseImage(songId) {
+  if (!confirm('Remove base image?')) return;
+  fetch('/api/songs/' + songId + '/base-image', { method: 'DELETE' })
+    .then(r => r.json())
+    .then(d => { if (d.ok) window.location.reload(); });
+}
 </script>

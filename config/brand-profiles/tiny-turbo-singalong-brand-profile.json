@@ -1,0 +1,250 @@
+{
+  "brand_name": "Tiny Turbo Singalong",
+  "app_title": "Tiny Turbo Singalong",
+  "brand_type": "children_music",
+  "brand_description": "a hyper-catchy children's novelty music profile built around tiny absurd premises, snack-sized hooks, and immediate replay value",
+  "audience": {
+    "age_range": "4-10",
+    "description": "kids ages 4-10 plus parents who enjoy absurd, fast, funny earworms",
+    "guardrail": "age-appropriate for ages 4-10; silly, safe, non-scary, non-cynical"
+  },
+  "character": {
+    "name": "Tiny Turbo Singalong",
+    "core_concept": "a cheerful, fast-moving narrator who treats the smallest silly idea like the biggest event in the universe",
+    "fallback_summary": "absurdly enthusiastic narrator of tiny, catchy, funny musical moments",
+    "clap_name": "Tiny Turbo Clap",
+    "personality_traits": [
+      "Relentlessly upbeat — every small object, animal, snack, or moment deserves a celebration",
+      "Absurdly specific — songs are often about one tiny premise, not a broad theme",
+      "Dead-simple emotionally — happy, surprised, excited, proud, or amazed",
+      "Straight-faced silly — delivers ridiculous ideas with complete sincerity",
+      "Immediately accessible — kids understand the joke within the first line",
+      "Replay-driven — every song feels like it could be looped five times without wearing out",
+      "Parent-friendly goofy — funny enough for adults but never winking above the child's head"
+    ],
+    "catchphrases": [
+      "Here it comes!",
+      "Look at that little guy!",
+      "Do it again!",
+      "Tiny thing, big day!",
+      "Snack attack, clap clap!",
+      "Whoa-oh-oh, there it goes!"
+    ],
+    "visual_identity": "Bright, flat, playful cartoon world with one absurd central object or creature made heroic through scale, motion, and exaggerated joy",
+    "visual_reference": [
+      "Simple central subject, usually one funny animal, food, object, or tiny creature",
+      "Big expressive eyes, clear silhouette, easy for kids to recognize instantly",
+      "Bright saturated colors with clean outlines",
+      "Minimal background clutter so the joke reads immediately",
+      "Motion lines, sparkles, stars, hearts, speed streaks, or musical notes",
+      "Expression: delighted, proud, zooming, bouncing, or triumphantly silly",
+      "Composition should feel like a sticker, meme, or mini poster"
+    ]
+  },
+  "music": {
+    "default_style": "upbeat novelty children's pop-rock",
+    "default_bpm": 132,
+    "default_key": "C Major",
+    "default_prompt": "Upbeat novelty children's pop-rock, 132 BPM, C Major, extremely catchy, bright guitars, hand claps, simple drums, bouncy bass, cheerful male lead vocal, short hook-first structure, absurd kid-safe humor, no spoken production directions",
+    "target_length": "0:45-1:30",
+    "min_words": 45,
+    "normal_word_range": "45-140",
+    "first_vocal_by_seconds": 1,
+    "max_instrumental_intro_seconds": 2
+  },
+  "lyrics": {
+    "title_examples": [
+      "Tiny Banana Rocket",
+      "Happy Little Turtle Parade",
+      "The Snack That Ran Away",
+      "Dancing Underpants Day",
+      "Penguin On A Scooter",
+      "The Super Tiny Burrito",
+      "Kitty Zoom Zoom"
+    ],
+    "topic_variety": "funny animals, tiny foods, household objects, pets doing impossible things, joyful accidents, miniature adventures, dancing, zooming, bouncing, snack drama, harmless chaos, exaggerated celebrations of ordinary things",
+    "required_closing": "End with one more hook repeat, silly question, surprise sound, or unresolved loop cue — never a sentimental goodbye"
+  },
+  "songwriting": {
+    "song_type": "children_novelty_pop",
+    "primary_emotional_goal": "instant catchiness, absurd joy, replayability, and one-listen memorability",
+    "voice_perspective": "an excited narrator singing directly about a tiny absurd premise as if it is the greatest discovery ever",
+    "character_voice": {
+      "person": "Flexible first or third person; direct address is allowed but the premise should remain the star",
+      "tone": "Bright, punchy, delighted, extremely literal, lightly ridiculous, never mean",
+      "vocabulary": "Very simple words; vivid nouns; lots of action verbs; short phrases; minimal explanation",
+      "signature_sounds": [
+        "whoa",
+        "yeah",
+        "hey",
+        "woo",
+        "oh no",
+        "zoom"
+      ],
+      "comedy_mode": "Micro-absurdity — one tiny image is repeated, escalated, and treated like a huge anthem",
+      "kid_relationship": "Kids are invited to notice, clap, shout, and repeat the funny hook, not decode a complex story"
+    },
+    "earworm_stack": [
+      "1. One premise only — make the entire song about a single funny image or action",
+      "2. State the premise in the first vocal line, ideally in 3-6 words",
+      "3. Make the title phrase rhythmically identical every time it appears",
+      "4. Use short melodic cells that repeat quickly and predictably",
+      "5. Build the chorus around a phrase kids can shout after one listen",
+      "6. Add a tiny escalation each repeat: bigger motion, sillier object, faster action, louder group vocal",
+      "7. Keep verses short; the hook is the product",
+      "8. End while the hook still feels active, not after the idea has been fully resolved"
+    ],
+    "hook_design_rules": [
+      "Opening line must immediately reveal the funny central image or action",
+      "Chorus hook should be 3-7 words and easy to chant",
+      "Title phrase should appear within the first 3 seconds and repeat multiple times",
+      "Avoid clever setup; the joke must be obvious instantly",
+      "Use strong hard consonants, bouncing rhythms, and repeated vowel sounds",
+      "A child should be able to sing the hook without understanding every verse",
+      "The hook should work even if heard as a 10-second clip"
+    ],
+    "energy_arc": {
+      "pattern": "HOOK → TINY STORY → HOOK → ESCALATION → BIG HOOK → LOOP",
+      "rules": [
+        "Start with vocals almost immediately",
+        "Open at 85% energy with a complete hook fragment",
+        "First full chorus arrives fast, ideally within 15 seconds",
+        "Use very short verses to reset the joke",
+        "Bridge or breakdown should be optional and brief",
+        "Final chorus adds group vocals, claps, doubled hook, or one silly surprise",
+        "End at high energy with a loopable hook or question"
+      ]
+    },
+    "participation_patterns": [
+      "Kids repeat the title phrase",
+      "Call-and-response with one-word answers",
+      "Clap patterns tied to the hook rhythm",
+      "Simple movement words: jump, wiggle, spin, dance, stomp, zoom",
+      "Shoutable sound effects that are real lyric words, not stage directions",
+      "Counting only when it directly increases the silliness",
+      "Final repeat where kids can yell the last rhyme word"
+    ],
+    "allowed_elements": [
+      "short song lengths",
+      "hook-first structure",
+      "absurd animals",
+      "silly food imagery",
+      "tiny creatures treated heroically",
+      "household objects acting alive",
+      "bright guitar pop",
+      "hand claps",
+      "simple drum patterns",
+      "chantable chorus lines",
+      "repeated title phrases",
+      "singable onomatopoeia",
+      "joyful nonsense syllables",
+      "safe slapstick",
+      "micro-storytelling",
+      "speed, bouncing, dancing, zooming, spinning",
+      "one-joke escalation",
+      "loopable endings"
+    ],
+    "forbidden_elements": [
+      "direct reference to any real artist name",
+      "direct reference to any existing song title",
+      "copying a living artist's exact voice, melodies, lyrics, or signature arrangement",
+      "unsafe or scary imagery",
+      "adult themes",
+      "mean-spirited jokes",
+      "irony that kids cannot understand",
+      "long narrative setup before the hook",
+      "abstract lesson-first songwriting",
+      "emoji in lyrics",
+      "stage directions inside lyrics",
+      "markdown in lyrics",
+      "metadata labels in lyrics",
+      "slow intros",
+      "overly complex chord progressions",
+      "melancholy or minor-key framing unless used extremely briefly for comic contrast",
+      "goodbye endings that fully resolve the idea"
+    ],
+    "render_safety": [
+      "lyrics field must contain only words safe to sing or speak aloud",
+      "no markdown formatting in the lyrics field",
+      "no stage directions in the lyrics field",
+      "no metadata labels in the lyrics field",
+      "no emoji in the lyrics field",
+      "section labels are allowed only as structural markers and must be stripped before audio render",
+      "sound effects are allowed only when written as singable words"
+    ],
+    "structure_preferences": [
+      "[INTRO HOOK] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [FINAL CHORUS] -> [OUTRO HOOK]",
+      "[HOOK] -> [MICRO VERSE] -> [HOOK] -> [SILLY ESCALATION] -> [BIG HOOK] -> [LOOP ENDING]",
+      "[INTRO] -> [CALL/RESPONSE] -> [CHORUS] -> [TINY STORY] -> [CHORUS] -> [BREAKDOWN] -> [FINAL CHORUS]"
+    ],
+    "required_elements": [
+      "one clear absurd premise",
+      "title phrase in the first vocal line",
+      "title phrase repeated in the chorus",
+      "chorus hook that works as a 10-second clip",
+      "simple, singable lyrics with no production notes",
+      "at least one participation moment",
+      "ending that feels loopable or unresolved"
+    ],
+    "output_schema": {
+      "include_physical_action_cue": true,
+      "include_funny_long_word": true,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    },
+    "qa_rules": [
+      "Central premise must be understandable from the first line",
+      "Chorus hook must be 3-7 words",
+      "Title must appear in opening vocal line",
+      "Title must appear in chorus",
+      "Song should reach a hook within 15 seconds",
+      "No markdown formatting in lyrics field",
+      "No stage directions in lyrics field",
+      "No emoji in lyrics field",
+      "Must include at least one participation moment",
+      "Must not reference real artist names or existing song titles",
+      "Must end with a loopable hook, question, surprise, or unresolved repeat"
+    ]
+  },
+  "visuals": {
+    "style": "Bold, simple, meme-readable cartoon illustration with a single absurd hero object or creature, bright colors, clean outlines, and instant visual punch — NOT photorealistic",
+    "palette": {
+      "sunny_yellow": "#FFD43B",
+      "bubblegum_pink": "#FF6FB1",
+      "sky_blue": "#62C7F2",
+      "lime_green": "#8BE04E",
+      "deep_navy": "#17233D"
+    },
+    "negative_prompt": "text, words, letters, photorealistic, scary, violent, dark horror, realistic injury, cluttered background, blurry, adult themes",
+    "text_overlay_style": "big rounded bubble letters, white fill with thick navy outline, playful drop shadow, high contrast, minimal words"
+  },
+  "distribution": {
+    "default_distributor": "TuneCore",
+    "legacy_distributor": "DistroKid",
+    "research_default_service": "DistroKid",
+    "research_default_url": "https://distrokid.com",
+    "default_artist": "Tiny Turbo Singalong",
+    "default_album": "Tiny Turbo Singalong Vol. 1",
+    "primary_genre": "Children's Music",
+    "spotify_genres": [
+      "children's music",
+      "kids pop",
+      "novelty"
+    ],
+    "youtube_tags_seed": [
+      "kids songs",
+      "funny kids music",
+      "children's novelty songs"
+    ],
+    "apple_music_genres": [
+      "Kids & Family",
+      "Children's Music"
+    ],
+    "coppa_status": "directed to children under 13",
+    "content_advisory": "suitable for all ages"
+  },
+  "ui": {
+    "sidebar_subtitle": "Music Studio",
+    "logo_path": "/logo.png"
+  }
+}

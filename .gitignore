@@ -10,3 +10,4 @@ music-pipeline.db-shm
 music-pipeline.db-wal
 music-pipeline.db.backup-*
 output/
+secrets/

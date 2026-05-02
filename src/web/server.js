@@ -6,6 +6,7 @@
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,6 +19,8 @@ import express from 'express';
 import expressLayouts from 'express-ejs-layouts';
 import fs from 'fs';
 import { spawn } from 'child_process';
+import { createRequire as _cReq } from 'module';
+const _multer = _cReq(import.meta.url)('multer');
 
 import {
   getAllIdeas, getIdea, createIdea, updateIdea,
@@ -36,10 +39,34 @@ import {
   loadBrandProfile,
   loadBrandProfileById,
   saveBrandProfileById,
+  getActiveProfileId,
+  setActiveProfileId,
+  resolveBrandProfilePath,
 } from '../shared/brand-profile.js';
 import { generateThumbnails } from '../agents/creative-manager.js';
 
-// In-memory job store for suggest runs
+// ── Base image upload config ───────────────────────────────────────
+const ALLOWED_IMG_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+const baseImageUpload = _multer({
+  storage: _multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const refDir = join(__dirname, '../../output/songs', req.params.id, 'reference');
+      fs.mkdirSync(refDir, { recursive: true });
+      cb(null, refDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.png';
+      cb(null, `base-image${ext}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, ALLOWED_IMG_EXTS.has(ext));
+  },
+});
+
+// ── In-memory job store for suggest runs ──────────────────────────
 const suggestJobs = new Map(); // jobId → { status, logs, results, error }
 
 // In-memory job store for full song pipeline runs
@@ -151,7 +178,7 @@ app.post('/api/suggest/run', (req, res) => {
   runSuggestPipeline((msg) => {
     const job = suggestJobs.get(jobId);
     if (job) job.logs.push(msg);
-  }, { themePrompt }).then((results) => {
+  }, { themePrompt, brandProfileId: getActiveProfileId() }).then((results) => {
     const job = suggestJobs.get(jobId);
     if (job) { job.status = 'done'; job.results = results; }
   }).catch((err) => {
@@ -212,7 +239,7 @@ app.get('/api/suggest/status/:jobId', (req, res) => {
 // ── IDEAS ──────────────────────────────────────────────────────
 app.get('/ideas', (req, res) => {
   let ideas = getAllIdeas();
-  const { q, status, category } = req.query;
+  const { q, status, category, brand } = req.query;
   if (q) {
     const lq = q.toLowerCase();
     ideas = ideas.filter(i =>
@@ -224,9 +251,11 @@ app.get('/ideas', (req, res) => {
   }
   if (status) ideas = ideas.filter(i => i.status === status);
   if (category) ideas = ideas.filter(i => i.category === category);
+  if (brand) ideas = ideas.filter(i => i.brand_profile_id === brand);
 
   const categories = [...new Set(getAllIdeas().map(i => i.category).filter(Boolean))].sort();
-  res.render('ideas/index', { ideas, q: q || '', filterStatus: status || '', filterCategory: category || '', categories });
+  const profiles = listBrandProfiles();
+  res.render('ideas/index', { ideas, q: q || '', filterStatus: status || '', filterCategory: category || '', filterBrand: brand || '', categories, profiles });
 });
 
 app.get('/ideas/new', (req, res) => {
@@ -251,6 +280,7 @@ app.post('/ideas', (req, res) => {
     thumbnail_seed: thumbnail_seed?.trim() || null,
     notes: notes?.trim() || null,
     source_type: 'manual',
+    brand_profile_id: getActiveProfileId(),
   });
   res.redirect('/ideas');
 });
@@ -356,6 +386,7 @@ app.post('/api/ideas/:id/promote', (req, res) => {
     keywords: idea.tags || [],
     notes: idea.notes || null,
     distributor: DEFAULT_DISTRIBUTOR,
+    brand_profile_id: idea.brand_profile_id || getActiveProfileId(),
   });
 
   updateIdea(idea.id, { status: 'promoted', promoted_song_id: songId });
@@ -382,19 +413,22 @@ app.post('/api/songs/:id/generate', (req, res) => {
   const jobId = `pipe_${Date.now().toString(36)}`;
   const topic = song.topic || song.title || `${BRAND_PROFILE.music.default_style} song`;
 
+  const spawnedProfileId = getActiveProfileId();
   pipelineJobs.set(jobId, {
     status: 'running',
     logs: [],
     songId: null,       // will be parsed from output
     originalSongId: song.id,
+    spawnedProfileId,
     error: null,
     startedAt: Date.now(),
   });
 
   const orchestratorPath = join(__dirname, '../orchestrator.js');
+  const activeProfilePath = resolveBrandProfilePath(spawnedProfileId);
   const child = spawn('node', [orchestratorPath, '--new', topic], {
     cwd: join(__dirname, '../..'),
-    env: { ...process.env, WEB_PIPELINE: '1', FORCE_COLOR: '0' },
+    env: { ...process.env, WEB_PIPELINE: '1', FORCE_COLOR: '0', BRAND_PROFILE_PATH: activeProfilePath },
   });
 
   const job = pipelineJobs.get(jobId);
@@ -454,6 +488,10 @@ app.post('/api/songs/:id/generate', (req, res) => {
             job.logs.push(`📀 Song ID: ${recent.id}`);
           }
         } catch {}
+      }
+      // Stamp the generated song with the brand profile used
+      if (job.songId && job.spawnedProfileId) {
+        try { upsertSong({ id: job.songId, brand_profile_id: job.spawnedProfileId }); } catch {}
       }
     } else {
       job.status = 'error';
@@ -526,7 +564,7 @@ app.get('/songs', (req, res) => {
     };
   });
 
-  const { q, status, sort } = req.query;
+  const { q, status, sort, brand } = req.query;
 
   // Count totals BEFORE filtering for tab badges
   const totalCounts = {
@@ -543,6 +581,7 @@ app.get('/songs', (req, res) => {
     );
   }
   if (status) songs = songs.filter(s => s.status === status);
+  if (brand) songs = songs.filter(s => s.brand_profile_id === brand);
 
   // Always sort: approved first, then by date
   if (sort === 'readiness') songs.sort((a, b) => b.progress.pct - a.progress.pct);
@@ -555,7 +594,8 @@ app.get('/songs', (req, res) => {
     });
   }
 
-  res.render('songs/index', { songs, q: q || '', filterStatus: status || '', sort: sort || '', totalCounts });
+  const profiles = listBrandProfiles();
+  res.render('songs/index', { songs, q: q || '', filterStatus: status || '', filterBrand: brand || '', sort: sort || '', totalCounts, profiles });
 });
 
 app.get('/songs/:id', (req, res) => {
@@ -581,9 +621,13 @@ app.get('/songs/:id', (req, res) => {
   const metadataParsed   = metadataContent ? (() => { try { return JSON.parse(metadataContent); } catch { return null; } })() : null;
   const brandParsed      = brandReviewContent ? (() => { try { return JSON.parse(brandReviewContent); } catch { return null; } })() : null;
 
+  const marketingPack = scanMarketingPack(song.id);
+  const baseImage = scanSongBaseImage(song.id);
+
   res.render('songs/detail', {
     song, idea, assets, checklist, progress, links, snapshots, fsAssets,
     lyricsContent, audioPromptContent, metadataParsed, brandParsed,
+    marketingPack, baseImage,
   });
 });
 
@@ -752,6 +796,151 @@ app.get('/api/songs/thumbnails/stream/:jobId', (req, res) => {
   req.on('close', () => {});
 });
 
+// ── BASE IMAGE (Phase 4) ────────────────────────────────────────────────────
+
+function scanSongBaseImage(songId) {
+  const refDir = join(__dirname, '../../output/songs', songId, 'reference');
+  if (!fs.existsSync(refDir)) return null;
+  const files = fs.readdirSync(refDir).filter(f => f.startsWith('base-image'));
+  if (!files.length) return null;
+  const name = files[0];
+  const abs = join(refDir, name);
+  return { path: abs, url: `/media/songs/${songId}/reference/${name}`, name };
+}
+
+function clearSongBaseImage(songId) {
+  const refDir = join(__dirname, '../../output/songs', songId, 'reference');
+  if (!fs.existsSync(refDir)) return;
+  for (const f of fs.readdirSync(refDir)) {
+    if (f.startsWith('base-image')) {
+      try { fs.unlinkSync(join(refDir, f)); } catch {}
+    }
+  }
+}
+
+// Upload base image
+app.post('/api/songs/:id/base-image', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+
+  baseImageUpload.single('base_image')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No valid image file provided (png/jpg/jpeg/webp)' });
+    const info = scanSongBaseImage(req.params.id);
+    res.json({ ok: true, baseImage: info });
+  });
+});
+
+// Clear base image
+app.delete('/api/songs/:id/base-image', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+  clearSongBaseImage(req.params.id);
+  res.json({ ok: true });
+});
+
+// ── SOCIAL ASSET PACK (Phase 6) ─────────────────────────────────────────────
+
+const socialPackJobs = new Map(); // jobId → { status, logs, error, outputDir, dashboardUrl }
+
+function scanMarketingPack(songId) {
+  const packDir = join(__dirname, '../../output/marketing-ready', songId);
+  const metaPath = join(packDir, 'metadata.json');
+  const dashPath = join(packDir, 'index.html');
+  if (!fs.existsSync(packDir)) return { exists: false, status: 'not_built', dashboardUrl: null, readiness: {} };
+
+  const metaExists = fs.existsSync(metaPath);
+  const dashExists = fs.existsSync(dashPath);
+  let meta = null;
+  try { if (metaExists) meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch {}
+
+  const songDir = join(__dirname, '../../output/songs', songId);
+  const distDir = join(__dirname, '../../output/distribution-ready', songId);
+  const hasAudio = fs.existsSync(join(distDir, 'upload-this.mp3')) || fs.existsSync(join(songDir, 'audio.mp3'));
+  const hasCover = fs.existsSync(join(distDir)) && fs.readdirSync(distDir).some(f => /\.(png|jpg|jpeg)$/i.test(f));
+  const hasCharacter = !!(process.env.MARKETING_CHARACTER_ASSET && fs.existsSync(process.env.MARKETING_CHARACTER_ASSET));
+  const baseImg = scanSongBaseImage(songId);
+  const linksPath = join(songDir, 'metadata.json');
+  let hasLink = false;
+  try { const m = JSON.parse(fs.readFileSync(linksPath, 'utf8')); hasLink = !!(m?.hyperfollow_url || m?.streaming_link); } catch {}
+
+  return {
+    exists: true,
+    status: metaExists ? 'built' : 'not_built',
+    dashboardUrl: dashExists ? `/media/marketing-ready/${songId}/index.html` : null,
+    readiness: { finalAudio: hasAudio, coverArt: hasCover, characterAsset: hasCharacter, baseImagePresent: !!baseImg, linkPresent: hasLink },
+    meta,
+  };
+}
+
+app.post('/api/songs/:id/social-assets', (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Song not found' });
+
+  const jobId = `pack_${song.id}_${Date.now().toString(36)}`;
+  socialPackJobs.set(jobId, { status: 'running', logs: [], error: null, outputDir: null, dashboardUrl: null });
+
+  const {
+    mode = '', provider = '', formats = '', useBaseImage, regenerateBaseArt, renderVideos, requireApprovalBeforeVideo,
+  } = req.body || {};
+
+  const args = [join(__dirname, '../scripts/build-marketing-pack.js'), '--song-id', song.id];
+  if (mode) args.push('--mode', mode);
+  if (provider) args.push('--provider', provider);
+  if (formats) args.push('--formats', formats);
+  if (useBaseImage === false || useBaseImage === 'false') args.push('--no-use-base-image');
+  if (regenerateBaseArt === true || regenerateBaseArt === 'true') args.push('--regenerate-base-art');
+  if (renderVideos === false || renderVideos === 'false') args.push('--no-render-videos');
+  if (requireApprovalBeforeVideo === true || requireApprovalBeforeVideo === 'true') args.push('--require-approval-before-video');
+
+  const child = spawn('node', args, {
+    cwd: join(__dirname, '../..'),
+    env: { ...process.env, FORCE_COLOR: '0' },
+  });
+
+  const job = socialPackJobs.get(jobId);
+  const stripAnsi = s => s.replace(/\x1B\[[0-9;]*[mGKHFABCDEFsuhl]/g,'').replace(/\x1B\][^\x07]*\x07/g,'').replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g,'').trim();
+
+  let buf = '';
+  const onData = d => {
+    buf += d.toString();
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const l of lines) { const c = stripAnsi(l); if (c) job.logs.push(c); }
+  };
+  child.stdout.on('data', onData);
+  child.stderr.on('data', onData);
+  child.on('close', code => {
+    if (buf.trim()) { const c = stripAnsi(buf); if (c) job.logs.push(c); }
+    job.status = code === 0 ? 'done' : 'error';
+    if (code !== 0) job.error = `Process exited ${code}`;
+    const packInfo = scanMarketingPack(song.id);
+    job.dashboardUrl = packInfo.dashboardUrl;
+    job.outputDir = packInfo.exists ? join(__dirname, '../../output/marketing-ready', song.id) : null;
+  });
+
+  res.json({ ok: true, jobId });
+});
+
+app.get('/api/songs/social-assets/stream/:jobId', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let cursor = 0;
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const tick = () => {
+    const job = socialPackJobs.get(req.params.jobId);
+    if (!job) { send('error', { message: 'Job not found' }); return res.end(); }
+    while (cursor < job.logs.length) send('log', { message: job.logs[cursor++] });
+    if (job.status === 'done') { send('complete', { dashboardUrl: job.dashboardUrl }); return res.end(); }
+    if (job.status === 'error') { send('error', { message: job.error }); return res.end(); }
+    setTimeout(tick, 400);
+  };
+  tick();
+});
+
 // API: update checklist item
 app.post('/api/songs/:id/checklist/:key', (req, res) => {
   const { status, note } = req.body;
@@ -832,93 +1021,43 @@ app.post('/api/songs/:id/links', (req, res) => {
 
 // ── BRAND EDITOR ───────────────────────────────────────────────
 app.get('/brand', (req, res) => {
-  const activeProfileId = normalizeProfileId(req.query.profile);
+  const activeForGenerationId = getActiveProfileId();
+  const activeProfileId = req.query.profile ? normalizeProfileId(req.query.profile) : activeForGenerationId;
   const profiles = listBrandProfiles();
   const profile = loadBrandProfileById(activeProfileId);
 
   res.render('brand/edit', {
-    brand: profileToBrandEditorShape(profile),
-    profile,
+    profileJson: JSON.stringify(profile, null, 2),
     profiles,
     activeProfileId,
+    activeForGenerationId,
   });
 });
 
 app.post('/api/brand', express.json(), (req, res) => {
   try {
     const profileId = normalizeProfileId(req.body.profileId);
-    const profile = loadBrandProfileById(profileId);
-    const updated = applyBrandEditorForm(profile, req.body);
-
-    saveBrandProfileById(profileId, updated);
-
+    const profile = JSON.parse(req.body.profileJson);
+    saveBrandProfileById(profileId, profile);
     res.json({ ok: true, profileId });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/brand/activate', express.json(), (req, res) => {
+  try {
+    const profileId = normalizeProfileId(req.body.profileId);
+    setActiveProfileId(profileId);
+    res.json({ ok: true, profileId });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
   }
 });
 
 function normalizeProfileId(value) {
   const raw = String(value || '').trim();
   return raw || DEFAULT_PROFILE_ID;
-}
-
-function profileToBrandEditorShape(profile) {
-  return {
-    brand_data: {
-      character: {
-        name: profile.character?.name || '',
-        backstory: profile.character?.backstory || profile.character?.fallback_summary || '',
-        personality_traits: profile.character?.personality_traits || [],
-        catchphrases: profile.character?.catchphrases || [],
-      },
-      voice: {
-        tone: profile.voice?.tone || profile.songwriting?.primary_emotional_goal || '',
-        formula: profile.voice?.formula || '',
-        recurring_themes: profile.voice?.recurring_themes || [],
-      },
-      rules: {
-        age_guardrails: profile.rules?.age_guardrails || profile.audience?.guardrail || '',
-        always: profile.rules?.always || profile.songwriting?.required_elements || [],
-        never: profile.rules?.never || profile.songwriting?.forbidden_elements || [],
-        on_brand_topics: profile.rules?.on_brand_topics || [],
-        off_brand_topics: profile.rules?.off_brand_topics || [],
-      },
-    },
-    profile,
-  };
-}
-
-function lines(value) {
-  return String(value || '')
-    .split('\n')
-    .map(v => v.trim())
-    .filter(Boolean);
-}
-
-function applyBrandEditorForm(profile, body) {
-  const updated = structuredClone(profile);
-
-  updated.character ||= {};
-  updated.voice ||= {};
-  updated.rules ||= {};
-
-  updated.character.name = String(body.character_name || '').trim();
-  updated.character.backstory = String(body.character_backstory || '').trim();
-  updated.character.personality_traits = lines(body.personality_traits);
-  updated.character.catchphrases = lines(body.catchphrases);
-
-  updated.voice.tone = String(body.voice_tone || '').trim();
-  updated.voice.formula = String(body.voice_formula || '').trim();
-  updated.voice.recurring_themes = lines(body.recurring_themes);
-
-  updated.rules.age_guardrails = String(body.age_guardrails || '').trim();
-  updated.rules.always = lines(body.rules_always);
-  updated.rules.never = lines(body.rules_never);
-  updated.rules.on_brand_topics = lines(body.on_brand_topics);
-  updated.rules.off_brand_topics = lines(body.off_brand_topics);
-
-  return updated;
 }
 
 // ── 404 ────────────────────────────────────────────────────────

@@ -13,6 +13,23 @@
     "core_concept": "a cheerful robot who loves making pancakes and going on silly adventures",
     "fallback_summary": "cheerful robot who loves pancakes and silly adventures",
     "clap_name": "Pancake Robot Clap",
+    "personality_traits": [
+      "Endlessly enthusiastic — everything is the BEST thing ever",
+      "Prone to delightful glitches — syrup leaks, arms spin, stack grows too tall",
+      "Speaks directly to kids as co-adventurers, not as an audience",
+      "Absurdly literal — takes silly instructions literally for maximum comedy",
+      "Genuinely curious — asks kids real questions and waits for the answer",
+      "Never gets frustrated — errors and mess are celebrated, never shameful",
+      "Loves to count, sort, and organize — then watches it all hilariously collapse"
+    ],
+    "catchphrases": [
+      "BEEP BOOP, pancake loop!",
+      "Syrup overload — ERROR ERROR!",
+      "WHIRR CLICK — let's flip it!",
+      "Stack it up, stack it higher!",
+      "I'm Pancake Robot and I cannot stop!",
+      "Processing... processing... PANCAKES!"
+    ],
     "visual_identity": "A cheerful robot with a toaster-style body, monitor head with a glowing pixel smiley face, silver/grey metallic arms and legs with joint bolts, warm syrup dripping from hands and feet, holding a stack of golden pancakes",
     "visual_reference": [
       "Toaster-style silver/grey metallic body with control panel buttons",
@@ -28,22 +45,74 @@
     "default_style": "upbeat children's pop",
     "default_bpm": 118,
     "default_key": "C Major",
-    "default_prompt": "Upbeat children's pop song, 118 BPM, C Major, bright and silly, fun for kids ages 4-10, hand claps, xylophone, singalong chorus, cheerful vocals",
-    "target_length": "1:30-3:00",
+    "default_prompt": "Upbeat children's pop song, 118 BPM, C Major, bright and silly, fun for kids ages 4-10, hand claps, xylophone, singalong chorus, cheerful male vocals, robot sound effects",
+    "target_length": "1:30-2:00",
     "min_words": 120,
-    "normal_word_range": "140-320",
+    "normal_word_range": "80-200",
     "first_vocal_by_seconds": 3,
     "max_instrumental_intro_seconds": 5
   },
   "lyrics": {
-    "title_examples": ["Raining Taco Dogs", "The Counting Stomp", "Wiggle Like a Jellyfish", "Five Silly Dinosaurs"],
-    "topic_variety": "animals, weather, space, vehicles, silly food, emotions, counting, colors, nature, dinosaurs, robots, dance",
+    "title_examples": [
+      "Raining Taco Dogs",
+      "The Counting Stomp",
+      "Wiggle Like a Jellyfish",
+      "Five Silly Dinosaurs",
+      "Pancake Stack Attack",
+      "Syrup Overload",
+      "The Robot Flip"
+    ],
+    "topic_variety": "animals, weather, space, vehicles, silly food, emotions, counting, colors, nature, dinosaurs, robots, dance, kitchen adventures, silly malfunctions",
     "required_closing": "End with an open question or forward tease — never a goodbye or resolution"
   },
   "songwriting": {
     "song_type": "children_pop",
     "primary_emotional_goal": "high-energy replayability, joy, silliness, and kid participation",
-    "voice_perspective": "Pancake Robot and friends singing directly to kids",
+    "voice_perspective": "Pancake Robot singing directly to kids as co-adventurers",
+    "character_voice": {
+      "person": "First-person — Pancake Robot speaks directly ('I'm Pancake Robot! Let's go!')",
+      "tone": "Enthusiastic, silly, slightly glitchy — always celebrating, never frustrated",
+      "vocabulary": "Simple 1-2 syllable words dominant; robot jargon used wrong for comedy",
+      "signature_sounds": [
+        "BEEP",
+        "BOOP",
+        "CLANK"
+      ],
+      "comedy_mode": "Absurd escalation — things that should stop keep going (the pancake stack grows forever, syrup covers everything)",
+      "kid_relationship": "Kids are always right; Pancake Robot needs their help to fix things"
+    },
+    "earworm_stack": [
+      "1. don't over complicate lyrics - children need to remember them",
+      "2. State the whole premise in 6 words or fewer in the first 3 seconds",
+      "3. Chorus melody must be simple and rhythmically obvious — kids learn it in one listen",
+      "6. End on an unresolved laugh, question, or robot sound — never resolution — creates itch to replay"
+    ],
+    "hook_design_rules": [
+      "Opening line must land the title word or a strong rhyme setup within the first 3 seconds",
+      "Chorus hook: 4-8 syllables, strong natural rhythm, easy to clap along to",
+      "Title must appear word-for-word in the opening vocal line AND the chorus (minimum twice total)",
+      "Every chorus must end on a rhyme word kids can shout",
+      "Avoid abstract openers — start with action, sound, or motion every time",
+      "A child must be able to hum the chorus hook after one full listen"
+    ],
+    "energy_arc": {
+      "pattern": "BURST → BUILD → BURST → BREATHE → BIGGER BURST → LAND",
+      "rules": [
+        "Never open at 100% energy — open at 80% and leave room to grow",
+        "First chorus hits 90% energy",
+        "Bridge drops to 60% for contrast — this makes the final chorus feel bigger",
+        "Final chorus hits 100% with full participation",
+        "Song ends at 85% — energized, not resolved, immediately replayable"
+      ]
+    },
+    "participation_patterns": [
+      "Call-and-response: Pancake Robot sings a line, kids echo it back",
+      "Fill-in-the-blank: 'I'm making pancakes, can you say... [BEEP]!'",
+      "Countdown: 'Stack it up — 3, 2, 1 — FLIP!'",
+      "Movement cues woven into lyrics: stomp, clap, wiggle, spin — described as actions, not stage directions",
+      "Question to kids mid-song that kids can answer aloud",
+      "Repetition with escalation: each chorus adds one new silly element"
+    ],
     "allowed_elements": [
       "claps",
       "physical action cues",
@@ -53,19 +122,37 @@
       "funny long words",
       "robot sounds",
       "pancake imagery",
-      "singable sound effects",
+      "syrup and kitchen imagery",
+      "singable onomatopoeia",
       "warm silly humor",
       "kid-safe vocabulary",
       "kid-friendly repetition",
-      "Pancake Robot character moments",
-      "open question ending"
+      "Pancake Robot character moments and glitches",
+      "open question ending",
+      "countdown sequences (3-2-1 FLIP)",
+      "progressive escalation — each verse gets sillier",
+      "robot malfunction humor",
+      "fill-in-the-blank moments"
     ],
     "forbidden_elements": [
       "unsafe or scary imagery",
       "adult themes",
       "sarcasm that kids cannot parse",
       "emoji in lyrics",
-      "stage directions inside lyrics"
+      "stage directions inside lyrics",
+      "markdown in lyrics",
+      "metadata labels in lyrics (Key Hook, Physical Action, Word Count)",
+      "slow or minor-key openings",
+      "resolution or goodbye endings",
+      "vocabulary above Grade 2 in lyric lines"
+    ],
+    "render_safety": [
+      "lyrics field must contain only words safe to sing or speak aloud",
+      "no markdown formatting in the lyrics field (no **, no #, no ---, no backticks)",
+      "no stage directions in the lyrics field",
+      "no metadata labels in the lyrics field (e.g. Key Hook, Physical Action, Word Count)",
+      "section labels like [CHORUS] are allowed only as structural markers — they will be stripped before audio render",
+      "robot sounds (BEEP BOOP CLANK WHIRR) are allowed as singable lyric words"
     ],
     "structure_preferences": [
       "[INTRO] -> [HOOK] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [OUTRO]",
@@ -73,17 +160,27 @@
       "[INTRO] -> [CALL/RESPONSE 1] -> [CHORUS] -> [CALL/RESPONSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [OUTRO]"
     ],
     "required_elements": [
-      "the exact title in the opening singable line",
       "the exact title in the chorus",
-      "a memorable repeatable hook",
-      "lyrics safe to sing aloud"
+      "a memorable repeatable hook — 4-8 syllables, singable after one listen",
+      "lyrics safe to sing aloud (no markdown, no stage directions)",
+      "Pancake Robot character name embedded in the chorus",
+      "ending that is open, not resolved — question, laugh, or robot sound"
     ],
     "output_schema": {
       "include_physical_action_cue": true,
       "include_funny_long_word": true,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "qa_rules": [
+      "Chorus hook must be 4-8 syllables",
+      "Title must appear in opening vocal line",
+      "Title must appear in chorus",
+      "No markdown formatting in lyrics field",
+      "No stage directions in lyrics field",
+      "Must include at least one participation moment",
+      "Must end with open question or forward tease"
+    ]
   },
   "visuals": {
     "style": "Bold cartoon illustration, clean black outlines, bright saturated colors — NOT photorealistic",
@@ -105,9 +202,20 @@
     "default_artist": "Pancake Robot",
     "default_album": "Pancake Robot Vol. 1",
     "primary_genre": "Children's Music",
-    "spotify_genres": ["children's music", "kids pop", "educational"],
-    "youtube_tags_seed": ["kids songs", "children's music", "pancake robot"],
-    "apple_music_genres": ["Kids & Family", "Children's Music"],
+    "spotify_genres": [
+      "children's music",
+      "kids pop",
+      "educational"
+    ],
+    "youtube_tags_seed": [
+      "kids songs",
+      "children's music",
+      "pancake robot"
+    ],
+    "apple_music_genres": [
+      "Kids & Family",
+      "Children's Music"
+    ],
     "coppa_status": "directed to children under 13",
     "content_advisory": "suitable for all ages"
   },

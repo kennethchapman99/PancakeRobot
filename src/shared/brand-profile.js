@@ -13,6 +13,7 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PROFILE_PATH = join(__dirname, '../../config/brand-profile.json');
 const BRAND_PROFILES_DIR = join(__dirname, '../../config/brand-profiles');
+const ACTIVE_PROFILE_PATH = join(__dirname, '../../config/active-profile.json');
 export const DEFAULT_PROFILE_ID = 'default';
 const SAFE_PROFILE_ID = /^[a-zA-Z0-9._-]+$/;
 
@@ -191,6 +192,22 @@ export function loadBrandProfile() {
 
 export function clearBrandProfileCache() {
   cachedProfile = null;
+}
+
+export function getActiveProfileId() {
+  try {
+    if (fs.existsSync(ACTIVE_PROFILE_PATH)) {
+      const data = JSON.parse(fs.readFileSync(ACTIVE_PROFILE_PATH, 'utf8'));
+      if (data?.activeProfileId) return String(data.activeProfileId);
+    }
+  } catch {}
+  return DEFAULT_PROFILE_ID;
+}
+
+export function setActiveProfileId(profileId) {
+  resolveBrandProfilePath(profileId); // throws if unsafe id
+  loadBrandProfileById(profileId);    // throws if file missing or invalid
+  fs.writeFileSync(ACTIVE_PROFILE_PATH, JSON.stringify({ activeProfileId: profileId }, null, 2) + '\n');
 }
 
 export function validateBrandProfile(profile, profilePath = 'brand profile') {

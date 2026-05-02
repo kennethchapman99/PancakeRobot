@@ -28,23 +28,79 @@ export function initMarketingSchema() {
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
+      brand_profile_id TEXT,
       name TEXT NOT NULL,
       type TEXT NOT NULL,
       platform TEXT,
       source_url TEXT NOT NULL,
       submission_url TEXT,
       contact_method TEXT,
+      contact_email TEXT,
+      handle TEXT,
       audience TEXT,
+      geo TEXT,
+      genres_json TEXT,
+      content_types_json TEXT,
       fit_score INTEGER,
       ai_policy TEXT DEFAULT 'unclear',
       ai_risk_score INTEGER,
       recommendation TEXT DEFAULT 'manual_review',
       research_summary TEXT,
+      outreach_angle TEXT,
+      pitch_preferences TEXT,
+      last_verified_at TEXT,
+      freshness_status TEXT DEFAULT 'unknown',
       status TEXT DEFAULT 'needs_review',
       approved_at TEXT,
+      rejected_reason TEXT,
+      suppression_status TEXT DEFAULT 'none',
       notes TEXT,
       raw_json TEXT,
       UNIQUE(name, source_url)
+    );
+
+    CREATE TABLE IF NOT EXISTS marketing_target_sources (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      brand_profile_id TEXT NOT NULL,
+      source_type TEXT NOT NULL,
+      source_name TEXT,
+      source_url TEXT,
+      source_path TEXT,
+      status TEXT DEFAULT 'active',
+      last_checked_at TEXT,
+      notes TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS marketing_target_release_matches (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      brand_profile_id TEXT NOT NULL,
+      song_id TEXT,
+      album_id TEXT,
+      target_id TEXT NOT NULL,
+      match_score INTEGER,
+      match_reasons_json TEXT,
+      recommended_action TEXT,
+      status TEXT DEFAULT 'planned',
+      requires_human INTEGER DEFAULT 1,
+      raw_json TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS marketing_suppression_rules (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      brand_profile_id TEXT,
+      target_id TEXT,
+      email TEXT,
+      domain TEXT,
+      handle TEXT,
+      reason TEXT NOT NULL,
+      source TEXT,
+      active INTEGER DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS marketing_campaigns (
@@ -85,7 +141,28 @@ export function initMarketingSchema() {
     );
   `);
 
+  migrateMarketingTargetsColumns(db);
   syncMarketingSetupItemsFromConfig();
+}
+
+function migrateMarketingTargetsColumns(db) {
+  const newCols = [
+    ['brand_profile_id', 'TEXT'],
+    ['contact_email', 'TEXT'],
+    ['handle', 'TEXT'],
+    ['geo', 'TEXT'],
+    ['genres_json', 'TEXT'],
+    ['content_types_json', 'TEXT'],
+    ['outreach_angle', 'TEXT'],
+    ['pitch_preferences', 'TEXT'],
+    ['last_verified_at', 'TEXT'],
+    ['freshness_status', "TEXT DEFAULT 'unknown'"],
+    ['rejected_reason', 'TEXT'],
+    ['suppression_status', "TEXT DEFAULT 'none'"],
+  ];
+  for (const [col, type] of newCols) {
+    try { db.exec(`ALTER TABLE marketing_targets ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+  }
 }
 
 export function loadMarketingSetupConfig(configPath = process.env.MARKETING_SETUP_CONFIG_PATH || DEFAULT_SETUP_CONFIG_PATH) {
@@ -194,43 +271,73 @@ export function upsertMarketingTarget(target) {
     id,
     created_at: existing?.created_at || now,
     updated_at: now,
+    brand_profile_id: optionalText(target.brand_profile_id) || existing?.brand_profile_id || null,
     name: target.name.trim(),
     type: target.type.trim(),
     platform: optionalText(target.platform),
     source_url: target.source_url.trim(),
     submission_url: optionalText(target.submission_url),
     contact_method: optionalText(target.contact_method),
+    contact_email: optionalText(target.contact_email),
+    handle: optionalText(target.handle),
     audience: optionalText(target.audience),
+    geo: optionalText(target.geo),
+    genres_json: target.genres ? JSON.stringify(target.genres) : optionalText(target.genres_json),
+    content_types_json: target.content_types ? JSON.stringify(target.content_types) : optionalText(target.content_types_json),
     fit_score: toNullableInt(target.fit_score),
     ai_policy: optionalText(target.ai_policy) || 'unclear',
     ai_risk_score: toNullableInt(target.ai_risk_score),
     recommendation: optionalText(target.recommendation) || 'manual_review',
     research_summary: optionalText(target.research_summary),
+    outreach_angle: optionalText(target.outreach_angle),
+    pitch_preferences: optionalText(target.pitch_preferences),
+    last_verified_at: optionalText(target.last_verified_at),
+    freshness_status: optionalText(target.freshness_status) || 'unknown',
     status: optionalText(target.status) || existing?.status || 'needs_review',
     approved_at: target.status === 'approved' ? now : existing?.approved_at || null,
+    rejected_reason: optionalText(target.rejected_reason),
+    suppression_status: optionalText(target.suppression_status) || 'none',
     notes: optionalText(target.notes),
     raw_json: JSON.stringify(target.raw_json || target),
   };
 
   getDb().prepare(`
     INSERT INTO marketing_targets
-      (id, created_at, updated_at, name, type, platform, source_url, submission_url, contact_method, audience,
-       fit_score, ai_policy, ai_risk_score, recommendation, research_summary, status, approved_at, notes, raw_json)
+      (id, created_at, updated_at, brand_profile_id, name, type, platform, source_url, submission_url,
+       contact_method, contact_email, handle, audience, geo, genres_json, content_types_json,
+       fit_score, ai_policy, ai_risk_score, recommendation, research_summary, outreach_angle,
+       pitch_preferences, last_verified_at, freshness_status, status, approved_at, rejected_reason,
+       suppression_status, notes, raw_json)
     VALUES
-      (@id, @created_at, @updated_at, @name, @type, @platform, @source_url, @submission_url, @contact_method, @audience,
-       @fit_score, @ai_policy, @ai_risk_score, @recommendation, @research_summary, @status, @approved_at, @notes, @raw_json)
+      (@id, @created_at, @updated_at, @brand_profile_id, @name, @type, @platform, @source_url, @submission_url,
+       @contact_method, @contact_email, @handle, @audience, @geo, @genres_json, @content_types_json,
+       @fit_score, @ai_policy, @ai_risk_score, @recommendation, @research_summary, @outreach_angle,
+       @pitch_preferences, @last_verified_at, @freshness_status, @status, @approved_at, @rejected_reason,
+       @suppression_status, @notes, @raw_json)
     ON CONFLICT(name, source_url) DO UPDATE SET
       updated_at = excluded.updated_at,
+      brand_profile_id = COALESCE(excluded.brand_profile_id, brand_profile_id),
       type = excluded.type,
       platform = excluded.platform,
       submission_url = excluded.submission_url,
       contact_method = excluded.contact_method,
+      contact_email = excluded.contact_email,
+      handle = excluded.handle,
       audience = excluded.audience,
+      geo = excluded.geo,
+      genres_json = excluded.genres_json,
+      content_types_json = excluded.content_types_json,
       fit_score = excluded.fit_score,
       ai_policy = excluded.ai_policy,
       ai_risk_score = excluded.ai_risk_score,
       recommendation = excluded.recommendation,
       research_summary = excluded.research_summary,
+      outreach_angle = excluded.outreach_angle,
+      pitch_preferences = excluded.pitch_preferences,
+      last_verified_at = excluded.last_verified_at,
+      freshness_status = excluded.freshness_status,
+      rejected_reason = excluded.rejected_reason,
+      suppression_status = excluded.suppression_status,
       notes = excluded.notes,
       raw_json = excluded.raw_json
   `).run(payload);
@@ -369,6 +476,105 @@ export function getMarketingSummary() {
   `).get();
 
   return { setup, targets, campaigns, runs };
+}
+
+export function getApprovedTargetsForBrand(brandProfileId) {
+  initMarketingSchema();
+  return getDb().prepare(
+    `SELECT * FROM marketing_targets WHERE status = 'approved' AND brand_profile_id = ? ORDER BY fit_score DESC, updated_at DESC`
+  ).all(brandProfileId);
+}
+
+export function getTargetsByBrand(brandProfileId, filters = {}) {
+  initMarketingSchema();
+  const clauses = ['brand_profile_id = ?'];
+  const params = [brandProfileId];
+  if (filters.status) { clauses.push('status = ?'); params.push(filters.status); }
+  if (filters.type) { clauses.push('type = ?'); params.push(filters.type); }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return getDb().prepare(`SELECT * FROM marketing_targets ${where} ORDER BY fit_score DESC, updated_at DESC`).all(...params);
+}
+
+export function upsertTargetSource(source) {
+  initMarketingSchema();
+  const now = new Date().toISOString();
+  const id = source.id || `MKT_SRC_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+  getDb().prepare(`
+    INSERT INTO marketing_target_sources (id, created_at, updated_at, brand_profile_id, source_type, source_name, source_url, source_path, status, last_checked_at, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at, status=excluded.status, last_checked_at=excluded.last_checked_at, notes=excluded.notes
+  `).run(id, now, now, source.brand_profile_id, source.source_type, source.source_name||null, source.source_url||null, source.source_path||null, source.status||'active', source.last_checked_at||null, source.notes||null);
+  return id;
+}
+
+export function upsertReleaseMatch(match) {
+  initMarketingSchema();
+  const now = new Date().toISOString();
+  const id = match.id || `MKT_MATCH_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+  getDb().prepare(`
+    INSERT INTO marketing_target_release_matches
+      (id, created_at, updated_at, brand_profile_id, song_id, album_id, target_id, match_score, match_reasons_json, recommended_action, status, requires_human, raw_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at, match_score=excluded.match_score, match_reasons_json=excluded.match_reasons_json, recommended_action=excluded.recommended_action, status=excluded.status
+  `).run(
+    id, now, now,
+    match.brand_profile_id, match.song_id||null, match.album_id||null,
+    match.target_id, match.match_score||null,
+    JSON.stringify(match.match_reasons||[]),
+    match.recommended_action||null,
+    match.status||'planned',
+    match.requires_human !== undefined ? (match.requires_human ? 1 : 0) : 1,
+    JSON.stringify(match),
+  );
+  return id;
+}
+
+export function getReleaseMatches(songId, brandProfileId) {
+  initMarketingSchema();
+  const clauses = [];
+  const params = [];
+  if (songId) { clauses.push('song_id = ?'); params.push(songId); }
+  if (brandProfileId) { clauses.push('brand_profile_id = ?'); params.push(brandProfileId); }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return getDb().prepare(`SELECT * FROM marketing_target_release_matches ${where} ORDER BY match_score DESC, created_at DESC`).all(...params);
+}
+
+export function addSuppressionRule(rule) {
+  initMarketingSchema();
+  const now = new Date().toISOString();
+  const id = `MKT_SUP_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+  getDb().prepare(`
+    INSERT INTO marketing_suppression_rules (id, created_at, updated_at, brand_profile_id, target_id, email, domain, handle, reason, source, active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+  `).run(id, now, now, rule.brand_profile_id||null, rule.target_id||null, rule.email||null, rule.domain||null, rule.handle||null, rule.reason, rule.source||null);
+  return id;
+}
+
+export function getSuppressionRules(brandProfileId) {
+  initMarketingSchema();
+  return getDb().prepare(
+    `SELECT * FROM marketing_suppression_rules WHERE active = 1 AND (brand_profile_id IS NULL OR brand_profile_id = ?) ORDER BY created_at DESC`
+  ).all(brandProfileId||null);
+}
+
+export function getMarketingTargetStats(brandProfileId) {
+  initMarketingSchema();
+  const db = getDb();
+  const clause = brandProfileId ? 'WHERE brand_profile_id = ?' : '';
+  const params = brandProfileId ? [brandProfileId] : [];
+  return db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END) as approved,
+      SUM(CASE WHEN status='needs_review' THEN 1 ELSE 0 END) as needs_review,
+      SUM(CASE WHEN status='stale' THEN 1 ELSE 0 END) as stale,
+      SUM(CASE WHEN status='rejected' THEN 1 ELSE 0 END) as rejected,
+      SUM(CASE WHEN status='do_not_contact' THEN 1 ELSE 0 END) as do_not_contact,
+      SUM(CASE WHEN ai_policy='allowed' THEN 1 ELSE 0 END) as ai_allowed,
+      SUM(CASE WHEN ai_policy='disclosure_required' THEN 1 ELSE 0 END) as ai_disclosure,
+      SUM(CASE WHEN ai_policy='likely_hostile' OR ai_policy='banned' THEN 1 ELSE 0 END) as ai_hostile
+    FROM marketing_targets ${clause}
+  `).get(...params);
 }
 
 function validateTarget(target) {

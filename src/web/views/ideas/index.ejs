@@ -1,4 +1,9 @@
 <% title = 'Idea Vault' %>
+<%
+  const brandMap = {};
+  for (const p of (profiles || [])) brandMap[p.id] = p.name;
+  function brandLabel(id) { return id ? (brandMap[id] || id) : null; }
+%>
 
 <script>
 window.ideaVault = function() {
@@ -86,8 +91,17 @@ window.ideaVault = function() {
     </select>
     <% } %>
 
+    <% if ((profiles || []).length > 1) { %>
+    <select name="brand" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All brands</option>
+      <% for (const p of profiles) { %>
+        <option value="<%= p.id %>" <%= filterBrand === p.id ? 'selected' : '' %>><%= p.name %></option>
+      <% } %>
+    </select>
+    <% } %>
+
     <button type="submit" class="bg-zinc-100 border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-200 transition">Filter</button>
-    <% if (q || filterStatus || filterCategory) { %>
+    <% if (q || filterStatus || filterCategory || filterBrand) { %>
       <a href="/ideas" class="text-sm px-4 py-2 text-zinc-500 hover:text-zinc-700 transition self-center">Clear</a>
     <% } %>
   </form>
@@ -159,6 +173,7 @@ window.ideaVault = function() {
           <div class="flex flex-wrap gap-2 mt-1.5">
             <% if (idea.category) { %><span class="text-xs bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full"><%= idea.category %></span><% } %>
             <% if (idea.mood) { %><span class="text-xs bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full"><%= idea.mood %></span><% } %>
+            <% if (idea.brand_profile_id) { %><span class="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium"><%= brandLabel(idea.brand_profile_id) %></span><% } %>
             <% if (idea.target_age_range) { %><span class="text-xs text-zinc-400">Ages <%= idea.target_age_range %></span><% } %>
             <% for (const tag of (idea.tags || []).slice(0,3)) { %><span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">#<%= tag %></span><% } %>
           </div>

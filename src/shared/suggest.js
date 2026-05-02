@@ -19,7 +19,7 @@ dotenv.config({ path: join(__dirname, '../../.env'), override: true });
 
 import fs from 'fs';
 import { runAgent, parseAgentJson } from './managed-agent.js';
-import { loadBrandProfile } from './brand-profile.js';
+import { loadBrandProfile, loadBrandProfileById } from './brand-profile.js';
 import { getAllSongs, createIdea } from './db.js';
 
 const BRAND_PROFILE = loadBrandProfile();
@@ -48,19 +48,27 @@ export function buildThemeGuidance(themePrompt) {
   return `\nUSER THEME / VIBE GUIDANCE — HARD BATCH CONSTRAINT:\nThe user wants this entire batch of ideas to share this common theme, vibe, or creative lane:\n"${normalizedTheme}"\n\nNon-negotiable requirements:\n- Every recommendation must be rooted in this exact theme/vibe.\n- Do not satisfy the theme with only rank 1. Ranks 1, 2, 3, 4, and 5 must each visibly fit the theme.\n- Distinct ideas are welcome, but distinct means different angles inside the same theme — not unrelated topics.\n- For every recommendation, include a non-empty theme_alignment field explaining how that specific idea fits the theme.\n- Before outputting JSON, audit all 5 recommendations and replace anything that is not clearly aligned to the theme.\n- Do not hard-code canned categories; interpret the user's wording naturally while preserving brand, audience, title, and duplicate-topic rules.`;
 }
 
-export function buildSuggestTask({ songs = [], researchSummary = '', themePrompt = '', currentDate = new Date() } = {}) {
+export function buildSuggestTask({ songs = [], researchSummary = '', themePrompt = '', currentDate = new Date(), profile = BRAND_PROFILE } = {}) {
   const normalizedTheme = normalizeThemePrompt(themePrompt);
+
+  const brandName = profile.brand_name;
+  const characterName = profile.character?.name;
+  const characterFallbackSummary = profile.character?.fallback_summary;
+  const audienceDescription = profile.audience?.description;
+  const titleExamplesList = profile.lyrics?.title_examples || [];
+  const topicVariety = profile.lyrics?.topic_variety;
+  const songwriting = profile.songwriting || {};
 
   const existingSongs = songs.length > 0
     ? `\nEXISTING SONGS (avoid repeating these themes):\n${songs.map(s => `- "${s.title}" (${s.topic}) — score: ${s.brand_score || '?'}`).join('\n')}`
     : '\nEXISTING SONGS: None yet — this will be the first!';
 
-  const brandSummary = `Brand: ${BRAND_NAME} — ${CHARACTER_FALLBACK_SUMMARY}; audience: ${AUDIENCE_DESCRIPTION}`;
-  const titleExamples = TITLE_EXAMPLES.map(t => `"${t}"`).join(', ');
+  const brandSummary = `Brand: ${brandName} — ${characterFallbackSummary}; audience: ${audienceDescription}`;
+  const titleExamples = titleExamplesList.map(t => `"${t}"`).join(', ');
   const themeGuidance = buildThemeGuidance(normalizedTheme);
   const currentMonth = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  return `You are the song strategist for ${BRAND_NAME}, ${BRAND_PROFILE.brand_description}.
+  return `You are the song strategist for ${brandName}, ${profile.brand_description}.
 
 ${brandSummary}
 ${existingSongs}
@@ -68,21 +76,21 @@ ${researchSummary}
 ${themeGuidance}
 
 ACTIVE SONGWRITING RULES:
-${JSON.stringify(SONGWRITING, null, 2)}
+${JSON.stringify(songwriting, null, 2)}
 
 Recommend the 5 best next song topics. For each:
 1. Pick topics that are NOT already covered by existing songs
 2. Prioritize high replay-ability and viral potential
 3. Consider the season/timing (current date: ${currentMonth})
 4. Mix educational + pure fun topics
-5. Think BIG on variety — ${TOPIC_VARIETY}
+5. Think BIG on variety — ${topicVariety}
 6. If theme guidance is provided, keep all 5 ideas aligned to that same theme while making each idea distinct
 7. If theme guidance is provided, do not include any recommendation unless you can explain its theme fit in theme_alignment
 
 TITLE RULES — this is critical:
 - Most titles should be creative and topic-first: ${titleExamples}
-- Do NOT default to "${CHARACTER_NAME} [topic]" — that pattern is overused
-- The character name "${CHARACTER_NAME}" should appear in a title at most once per 5 songs, and only when it genuinely adds humor or meaning
+- Do NOT default to "${characterName} [topic]" — that pattern is overused
+- The character name "${characterName}" should appear in a title at most once per 5 songs, and only when it genuinely adds humor or meaning
 - Great titles are specific, memorable, and aligned to the active brand profile.
 
 Output as JSON:
@@ -90,7 +98,7 @@ Output as JSON:
   "recommendations": [
     {
       "rank": 1,
-      "title": "Creative topic-first title (NOT '${CHARACTER_NAME} ___')",
+      "title": "Creative topic-first title (NOT '${characterName} ___')",
       "topic": "One-line topic description for --new command",
       "why": "Why this will work right now (2-3 sentences)",
       "hook_idea": "The key lyrical or musical hook concept",
@@ -175,8 +183,10 @@ async function auditThemedSuggestions({ suggestions, themePrompt, suggesterDef, 
 export async function runSuggestPipeline(onLog = () => {}, options = {}) {
   const log = (msg) => onLog(msg);
   const themePrompt = normalizeThemePrompt(options.themePrompt);
+  const brandProfileId = options.brandProfileId || null;
 
   log('🔍 Loading brand profile and catalog...');
+  const profile = brandProfileId ? loadBrandProfileById(brandProfileId) : BRAND_PROFILE;
   const songs = getAllSongs();
 
   if (themePrompt) {
@@ -202,10 +212,10 @@ export async function runSuggestPipeline(onLog = () => {}, options = {}) {
     log(`📀 Found ${songs.length} existing song(s) — avoiding duplicate topics.`);
   }
 
-  const task = buildSuggestTask({ songs, researchSummary, themePrompt });
+  const task = buildSuggestTask({ songs, researchSummary, themePrompt, profile });
 
   const suggesterDef = {
-    name: `${BRAND_NAME} Song Suggester`,
+    name: `${profile.brand_name} Song Suggester`,
     model: 'claude-haiku-4-5-20251001',
     noTools: true,
     system: 'You are a music content strategist. You recommend song topics that maximize profile fit, replay value, and brand consistency. Always output valid JSON.',
@@ -242,7 +252,7 @@ export async function runSuggestPipeline(onLog = () => {}, options = {}) {
         title: rec.title,
         concept: rec.why || null,
         hook: rec.hook_idea || null,
-        target_age_range: AUDIENCE_AGE_RANGE,
+        target_age_range: profile.audience?.age_range,
         category: rec.urgency === 'seasonal' ? 'seasonal' : null,
         mood: rec.bpm_target ? `upbeat, ${rec.bpm_target} BPM` : null,
         tags: [rec.urgency || 'evergreen', themePrompt ? `theme:${themePrompt}` : null].filter(Boolean),
@@ -256,6 +266,7 @@ export async function runSuggestPipeline(onLog = () => {}, options = {}) {
         source_ref: themePrompt
           ? `suggest_${new Date().toISOString().slice(0, 10)}_${themePrompt.slice(0, 40)}`
           : `suggest_${new Date().toISOString().slice(0, 10)}`,
+        brand_profile_id: brandProfileId,
       });
       savedIds.push({ rank: rec.rank, ideaId });
       savedCount++;

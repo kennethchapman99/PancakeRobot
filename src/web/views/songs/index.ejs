@@ -1,4 +1,9 @@
 <% title = 'Song Catalog' %>
+<%
+  const brandMap = {};
+  for (const p of (profiles || [])) brandMap[p.id] = p.name;
+  function brandLabel(id) { return id ? (brandMap[id] || id) : null; }
+%>
 
 <div class="p-8" x-data="catalog()" @keydown.escape.window="if(selecting) cancelSelect(); else closeDeleteModal()">
 
@@ -85,8 +90,17 @@
       <option value="readiness" <%= sort === 'readiness' ? 'selected' : '' %>>Most Ready</option>
     </select>
 
+    <% if ((profiles || []).length > 1) { %>
+    <select name="brand" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All brands</option>
+      <% for (const p of profiles) { %>
+        <option value="<%= p.id %>" <%= filterBrand === p.id ? 'selected' : '' %>><%= p.name %></option>
+      <% } %>
+    </select>
+    <% } %>
+
     <button type="submit" class="bg-zinc-100 border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-200 transition">Search</button>
-    <% if (q || filterStatus) { %>
+    <% if (q || filterStatus || filterBrand) { %>
       <a href="/songs" class="text-sm px-4 py-2 text-zinc-500 hover:text-zinc-700 transition self-center">Clear</a>
     <% } %>
   </form>
@@ -103,7 +117,7 @@
       ];
     %>
     <% for (const [val, label, count] of tabs) { %>
-    <a href="/songs?status=<%= val %><%= q ? '&q=' + encodeURIComponent(q) : '' %>"
+    <a href="/songs?status=<%= val %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= filterBrand ? '&brand=' + encodeURIComponent(filterBrand) : '' %>"
        class="shrink-0 pb-2.5 px-3 text-sm border-b-2 transition-colors whitespace-nowrap
          <%= filterStatus === val ? (val === 'approved' ? 'border-emerald-500 text-emerald-700 font-semibold' : 'border-zinc-900 text-zinc-900 font-semibold') : 'border-transparent text-zinc-400 hover:text-zinc-700' %>">
       <%= label %>
@@ -203,6 +217,9 @@
             <p class="text-xs text-zinc-400 mt-0.5 truncate"><%= song.topic %></p>
           <% } %>
         </a>
+        <% if (song.brand_profile_id) { %>
+          <span class="self-start text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium"><%= brandLabel(song.brand_profile_id) %></span>
+        <% } %>
 
         <% if (isApproved) { %>
         <!-- Approved action row -->

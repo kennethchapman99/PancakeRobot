@@ -73,7 +73,8 @@ function initSchema(db) {
       music_service TEXT,
       distribution_status TEXT,
       brand_score INTEGER,
-      total_cost_usd REAL DEFAULT 0
+      total_cost_usd REAL DEFAULT 0,
+      brand_profile_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS ideas (
@@ -94,7 +95,8 @@ function initSchema(db) {
       notes TEXT,
       source_type TEXT DEFAULT 'manual',
       source_ref TEXT,
-      promoted_song_id TEXT
+      promoted_song_id TEXT,
+      brand_profile_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS assets (
@@ -181,10 +183,20 @@ function initSchema(db) {
     ['distributor_submission_date', 'TEXT'],
     ['publishing_status', "TEXT DEFAULT 'not_started'"],
     ['published_at', 'TEXT'],
+    ['brand_profile_id', 'TEXT'],
   ];
   for (const [col, type] of newSongCols) {
     if (!songCols.includes(col)) {
       db.exec(`ALTER TABLE songs ADD COLUMN ${col} ${type}`);
+    }
+  }
+
+  // Migrate ideas table
+  const ideaCols = db.prepare("PRAGMA table_info(ideas)").all().map(c => c.name);
+  const newIdeaCols = [['brand_profile_id', 'TEXT']];
+  for (const [col, type] of newIdeaCols) {
+    if (!ideaCols.includes(col)) {
+      db.exec(`ALTER TABLE ideas ADD COLUMN ${col} ${type}`);
     }
   }
 
@@ -256,7 +268,7 @@ export function upsertSong(song) {
       'release_date', 'distributor', 'distributor_submission_date', 'publishing_status',
       'published_at', 'lyrics_path', 'audio_prompt_path', 'thumbnail_path',
       'metadata_path', 'music_service', 'distribution_status', 'brand_score',
-      'total_cost_usd',
+      'total_cost_usd', 'brand_profile_id',
     ];
     for (const key of patchable) {
       if (song[key] !== undefined && song[key] !== null) {
@@ -273,9 +285,9 @@ export function upsertSong(song) {
          concept, target_age_range, genre_tags, mood_tags, keywords, notes,
          release_date, distributor, distributor_submission_date, publishing_status,
          published_at, lyrics_path, audio_prompt_path, thumbnail_path, metadata_path,
-         music_service, distribution_status, brand_score, total_cost_usd)
+         music_service, distribution_status, brand_score, total_cost_usd, brand_profile_id)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       song.id,
       song.created_at || now,
@@ -303,7 +315,8 @@ export function upsertSong(song) {
       song.music_service || null,
       song.distribution_status || null,
       song.brand_score || null,
-      song.total_cost_usd || 0
+      song.total_cost_usd || 0,
+      song.brand_profile_id || null
     );
   }
 }
@@ -354,9 +367,9 @@ export function createIdea(idea) {
     INSERT INTO ideas
       (id, created_at, updated_at, status, title, concept, hook, target_age_range,
        category, mood, educational_angle, tags, lyric_seed, thumbnail_seed,
-       notes, source_type, source_ref, promoted_song_id)
+       notes, source_type, source_ref, promoted_song_id, brand_profile_id)
     VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, now, now,
     idea.status || 'new',
@@ -373,7 +386,8 @@ export function createIdea(idea) {
     idea.notes || null,
     idea.source_type || 'manual',
     idea.source_ref || null,
-    idea.promoted_song_id || null
+    idea.promoted_song_id || null,
+    idea.brand_profile_id || null
   );
   return id;
 }
@@ -384,7 +398,7 @@ export function updateIdea(id, fields) {
   const allowed = [
     'status', 'title', 'concept', 'hook', 'target_age_range', 'category',
     'mood', 'educational_angle', 'tags', 'lyric_seed', 'thumbnail_seed',
-    'notes', 'source_type', 'source_ref', 'promoted_song_id',
+    'notes', 'source_type', 'source_ref', 'promoted_song_id', 'brand_profile_id',
   ];
   const updates = { updated_at: now };
   for (const key of allowed) {

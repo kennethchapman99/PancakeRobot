@@ -379,6 +379,7 @@ export function buildStylePrompt(audioPrompt, { title } = {}) {
 }
 
 function isAdultBalladDirection(audioPrompt, title) {
+  if (BRAND_PROFILE.brand_type !== 'children_music') return false;
   const text = [
     title,
     BRAND_PROFILE.brand_name,

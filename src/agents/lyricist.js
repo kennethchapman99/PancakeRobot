@@ -84,8 +84,9 @@ export async function writeLyrics({ songId, topic, researchReport, revisionNotes
     qaRevisionNotes = [
       revisionNotes || '',
       'CRITICAL PROFILE QA FAILURE:',
-      `The previous draft included forbidden active-profile element(s): ${contamination.map(item => item.element).join(', ')}.`,
-      'Rewrite from scratch and remove every forbidden element. Use only allowed and required elements from the active brand profile.',
+      `The previous draft included forbidden active-profile element(s) in the title, lyrics, hook, or chorus: ${contamination.map(item => item.element).join(', ')}.`,
+      'Rewrite from scratch and remove every forbidden element from singable song content. Use only allowed and required elements from the active brand profile.',
+      'Keep audio_prompt metadata positive-only and do not mention forbidden elements there, even as exclusions.',
       'Keep the JSON complete and valid. Do not shorten long hip-hop verses; instead keep metadata concise.'
     ].filter(Boolean).join('\n');
   }
@@ -175,6 +176,7 @@ REQUIREMENTS:
 - Chorus: 4-8 lines, memorable, and built around the exact title.
 - Main hook/chorus repeats at least two times.
 - The lyrics field may be sung by the renderer after deterministic sanitization; include only plain section labels and singable words. No markdown, no cues, no commentary.
+- Keep audio_prompt fields positive-only. Do not mention forbidden elements in metadata, even as negatives or exclusions.
 
 STRUCTURE OPTIONS:
 ${formatStructurePreferences()}
@@ -196,6 +198,7 @@ function buildRetryRevisionNotes({ revisionNotes, lastFailure, rawText = '' }) {
     lastFailure,
     'Return one complete valid JSON object only. No markdown fences. No trailing commas. The JSON must end with the final closing brace.',
     'Long hip-hop lyrics are allowed and expected; do not shorten verses. Keep metadata fields concise if space is needed.',
+    'Keep audio_prompt metadata positive-only and do not mention forbidden elements as exclusions.',
     tail ? `Previous output tail for debugging:\n${tail}` : ''
   ].filter(Boolean).join('\n');
 }
@@ -351,13 +354,15 @@ function sanitizeSongData(songData, topic) {
 function sanitizeAudioPrompt(audioPrompt) {
   const cleaned = { ...audioPrompt };
   for (const [key, value] of Object.entries(cleaned)) {
-    if (typeof value === 'string') cleaned[key] = stripEmojis(value).trim();
+    if (typeof value === 'string') {
+      cleaned[key] = stripForbiddenNegatedClauses(stripEmojis(value)).trim();
+    }
   }
   return cleaned;
 }
 
 export function findForbiddenElementContamination(songData, forbiddenElements = SONGWRITING.forbidden_elements || []) {
-  const searchable = collectSearchableSongText(songData);
+  const searchable = collectSingableSongText(songData);
   const normalized = normalizeForForbiddenMatch(searchable);
 
   return forbiddenElements
@@ -366,25 +371,45 @@ export function findForbiddenElementContamination(songData, forbiddenElements = 
     .map(({ element, pattern }) => ({ element, pattern: pattern.source }));
 }
 
-function collectSearchableSongText(songData = {}) {
+function collectSingableSongText(songData = {}) {
   const parts = [
     songData.title,
     songData.lyrics,
     songData.key_hook,
     ...(Array.isArray(songData.chorus_lines) ? songData.chorus_lines : []),
-    flattenMetadataText(songData.audio_prompt),
-    flattenMetadataText(songData.metadata),
+    songData.physical_action_cue,
+    songData.funny_long_word,
   ];
 
   return parts.filter(Boolean).join('\n');
 }
 
-function flattenMetadataText(value) {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(flattenMetadataText).join(' ');
-  if (typeof value === 'object') return Object.values(value).map(flattenMetadataText).join(' ');
-  return String(value);
+function stripForbiddenNegatedClauses(value = '', forbiddenElements = SONGWRITING.forbidden_elements || []) {
+  const text = String(value || '');
+  if (!text.trim() || !Array.isArray(forbiddenElements) || forbiddenElements.length === 0) return text;
+
+  const clauses = text.split(/([.;]\s*)/);
+  const kept = [];
+
+  for (let index = 0; index < clauses.length; index += 2) {
+    const clause = clauses[index] || '';
+    const punctuation = clauses[index + 1] || '';
+    if (!clause.trim()) {
+      kept.push(clause, punctuation);
+      continue;
+    }
+
+    const normalizedClause = normalizeForForbiddenMatch(clause);
+    const containsNegation = /\b(no|not|without|avoid|exclude|free of|never|do not|dont)\b/i.test(normalizedClause);
+    const mentionsForbidden = forbiddenElements.some(element =>
+      buildForbiddenPatterns(element).some(pattern => pattern.test(normalizedClause))
+    );
+
+    if (containsNegation && mentionsForbidden) continue;
+    kept.push(clause, punctuation);
+  }
+
+  return kept.join('').replace(/\s{2,}/g, ' ').trim();
 }
 
 function normalizeForForbiddenMatch(value = '') {

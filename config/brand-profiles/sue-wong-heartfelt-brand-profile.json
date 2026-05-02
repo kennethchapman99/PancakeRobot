@@ -1,0 +1,367 @@
+{
+  "brand_name": "Mother's Day Ballad for Sue",
+  "app_title": "Mother's Day Ballad for Sue",
+  "brand_type": "heartfelt_family_music",
+  "brand_description": "a deeply heartfelt family-love and romantic ballad profile built around Sue Wong: funny, warm, imperfect, adored, and emotionally unforgettable",
+  "audience": {
+    "age_range": "family / adult-primary",
+    "description": "family members, spouses, kids, and loved ones creating songs that feel personal, funny, sweet, romantic, and emotionally true",
+    "guardrail": "safe, loving, non-explicit, family-respectful; can be romantic, but romance should stay tender, loyal, grateful, and emotionally sincere"
+  },
+  "character": {
+    "name": "Sue Wong",
+    "core_concept": "the beloved center of the family: funny, warm, expressive, brave, beautiful in the real-life way, and loved most because she is human rather than perfect",
+    "fallback_summary": "warm, hilarious, deeply loved mother and partner whose everyday mess, care, and courage become tear-jerking songs",
+    "clap_name": "Sue Shimmy Clap",
+    "personality_traits": [
+      "Warm but not saccharine — she laughs at herself as much as she laughs with everyone else",
+      "Chaotically competent — she burns one batch, nails the next, and makes both feel like family memories",
+      "Physically expressive — she talks with her hands, dances while cooking, and hugs like she means it",
+      "Genuinely curious — she asks real questions and makes people feel heard",
+      "Lovably imperfect — she forgets directions, misplaces things, wrestles with technology, and turns it into charm",
+      "Emotionally available — she can name what she feels without making it heavy or preachy",
+      "Adventure-ready — travel, family outings, and ordinary days all become stories",
+      "Music-adjacent by nature — she hums, dances, laughs, and turns small moments into emotional anchors",
+      "Quietly brave — she tries, fails, laughs, and tries again",
+      "Romantically unforgettable — the kind of partner whose daily love is more powerful than grand gestures",
+      "Family-rooted — food, care, warmth, and presence are her love languages"
+    ],
+    "catchphrases": [
+      "Oh, that's a Sue thing to do!",
+      "Let's find out together!",
+      "Whoops — that's just the magic starting!",
+      "More love, more mess, more fun!",
+      "Sing it with me, we're not done yet!",
+      "I wonder… do you know?",
+      "That's what mamas are made of!",
+      "This is us.",
+      "You make home feel like home."
+    ],
+    "visual_identity": "Warm, cinematic, family-centered 2D semi-flat animation with soft rounded shapes, expressive hands, real-life beauty, cozy home light, and small imperfect details that make Sue feel specific and loved",
+    "visual_reference": [
+      "Sue is the emotional focus: smiling, laughing, dancing, hugging, cooking, gardening, traveling, or caught mid-whoops",
+      "Warm round face, kind dark eyes, crinkled smile, black hair in a loose bun with one strand falling across her forehead",
+      "Colorful-casual clothing, bright patterned tops, comfortable pants, yellow garden clogs, and a slightly flour-dusted apron",
+      "Scenes should feel lived-in: kitchen light, garden warmth, family table, travel snapshots, handwritten notes, soft morning or golden-hour glow",
+      "Visual tone should be sweet enough for family, but emotionally rich enough for an adult spouse to cry",
+      "Avoid generic romance imagery; anchor visuals in specific domestic love: coffee mugs, clogs by the door, flour on the counter, a suitcase half-packed, kids' drawings, garden gloves",
+      "Rounded 2D semi-flat animation, warm line weights, no sharp corners, no cold palettes, no pure black"
+    ]
+  },
+  "music": {
+    "default_style": "heartfelt acoustic pop ballad with warm family-film energy",
+    "default_bpm": 76,
+    "default_key": "C Major",
+    "default_prompt": "Heartfelt acoustic pop ballad, 76 BPM, C Major, warm piano, gentle acoustic guitar, soft brushed drums, cinematic strings swelling late, intimate sincere lead vocal, emotional but not melodramatic, funny-sweet personal details, romantic family gratitude, tear-jerking final chorus, no spoken production directions",
+    "target_length": "2:15-3:30",
+    "min_words": 110,
+    "normal_word_range": "130-260",
+    "first_vocal_by_seconds": 4,
+    "max_instrumental_intro_seconds": 6
+  },
+  "lyrics": {
+    "title_examples": [
+      "For Sue",
+      "That's What Mamas Are Made Of",
+      "The Way You Make A House A Home",
+      "More Love, More Mess, More Fun",
+      "Every Little Sue Thing",
+      "Yellow Clogs By The Door",
+      "You Still Make Me Laugh",
+      "Mama Sue, My Whole Heart",
+      "The First Batch Burned",
+      "Home Sounds Like You"
+    ],
+    "topic_variety": "Mother's Day, anniversary, birthday, family tribute, romantic thank-you, funny domestic memories, raising kids, shared travel, kitchen chaos, gardening, being loved through ordinary days, a spouse noticing all the unseen work, kids describing why their mom is magic, grown-up gratitude that lands as tears",
+    "required_closing": "End with an emotionally unresolved but loving final image, repeated title phrase, intimate question, or last line that suggests love continues after the song — never a novelty punchline or generic goodbye"
+  },
+  "songwriting": {
+    "song_type": "heartfelt_family_ballad",
+    "primary_emotional_goal": "make the listener feel deeply seen; generate tears through specificity, gratitude, humor, tenderness, and romantic truth",
+    "voice_perspective": "usually first person from spouse or family to Sue; can be collective family voice; direct address is preferred because it feels personal",
+    "character_voice": {
+      "person": "First person direct address is strongest: 'you', 'we', 'I'. Third person is allowed only for childlike tribute songs.",
+      "tone": "Tender, funny, grateful, specific, romantic, emotionally honest, never generic, never manipulative, never syrupy",
+      "vocabulary": "Plain spoken words, short phrases, concrete family details, vivid domestic images, simple rhymes, adult emotional resonance without complex phrasing",
+      "signature_sounds": [
+        "soft laugh",
+        "hmm",
+        "oh",
+        "whoops",
+        "one more time",
+        "home"
+      ],
+      "comedy_mode": "Funny because it is true — burnt cookies, lost gloves, dancing in the kitchen, technology confusion, suitcase half-packed, the tiny habits loved ones recognize instantly",
+      "kid_relationship": "Kids can sing parts of it, but the emotional core should also hit a spouse or parent hard"
+    },
+    "earworm_stack": [
+      "1. Use one central emotional truth only — Sue makes home feel alive, safe, funny, and loved",
+      "2. Put a specific Sue detail in the first verse within the first 2-4 lines",
+      "3. Make the chorus title phrase simple enough to remember and emotionally strong enough to repeat",
+      "4. Blend funny-specific details with sincere payoff lines; laughter opens the door for tears",
+      "5. Use a chorus that can be sung directly to Sue without sounding like a children's song",
+      "6. Escalate emotionally each chorus: gratitude → devotion → legacy/family meaning",
+      "7. Save the biggest tear line for the final chorus or final couplet",
+      "8. End on an image, not an explanation"
+    ],
+    "hook_design_rules": [
+      "Opening line should be intimate, specific, or funny-sweet — no generic 'you are amazing' opening",
+      "Chorus hook should be 4-9 words and feel like something a family would actually say to Sue",
+      "Title phrase should appear in the first verse or first chorus",
+      "Use a callback detail in the final chorus from verse 1 so the song feels written, not generated",
+      "Make the listener laugh softly before asking them to cry",
+      "Avoid greeting-card language; use household evidence of love",
+      "The hook should work as a dedication caption, not just a lyric"
+    ],
+    "energy_arc": {
+      "pattern": "INTIMATE DETAIL → FUNNY-SWEET MEMORY → HEARTFELT CHORUS → DEEPER FAMILY TRUTH → BRIDGE CONFESSION → TEAR-JERKING FINAL CHORUS → LAST IMAGE",
+      "rules": [
+        "Start intimate, not huge",
+        "First chorus should be emotionally clear by 45 seconds",
+        "Use verse 2 to expand from one detail to the whole family",
+        "Bridge should say the thing usually left unsaid",
+        "Final chorus should add one new emotional line, not just repeat",
+        "Last line should be quiet, personal, and devastating in a good way",
+        "No fake drama; the emotion comes from ordinary love being noticed"
+      ]
+    },
+    "participation_patterns": [
+      "Family members can repeat the title phrase",
+      "Kids can echo a simple 'Mama Sue' line",
+      "Spouse lead vocal with family backing vocals in final chorus",
+      "A brief laugh or 'whoops' can appear as a real lyric word, not a stage direction",
+      "A final group line can feel like a family saying thank you together",
+      "Call-and-response should be used sparingly and only when it supports the emotional moment"
+    ],
+    "allowed_elements": [
+      "romantic gratitude",
+      "motherhood tribute",
+      "family memories",
+      "sweet humor",
+      "domestic imagery",
+      "specific personal details",
+      "light Chinese-American family references",
+      "kitchen, garden, travel, and home imagery",
+      "soft piano",
+      "acoustic guitar",
+      "warm strings",
+      "subtle ukulele",
+      "gentle percussion",
+      "family backing vocals",
+      "tear-jerking final chorus",
+      "vow-like language",
+      "anniversary-style devotion",
+      "Mother's Day emotion",
+      "funny lines that turn sincere"
+    ],
+    "forbidden_elements": [
+      "direct reference to any real artist name",
+      "direct reference to any existing song title",
+      "copying a living artist's exact voice, melodies, lyrics, or signature arrangement",
+      "generic greeting-card lines",
+      "overly perfect supermom framing",
+      "mean jokes about Sue, spouse, kids, family, culture, age, or appearance",
+      "sexualized romance or explicit content",
+      "adult themes unsuitable for a family dedication",
+      "dark tragedy, death, serious illness, or fear-based emotion",
+      "therapy-speak overload",
+      "stage directions inside lyrics",
+      "markdown in lyrics",
+      "metadata labels in lyrics",
+      "emoji in lyrics",
+      "spoken production cues",
+      "section labels sent to audio render",
+      "novelty-only endings",
+      "sleepy lullaby closure unless explicitly requested"
+    ],
+    "render_safety": [
+      "lyrics field must contain only words safe to sing or speak aloud",
+      "no markdown formatting in the lyrics field",
+      "no stage directions in the lyrics field",
+      "no metadata labels in the lyrics field",
+      "no emoji in the lyrics field",
+      "no production notes in the lyrics field",
+      "section labels are allowed only as structural markers and must be stripped before audio render",
+      "sound effects are allowed only when written as singable words",
+      "romantic language must remain tender and family-safe"
+    ],
+    "structure_preferences": [
+      "[VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS] -> [LAST IMAGE]",
+      "[INTIMATE OPEN] -> [FUNNY MEMORY] -> [CHORUS] -> [FAMILY MEMORY] -> [BRIDGE CONFESSION] -> [BIG CHORUS] -> [QUIET TAG]",
+      "[VERSE] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE] -> [PRE-CHORUS] -> [CHORUS] -> [BRIDGE] -> [FINAL CHORUS]"
+    ],
+    "required_elements": [
+      "one clear emotional thesis about why Sue is loved",
+      "at least one specific funny Sue detail",
+      "at least one concrete home/family image",
+      "chorus hook that can be dedicated directly to Sue",
+      "romantic or family gratitude that feels earned",
+      "final chorus must deepen the meaning rather than simply repeat",
+      "lyrics must be clean singable lines with no production notes",
+      "ending must land on an image, callback, or emotionally unresolved love line"
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    },
+    "qa_rules": [
+      "Song must feel written for Sue, not a generic mother or spouse",
+      "First verse must include a specific Sue detail",
+      "Chorus must be emotionally memorable and repeatable",
+      "At least one line should be funny-sweet before the deepest emotional payoff",
+      "Romantic songs must be tender, loyal, grateful, and family-safe",
+      "Mother's Day songs must avoid perfect-supermom clichés",
+      "No markdown formatting in lyrics field",
+      "No stage directions in lyrics field",
+      "No emoji in lyrics field",
+      "No production cues in lyrics field",
+      "Must not reference real artist names or existing song titles",
+      "Must end with a final image, callback, intimate question, or love-continuing-after-the-song line"
+    ]
+  },
+  "visuals": {
+    "style": "Warm cinematic 2D semi-flat family illustration with rounded edges, expressive character acting, cozy domestic light, soft high-saturation palette, and emotionally specific props — not photorealistic",
+    "palette": {
+      "coral_rose": "#FF6B6B",
+      "sues_teal": "#4ECDC4",
+      "sunshine_yellow": "#FFE66D",
+      "mint_green": "#A8E6CF",
+      "petal_pink": "#FF8B94",
+      "cream": "#FFF9F0",
+      "warm_espresso": "#3D2B1F"
+    },
+    "negative_prompt": "text, words, letters, photorealistic, scary, violent, dark horror, harsh shadows, pure black, pure white, sharp angular design, cold palette, sexualized imagery, cluttered background, blurry, mean-spirited caricature",
+    "text_overlay_style": "bold rounded sans-serif, sunshine yellow fill with warm espresso outline, soft playful drop shadow, minimal words, warm family-card feel without looking cheesy"
+  },
+  "distribution": {
+    "default_distributor": "TuneCore",
+    "legacy_distributor": "DistroKid",
+    "research_default_service": "DistroKid",
+    "research_default_url": "https://distrokid.com",
+    "default_artist": "Mother's Day Ballad for Sue",
+    "default_album": "For Sue",
+    "primary_genre": "Singer/Songwriter",
+    "spotify_genres": [
+      "acoustic pop",
+      "singer-songwriter",
+      "family"
+    ],
+    "youtube_tags_seed": [
+      "Mother's Day song",
+      "love song for wife",
+      "family tribute song",
+      "heartfelt ballad",
+      "romantic family song"
+    ],
+    "apple_music_genres": [
+      "Singer/Songwriter",
+      "Pop",
+      "Kids & Family"
+    ],
+    "coppa_status": "not primarily directed to children under 13; family-safe",
+    "content_advisory": "suitable for all ages"
+  },
+  "ui": {
+    "sidebar_subtitle": "Heartfelt Song Studio",
+    "logo_path": "/logo.png"
+  },
+  "brand_data": {
+    "character": {
+      "name": "Sue Wong",
+      "personality_traits": [
+        "Warm but not saccharine — she laughs at herself as much as she laughs with you",
+        "Chaotically competent — she burns one batch of cookies and nails the next, and she announces both with equal pride",
+        "Physically expressive — she talks with her hands, dances while stirring, and hugs like she means it every single time",
+        "Genuinely curious — she asks real questions and waits like she actually wants the answer",
+        "Hilariously bad at one thing per song — directions, technology, lost gardening gloves, or one perfectly Sue-style mix-up",
+        "Emotionally available — she names feelings out loud without making it a lesson",
+        "Adventure-ready — her suitcase is always half-packed and her passport has stamps that lead to stories",
+        "Music-obsessed — she hums without realizing it, and the hum always turns into a song",
+        "Quietly brave — she tries new things, fails cheerfully, and tries again",
+        "Deeply loved — the emotional point is not that Sue is perfect, but that her realness is what makes her irreplaceable"
+      ],
+      "catchphrases": [
+        "Oh, that's a Sue thing to do!",
+        "Let's find out together!",
+        "Whoops — that's just the magic starting!",
+        "More love, more mess, more fun!",
+        "Sing it with me, we're not done yet!",
+        "I wonder… do you know?",
+        "That's what mamas are made of!",
+        "You make home feel like home."
+      ],
+      "backstory": "Sue Wong grew up in a big, loud, lovable family where every meal was a concert and every trip to the grocery store could become an adventure. She built a home that smells like cinnamon, sounds like laughter, and always has room for one more at the table. Sue is Chinese-American, and her kitchen is a fusion of family recipes, happy experiments, and imperfect but unforgettable love. She gardens because it calms her. She bakes because it feeds people. She sings because she cannot help it. Her family loves her not because she is flawless, but because every whoops, every hug, every meal, every trip, every tiny ritual makes life feel warmer.",
+      "visual_description": "Sue Wong is a warm, round-faced Chinese-American woman with kind dark eyes that crinkle completely when she smiles. Her black hair is usually in a loose bun with one strand always falling across her forehead. She often wears a slightly flour-dusted apron, bright patterned tops, comfortable pants, and yellow garden clogs. She has expressive hands, a full-face smile, and the kind of presence that makes a room feel safer and funnier. Art style: 2D semi-flat animation, warm line weights, rounded edges, cozy domestic light, cinematic but not photorealistic.",
+      "color_palette": {
+        "primary": "#FF6B6B (Coral Rose — warmth, love, energy)",
+        "secondary": "#4ECDC4 (Sue's Teal — calm, garden, travel)",
+        "accent": "#FFE66D (Sunshine Yellow — joy, baking, Sue's clogs)",
+        "supporting_1": "#A8E6CF (Mint Green — nature, growth, garden scenes)",
+        "supporting_2": "#FF8B94 (Petal Pink — softness, family moments)",
+        "neutral_warm": "#FFF9F0 (Cream — backgrounds, warmth, home)",
+        "text_dark": "#3D2B1F (Warm Espresso — never pure black)"
+      }
+    },
+    "voice": {
+      "tone": "Heartfelt, funny-sweet, intimate, grateful, romantic when appropriate, and emotionally specific. Never generic. Never preachy. Never fake. The voice should sound like someone who has paid attention for years and finally found the words.",
+      "vocabulary_level": "Plain spoken language. Simple words. Concrete images. Avoid overwriting. The strongest lines should sound like something a spouse, child, or family member could actually say through tears.",
+      "recurring_themes": [
+        "Ordinary love is the most powerful kind",
+        "Home is made by the person who keeps showing up",
+        "Messes become memories",
+        "Funny habits become sacred details",
+        "Food is love language",
+        "A mother can be human, hilarious, tired, beautiful, and heroic all at once",
+        "A partner's daily care matters more than grand gestures",
+        "Travel, cooking, gardening, and family rituals become emotional proof",
+        "The best love songs are specific, not perfect"
+      ],
+      "formula": "OPEN WITH A SPECIFIC DETAIL → Make the listener smile with a funny true Sue moment → Let the chorus reveal the emotional thesis → Use verse 2 to widen from one memory to the whole family → BRIDGE: say the thing normally left unsaid → FINAL CHORUS: add the tear line and a callback detail → END ON A SMALL IMAGE THAT SAYS EVERYTHING"
+    },
+    "music_dna": {
+      "replay_formula": "The Sue Tearjerker Stack: (1) Start with an intimate concrete detail. (2) Add a funny Sue-specific imperfection early. (3) Use a chorus phrase that feels like a dedication, not a slogan. (4) Escalate from gratitude to devotion to legacy. (5) Bring back a verse-one detail in the final chorus. (6) End on a final image instead of explaining the emotion.",
+      "signature_elements": [
+        "Warm piano motif — simple 3-5 note figure that feels like home",
+        "Acoustic guitar pulse — steady, human, not overproduced",
+        "Soft Sue Shimmy echo — optional gentle ukulele or handclap callback for funny-sweet songs",
+        "Kitchen memory percussion — very subtle spoon, cup, or counter tap only when it supports the lyric",
+        "Family harmony lift — spouse or family-style backing vocals enter in the final chorus",
+        "String swell — emotional rise in the final chorus, never melodramatic",
+        "Quiet last line — instrumentation drops back so the final lyric lands",
+        "Callback detail — a musical or lyrical return to the first Sue image"
+      ],
+      "energy_arc": "INTIMATE → WARM → OPEN → DEEPEN → CONFESS → SWELL → QUIET LANDING. Songs begin at 35-45% emotional energy, first chorus reaches 65-70%, bridge drops to 45% for honesty, final chorus reaches 90-95%, ending lands softly at 40% with the most personal image."
+    },
+    "rules": {
+      "always": [
+        "Make it feel written for Sue, not for a generic mom or wife",
+        "Include at least one funny true-to-life Sue detail before the emotional payoff",
+        "Anchor emotion in concrete objects, actions, and memories",
+        "Make romantic songs tender, loyal, grateful, and family-safe",
+        "Use plain language that can be sung without sounding like a poem generator",
+        "Let Sue be imperfect; the love is stronger because she is real",
+        "Save the strongest tear line for the bridge, final chorus, or final couplet",
+        "Use a callback from the first verse near the end",
+        "Keep the final image small and specific",
+        "Use warm, high-saturation visuals and cozy family lighting"
+      ],
+      "never": [
+        "Never make Sue sound like a perfect supermom",
+        "Never use generic greeting-card praise as the main emotional engine",
+        "Never use sexualized or explicit romantic language",
+        "Never mock Sue in a mean way",
+        "Never lean on tragedy, illness, death, or fear to create tears",
+        "Never include stage directions, section labels, markdown, emoji, or production notes in render lyrics",
+        "Never use direct artist names, existing song titles, copied melodies, or imitation of a living artist",
+        "Never end with a generic goodbye",
+        "Never make the song only cute; it must have a real emotional center",
+        "Never let the music get so slow or sleepy that it loses emotional momentum"
+      ],
+      "age_guardrails": "Adult-primary but family-safe. Romantic content should feel like a spouse honoring a life partner, not physical seduction. Kids may be referenced warmly. No explicit content, cruelty, serious illness, death, or fear-based manipulation. Emotional weight should come from love, gratitude, humor, memory, and specificity.",
+      "thumbnail_prompt_base": "Warm cinematic 2D semi-flat animation style, rounded edges, no sharp corners, cozy golden family light. Sue Wong: warm round-faced Chinese-American woman, kind crinkled dark eyes, black hair in loose bun with one strand across forehead, bright patterned top, yellow garden clogs, slightly flour-dusted apron, expressive hands, huge full-face smile or tender laughing expression. Setting: lived-in kitchen, garden, family table, travel-memory wall, or warm home scene. Palette: coral rose #FF6B6B, Sue's teal #4ECDC4, sunshine yellow #FFE66D, mint green #A8E6CF, cream #FFF9F0, warm espresso #3D2B1F. Emotional, sweet, funny, specific, not photorealistic, no dark tones, no sharp lines."
+    }
+  },
+  "brand_bible_markdown": "# Mother's Day Ballad for Sue\n## Heartfelt Brand Bible\n*Version 1.0 — Built for funny-sweet, romantic, tear-jerking songs*\n\n---\n\n## WHO WE ARE\n\n**Mother's Day Ballad for Sue** is a family-love music profile built around Sue Wong: warm, funny, expressive, imperfect, romantic, and deeply loved.\n\nThe goal is not generic praise. The goal is recognition.\n\nA great Sue song should feel like someone noticed the tiny things:\nthe yellow clogs by the door,\nthe flour on the counter,\nthe way she laughs at her own mistake,\nthe way the whole room gets warmer when she walks in.\n\nThe songs should make Sue laugh first, then cry.\n\n---\n\n# PART 1: CHARACTER\n\n## Sue Wong — The One-Line Truth\n\n> Sue Wong is the woman who burns the first batch, nails the second, and somehow makes both batches feel like home.\n\n## Core Traits\n\n- Warm but not saccharine\n- Chaotically competent\n- Physically expressive\n- Genuinely curious\n- Lovably bad at one thing at a time\n- Emotionally available\n- Adventure-ready\n- Music-adjacent by instinct\n- Quietly brave\n- Romantic in the real-life way: loyal, present, funny, steady, unforgettable\n\n## What makes Sue emotionally powerful\n\nSue is not loved because she is perfect.\nShe is loved because she is specific.\n\nShe has the kind of presence that turns ordinary details into family mythology:\n- the misplaced garden gloves\n- the one strand of hair that will not stay put\n- the kitchen that always has something happening\n- the half-packed suitcase\n- the laugh after the whoops\n- the hug that fixes more than words could\n\n---\n\n# PART 2: SONGWRITING ENGINE\n\n## Emotional target\n\nEvery song must aim for one of two lanes:\n\n### Lane 1 — Funny-sweet tearjerker\nThe song starts with a real funny Sue detail, then reveals how that detail is actually part of why she is loved.\n\nExample emotional move:\n- Funny: she burned the cookies\n- Sweet: everyone still gathered in the kitchen\n- Tear line: the house never smelled better because she was there\n\n### Lane 2 — Romantic family ballad\nThe song is sung from a spouse or family voice directly to Sue. It should feel loyal, grateful, tender, and specific.\n\nExample emotional move:\n- Ordinary detail: her clogs by the door\n- Romantic meaning: it means she is home\n- Tear line: every room is just a room until she walks in\n\n## Formula\n\n1. Open with a specific Sue detail\n2. Make the listener smile\n3. Reveal the deeper love underneath it\n4. Use the chorus to state the emotional thesis\n5. Verse 2 expands from one memory to the whole family\n6. Bridge says what is usually left unsaid\n7. Final chorus adds a new tear line\n8. End on a small image that says everything\n\n## Chorus rules\n\n- Simple enough to remember\n- Personal enough to feel written for Sue\n- Strong enough to be used as a dedication\n- Should not sound like a slogan\n- Must avoid generic lines like “you are the best”\n\nBetter:\n- “You make home feel like home”\n- “That’s what mamas are made of”\n- “Every little Sue thing brings me back to you”\n- “More love, more mess, more us”\n\n---\n\n# PART 3: MUSIC DNA\n\n## Default sound\n\nHeartfelt acoustic pop ballad:\n- warm piano\n- gentle acoustic guitar\n- soft brushed drums\n- subtle ukulele if funny-sweet\n- cinematic strings late\n- intimate sincere lead vocal\n- family backing vocals in final chorus\n\n## Energy arc\n\nINTIMATE → WARM → OPEN → DEEPEN → CONFESS → SWELL → QUIET LANDING\n\nThe final chorus should swell, but the final line should often drop back down so the lyric lands.\n\n## Signature emotional devices\n\n- Callback detail from verse 1 returns near the end\n- Funny detail turns into love proof\n- Spouse or family backing vocals enter late\n- Final lyric lands on an object or image, not an explanation\n- No stage directions in lyrics\n- No production cues in lyrics\n- No emoji in lyrics\n\n---\n\n# PART 4: VISUAL IDENTITY\n\nWarm cinematic 2D semi-flat family illustration.\n\nSue:\n- warm round face\n- kind dark crinkled eyes\n- black hair in loose bun with one strand falling across her forehead\n- bright patterned top\n- yellow garden clogs\n- slightly flour-dusted apron\n- expressive hands\n- full-face smile or tender laugh\n\nScenes:\n- kitchen\n- garden\n- family table\n- travel-memory wall\n- golden-hour home light\n- small specific props that prove the song is about Sue\n\nPalette:\n- Coral Rose #FF6B6B\n- Sue's Teal #4ECDC4\n- Sunshine Yellow #FFE66D\n- Mint Green #A8E6CF\n- Petal Pink #FF8B94\n- Cream #FFF9F0\n- Warm Espresso #3D2B1F\n\n---\n\n# PART 5: HARD RULES\n\n## Always\n\n- Make it specific to Sue\n- Include a funny true-to-life detail\n- Make the love feel earned\n- Keep romance tender and family-safe\n- Use plain emotional language\n- Let Sue be real, not perfect\n- Save the biggest emotional hit for late\n- End on a callback, final image, or love-continuing-after-the-song line\n\n## Never\n\n- Never use generic greeting-card praise\n- Never portray Sue as perfect\n- Never mock her meanly\n- Never use tragedy as the emotional shortcut\n- Never include stage directions in lyrics\n- Never include markdown, emoji, or section labels in render lyrics\n- Never imitate real artists or existing songs\n- Never end with a generic goodbye\n"
+}

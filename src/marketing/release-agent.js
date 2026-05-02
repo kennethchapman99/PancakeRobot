@@ -102,10 +102,57 @@ function writeDashboard(assets, metadata, renderResult, qaReport) {
 }
 
 export async function buildMarketingReleasePack(songId, options = {}) {
+  const {
+    mode = null,
+    renderVideos = true,
+    requireApprovalBeforeVideo = false,
+  } = options;
+
+  const captionsOnly = mode === 'captions_checklist_only';
+
   const assets = collectMarketingAssets(songId, options);
+
+  // Inject base image path if one exists
+  if (options.useBaseImage !== false) {
+    const baseImgDir = join(assets.repoRoot, 'output/songs', songId, 'reference');
+    if (fs.existsSync(baseImgDir)) {
+      const baseFiles = fs.readdirSync(baseImgDir).filter(f => f.startsWith('base-image'));
+      if (baseFiles.length) {
+        assets.baseImagePath = join(baseImgDir, baseFiles[0]);
+        assets.hasBaseImage = true;
+        console.log('[RELEASE] Base image:', assets.baseImagePath);
+        if (!fs.existsSync(assets.baseImagePath)) {
+          throw new Error(`[RELEASE] Base image path set but file does not exist: ${assets.baseImagePath}`);
+        }
+      }
+    }
+  }
+  if (!assets.hasBaseImage) {
+    console.log('[RELEASE] Base image: none');
+  }
+
+  const shouldRegenerateArt = options.regenerateBaseArt === true || options.regenerateBaseArt === 'true';
+  console.log('[RELEASE] regenerateBaseArt:', shouldRegenerateArt);
+  if (shouldRegenerateArt) {
+    console.log('[RELEASE] Base art regeneration requested. No image generator configured — using existing base image.');
+    // Future: call generateBaseArt(assets) here when a provider is configured.
+  } else if (assets.hasBaseImage) {
+    console.log('[RELEASE] Using uploaded base image as-is (regenerate not requested)');
+  }
+
   const hook = await findMarketingHook(assets, options);
   const captions = generateCaptions(assets);
-  const renderResult = await renderMarketingAssets(assets, hook);
+
+  let renderResult = { generated: [], skipped: [] };
+  if (!captionsOnly) {
+    const renderOptions = { ...options };
+    if (renderVideos === false) renderOptions.skipVideos = true;
+    if (requireApprovalBeforeVideo) renderOptions.requireApprovalBeforeVideo = true;
+    renderResult = await renderMarketingAssets(assets, hook, renderOptions);
+  } else {
+    renderResult.skipped.push({ name: 'All media', reason: 'mode=captions_checklist_only' });
+  }
+
   const qaReport = await runMarketingQA(assets, renderResult, hook, captions);
   generateUploadChecklist(assets, hook, captions, qaReport, renderResult);
 
@@ -117,6 +164,11 @@ export async function buildMarketingReleasePack(songId, options = {}) {
     cta: assets.cta,
     hyperfollow_url: assets.hyperfollowUrl || null,
     generated_at: new Date().toISOString(),
+    mode: mode || 'default',
+    provider: options.provider || options.imageProvider || process.env.MARKETING_IMAGE_PROVIDER || 'none',
+    base_image_source: assets.hasBaseImage ? 'uploaded' : 'none',
+    base_image_path: assets.hasBaseImage ? rel(assets.repoRoot, assets.baseImagePath) : null,
+    requested_formats: options.formats || null,
     hook_start_sec: hook.hook_start_sec,
     hook_end_sec: hook.hook_end_sec,
     hook_duration_sec: hook.hook_duration_sec,

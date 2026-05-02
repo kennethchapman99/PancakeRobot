@@ -1,0 +1,242 @@
+{
+  "brand_name": "Basement Cypher",
+  "app_title": "Basement Cypher",
+  "brand_type": "private_adult_hip_hop",
+  "brand_description": "a private old-school hip-hop album profile for adult boom-bap tracks ",
+  "audience": {
+    "age_range": "adult",
+    "description": "clever old-school hip-hop, elite rhyme craft, and underground cypher energy",
+    "guardrail": "adult, private-use hip-hop is allowed to be gritty and profane, but must avoid excessive hate, racial slurs, anti-Black slurs, the n-word, and direct artist imitation"
+  },
+  "character": {
+    "name": "Basement Cypher",
+    "core_concept": "an underground MC collective trading sharp verses over dusty East Coast boom-bap beats in a private late-night studio setting",
+    "fallback_summary": "Basement Cypher is a private adult hip-hop identity: raw verses, elite flows, vinyl texture, DJ scratches, dense rhyme schemes, and cypher-style MC switching without copying any real artist",
+    "clap_name": "none",
+    "visual_identity": "Figment Factory presents Basement Cypher as a mysterious underground hip-hop collective with smoky basement energy, vinyl records, turntables, microphones, concrete walls, neon purple accents, and smart old-school style",
+    "visual_reference": [
+      "Figment Factory label identity: mysterious, creative, underground, slightly surreal",
+      "Basement cypher setting with MCs around a central microphone",
+      "East Coast boom-bap atmosphere: concrete, smoke, vinyl, turntables, MPC pads, speakers, and dim basement light",
+      "Visual tone can be gritty, colorful, smooth, mysterious, or illustrated depending on the song",
+      "Purple, charcoal, black, ivory, teal, magenta, and warm low-light accents work well",
+      "Avoid children's-brand visuals, robot mascots, pancakes, syrup, kid-safe cartoon defaults, and bright preschool imagery"
+    ],
+    "personality_traits": [
+      "Razor Atlas - The precision technician. Competitive, restless, brutally self-aware. He sounds like the MC who treats every verse like a title fight in a low-ceiling basement. Intense, funny, cutting, but never cartoonishly angry",
+      "Professor Velvet - The smooth storyteller. Charismatic, sly, funny, observant. He is the smoky-room narrator who makes mundane scenes feel cinematic: corner stores, old records, bad decisions, late-night drives, basement arguments",
+      "Saint Lo-Fi - The conscience of the crew. Grounded, thoughtful, socially aware, emotionally honest. He brings grown-man perspective: family, regret, discipline, community, ego, aging, temptation, purpose",
+      "Q-Nova Strange - The abstract scientist. Weird, playful, jazzy, slightly cosmic. He brings the off-kilter imagination: basement as spaceship, turntable as portal, rhyme book as a physics experiment"
+    ],
+    "catchphrases": []
+  },
+  "music": {
+    "default_style": "old-school East Coast hip-hop boom-bap",
+    "default_bpm": 92,
+    "default_key": "D Minor",
+    "default_prompt": "Private adult old-school East Coast boom-bap hip-hop track, 92 BPM, D Minor, dusty drums, hard snare, vinyl crackle, warm bassline, DJ scratches, turntable cuts, jazz/funk/soul-flavored musical texture, raw cypher energy, confident natural rap vocals, no Auto-Tune lead vocal, not R&B, no trap-pop polish, multiple MCs may trade verses or one MC may carry the whole track, English or multilingual bars allowed when natural, elite rhyme craft and flow are the priority. Do not imitate any real artist's voice, lyrics, melodies, beats, cadence, or copyrighted material.",
+    "target_length": "2:30-3:30",
+    "min_words": 260,
+    "normal_word_range": "320-720",
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 10
+  },
+  "lyrics": {
+    "title_examples": [
+      "Basement Cypher",
+      "Bars Below the Floorboards",
+      "Needle in the Concrete",
+      "Smoke From the Speaker",
+      "No Hook Needed",
+      "Purple Light Session",
+      "Dust on the Drum Break",
+      "One Mic Downstairs"
+    ],
+    "topic_variety": "underground cyphers, adult reflection, competitive bars, clever punchlines, storytelling, memory, midlife perspective, confidence, discipline, craft, city nights, vinyl culture, friendship, hustle, humor, wordplay, language switching, DJ culture, battle energy without real-world threats, and private studio mythology",
+    "required_closing": "End with a strong final bar, tag, or image that feels complete and confident; avoid children's open-question endings, sentimental family-ballad endings, or forced moral lessons"
+  },
+  "songwriting": {
+    "song_type": "old_school_hip_hop_cypher",
+    "primary_emotional_goal": "make the listener nod their head, respect the rhyme craft, and feel the private underground cypher energy",
+    "voice_perspective": "one or more original MC personas rapping as part of Basement Cypher, trading bars or carrying solo verses with confident adult perspective",
+    "allowed_elements": [
+      "boom-bap drums",
+      "hard snare",
+      "dusty kick drum",
+      "vinyl crackle",
+      "DJ scratches",
+      "turntable cuts",
+      "record-stop flourishes used sparingly",
+      "MPC-style beat feel",
+      "jazz-flavored chords",
+      "funk bassline",
+      "soulful sample-like texture without copying a real sample",
+      "single MC verses",
+      "multiple MCs switching in and out",
+      "cypher callouts",
+      "ad-libs that sound like adult hip-hop, not kid participation cues",
+      "dense internal rhymes",
+      "multisyllabic rhyme schemes",
+      "clever punchlines",
+      "storytelling verses",
+      "battle-rap confidence without hate or real threats",
+      "scratching between verses",
+      "English lyrics",
+      "multilingual verses when natural",
+      "adult profanity",
+      "private-use explicit language",
+      "old-school chorus hooks",
+      "no-hook verse-only structures",
+      "spoken intro tags if they are natural artist tags and not production directions"
+    ],
+    "forbidden_elements": [
+      "children's song language",
+      "children's music",
+      "kids action",
+      "preschool",
+      "toddler",
+      "audience participation for kids",
+      "hands-up cues",
+      "wiggles",
+      "stomps",
+      "pancakes",
+      "syrup",
+      "Pancake Robot",
+      "robot sounds",
+      "beep boop",
+      "Mother's Day ballad",
+      "Sue Wong",
+      "family-safe kids framing",
+      "open question ending",
+      "emoji",
+      "markdown",
+      "stage directions inside lyrics",
+      "production directions inside lyrics",
+      "bracketed performance directions",
+      "Auto-Tune lead vocal",
+      "melodic trap-pop lead vocal",
+      "R&B ballad hook",
+      "copying real artist voices",
+      "direct imitation of real artist cadences",
+      "direct imitation of copyrighted lyrics",
+      "direct imitation of copyrighted melodies",
+      "nigga",
+      "nigger",
+      "anti-Black slurs",
+      "racial slurs",
+      "hate slurs"
+    ],
+    "structure_preferences": [
+      "[INTRO] -> [VERSE 1] -> [SCRATCH BREAK] -> [VERSE 2] -> [HOOK] -> [VERSE 3] -> [OUTRO]",
+      "[INTRO] -> [MC 1 VERSE] -> [MC 2 VERSE] -> [MC 3 VERSE] -> [HOOK] -> [FINAL VERSE] -> [OUTRO]",
+      "[INTRO] -> [VERSE 1] -> [VERSE 2] -> [VERSE 3] -> [OUTRO]",
+      "[INTRO] -> [HOOK] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [BRIDGE / SCRATCH BREAK] -> [FINAL HOOK] -> [OUTRO]"
+    ],
+    "required_elements": [
+      "the exact song title in the hook, refrain, or memorable repeat line",
+      "old-school boom-bap feel",
+      "strong rhyme craft",
+      "natural adult hip-hop vocabulary",
+      "lyrics that are only singable or rappable text, with no production directions",
+      "no racial slurs or n-word variants",
+      "no direct imitation of any named artist"
+    ],
+    "render_safety": [
+      "Lyrics sent to the music provider must contain only section labels and rappable/singable lyric lines",
+      "Do not include parenthetical production notes, emoji, markdown, sound-effect descriptions, or non-lyric direction cues in the lyrics field",
+      "DJ scratches and cuts should be described in audio_prompt, not as lyric lines to be spoken",
+      "Profanity is permitted for private adult use, but slurs are not permitted",
+      "Artist references are inspiration only and must never become voice cloning, lyric copying, beat copying, cadence copying, or named soundalike instructions"
+    ],
+    "qa_rules": [
+      "Do not block the pipeline for subjective taste; report style concerns unless safety or forbidden-element rules are violated"
+    ],
+    "reference_artists_for_internal_vibe_only": [
+      "Q-Tip",
+      "A Tribe Called Quest",
+      "Eminem",
+      "Mac Miller",
+      "k-os",
+      "Slick Rick",
+      "Snoop Dogg",
+      "Blackalicious",
+      "Danger Doom",
+      "Macklemore"
+    ],
+    "reference_safety": "The artists listed are only loose taste references for rhyme quality, flow ambition, storytelling intelligence, humor, and old-school feel. Do not copy their voices, lyrics, beats, melodies, arrangements, cadence, personas, or copyrighted material.",
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    },
+    "character_voice": {
+      "person": "",
+      "tone": "Razor Atlas - Dense multisyllabic rhyme chains, sudden internal rhymes, controlled breathless runs, then hard pauses. Can flip from comedy to confession quickly. Elite punchlines, but grounded in adult reflection rather than shock-value chaos\n\nProfessor Velvet - Relaxed pocket, conversational flow, vivid storytelling, playful rhyme schemes. Often starts plain and builds into clever layered imagery. Less aggressive than Razor, but lands wisdom with a grin\n\nSaint Lo-Fi - Warm, measured boom-bap delivery with clean rhyme architecture. More clarity than flash. Uses couplets that sound simple at first, then reveal a second meaning. Can carry a chorus without becoming R&B\n\nQ-Nova Strange - Bouncy, syncopated, jazz-informed flow. He bends rhyme placement, uses unexpected word pairings, and sounds loose without being sloppy. Great for bridges, openers, or verse two energy shifts",
+      "vocabulary": "Razor Atlas - Uses sharp concrete nouns: brick, blade, ledger, static, basement, ink, debt, mirror. Avoids lazy flexing. No fake gangster talk. No filler ad-libs unless they hit rhythmically\n\nProfessor Velvet - Uses sensory language: smoke, leather, vinyl, rain, cologne, neon, coffee, concrete. Keeps slang warm and timeless. Avoids over-explaining; lets images do the work\n\nSaint Lo-Fi - Uses plainspoken moral vocabulary: work, debt, grace, truth, pride, roots, patience, home, hunger. Avoids preachiness by anchoring every point in a real image or personal scene\n\nQ-Nova Strange - Uses cosmic, musical, and surreal vocabulary: orbit, static, prism, cassette, Saturn, cymbal, velvet, frequency, phantom, blueprint. Allows occasional multilingual bars if natural. Avoids nonsense that breaks meaning",
+      "signature_sounds": [],
+      "comedy_mode": "",
+      "kid_relationship": ""
+    },
+    "earworm_stack": [],
+    "hook_design_rules": [],
+    "energy_arc": {
+      "pattern": "",
+      "rules": []
+    },
+    "participation_patterns": []
+  },
+  "visuals": {
+    "style": "Premium hip-hop album art: underground, mysterious, adult, cinematic or stylized illustrated, with strong composition, expressive typography, vinyl/turntable/mic/cypher cues, and no children's cartoon defaults",
+    "palette": {
+      "deep_black": "#050505",
+      "charcoal": "#15151A",
+      "concrete_gray": "#5E5A56",
+      "warm_ivory": "#F1DFC3",
+      "electric_purple": "#7B2DFF",
+      "neon_magenta": "#FF2DAA",
+      "cyan_blue": "#00B7FF",
+      "low_light_gold": "#D79A3D"
+    },
+    "negative_prompt": "children's cartoon, preschool, Pancake Robot, pancakes, syrup, toy-like, cute robot, extra text, random slogans, malformed words, blurry typography, watermark, gore, weapons-focused imagery, hate symbols",
+    "text_overlay_style": "premium hip-hop title treatment: bold condensed block lettering for primary title, expressive brush or custom script for emphasis, high contrast, clean kerning, readable at album-cover size"
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Basement Cypher",
+    "default_album": "Basement Cypher",
+    "label_name": "Figment Factory",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "hip-hop",
+      "old-school hip-hop",
+      "boom bap",
+      "east coast hip-hop",
+      "underground hip-hop"
+    ],
+    "youtube_tags_seed": [
+      "old school hip hop",
+      "boom bap",
+      "east coast hip hop",
+      "underground rap",
+      "cypher rap",
+      "dj scratches",
+      "private hip hop album",
+      "Basement Cypher",
+      "Figment Factory"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "Rap"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "private adult-use hip-hop; profanity permitted; racial slurs, hate slurs, and n-word variants prohibited; not intended for public distribution"
+  },
+  "ui": {
+    "sidebar_subtitle": "Figment Factory Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}
