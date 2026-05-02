@@ -219,6 +219,16 @@
     "coppa_status": "directed to children under 13",
     "content_advisory": "suitable for all ages"
   },
+  "social": {
+    "spotify_artist_url": "https://open.spotify.com/artist/2J2GPtrzwEl4w4wDLdWGea",
+    "youtube_channel_url": "https://www.youtube.com/@pancakerobotmusic",
+    "instagram_url": "https://www.instagram.com/pancakerobotmusic",
+    "tiktok_url": "https://www.tiktok.com/@pancakerobotmusic",
+    "website_url": "https://www.facebook.com/pancakerobotmusic/",
+    "linktree_url": "",
+    "email_contact": "pancake.robot.music@gmail.com",
+    "press_kit_url": ""
+  },
   "ui": {
     "sidebar_subtitle": "Music Studio",
     "logo_path": "/logo.png"

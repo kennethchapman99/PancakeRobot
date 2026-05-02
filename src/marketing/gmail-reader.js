@@ -8,6 +8,13 @@ import { getAuthorizedClient } from './gmail-auth.js';
 
 // ─── Classification ────────────────────────────────────────────────────────────
 
+const BLOCKED_DOMAINS = [
+  'google.com',
+  'accounts.google.com',
+  'artists.spotify.com',
+  'distrokid.com',
+];
+
 const OPT_OUT_PATTERNS = [
   /\bopt.?out\b/i, /\bunsubscribe\b/i, /\bremove me\b/i,
   /\bdo not contact\b/i, /\bstop emailing\b/i, /\bstop contacting\b/i,
@@ -33,6 +40,11 @@ export function classifyMessage(msg) {
   const body = (msg.body_text || '').toLowerCase();
   const from = (msg.from_email || '').toLowerCase();
   const combined = subject + ' ' + body;
+
+  const fromDomain = from.split('@')[1] || '';
+  if (BLOCKED_DOMAINS.some(d => fromDomain === d || fromDomain.endsWith(`.${d}`))) {
+    return { classification: 'platform_admin', requires_ken: false, suggested_reply: null };
+  }
 
   if (OPT_OUT_PATTERNS.some(p => p.test(combined))) {
     return { classification: 'do_not_contact', requires_ken: true, suggested_reply: null };

@@ -43,7 +43,7 @@
           Generate Ideas
         </a>
 
-        <% const navLinks = [['/', 'Dashboard', '◈'], ['/ideas', 'Idea Vault', '💡'], ['/songs', 'Song Catalog', '🎵'], ['/brand', 'Brand', '🎨']]; %>
+        <% const navLinks = [['/', 'Dashboard', '◈'], ['/ideas', 'Idea Vault', '💡'], ['/songs', 'Song Catalog', '🎵'], ['/marketing', 'Marketing', '📣'], ['/brand', 'Brand', '🎨']]; %>
         <% for (const [href, label, icon] of navLinks) { %>
           <a href="<%= href %>"
              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors <%= currentPath === href || (href !== '/' && currentPath.startsWith(href) && href !== '/ideas' || currentPath === href) ? 'bg-zinc-700 text-white font-medium' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white' %>">

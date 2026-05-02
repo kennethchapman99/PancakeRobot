@@ -1,4 +1,7 @@
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
 import {
   getMarketingSetupItems,
   updateMarketingSetupItem,
@@ -15,9 +18,12 @@ import {
 import { runMarketingResearchImport, runDraftCampaignPlanner } from '../agents/marketing-manager.js';
 import { getMarketingContext } from '../shared/marketing-context.js';
 import { loadBrandProfile, getActiveProfileId } from '../shared/brand-profile.js';
-import { getInboxMessages, getInboxSummary } from '../shared/marketing-inbox-db.js';
+import { getInboxMessages } from '../shared/marketing-inbox-db.js';
+import { getAllSongs, getReleaseLinks } from '../shared/db.js';
 
 const BRAND_PROFILE = loadBrandProfile();
+const __dirname_mkt = dirname(fileURLToPath(import.meta.url));
+const SCAN_RESULTS_PATH = join(__dirname_mkt, '../../output/marketing/gmail-scan-results.json');
 
 const require = createRequire(import.meta.url);
 const express = require('express');
@@ -117,8 +123,6 @@ async function routeMarketing(req, res) {
 
   if (pathname === '/marketing' && req.method === 'GET') {
     return sendHtml(res, renderMarketingPage({
-      q: url.searchParams.get('q') || '',
-      status: url.searchParams.get('status') || '',
       message: url.searchParams.get('message') || '',
       error: url.searchParams.get('error') || '',
     }));
@@ -180,114 +184,145 @@ async function routeMarketing(req, res) {
   return sendHtml(res, shell('Marketing', '<main class="p-8">Marketing route not found.</main>'));
 }
 
-function renderMarketingPage({ q, status, message, error }) {
-  const summary = getMarketingSummary();
-  const setup = getMarketingSetupItems();
-  const targets = getMarketingTargets({ q, status });
-  const campaigns = getMarketingCampaigns(10);
-  const runs = getMarketingAgentRuns(10);
-  const latestLogs = runs[0] ? getMarketingAgentLogs(runs[0].id) : [];
-  const setupGroups = groupBy(setup, 'category');
-  const setupPct = summary.setup.total ? Math.round(((summary.setup.done || 0) / summary.setup.total) * 100) : 0;
-  const brandProfileId = getActiveProfileId();
+function renderMarketingPage({ message, error }) {
+  const social = BRAND_PROFILE.social || {};
 
-  let targetStats = null;
-  try { targetStats = getMarketingTargetStats(brandProfileId); } catch {}
+  // ── Card 1: Gmail Reply Candidates ──
+  let gmailCandidates = [];
+  try {
+    const raw = fs.readFileSync(SCAN_RESULTS_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    gmailCandidates = (parsed.messages || []).filter(m => m.classification === 'safe_reply_candidate');
+  } catch {
+    try {
+      const dbRows = getInboxMessages(50, { classification: 'safe_reply_candidate' });
+      gmailCandidates = dbRows.map(m => ({
+        from: m.from_email || '',
+        subject: m.subject || '',
+        classification: m.classification || '',
+        status: 'NEEDS-KEN',
+        snippet: m.snippet || '',
+        messageId: m.gmail_message_id || '',
+        date: m.received_at || '',
+      }));
+    } catch { /* DB also unavailable */ }
+  }
 
-  let inboxMessages = [];
-  let inboxSummary = null;
-  try { inboxMessages = getInboxMessages(20); inboxSummary = getInboxSummary(); } catch {}
+  // ── Card 2: Recently Released Songs ──
+  let releasedSongs = [];
+  try {
+    const allSongs = getAllSongs();
+    const eligible = allSongs.filter(s =>
+      s.status === 'submitted_to_distributor' || s.status === 'published'
+    );
+    for (const song of eligible) {
+      const links = getReleaseLinks(song.id);
+      const distrokidLink = links.find(l => l.platform.toLowerCase() === 'distrokid' || l.platform.toLowerCase() === 'distrokid_link');
+      releasedSongs.push({ song, links, distrokidLink: distrokidLink || null });
+    }
+  } catch { /* DB unavailable */ }
 
   const body = `
   <main class="p-8 space-y-8">
     <section class="bg-white border border-zinc-200 rounded-2xl p-6">
       <div class="flex items-start justify-between gap-4">
-        <div><h1 class="text-3xl font-extrabold">Marketing Mission Control</h1><p class="text-zinc-500 mt-2">Brand-level target library, inbox monitoring, release planning. No fake targets. No auto-sending.</p></div>
+        <div>
+          <h1 class="text-3xl font-extrabold">Marketing Mission Control</h1>
+        </div>
         <div class="flex gap-2 flex-wrap">
-          <form method="POST" action="/marketing/agents/research-import"><button class="bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm font-semibold">Import targets</button></form>
-          <form method="POST" action="/marketing/agents/draft-campaign"><button class="bg-amber-500 text-white rounded-lg px-4 py-2 text-sm font-semibold">Create draft campaign</button></form>
-          <form method="POST" action="/marketing/agents/inbox-scan"><button class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Scan Gmail inbox</button></form>
+          <form method="POST" action="/marketing/agents/inbox-scan">
+            <button class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Scan Gmail inbox</button>
+          </form>
         </div>
       </div>
     </section>
     ${message ? banner(message, 'emerald') : ''}${error ? banner(error, 'red') : ''}
-
-    <!-- Metrics row -->
-    <section class="grid grid-cols-2 lg:grid-cols-6 gap-4">
-      ${metric(summary.setup.done || 0, 'Setup done')} ${metric(`${setupPct}%`, 'Setup progress')} ${metric(targetStats?.total || summary.targets.total || 0, 'Sourced targets')} ${metric(targetStats?.approved || summary.targets.approved || 0, 'Approved targets')} ${metric(inboxSummary?.new_count || 0, 'New inbox')} ${metric(inboxSummary?.needs_ken || 0, 'Needs Ken')}
-    </section>
-
-    <!-- Setup + Readiness -->
-    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div class="xl:col-span-2 bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold mb-4">Human setup checklist</h2>${Object.entries(setupGroups).map(([category, items]) => `<h3 class="text-xs uppercase tracking-widest text-zinc-400 mt-6 mb-2">${esc(category)}</h3>${items.map(renderSetup).join('')}`).join('')}</div>
-      <aside class="space-y-6"><div class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold">Workflow readiness</h2><ol class="text-sm text-zinc-600 mt-3 list-decimal pl-5 space-y-2"><li>Complete setup checklist.</li><li>Set MARKETING_RESEARCH_SOURCE_PATH.</li><li>Import &amp; approve targets.</li><li>Authorize Gmail (npm run marketing:gmail:auth).</li><li>Scan inbox to classify messages.</li><li>Match targets for a song release.</li><li>Create release plan.</li></ol><div class="mt-4 text-xs bg-zinc-50 border border-zinc-200 rounded-lg p-3 break-all">${esc(process.env.MARKETING_RESEARCH_SOURCE_PATH || 'MARKETING_RESEARCH_SOURCE_PATH not configured')}</div></div>${renderTargetForm()}</aside>
-    </section>
-
-    <!-- Target Intelligence Library -->
-    <section class="bg-white border border-zinc-200 rounded-2xl p-6">
-      <div class="flex items-center justify-between gap-3 mb-4">
-        <div>
-          <h2 class="font-bold">Target Intelligence Library</h2>
-          <p class="text-sm text-zinc-500 mt-1">Brand: <code class="font-mono text-xs">${esc(brandProfileId)}</code></p>
-        </div>
-        <div class="flex gap-2">
-          <form method="GET" action="/marketing" class="flex gap-2">
-            <input name="q" value="${attr(q)}" placeholder="Search targets" class="border rounded-lg px-3 py-2 text-sm">
-            <select name="status" class="border rounded-lg px-3 py-2 text-sm">${opt('', 'All', status)}${opt('needs_review', 'Needs review', status)}${opt('approved', 'Approved', status)}${opt('rejected', 'Rejected', status)}${opt('do_not_contact', 'DNC', status)}</select>
-            <button class="bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm">Filter</button>
-          </form>
-        </div>
-      </div>
-      ${targetStats ? `<div class="grid grid-cols-2 lg:grid-cols-7 gap-3 mb-6">${metricSmall(targetStats.total||0,'Total')}${metricSmall(targetStats.approved||0,'Approved')}${metricSmall(targetStats.needs_review||0,'Needs review')}${metricSmall(targetStats.stale||0,'Stale')}${metricSmall(targetStats.rejected||0,'Rejected')}${metricSmall(targetStats.do_not_contact||0,'DNC')}${metricSmall(targetStats.ai_allowed||0,'AI: allowed')}</div>` : ''}
-      ${targets.length ? renderTargets(targets) : '<div class="border border-dashed rounded-xl p-8 text-center text-zinc-500">No sourced targets yet. Run: npm run marketing:targets:import -- --source /path/to/targets.json</div>'}
-    </section>
-
-    <!-- Marketing Inbox -->
-    <section class="bg-white border border-zinc-200 rounded-2xl p-6">
-      <div class="flex items-center justify-between gap-3 mb-4">
-        <div>
-          <h2 class="font-bold">Marketing Inbox</h2>
-          <p class="text-sm text-zinc-500">Classified Gmail messages — read-only. No sending or deleting.</p>
-        </div>
-        <form method="POST" action="/marketing/agents/inbox-scan">
-          <button class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Scan Inbox</button>
-        </form>
-      </div>
-      ${inboxMessages.length ? renderInbox(inboxMessages) : '<div class="border border-dashed rounded-xl p-8 text-center text-zinc-500">No inbox messages. Run: npm run marketing:gmail:auth &amp; npm run marketing:gmail:scan -- --write</div>'}
-    </section>
-
-    <!-- Draft campaigns -->
-    <section class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold mb-4">Draft campaigns</h2>${campaigns.length ? campaigns.map(renderCampaign).join('') : '<div class="border border-dashed rounded-xl p-6 text-center text-zinc-500">No draft campaigns yet.</div>'}</section>
-
-    <!-- Agent runs + logs -->
-    <section class="grid grid-cols-1 xl:grid-cols-2 gap-6"><div class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold mb-4">Recent agent runs</h2>${runs.length ? runs.map(renderRun).join('') : '<div class="text-zinc-400 text-sm">No runs yet.</div>'}</div><div class="bg-zinc-900 text-zinc-100 rounded-2xl p-6"><h2 class="font-bold mb-4">Latest run logs</h2><div class="font-mono text-xs space-y-2 max-h-96 overflow-y-auto">${latestLogs.length ? latestLogs.map(l => `<div><span class="text-zinc-500">${esc(l.level)}</span> ${esc(l.message)}</div>`).join('') : '<div class="text-zinc-500">No logs yet.</div>'}</div></div></section>
+    ${renderGmailCandidates(gmailCandidates, social)}
+    ${renderReleasedSongs(releasedSongs)}
   </main>`;
   return shell('Marketing', body);
 }
 
-function renderInbox(messages) {
-  return `<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-left text-xs uppercase text-zinc-400 border-b"><tr><th class="py-3 pr-4">Subject</th><th class="py-3 pr-4">From</th><th class="py-3 pr-4">Classification</th><th class="py-3 pr-4">Needs Ken</th><th class="py-3 pr-4">Date</th></tr></thead><tbody class="divide-y">${messages.map(m => `<tr class="align-top"><td class="py-3 pr-4 font-medium">${esc(m.subject || '(no subject)')}</td><td class="py-3 pr-4 text-zinc-500 text-xs">${esc(m.from_email || '')}</td><td class="py-3 pr-4"><span class="${inboxBadge(m.classification)}">${esc(m.classification)}</span></td><td class="py-3 pr-4">${m.requires_ken ? '<span class="text-amber-600 font-semibold text-xs">⚠ Yes</span>' : '<span class="text-zinc-300 text-xs">No</span>'}</td><td class="py-3 pr-4 text-zinc-400 text-xs">${m.received_at ? new Date(m.received_at).toLocaleDateString() : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+function buildSuggestedReply(msg, social) {
+  const combined = ((msg.subject || '') + ' ' + (msg.snippet || '')).toLowerCase();
+  const hasPlaylist = /playlist|curator|curate/.test(combined);
+  const hasPress = /blog|press|review|media|feature|interview/.test(combined);
+  const hasCollaboration = /collab|partner|sponsor|brand deal/.test(combined);
+
+  const links = [];
+  if (social.spotify_artist_url) links.push(`Spotify: ${social.spotify_artist_url}`);
+  if (social.youtube_channel_url) links.push(`YouTube: ${social.youtube_channel_url}`);
+  if (social.instagram_url) links.push(`Instagram: ${social.instagram_url}`);
+  if (social.tiktok_url) links.push(`TikTok: ${social.tiktok_url}`);
+  if (social.linktree_url) links.push(`All links: ${social.linktree_url}`);
+  if (social.website_url) links.push(`Website: ${social.website_url}`);
+  if (social.press_kit_url) links.push(`Press kit: ${social.press_kit_url}`);
+  const linkBlock = links.length ? links.join('\n') : '[Add social links in Brand Profile → social section]';
+
+  const brand = 'Pancake Robot';
+  const email = social.email_contact || 'pancake.robot.music@gmail.com';
+
+  if (hasPlaylist) {
+    return `Hi,\n\nThanks so much for reaching out! We'd love to have ${brand} featured on your playlist.\n\n${brand} makes upbeat, silly children's music for kids ages 4–10 — high-energy pop songs designed for maximum replayability and kid participation.\n\nHere are our streaming links:\n${linkBlock}\n\nHappy to send over specific tracks or any other info you need. Just let us know!\n\nBest,\nKen (${brand})\n${email}`;
+  }
+  if (hasPress) {
+    return `Hi,\n\nThanks for your interest in ${brand}!\n\n${brand} is a children's music project featuring a cheerful robot who loves making pancakes and going on silly adventures. We make upbeat, singalong-ready kids' pop songs for ages 4–10.\n\nHere's where to find us:\n${linkBlock}\n\nI'd be happy to answer any questions, share tracks, or send a press kit. Let me know what would be most helpful!\n\nBest,\nKen (${brand})\n${email}`;
+  }
+  if (hasCollaboration) {
+    return `Hi,\n\nThanks for reaching out about a collaboration! We're always open to the right partnerships for ${brand}.\n\nA bit about us: ${brand} makes silly, high-energy children's music for kids ages 4–10. Our audience is families and young kids who love to sing and dance along.\n\nHere's a quick overview of where we are:\n${linkBlock}\n\nHappy to learn more about what you have in mind. Feel free to share more details and we can go from there.\n\nBest,\nKen (${brand})\n${email}`;
+  }
+  return `Hi,\n\nThanks so much for reaching out!\n\n${brand} is a children's music project — upbeat, silly pop songs for kids ages 4–10. Happy to share more about what we do.\n\nHere are our links:\n${linkBlock}\n\nLet me know how I can help!\n\nBest,\nKen (${brand})\n${email}`;
 }
 
-function renderSetup(item) {
-  const done = item.status === 'done';
-  return `<form method="POST" action="/marketing/setup/${encodeURIComponent(item.key)}" class="border ${done ? 'border-emerald-200 bg-emerald-50' : 'border-zinc-200 bg-white'} rounded-xl p-4 mb-3"><div class="flex gap-3"><input type="checkbox" ${done ? 'checked' : ''} onchange="this.form.status.value=this.checked?'done':'not_started';this.form.submit()"><div class="flex-1"><div class="font-semibold">${esc(item.title)} <span class="${badge(item.status)}">${esc(item.status)}</span></div><p class="text-sm text-zinc-500 mt-1">${esc(item.instructions || '')}</p>${item.reference_url ? `<a href="${attr(item.reference_url)}" target="_blank" class="text-xs text-blue-600">Instructions/source</a>` : ''}<div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mt-3"><input name="value" value="${attr(item.value || '')}" placeholder="Account, URL, handle, or config" class="border rounded-lg px-3 py-2 text-sm"><input name="notes" value="${attr(item.notes || '')}" placeholder="Notes" class="border rounded-lg px-3 py-2 text-sm"></div><input type="hidden" name="status" value="${attr(item.status || 'not_started')}"><button class="mt-2 bg-zinc-900 text-white rounded-lg px-3 py-1.5 text-xs">Save</button></div></div></form>`;
+function renderGmailCandidates(messages, social = {}) {
+  const heading = `<div class="flex items-center justify-between gap-3 mb-4"><div><h2 class="font-bold text-lg">Gmail Reply Candidates</h2><p class="text-sm text-zinc-500 mt-1">Messages classified as safe to reply to. Status: NEEDS-KEN until actioned.</p></div></div>`;
+  if (!messages.length) {
+    return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">${heading}<div class="border border-dashed rounded-xl p-8 text-center text-zinc-500">No Gmail reply candidates found. Run inbox scan to refresh.</div></section>`;
+  }
+
+  const rows = messages.map((m, i) => {
+    const reply = buildSuggestedReply(m, social);
+    const replyId = `reply-${i}`;
+    return `<tr class="align-top border-b">
+      <td class="py-4 pr-4 font-medium max-w-xs">
+        <div class="font-semibold">${esc(m.subject || '(no subject)')}</div>
+        <div class="text-xs text-zinc-500 mt-0.5">${esc(m.from || '')}</div>
+        <div class="text-xs text-zinc-400 mt-0.5">${m.date ? new Date(m.date).toLocaleDateString() : ''}</div>
+      </td>
+      <td class="py-4 pr-4">
+        <span class="${inboxBadge(m.classification)}">${esc(m.classification)}</span>
+        <div class="text-amber-600 font-semibold text-xs mt-1">&#9888; ${esc(m.status || 'NEEDS-KEN')}</div>
+      </td>
+      <td class="py-4 pr-4 text-zinc-400 text-xs max-w-xs">${esc(m.snippet || '')}</td>
+      <td class="py-4 pl-2 min-w-80">
+        <div class="relative">
+          <textarea id="${replyId}" class="w-full text-xs font-mono border border-zinc-200 rounded-lg p-3 bg-zinc-50 resize-y min-h-40" readonly>${esc(reply)}</textarea>
+          <button onclick="(function(btn){const t=document.getElementById('${replyId}');navigator.clipboard.writeText(t.value).then(()=>{const orig=btn.textContent;btn.textContent='Copied!';btn.classList.add('bg-emerald-600');setTimeout(()=>{btn.textContent=orig;btn.classList.remove('bg-emerald-600')},1500)});})(this)" class="absolute top-2 right-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-2 py-1 rounded transition-colors">Copy</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">${heading}<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-left text-xs uppercase text-zinc-400 border-b"><tr><th class="py-3 pr-4">Message</th><th class="py-3 pr-4">Status</th><th class="py-3 pr-4">Snippet</th><th class="py-3 pl-2">Suggested Reply</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
 }
 
-function renderTargetForm() {
-  return `<div class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold">Add manual target</h2><p class="text-sm text-zinc-500 mt-1">A source URL is required.</p><form method="POST" action="/marketing/targets" class="mt-4 space-y-3"><input required name="name" placeholder="Name" class="w-full border rounded-lg px-3 py-2 text-sm"><select required name="type" class="w-full border rounded-lg px-3 py-2 text-sm"><option value="">Type</option><option value="playlist">Playlist</option><option value="influencer">Influencer</option><option value="blog">Blog / media</option><option value="radio">Radio / audio</option><option value="community">Community</option></select><input required name="source_url" placeholder="Source URL" class="w-full border rounded-lg px-3 py-2 text-sm"><input name="platform" placeholder="Platform" class="w-full border rounded-lg px-3 py-2 text-sm"><input name="submission_url" placeholder="Submission/contact URL" class="w-full border rounded-lg px-3 py-2 text-sm"><select name="ai_policy" class="w-full border rounded-lg px-3 py-2 text-sm"><option value="unclear">AI unclear</option><option value="allowed">AI allowed</option><option value="disclosure_required">Disclosure required</option><option value="individual_curator_choice">Curator choice</option><option value="likely_hostile">Likely hostile</option><option value="banned">Banned</option></select><textarea name="research_summary" rows="3" placeholder="Research summary" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea><button class="w-full bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm font-semibold">Add sourced target</button></form></div>`;
+function renderReleasedSongs(entries) {
+  const heading = `<div class="flex items-center justify-between gap-3 mb-4"><div><h2 class="font-bold text-lg">Recently Released Songs</h2><p class="text-sm text-zinc-500 mt-1">${entries.length} song${entries.length !== 1 ? 's' : ''} submitted to distributor.</p></div></div>`;
+  if (!entries.length) {
+    return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">${heading}<div class="border border-dashed rounded-xl p-8 text-center text-zinc-500">No released songs with DistroKid links yet.</div></section>`;
+  }
+  const isDistrokidPlatform = p => p.toLowerCase() === 'distrokid' || p.toLowerCase() === 'distrokid_link';
+  const cards = entries.map(({ song, links, distrokidLink }) => {
+    const otherLinks = links.filter(l => !isDistrokidPlatform(l.platform));
+    const otherLinksHtml = otherLinks.map(l => `<a href="${attr(l.url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:underline">${esc(l.platform)}</a>`).join(' &middot; ');
+    const distrokidHtml = distrokidLink
+      ? `<a href="${attr(distrokidLink.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full hover:bg-indigo-100">DistroKid &#8599;</a>`
+      : `<span class="inline-flex items-center gap-1 bg-zinc-100 border border-zinc-200 text-zinc-400 text-xs px-3 py-1 rounded-full">Link pending</span>`;
+    return `<div class="border border-zinc-200 rounded-xl p-4"><div class="flex items-start justify-between gap-3"><div class="flex-1"><div class="font-semibold">${esc(song.title || '(untitled)')}</div><div class="mt-2 flex flex-wrap gap-2 items-center">${distrokidHtml}${otherLinksHtml ? `<span class="text-zinc-400 text-xs">${otherLinksHtml}</span>` : ''}</div></div><span class="${badge(song.status)}">${esc(song.status)}</span></div></div>`;
+  }).join('');
+  return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">${heading}<div class="space-y-2">${cards}</div></section>`;
 }
-
-function renderCampaign(c) { return `<div class="border rounded-xl p-4 mb-3"><div class="flex items-start justify-between gap-3"><div><div class="font-semibold">${esc(c.name)}</div><div class="text-sm text-zinc-500 mt-1">${esc(c.objective || '')}</div><div class="text-xs text-zinc-400 mt-2">Focus song: ${esc(c.focus_song_id || 'none')} | targets: ${esc((c.approved_target_ids || []).length)}</div></div><span class="${badge(c.status)}">${esc(c.status)}</span></div></div>`; }
-
-function renderTargets(targets) {
-  return `<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-left text-xs uppercase text-zinc-400 border-b"><tr><th class="py-3 pr-4">Target</th><th class="py-3 pr-4">Type</th><th class="py-3 pr-4">AI policy</th><th class="py-3 pr-4">Research</th><th class="py-3 pr-4">Status</th><th class="py-3 pr-4">Action</th></tr></thead><tbody class="divide-y">${targets.map(t => `<tr class="align-top"><td class="py-4 pr-4"><div class="font-semibold">${esc(t.name)}</div><div class="text-xs text-zinc-400">${esc(t.platform || '')}</div><a href="${attr(t.source_url)}" target="_blank" class="text-xs text-blue-600">source</a>${t.submission_url ? ` <a href="${attr(t.submission_url)}" target="_blank" class="text-xs text-blue-600">submit/contact</a>` : ''}</td><td class="py-4 pr-4">${esc(t.type)}</td><td class="py-4 pr-4">${esc(t.ai_policy || 'unclear')}</td><td class="py-4 pr-4 max-w-xl text-zinc-600">${esc(t.research_summary || '')}</td><td class="py-4 pr-4"><span class="${badge(t.status)}">${esc(t.status)}</span></td><td class="py-4 pr-4"><form method="POST" action="/marketing/targets/${encodeURIComponent(t.id)}/status" class="space-y-2"><select name="status" class="border rounded-lg px-2 py-1 text-xs">${opt('needs_review', 'Needs review', t.status)}${opt('approved', 'Approve', t.status)}${opt('rejected', 'Reject', t.status)}</select><input name="notes" value="${attr(t.notes || '')}" placeholder="Notes" class="border rounded-lg px-2 py-1 text-xs"><button class="bg-zinc-900 text-white rounded-lg px-3 py-1 text-xs">Save</button></form></td></tr>`).join('')}</tbody></table></div>`;
-}
-
-function renderRun(run) { return `<div class="border rounded-xl p-4 mb-3"><div class="font-semibold">${esc(run.run_type)} <span class="${badge(run.status)}">${esc(run.status)}</span></div><div class="text-xs text-zinc-400">${esc(run.agent_name)} — ${esc(run.id)}</div>${run.error ? `<div class="text-xs text-red-600 mt-2">${esc(run.error)}</div>` : ''}</div>`; }
-function metricSmall(value, label) { return `<div class="bg-zinc-50 rounded-lg border border-zinc-200 p-3"><div class="text-xl font-bold">${esc(value)}</div><div class="text-xs text-zinc-500 mt-0.5">${esc(label)}</div></div>`; }
-function inboxBadge(cls) { const map = { do_not_contact:'bg-red-100 text-red-700', safe_reply_candidate:'bg-emerald-100 text-emerald-700', opportunity:'bg-amber-100 text-amber-700', submission_confirmation:'bg-blue-100 text-blue-700', vendor_spam:'bg-zinc-100 text-zinc-500', needs_ken:'bg-orange-100 text-orange-700', creator_reply:'bg-violet-100 text-violet-700', playlist_reply:'bg-indigo-100 text-indigo-700', blog_media_reply:'bg-sky-100 text-sky-700' }; return `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${map[cls]||'bg-zinc-100 text-zinc-600'}`; }
-function metric(value, label) { return `<div class="bg-white rounded-xl border border-zinc-200 p-5"><div class="text-3xl font-bold">${esc(value)}</div><div class="text-sm text-zinc-500 mt-1">${esc(label)}</div></div>`; }
+function inboxBadge(cls) { const map = { do_not_contact:'bg-red-100 text-red-700', safe_reply_candidate:'bg-emerald-100 text-emerald-700', opportunity:'bg-amber-100 text-amber-700', submission_confirmation:'bg-blue-100 text-blue-700', vendor_spam:'bg-zinc-100 text-zinc-500', needs_ken:'bg-orange-100 text-orange-700', creator_reply:'bg-violet-100 text-violet-700', playlist_reply:'bg-indigo-100 text-indigo-700', blog_media_reply:'bg-sky-100 text-sky-700', platform_admin:'bg-gray-100 text-gray-500', account_admin:'bg-gray-100 text-gray-500' }; return `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${map[cls]||'bg-zinc-100 text-zinc-600'}`; }
 function banner(text, color) { return `<div class="rounded-xl border border-${color}-200 bg-${color}-50 px-4 py-3 text-sm text-${color}-800">${esc(text)}</div>`; }
 function badge(status) { return `badge ${status === 'done' || status === 'approved' || status === 'draft' ? 'badge-ok' : status === 'rejected' || String(status).startsWith('blocked') || status === 'error' ? 'badge-bad' : 'badge-warn'}`; }
 function opt(value, label, selected) { return `<option value="${attr(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`; }
