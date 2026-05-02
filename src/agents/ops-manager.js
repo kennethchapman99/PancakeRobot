@@ -74,6 +74,18 @@ function ensureYoutubeTitle(meta, metadataPath) {
   return false;
 }
 
+export function findAudioFile(songDir) {
+  const audioDir = join(songDir, 'audio');
+  const candidates = [join(songDir, 'audio.mp3'), join(songDir, 'audio.wav')];
+  if (fs.existsSync(audioDir)) {
+    const generated = fs.readdirSync(audioDir)
+      .filter(f => f.endsWith('.mp3') || f.endsWith('.wav'))
+      .map(f => join(audioDir, f));
+    candidates.push(...generated);
+  }
+  return candidates.find(filePath => fs.existsSync(filePath)) || null;
+}
+
 /**
  * Run QA checklist on a completed song pipeline run.
  * Validates actual file content, not just existence.
@@ -95,10 +107,12 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
   } else {
     const txt = fs.readFileSync(lyricsPath, 'utf8');
     const wordCount = txt.split(/\s+/).filter(Boolean).length;
-    if (!txt.includes('[CHORUS]')) fail('Lyrics', 'Missing [CHORUS] section');
-    else if (!txt.includes('[VERSE')) fail('Lyrics', 'Missing [VERSE] section');
+    const hasVerse = /\[(VERSE|VERSE\s+\d+)\]/i.test(txt);
+    const hasHookOrChorus = /\[(CHORUS|HOOK|FINAL CHORUS|FINAL HOOK)\]/i.test(txt);
+    if (!hasHookOrChorus) fail('Lyrics', 'Missing hook/chorus section ([HOOK] or [CHORUS])');
+    else if (!hasVerse) fail('Lyrics', 'Missing [VERSE] section');
     else if (wordCount < 80) fail('Lyrics', `Word count too low: ${wordCount} (min 80)`);
-    else pass('Lyrics', `${wordCount} words, has CHORUS + VERSE`);
+    else pass('Lyrics', `${wordCount} words, has hook/chorus + verse`);
   }
 
   // ── Audio prompt ───────────────────────────────────────────
@@ -111,19 +125,10 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
   }
 
   // ── Audio file (MP3) ───────────────────────────────────────
-  const audioDir = join(songDir, 'audio');
-  const audioRootMp3 = join(songDir, 'audio.mp3');
-  const audioRootWav = join(songDir, 'audio.wav');
-  let audioFilePath = null;
-  if (fs.existsSync(audioRootMp3)) audioFilePath = audioRootMp3;
-  else if (fs.existsSync(audioRootWav)) audioFilePath = audioRootWav;
-  else if (fs.existsSync(audioDir)) {
-    const mp3s = fs.readdirSync(audioDir).filter(f => f.endsWith('.mp3') || f.endsWith('.wav'));
-    if (mp3s.length > 0) audioFilePath = join(audioDir, mp3s[0]);
-  }
+  const audioFilePath = findAudioFile(songDir);
 
   if (!audioFilePath) {
-    warn('Audio file', 'No MP3/WAV yet — generate manually via audio/MUSIC_GENERATION_INSTRUCTIONS.md');
+    fail('Audio file', 'No MP3/WAV yet — generation is required before distribution package build');
   } else {
     const stat = fs.statSync(audioFilePath);
     if (stat.size < 50 * 1024) {
@@ -249,24 +254,20 @@ export async function generateHumanTasks({ songId, title, topic, songDir, metada
   const durationSec = metaJson.duration_seconds || 150;
   const durationStr = `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}`;
 
+  const audioSrc = findAudioFile(songDir);
+  if (!audioSrc) {
+    throw new Error(
+      'Distribution package blocked: no generated audio file found. ' +
+      'Generate audio first or add an MP3/WAV under the song audio folder, then rerun approval/package build.'
+    );
+  }
+
   const distDir = join(__dirname, `../../output/distribution-ready/${songId}`);
   fs.mkdirSync(distDir, { recursive: true });
 
-  const audioDir = join(songDir, 'audio');
-  let audioSrc = null;
-  let audioExt = 'mp3';
-  if (fs.existsSync(join(songDir, 'audio.mp3'))) { audioSrc = join(songDir, 'audio.mp3'); }
-  else if (fs.existsSync(join(songDir, 'audio.wav'))) { audioSrc = join(songDir, 'audio.wav'); audioExt = 'wav'; }
-  else if (fs.existsSync(audioDir)) {
-    const mp3s = fs.readdirSync(audioDir).filter(f => f.endsWith('.mp3'));
-    const wavs = fs.readdirSync(audioDir).filter(f => f.endsWith('.wav'));
-    if (mp3s.length > 0) { audioSrc = join(audioDir, mp3s[0]); }
-    else if (wavs.length > 0) { audioSrc = join(audioDir, wavs[0]); audioExt = 'wav'; }
-  }
-  if (audioSrc) {
-    fs.copyFileSync(audioSrc, join(distDir, `upload-this.${audioExt}`));
-    console.log(`[OPS] ✓ Audio copied → upload-this.${audioExt}`);
-  }
+  let audioExt = audioSrc.endsWith('.wav') ? 'wav' : 'mp3';
+  fs.copyFileSync(audioSrc, join(distDir, `upload-this.${audioExt}`));
+  console.log(`[OPS] ✓ Audio copied → upload-this.${audioExt}`);
 
   const thumbDir = join(songDir, 'thumbnails');
   if (fs.existsSync(thumbDir)) {
