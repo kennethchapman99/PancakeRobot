@@ -1,9 +1,10 @@
 /**
  * Music Generator Agent — MiniMax Music 2.6
  *
- * Final rule: MiniMax and any future provider receive only singable lyric lines.
+ * Final provider rule: MiniMax and any future provider receive only singable lyric lines.
  * Section labels, markdown, stage directions, emoji, prompt artifacts, and active
- * profile contamination are blocked before any paid render call.
+ * profile contamination are removed or blocked by the provider lyric sanitizer.
+ * QA reports findings but does not block generation.
  */
 
 import fs from 'fs';
@@ -34,29 +35,25 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
   const modelConfig = resolveMiniMaxModelConfig();
   const prompt = buildStylePrompt(audioPromptData, { title });
 
-  const preRenderQA = runPreRenderQAGate({
+  const preRenderQA = normalizeAdvisoryQaReport(runPreRenderQAGate({
     songId,
     songDir,
     title,
     lyrics: lyricsText,
     stylePrompt: prompt,
     model: modelConfig.model,
-  });
+  }));
+  persistAdvisoryPreRenderReport({ songDir, title, report: preRenderQA });
 
   if (!preRenderQA.passed) {
-    const summary = preRenderQA.failures.map(issue => `- ${issue}`).join('\n');
-    throw new Error(
-      `Pre-render QA blocked MiniMax generation for "${title}".\n` +
-      `${summary}\n` +
-      `See output/songs/${songId}/pre-render-qa.json and PRE_RENDER_QA_FAILED.md`
-    );
+    console.log('[MUSIC-GEN] ⚠ Pre-render QA found advisory issues; generation is not blocked by QA:');
+    preRenderQA.failures.forEach(f => console.log(`  • ${f}`));
   }
-
   if (preRenderQA.warnings.length > 0) {
     console.log('[MUSIC-GEN] Pre-render QA warnings:');
     preRenderQA.warnings.forEach(w => console.log(`  • ${w}`));
-  } else {
-    console.log('[MUSIC-GEN] ✓ Pre-render QA passed');
+  } else if (preRenderQA.passed) {
+    console.log('[MUSIC-GEN] ✓ Pre-render QA completed with no findings');
   }
 
   const providerLyricsReport = buildProviderLyricsPayload({ songDir, title, lyricsText });
@@ -118,15 +115,15 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     return { audioFiles: [], skipped: false, error: err.message, preRenderQA, providerLyricsReport };
   }
 
-  const postRenderQA = runPostRenderAudioQACheck({
+  const postRenderQA = normalizeAdvisoryQaReport(runPostRenderAudioQACheck({
     songId,
     songDir,
     title,
     audioFilePath: filePath,
-  });
+  }));
 
   if (!postRenderQA.passed) {
-    console.log('[MUSIC-GEN] ⚠ Post-render audio QA found blocking issues:');
+    console.log('[MUSIC-GEN] ⚠ Post-render audio QA found advisory issues:');
     postRenderQA.failures.forEach(f => console.log(`  • ${f}`));
   }
   if (postRenderQA.warnings.length > 0) {
@@ -146,7 +143,9 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     provider_lyrics_chars: renderLyrics.length,
     provider_lyrics_removed_count: providerLyricsReport.removed.length,
     pre_render_qa_passed: preRenderQA.passed,
+    pre_render_qa_blocking: false,
     post_render_qa_passed: postRenderQA.passed,
+    post_render_qa_blocking: false,
     versions: [{ version: 1, tier: modelConfig.tier, model: modelConfig.model, file: filename }],
   };
   fs.writeFileSync(join(audioDir, 'generation-meta.json'), JSON.stringify(meta, null, 2));
@@ -154,6 +153,44 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
   const audioFiles = [{ path: filePath, version: 1, model: modelConfig.model, tier: modelConfig.tier }];
   console.log(`[MUSIC-GEN] ✓ Generated ${audioFiles.length} audio file(s)`);
   return { audioFiles, skipped: false, preRenderQA, postRenderQA, providerLyricsReport };
+}
+
+export function normalizeAdvisoryQaReport(report = {}) {
+  const failures = Array.isArray(report.failures) ? report.failures : [];
+  const warnings = Array.isArray(report.warnings) ? report.warnings : [];
+  return {
+    ...report,
+    status: 'completed',
+    severity: failures.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'info',
+    blocking: false,
+  };
+}
+
+function persistAdvisoryPreRenderReport({ songDir, title, report }) {
+  if (!songDir) return;
+
+  fs.writeFileSync(join(songDir, 'pre-render-qa.json'), JSON.stringify(report, null, 2));
+
+  if (report.failures?.length > 0 || report.warnings?.length > 0) {
+    fs.writeFileSync(join(songDir, 'PRE_RENDER_QA_ADVISORY.md'), buildPreRenderAdvisoryMarkdown(title, report));
+  }
+
+  const legacyFailedPath = join(songDir, 'PRE_RENDER_QA_FAILED.md');
+  if (fs.existsSync(legacyFailedPath)) {
+    fs.rmSync(legacyFailedPath, { force: true });
+  }
+}
+
+function buildPreRenderAdvisoryMarkdown(title, report) {
+  const failures = report.failures?.length ? report.failures.map(issue => `- ${issue}`).join('\n') : '- None';
+  const warnings = report.warnings?.length ? report.warnings.map(issue => `- ${issue}`).join('\n') : '- None';
+  return `# Pre-Render QA Advisory — ${title}\n\n` +
+    `QA found issues to review. QA is advisory-only and does not block generation.\n\n` +
+    `## Findings\n\n${failures}\n\n` +
+    `## Warnings\n\n${warnings}\n\n` +
+    `## Pipeline decision rule\n\n` +
+    `- Continue unless the user rejects or requests regeneration.\n` +
+    `- Provider lyric sanitization is still mandatory and may block if no valid singable lyrics remain.\n`;
 }
 
 export function buildProviderLyricsPayload({ songDir, title, lyricsText }) {
@@ -167,6 +204,7 @@ export function buildProviderLyricsPayload({ songDir, title, lyricsText }) {
     title,
     blocked: report.blocked,
     block_reason: report.blockReason,
+    blocking: Boolean(report.blockReason || report.residualIssues?.length),
     provider_lyrics_chars: report.lyrics.length,
     removed: report.removed,
     residual_issues: report.residualIssues,
