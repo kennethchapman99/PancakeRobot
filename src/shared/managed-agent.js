@@ -19,6 +19,8 @@ import { logRun, logError } from './db.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_SLUG = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
 const CONFIG_PATH = join(__dirname, `../../${APP_SLUG}.config.json`);
+const DEFAULT_DIRECT_MAX_TOKENS = readPositiveInt(process.env.ANTHROPIC_DIRECT_MAX_TOKENS, 20000);
+const DEFAULT_DIRECT_RETRY_DELAY_MS = readPositiveInt(process.env.ANTHROPIC_DIRECT_RETRY_DELAY_MS, 5000);
 
 // Agent colors for terminal output
 const AGENT_COLORS = {
@@ -35,6 +37,11 @@ const AGENT_COLORS = {
 const ENV_NAME = `${APP_SLUG}-env`;
 
 let _client = null;
+
+function readPositiveInt(value, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 function getClient() {
   if (!_client) {
@@ -174,74 +181,111 @@ async function runAgentDirect(agentName, agentDef, task, options = {}) {
   const label = color.bold(`[${agentName.toUpperCase()}]`);
   const client = getClient();
   const model = agentDef.model || 'claude-sonnet-4-6';
-  const runId = generateRunId();
-  const startTime = Date.now();
+  const maxTokens = readPositiveInt(options.maxTokens ?? agentDef.maxTokens, DEFAULT_DIRECT_MAX_TOKENS);
+  const maxRetries = readPositiveInt(options.maxRetries ?? agentDef.maxRetries, 0);
+  const retryDelayMs = readPositiveInt(options.retryDelayMs ?? agentDef.retryDelayMs, DEFAULT_DIRECT_RETRY_DELAY_MS);
+  let lastError;
 
-  console.log(`\n${label} ${chalk.dim(`Direct call (${model}, no-tools)`)}`);
-  console.log(`${label} ${chalk.italic(task.substring(0, 120))}${task.length > 120 ? '...' : ''}`);
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      console.log(chalk.dim(`Retrying ${agentName} direct call (${attempt}/${maxRetries}) in ${retryDelayMs / 1000}s...`));
+      await new Promise(r => setTimeout(r, retryDelayMs));
+    }
 
-  const response = await client.messages.create({
-    model,
-    max_tokens: 8096,
-    system: agentDef.system,
-    messages: [{ role: 'user', content: task }],
-    stream: true,
-  });
+    const runId = generateRunId();
+    const startTime = Date.now();
 
-  let fullText = '';
-  let inputTokens = 0;
-  let outputTokens = 0;
+    try {
+      console.log(`\n${label} ${chalk.dim(`Direct call (${model}, no-tools, max_tokens=${maxTokens})`)}`);
+      console.log(`${label} ${chalk.italic(task.substring(0, 120))}${task.length > 120 ? '...' : ''}`);
 
-  for await (const event of response) {
-    if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-      process.stdout.write(color(event.delta.text));
-      fullText += event.delta.text;
-    } else if (event.type === 'message_delta' && event.usage) {
-      outputTokens = event.usage.output_tokens || 0;
-    } else if (event.type === 'message_start' && event.message?.usage) {
-      inputTokens = event.message.usage.input_tokens || 0;
+      const response = await client.messages.create({
+        model,
+        max_tokens: maxTokens,
+        system: agentDef.system,
+        messages: [{ role: 'user', content: task }],
+        stream: true,
+      });
+
+      let fullText = '';
+      let inputTokens = 0;
+      let outputTokens = 0;
+      let stopReason = null;
+
+      for await (const event of response) {
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+          process.stdout.write(color(event.delta.text));
+          fullText += event.delta.text;
+        } else if (event.type === 'message_delta') {
+          if (event.usage) outputTokens = event.usage.output_tokens || outputTokens;
+          if (event.delta?.stop_reason) stopReason = event.delta.stop_reason;
+        } else if (event.type === 'message_start' && event.message?.usage) {
+          inputTokens = event.message.usage.input_tokens || inputTokens;
+        } else if (event.type === 'message_stop' && event.message?.stop_reason) {
+          stopReason = event.message.stop_reason;
+        }
+      }
+
+      process.stdout.write('\n');
+
+      if (!fullText.trim()) {
+        throw new Error(`${agentName} direct call completed with no output`);
+      }
+
+      if (stopReason === 'max_tokens') {
+        throw new Error(`${agentName} direct call hit max_tokens=${maxTokens} before completing output`);
+      }
+
+      const runtimeSeconds = (Date.now() - startTime) / 1000;
+      const costUsd = calculateCost({ inputTokens, outputTokens, cacheReadTokens: 0 });
+
+      try {
+        logRun({
+          id: runId,
+          agentName,
+          taskSummary: task.substring(0, 200),
+          inputTokens,
+          outputTokens,
+          cacheReadTokens: 0,
+          runtimeSeconds,
+          costUsd,
+          sessionId: 'direct',
+          status: 'success',
+        });
+      } catch (dbErr) {
+        console.log(chalk.yellow(`${label} Warning: could not log run to DB — ${dbErr.message}`));
+      }
+
+      console.log(
+        `${label} ${chalk.dim(`Done in ${runtimeSeconds.toFixed(1)}s | ${inputTokens}in/${outputTokens}out tokens | $${costUsd.toFixed(5)}`)}`
+      );
+
+      return {
+        text: fullText,
+        content: [{ type: 'text', text: fullText }],
+        usage: { inputTokens, outputTokens, cacheReadTokens: 0 },
+        costUsd,
+        runtimeSeconds,
+        sessionId: 'direct',
+        runId,
+      };
+    } catch (err) {
+      lastError = err;
+      console.log(chalk.red(`\n${label} DIRECT CALL FAILED: ${err.message}`));
+
+      try {
+        logError({
+          agentName,
+          errorMessage: err.message,
+          context: { task: task.substring(0, 200), attempt, direct: true, maxTokens },
+        });
+      } catch {
+        // Logging must never hide the real model/API error.
+      }
     }
   }
 
-  process.stdout.write('\n');
-
-  if (!fullText.trim()) {
-    throw new Error(`${agentName} direct call completed with no output`);
-  }
-
-  const runtimeSeconds = (Date.now() - startTime) / 1000;
-  const costUsd = calculateCost({ inputTokens, outputTokens, cacheReadTokens: 0 });
-
-  try {
-    logRun({
-      id: runId,
-      agentName,
-      taskSummary: task.substring(0, 200),
-      inputTokens,
-      outputTokens,
-      cacheReadTokens: 0,
-      runtimeSeconds,
-      costUsd,
-      sessionId: 'direct',
-      status: 'success',
-    });
-  } catch (dbErr) {
-    console.log(chalk.yellow(`${label} Warning: could not log run to DB — ${dbErr.message}`));
-  }
-
-  console.log(
-    `${label} ${chalk.dim(`Done in ${runtimeSeconds.toFixed(1)}s | ${inputTokens}in/${outputTokens}out tokens | $${costUsd.toFixed(5)}`)}`
-  );
-
-  return {
-    text: fullText,
-    content: [{ type: 'text', text: fullText }],
-    usage: { inputTokens, outputTokens, cacheReadTokens: 0 },
-    costUsd,
-    runtimeSeconds,
-    sessionId: 'direct',
-    runId,
-  };
+  throw new Error(`Agent ${agentName} direct call failed after ${maxRetries + 1} attempts: ${lastError?.message}`);
 }
 
 /**
