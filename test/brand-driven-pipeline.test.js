@@ -2,114 +2,225 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
-const sueProfilePath = path.join(repoRoot, 'config/brand-profiles/sue-wong-heartfelt-brand-profile.json');
 const defaultProfilePath = path.join(repoRoot, 'config/brand-profile.json');
+const baseProfile = JSON.parse(fs.readFileSync(defaultProfilePath, 'utf8'));
 
-test('Sue profile forbidden-element QA catches contaminated lyricist output and accepts clean output', async () => {
-  process.env.BRAND_PROFILE_PATH = sueProfilePath;
-  const { clearBrandProfileCache } = await import('../src/shared/brand-profile.js');
+function isolatedProfile(overrides = {}) {
+  const profile = structuredClone(baseProfile);
+  const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  profile.brand_name = overrides.brand_name || `Isolated Test Artist ${id}`;
+  profile.app_title = overrides.app_title || `Isolated Test Studio ${id}`;
+  profile.brand_type = overrides.brand_type || 'test music brand';
+  profile.brand_description = overrides.brand_description || `profile-driven isolated test brand ${id}`;
+  profile.audience = {
+    ...profile.audience,
+    age_range: overrides.audience?.age_range || 'profile-defined test audience',
+    description: overrides.audience?.description || `profile-defined test listeners ${id}`,
+    guardrail: overrides.audience?.guardrail || `follow isolated profile guardrail ${id}`,
+  };
+  profile.character = {
+    ...profile.character,
+    name: overrides.character?.name || `Isolated Test Character ${id}`,
+    core_concept: overrides.character?.core_concept || `isolated test character concept ${id}`,
+    fallback_summary: overrides.character?.fallback_summary || `isolated test fallback ${id}`,
+  };
+  profile.music = {
+    ...profile.music,
+    default_style: overrides.music?.default_style || `isolated test style ${id}`,
+    default_prompt: overrides.music?.default_prompt || `isolated test arrangement ${id}`,
+  };
+  profile.distribution = {
+    ...profile.distribution,
+    default_artist: overrides.distribution?.default_artist || `Isolated Distribution Artist ${id}`,
+    default_album: overrides.distribution?.default_album || `Isolated Distribution Album ${id}`,
+    primary_genre: overrides.distribution?.primary_genre || `Isolated Genre ${id}`,
+    spotify_genres: overrides.distribution?.spotify_genres || [`isolated-spotify-${id}`],
+    youtube_tags_seed: overrides.distribution?.youtube_tags_seed || [`isolated-youtube-${id}`],
+    apple_music_genres: overrides.distribution?.apple_music_genres || [`Isolated Apple Genre ${id}`],
+    coppa_status: overrides.distribution?.coppa_status || `isolated compliance ${id}`,
+    content_advisory: overrides.distribution?.content_advisory || `isolated advisory ${id}`,
+  };
+  profile.songwriting = {
+    ...(profile.songwriting || {}),
+    ...(overrides.songwriting || {}),
+  };
+
+  return profile;
+}
+
+function writeTempProfile(profile) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'music-pipeline-profile-'));
+  const profilePath = path.join(dir, 'active-profile.json');
+  fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2));
+  return profilePath;
+}
+
+async function clearProfileCache() {
+  const { clearBrandProfileCache } = await import(`../src/shared/brand-profile.js?clear=${Date.now()}`);
   clearBrandProfileCache();
+}
 
-  const { findForbiddenElementContamination } = await import(`../src/agents/lyricist.js?sueQa=${Date.now()}`);
+test('active profile forbidden-element QA is driven by profile data only', async () => {
+  const forbiddenElements = ['forbidden echo phrase', 'legacy mascot marker', 'off profile cue'];
+  const profile = isolatedProfile({
+    songwriting: {
+      ...(baseProfile.songwriting || {}),
+      forbidden_elements: forbiddenElements,
+    },
+  });
+  process.env.BRAND_PROFILE_PATH = writeTempProfile(profile);
+  await clearProfileCache();
+
+  const { findForbiddenElementContamination } = await import(`../src/agents/lyricist.js?profileQa=${Date.now()}`);
 
   const dirty = {
-    title: 'For Sue',
-    lyrics: '[CHORUS]\nFor Sue, (clap clap), beep boop, pancake morning',
-    key_hook: 'For Sue',
-    chorus_lines: ['For Sue'],
-    audio_prompt: { special_notes: 'beep boop' },
-    metadata: { youtube_tags: ['pancake'] },
+    title: 'Profile QA Song',
+    lyrics: `[CHORUS]\nThis line says ${forbiddenElements[0]} and ${forbiddenElements[1]}`,
+    key_hook: 'Profile QA Song',
+    chorus_lines: ['Profile QA Song'],
+    audio_prompt: { special_notes: forbiddenElements[2] },
   };
+
   assert.deepEqual(
     findForbiddenElementContamination(dirty).map(item => item.element).sort(),
-    ['beep boop', 'claps', 'pancake metaphors', 'pancakes'].sort()
+    forbiddenElements.sort()
   );
 
   const clean = {
-    title: 'For Sue',
-    lyrics: '[INTRO]\nFor Sue, eighteen years of love began at home\n[CHORUS]\nFor Sue, the heart of all we know',
-    key_hook: 'For Sue, the heart of all we know',
-    chorus_lines: ['For Sue, the heart of all we know'],
-    audio_prompt: { style: 'tear-jerking emotional piano ballad' },
+    title: 'Profile QA Song',
+    lyrics: '[INTRO]\nProfile QA Song begins with clean active-profile language\n[CHORUS]\nProfile QA Song keeps the profile intact',
+    key_hook: 'Profile QA Song keeps the profile intact',
+    chorus_lines: ['Profile QA Song keeps the profile intact'],
+    audio_prompt: { style: profile.music.default_style },
   };
+
   assert.deepEqual(findForbiddenElementContamination(clean), []);
 });
 
-test('default profile drives Pancake Robot songwriting mechanics through JSON', () => {
-  const profile = JSON.parse(fs.readFileSync(defaultProfilePath, 'utf8'));
-  assert.equal(profile.brand_name, 'Pancake Robot');
-  assert.equal(profile.songwriting.output_schema.include_physical_action_cue, true);
-  assert.equal(profile.songwriting.output_schema.include_funny_long_word, true);
+test('default profile validates required songwriting mechanics from its own JSON', () => {
+  assert.equal(typeof baseProfile.brand_name, 'string');
+  assert.equal(Boolean(baseProfile.brand_name.trim()), true);
+  assert.equal(typeof baseProfile.songwriting.output_schema.include_physical_action_cue, 'boolean');
+  assert.equal(typeof baseProfile.songwriting.output_schema.include_funny_long_word, 'boolean');
 
-  for (const expected of ['claps', 'physical action cues', 'call-and-response', 'robot sounds', 'pancake imagery', 'open question ending']) {
-    assert.equal(profile.songwriting.allowed_elements.includes(expected), true, `missing ${expected}`);
+  for (const requiredField of ['allowed_elements', 'forbidden_elements', 'required_elements', 'structure_preferences']) {
+    assert.equal(Array.isArray(baseProfile.songwriting[requiredField]), true, `${requiredField} must be an array`);
   }
 });
 
-test('Sue metadata prompt uses active distribution profile and avoids positive kids metadata framing', async () => {
-  process.env.BRAND_PROFILE_PATH = sueProfilePath;
-  const { clearBrandProfileCache } = await import('../src/shared/brand-profile.js');
-  clearBrandProfileCache();
-
-  const { buildMetadataTask } = await import(`../src/agents/product-manager.js?sueMeta=${Date.now()}`);
-  const prompt = buildMetadataTask({
-    title: 'For Sue',
-    topic: 'title: For Sue',
-    lyrics: 'For Sue, Ken and the kids sing with gratitude.',
-    bpm: 72,
+test('metadata prompt uses active distribution profile without importing inactive profile values', async () => {
+  const profile = isolatedProfile({
+    brand_name: 'Metadata Fixture Brand',
+    brand_description: 'metadata fixture brand description',
+    audience: {
+      description: 'metadata fixture audience',
+      guardrail: 'metadata fixture guardrail',
+    },
+    distribution: {
+      default_artist: 'Metadata Fixture Artist',
+      default_album: 'Metadata Fixture Album',
+      primary_genre: 'Metadata Fixture Genre',
+      spotify_genres: ['metadata-fixture-spotify'],
+      youtube_tags_seed: ['metadata-fixture-youtube'],
+      apple_music_genres: ['Metadata Fixture Apple'],
+      coppa_status: 'metadata fixture compliance',
+      content_advisory: 'metadata fixture advisory',
+    },
+    songwriting: {
+      ...(baseProfile.songwriting || {}),
+      forbidden_elements: ['metadata forbidden fixture'],
+    },
   });
 
-  for (const expected of ['Singer-Songwriter', 'adult contemporary', "mother's day song", 'Sue Wong', 'Ken for Sue']) {
-    assert.equal(prompt.includes(expected), true, `prompt missing ${expected}`);
+  process.env.BRAND_PROFILE_PATH = writeTempProfile(profile);
+  await clearProfileCache();
+
+  const { buildMetadataTask } = await import(`../src/agents/product-manager.js?profileMeta=${Date.now()}`);
+  const prompt = buildMetadataTask({
+    title: 'Metadata Fixture Song',
+    topic: 'profile-driven metadata fixture topic',
+    lyrics: 'Metadata Fixture Song uses only active profile terms.',
+    bpm: 88,
+  });
+
+  for (const expected of [
+    profile.brand_name,
+    profile.brand_description,
+    profile.audience.description,
+    profile.distribution.default_artist,
+    profile.distribution.default_album,
+    profile.distribution.primary_genre,
+    profile.distribution.spotify_genres[0],
+    profile.distribution.youtube_tags_seed[0],
+    profile.distribution.apple_music_genres[0],
+    profile.distribution.content_advisory,
+    profile.distribution.coppa_status,
+  ]) {
+    assert.equal(prompt.includes(expected), true, `prompt missing active profile value: ${expected}`);
   }
 
-  assert.equal(/include at least 20 highly specific children's music search terms/i.test(prompt), false);
-  assert.equal(/"youtube_tags_seed":\s*\[[^\]]*preschool/i.test(prompt), false);
-  assert.equal(/"youtube_tags_seed":\s*\[[^\]]*toddler/i.test(prompt), false);
-  assert.equal(/Generate metadata optimized for:[\s\S]*kids action/i.test(prompt), false);
+  const inactiveDistributionValues = [
+    baseProfile.distribution.default_artist,
+    baseProfile.distribution.default_album,
+    baseProfile.distribution.primary_genre,
+    ...(baseProfile.distribution.spotify_genres || []),
+    ...(baseProfile.distribution.youtube_tags_seed || []),
+    ...(baseProfile.distribution.apple_music_genres || []),
+  ]
+    .filter(Boolean)
+    .filter(value => !JSON.stringify(profile).includes(value));
+
+  for (const inactiveValue of inactiveDistributionValues.slice(0, 10)) {
+    assert.equal(prompt.includes(inactiveValue), false, `prompt leaked inactive profile value: ${inactiveValue}`);
+  }
 });
 
 test('metadata QA ignores internal compliance notes and negated checklist language', async () => {
-  process.env.BRAND_PROFILE_PATH = defaultProfilePath;
-  const { clearBrandProfileCache } = await import('../src/shared/brand-profile.js');
-  clearBrandProfileCache();
+  const forbiddenElements = ['unsafe fixture imagery', 'adult fixture theme', 'unparseable fixture sarcasm'];
+  const profile = isolatedProfile({
+    songwriting: {
+      ...(baseProfile.songwriting || {}),
+      forbidden_elements: forbiddenElements,
+    },
+  });
+
+  process.env.BRAND_PROFILE_PATH = writeTempProfile(profile);
+  await clearProfileCache();
 
   const { findMetadataForbiddenElements } = await import(`../src/agents/product-manager.js?metadataQa=${Date.now()}`);
 
   const metadataWithInternalChecklist = {
-    title: 'Smooth In The Morning',
-    artist: 'Pancake Robot',
-    youtube_title: 'Morning Routine Song for Kids | Pancake Robot',
-    youtube_description: 'A cheerful routine song for movement and breakfast time.',
+    title: 'Metadata QA Song',
+    artist: profile.distribution.default_artist,
+    youtube_title: 'Metadata QA Song',
+    youtube_description: 'A profile-aligned description for active listeners.',
     compliance_checklist: {
-      youtube_kids_verification: [
-        'No unsafe or scary imagery',
-        'No adult themes',
-        'No sarcasm that kids cannot parse',
-      ],
+      verification: forbiddenElements.map(item => `No ${item}`),
     },
-    rationale: 'This avoids unsafe or scary imagery and avoids adult themes.',
+    rationale: `This avoids ${forbiddenElements[0]} and avoids ${forbiddenElements[1]}.`,
     performance_benchmarks: {
-      note: 'No sarcasm that kids cannot parse.',
+      note: `No ${forbiddenElements[2]}.`,
     },
   };
 
   assert.deepEqual(findMetadataForbiddenElements(metadataWithInternalChecklist), []);
 
   const publicFailure = {
-    title: 'Smooth In The Morning',
-    artist: 'Pancake Robot',
-    youtube_description: 'This video includes unsafe or scary imagery.',
+    title: 'Metadata QA Song',
+    artist: profile.distribution.default_artist,
+    youtube_description: `This public copy includes ${forbiddenElements[0]}.`,
   };
-  assert.deepEqual(findMetadataForbiddenElements(publicFailure), ['unsafe or scary imagery']);
+  assert.deepEqual(findMetadataForbiddenElements(publicFailure), [forbiddenElements[0]]);
 
   const negatedPublicCopy = {
-    title: 'Smooth In The Morning',
-    artist: 'Pancake Robot',
-    youtube_description: 'No unsafe or scary imagery, no adult themes, and no sarcasm that kids cannot parse.',
+    title: 'Metadata QA Song',
+    artist: profile.distribution.default_artist,
+    youtube_description: `No ${forbiddenElements[0]}, no ${forbiddenElements[1]}, and no ${forbiddenElements[2]}.`,
   };
   assert.deepEqual(findMetadataForbiddenElements(negatedPublicCopy), []);
 });
@@ -143,8 +254,10 @@ test('runtime static leak scan blocks hard-coded legacy assumptions in generic m
   assert.deepEqual(leaks, []);
 });
 
-test('Sue profile direct imports succeed', () => {
-  const env = { ...process.env, BRAND_PROFILE_PATH: sueProfilePath };
+test('active profile direct imports succeed with isolated profile path', () => {
+  const profile = isolatedProfile();
+  const env = { ...process.env, BRAND_PROFILE_PATH: writeTempProfile(profile) };
+
   for (const modulePath of ['src/agents/lyricist.js', 'src/agents/product-manager.js', 'src/agents/music-generator.js']) {
     const out = execFileSync(process.execPath, ['-e', `import('./${modulePath}').then(()=>console.log('OK'))`], {
       cwd: repoRoot,
