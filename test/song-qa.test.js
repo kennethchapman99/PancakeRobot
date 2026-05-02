@@ -4,13 +4,18 @@ import assert from 'node:assert/strict';
 import {
   findNonSingableLyricMarkup,
   prepareLyricsForRender,
+  runPreRenderQAGate,
   sanitizeLyricsForQA,
 } from '../src/shared/song-qa.js';
 import {
   findProviderLyricPayloadIssues,
   sanitizeLyricsForProvider,
 } from '../src/shared/lyrics-sanitizer.js';
-import { buildMiniMaxRequestBody } from '../src/agents/music-generator.js';
+import {
+  buildMiniMaxRequestBody,
+  normalizeAdvisoryQaReport,
+} from '../src/agents/music-generator.js';
+import { qaBlocksApproval } from '../src/shared/approval-gate.js';
 
 const dirtyLyrics = `# Something Went Wrong Again
 
@@ -170,5 +175,47 @@ test('final provider payload contains no section labels, markdown, emoji, or dir
   assert.doesNotMatch(body.lyrics, /\[[^\]]+\]/);
   assert.doesNotMatch(body.lyrics, /\*/);
   assert.doesNotMatch(body.lyrics, /🤖/);
+  assert.doesNotMatch(body.lyrics, /music slows|vocals start|sfx|spoken|sound effect/i);
+});
+
+test('QA reports with failures are advisory and do not block approval', () => {
+  const report = normalizeAdvisoryQaReport({
+    passed: false,
+    failures: ['Lyrics: missing [CHORUS]'],
+    warnings: [],
+    checks: [{ check: 'Lyrics', passed: false, detail: 'missing [CHORUS]' }],
+  });
+
+  assert.equal(report.status, 'completed');
+  assert.equal(report.severity, 'error');
+  assert.equal(report.blocking, false);
+  assert.equal(qaBlocksApproval(report), false);
+});
+
+test('pre-render QA failures can be reported while provider payload stays clean', () => {
+  const preRenderQA = normalizeAdvisoryQaReport(runPreRenderQAGate({
+    songId: 'TEST_SONG',
+    title: 'Wrong Title',
+    lyrics: '[VERSE 1]\nNo matching hook here\n\n[CHORUS]\nStill no matching hook here',
+    stylePrompt: 'cinematic intro, slow build',
+    model: 'bad-model',
+  }));
+
+  assert.equal(preRenderQA.passed, false);
+  assert.equal(preRenderQA.blocking, false);
+  assert.ok(preRenderQA.failures.length > 0);
+
+  const sanitized = sanitizeLyricsForProvider(dirtyLyrics, {
+    forbiddenElements: [],
+    blockBrandContamination: false,
+  });
+  const body = buildMiniMaxRequestBody({
+    model: 'music-2.6',
+    prompt: 'vocals begin immediately',
+    lyrics: sanitized.lyrics,
+  });
+
+  assert.match(body.lyrics, /Something Went Wrong Again/);
+  assert.doesNotMatch(body.lyrics, /\[[^\]]+\]/);
   assert.doesNotMatch(body.lyrics, /music slows|vocals start|sfx|spoken|sound effect/i);
 });
