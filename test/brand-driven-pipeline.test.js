@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
-const sueProfilePath = path.join(repoRoot, 'config/brand-profiles/my-new-brand.json');
+const sueProfilePath = path.join(repoRoot, 'config/brand-profiles/sue-wong-heartfelt-brand-profile.json');
 const defaultProfilePath = path.join(repoRoot, 'config/brand-profile.json');
 
 test('Sue profile forbidden-element QA catches contaminated lyricist output and accepts clean output', async () => {
