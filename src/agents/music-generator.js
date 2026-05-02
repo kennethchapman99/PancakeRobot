@@ -26,6 +26,8 @@ const PAID_MODEL = 'music-2.6';
 const FREE_MODEL = 'music-2.6-free';
 const POLL_INTERVAL_MS = 8000;
 const MAX_POLL_ATTEMPTS = 45;
+export const MINIMAX_PROVIDER_LYRICS_MAX_CHARS = Number(process.env.MINIMAX_PROVIDER_LYRICS_MAX_CHARS || 2800);
+export const MINIMAX_PROVIDER_LYRICS_WARN_CHARS = Number(process.env.MINIMAX_PROVIDER_LYRICS_WARN_CHARS || 2500);
 
 export async function generateMusic({ songId, title, lyricsText, audioPromptData }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
@@ -142,6 +144,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     style_prompt: prompt,
     provider_lyrics_chars: renderLyrics.length,
     provider_lyrics_removed_count: providerLyricsReport.removed.length,
+    provider_lyrics_length_adjustment: providerLyricsReport.lengthAdjustment,
     pre_render_qa_passed: preRenderQA.passed,
     pre_render_qa_blocking: false,
     post_render_qa_passed: postRenderQA.passed,
@@ -199,13 +202,29 @@ export function buildProviderLyricsPayload({ songDir, title, lyricsText }) {
     blockBrandContamination: true,
   });
 
+  if (report.blockReason) {
+    throw new Error(report.blockReason);
+  }
+
+  if (report.residualIssues.length > 0) {
+    throw new Error(`Provider lyric payload blocked: ${report.residualIssues.join('; ')}`);
+  }
+
+  const lengthAdjustment = enforceProviderLyricsLength(report.lyrics, {
+    maxChars: MINIMAX_PROVIDER_LYRICS_MAX_CHARS,
+    warnChars: MINIMAX_PROVIDER_LYRICS_WARN_CHARS,
+  });
+  report.lyrics = lengthAdjustment.lyrics;
+  report.lengthAdjustment = lengthAdjustment;
+
   const persistedReport = {
     checked_at: new Date().toISOString(),
     title,
     blocked: report.blocked,
     block_reason: report.blockReason,
-    blocking: Boolean(report.blockReason || report.residualIssues?.length),
+    blocking: Boolean(report.blockReason || report.residualIssues?.length || lengthAdjustment.finalChars > lengthAdjustment.maxChars),
     provider_lyrics_chars: report.lyrics.length,
+    provider_lyrics_length_adjustment: lengthAdjustment,
     removed: report.removed,
     residual_issues: report.residualIssues,
     forbidden_hits: report.forbiddenHits,
@@ -222,16 +241,63 @@ export function buildProviderLyricsPayload({ songDir, title, lyricsText }) {
     });
   }
 
-  if (report.blockReason) {
-    throw new Error(report.blockReason);
+  if (lengthAdjustment.compressed) {
+    console.log(`[MUSIC-GEN] Provider lyrics compressed for MiniMax: ${lengthAdjustment.originalChars} → ${lengthAdjustment.finalChars} chars (${lengthAdjustment.removedLines} line(s) removed)`);
+  } else if (lengthAdjustment.finalChars > lengthAdjustment.warnChars) {
+    console.log(`[MUSIC-GEN] Provider lyrics near MiniMax limit: ${lengthAdjustment.finalChars}/${lengthAdjustment.maxChars} chars`);
   }
 
-  if (report.residualIssues.length > 0) {
-    throw new Error(`Provider lyric payload blocked: ${report.residualIssues.join('; ')}`);
+  if (lengthAdjustment.finalChars > lengthAdjustment.maxChars) {
+    throw new Error(`Provider lyric payload blocked: ${lengthAdjustment.finalChars} chars exceeds MiniMax limit ${lengthAdjustment.maxChars}`);
   }
 
   console.log('[MUSIC-GEN] ✓ Provider lyrics sanitized for singable-only payload');
   return report;
+}
+
+export function enforceProviderLyricsLength(lyrics = '', { maxChars = MINIMAX_PROVIDER_LYRICS_MAX_CHARS, warnChars = MINIMAX_PROVIDER_LYRICS_WARN_CHARS } = {}) {
+  const original = String(lyrics || '').trim();
+  const originalChars = original.length;
+
+  if (originalChars <= maxChars) {
+    return {
+      lyrics: original,
+      originalChars,
+      finalChars: originalChars,
+      maxChars,
+      warnChars,
+      compressed: false,
+      removedLines: 0,
+    };
+  }
+
+  const lines = original.split('\n').map(line => line.trim()).filter(Boolean);
+  const selected = [];
+  let removedLines = 0;
+
+  for (const line of lines) {
+    const candidate = [...selected, line].join('\n');
+    if (candidate.length <= maxChars) {
+      selected.push(line);
+    } else {
+      removedLines += 1;
+    }
+  }
+
+  let shortened = selected.join('\n').trim();
+  if (shortened.length > maxChars) {
+    shortened = shortened.slice(0, maxChars).replace(/\s+\S*$/, '').trim();
+  }
+
+  return {
+    lyrics: shortened,
+    originalChars,
+    finalChars: shortened.length,
+    maxChars,
+    warnChars,
+    compressed: true,
+    removedLines,
+  };
 }
 
 function resolveMiniMaxModelConfig() {
@@ -419,7 +485,7 @@ MINIMAX_MUSIC_MODEL=music-2.6
 ${stylePrompt.substring(0, 2000)}
 \`\`\`
 
-**Lyrics** (paste into "lyrics" field — final provider-safe singable lines only, ≤3500 chars):
+**Lyrics** (paste into "lyrics" field — final provider-safe singable lines only, ≤${MINIMAX_PROVIDER_LYRICS_MAX_CHARS} chars):
 \`\`\`
 ${lyricsText}
 \`\`\`
