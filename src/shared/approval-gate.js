@@ -1,6 +1,6 @@
 /**
  * Human approval gate — shows full QA results before asking for human decision.
- * Pipeline must pass all QA checks before the human is even asked.
+ * QA is advisory-only: it may report issues, but it must not block approval.
  *
  * When WEB_PIPELINE=1 env var is set (web-triggered runs), the gate is bypassed
  * and auto-approves so the web UI can handle the real approval on the song detail page.
@@ -17,10 +17,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const BRAND_PROFILE = loadBrandProfile();
 const APP_TITLE = BRAND_PROFILE.app_title || BRAND_PROFILE.brand_name || 'Music Pipeline';
 
+export function qaBlocksApproval(_qaReport) {
+  return false;
+}
+
+function hasQaFindings(qaReport) {
+  return Boolean((qaReport?.failures?.length || 0) + (qaReport?.warnings?.length || 0));
+}
+
 /**
  * Present QA results + song info, then ask human to approve/reject/revise.
- * Throws if QA has failures (pipeline should not reach this point with failures,
- * but this is a second safety net).
+ * QA findings are warnings for the human, not pipeline blockers.
  */
 export async function approveSong({
   songId, title, topic, brandScore, costUsd,
@@ -43,24 +50,22 @@ export async function approveSong({
     for (const c of qaReport.checks) {
       const icon = c.passed
         ? (c.warning ? chalk.yellow('  ⚠') : chalk.green('  ✓'))
-        : chalk.red('  ✗');
+        : chalk.yellow('  ⚠');
       const label = c.passed
         ? (c.warning ? chalk.yellow(c.check) : chalk.green(c.check))
-        : chalk.red(c.check);
+        : chalk.yellow(c.check);
       const detail = c.detail || c.warning || '';
       console.log(`${icon} ${label}${detail ? chalk.dim(' — ' + detail) : ''}`);
     }
   }
 
-  // Hard block — don't ask human if QA failed
   if (qaReport?.failures?.length > 0) {
     console.log('');
-    console.log(chalk.red.bold('  ✗ QA FAILED — pipeline cannot proceed to human review'));
+    console.log(chalk.yellow.bold('  ⚠ QA found issues — advisory only, you can still approve'));
     for (const f of qaReport.failures) {
-      console.log(chalk.red(`    • ${f}`));
+      console.log(chalk.yellow(`    • ${f}`));
     }
-    console.log('');
-    throw new Error(`QA failed with ${qaReport.failures.length} issue(s). Fix above and re-run.`);
+    console.log(chalk.dim('  QA reports problems, but only your rejection stops the pipeline.'));
   }
 
   console.log('');
@@ -118,11 +123,15 @@ export async function approveSong({
   }
 
   // ── Decision ──────────────────────────────────────────────
+  const approvalPrompt = hasQaFindings(qaReport)
+    ? 'QA found advisory issues. APPROVE this song anyway?'
+    : 'APPROVE this song for distribution?';
+
   const { decision } = await inquirer.prompt([
     {
       type: 'list',
       name: 'decision',
-      message: chalk.bold('All checks passed. APPROVE this song for distribution?'),
+      message: chalk.bold(approvalPrompt),
       choices: [
         { name: '✓ Yes — approve and build distribution package', value: 'yes' },
         { name: '↺ Revise — send back to lyricist with notes', value: 'revise' },
