@@ -118,7 +118,7 @@ function renderGmailDraftQueueSection() {
     </div>
     ${rows ? `<div class="space-y-2">${rows}</div>` : '<div class="border border-dashed rounded-xl p-8 text-center text-zinc-500">No outreach items yet. Create an outreach run first.</div>'}
     <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
-      Gmail draft creation requires re-authorizing Gmail with compose scope: <code class="font-mono">npm run marketing:gmail:auth</code>. If your old token was read-only, delete the token file first or re-consent when prompted.
+      Gmail draft creation requires re-authorizing Gmail with compose scope: <code class="font-mono">npm run marketing:gmail:reauth</code>.
     </div>
   </section>`;
 }
@@ -142,11 +142,12 @@ function renderCampaignDraftRow({ campaign, items }) {
   return `<div class="border border-zinc-200 rounded-xl p-4">
     <div class="flex items-start justify-between gap-4">
       <div class="min-w-0">
-        <div class="font-semibold text-sm truncate">${esc(campaign.name)}</div>
+        <a href="/marketing/campaigns/${attr(campaign.id)}" class="font-semibold text-sm truncate text-blue-700 hover:underline block">${esc(campaign.name)}</a>
         <div class="text-xs text-zinc-500 mt-1">${items.length} item(s) · ${generated} generated · ${created} Gmail draft(s) · ${withEmail} with email · ${blocked} blocked/needs review</div>
         <div class="mt-2 flex flex-wrap gap-1">${itemPreview}</div>
       </div>
       <div class="flex gap-2 shrink-0">
+        <a href="/marketing/campaigns/${attr(campaign.id)}" class="border border-zinc-300 rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-zinc-50">Open</a>
         <form method="POST" action="/marketing/outreach-drafts/generate">
           <input type="hidden" name="campaign_id" value="${attr(campaign.id)}">
           <button class="bg-zinc-900 text-white rounded-lg px-3 py-1.5 text-xs font-semibold">Generate drafts</button>
