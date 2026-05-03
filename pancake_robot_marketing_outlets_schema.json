@@ -1,0 +1,4066 @@
+{
+  "schema_version": "1.0.0",
+  "created_at": "2026-05-02",
+  "purpose": "Marketing and awareness outlet database format for Pancake Robot, optimized for a marketing agent to prioritize, pitch, and track outreach while avoiding outlets with explicit anti-AI-music positions.",
+  "brand_source": {
+    "uploaded_brand_profile_summary": {
+      "name": "Pancake Robot",
+      "core_audience": "Kids 4-7, with secondary 7-10 and parent/caregiver approval",
+      "brand_promise": "Every morning is the start of an adventure — and Pancake Robot is your best friend for the whole wild ride.",
+      "positioning": "A warm, energetic, playfully absurd kids music character at the intersection of robots, breakfast/cooking, and silly adventure.",
+      "must_have_marketing_implications": [
+        "Lead with the character and parent-trust safety, not with AI novelty",
+        "Every pitch should emphasize movement, singalong, and repeatable kid participation",
+        "Best channels are kindie music, family radio, preschool teachers, parent activity creators, and screen-free kids audio",
+        "Avoid edgy, ironic, scary, adult, or controversy-led channels",
+        "Always have a 15-45 second hook clip ready because Pancake Robot’s value is easiest to understand in motion/audio"
+      ]
+    },
+    "citation_note": "Built from the uploaded Pancake Robot brand profile and current public research performed on 2026-05-02."
+  },
+  "ai_music_outreach_policy": {
+    "default_filter": "Prioritize outlets/platforms with no public anti-AI stance found or explicit AI-with-disclosure support. Exclude platforms that explicitly reject fully AI-generated music unless a future release has clear human-authorship evidence.",
+    "disclosure_principle": "Be transparent when asked or when platform policy requires it, but do not make AI the hero of parent-facing pitches. The hero is the original character, kid-safe design, catchiness, and usefulness for families/teachers.",
+    "recommended_disclosure_blurb": "Pancake Robot is an original character music project using AI-assisted production tools under human creative direction. We own/control the brand, visuals, lyrics/prompt direction, release packaging, and distribution, and we avoid impersonation, copyrighted character references, or mass-spam releases.",
+    "risk_labels": {
+      "low": "Explicitly accepts AI music with disclosure, owned channel, or platform policy allows AI under rights/anti-spam rules",
+      "medium": "No explicit anti-AI stance found; verify before outreach",
+      "high": "Major brand, taste-sensitive outlet, or explicit anti-AI / human-authorship requirement",
+      "avoid": "Do not use for current Pancake Robot AI-generated tracks"
+    },
+    "hard_exclusions_current": [
+      {
+        "name": "Musosoup",
+        "reason": "Explicitly does not accept fully AI-generated music",
+        "evidence_url": "https://musosoup.com/blog/musosoup-music-ai-policy"
+      },
+      {
+        "name": "Bandcamp",
+        "reason": "Reported ban on music created wholly or substantially by AI",
+        "evidence_url": "https://pitchfork.com/news/bandcamp-announces-ban-on-ai-music"
+      }
+    ]
+  },
+  "campaign_lanes": [
+    {
+      "id": "lane_kindie_earned_media",
+      "name": "Kindie earned media",
+      "priority": "P0",
+      "goal": "Credible reviews, premieres, radio plays, and parent-trust mentions",
+      "target_categories": [
+        "kindie_blog_review_news",
+        "family_radio_show_podcast",
+        "children_arts_radio"
+      ],
+      "best_assets": [
+        "private song link",
+        "lyrics",
+        "album art",
+        "short character description",
+        "30-sec video/visualizer",
+        "parent-safe disclosure blurb"
+      ]
+    },
+    {
+      "id": "lane_playlist_platforms",
+      "name": "Playlist and curator platforms",
+      "priority": "P0",
+      "goal": "Scalable discovery without spending weeks on manual curator scraping",
+      "target_categories": [
+        "music_submission_platform_curators",
+        "playlist_submission_platform",
+        "spotify_playlist_submission"
+      ],
+      "best_assets": [
+        "Spotify link",
+        "1-2 sentence pitch",
+        "AI disclosure when required",
+        "genre/mood/use-case tags"
+      ]
+    },
+    {
+      "id": "lane_parent_activity_creators",
+      "name": "Parent activity creators",
+      "priority": "P1",
+      "goal": "Drive awareness through practical household/classroom uses",
+      "target_categories": [
+        "parenting_activity_influencer_blog",
+        "kids_activity_youtube_creator",
+        "sensory_play_printables_shop"
+      ],
+      "best_assets": [
+        "printable",
+        "15-sec hook clip",
+        "activity steps",
+        "affiliate/sponsored offer",
+        "safe-use notes"
+      ]
+    },
+    {
+      "id": "lane_teacher_classroom",
+      "name": "Teacher and classroom resources",
+      "priority": "P1",
+      "goal": "Earn repeat listens through routines: cleanup, morning, movement breaks, counting/colors/shapes",
+      "target_categories": [
+        "teacher_editorial_resource",
+        "teacher_marketplace_distribution",
+        "b2b2parent_education_distribution"
+      ],
+      "best_assets": [
+        "free classroom kit",
+        "song link",
+        "QR printable",
+        "teacher copy",
+        "lyrics with movement cues"
+      ]
+    },
+    {
+      "id": "lane_owned_social",
+      "name": "Owned social channels",
+      "priority": "P0",
+      "goal": "Build proof, consistency, and retargetable audience before big outreach",
+      "target_categories": [
+        "owned_channel",
+        "owned_social_channel"
+      ],
+      "best_assets": [
+        "vertical clips",
+        "album art",
+        "caption templates",
+        "link-in-bio",
+        "release calendar"
+      ]
+    },
+    {
+      "id": "lane_awards_trust",
+      "name": "Awards and trust badges",
+      "priority": "P1",
+      "goal": "Create parent-trust proof for landing pages, pitches, and DistroKid/Spotify/YouTube copy",
+      "target_categories": [
+        "family_awards_music",
+        "family_awards_parenting_editorial",
+        "family_media_review_quality_seal"
+      ],
+      "best_assets": [
+        "full album",
+        "music video",
+        "lyrics",
+        "age guardrails",
+        "rights/disclosure statement",
+        "press kit"
+      ]
+    }
+  ],
+  "outreach_scoring_model": {
+    "fit_score_inputs": {
+      "direct_kids_music_relevance": 30,
+      "parent_teacher_decision_maker_access": 20,
+      "openness_to_independent_artists": 15,
+      "ability_to_drive_repeat_listens": 15,
+      "AI_music_acceptability_or_unknown_not_negative": 10,
+      "ease_of_contact_or_submission": 10
+    },
+    "priority_definitions": {
+      "P0": "Start here; high fit or mandatory release hygiene",
+      "P1": "Strong fit; use once assets are ready",
+      "P2": "Useful expansion or conditional fit",
+      "P3": "Only after traction or with a strong trend/story hook",
+      "AVOID_FOR_FULLY_AI": "Exclude from current default outreach"
+    }
+  },
+  "universal_fields_for_marketing_agent": {
+    "recommended_gmail_labels": [
+      "PR/P0 Kindie",
+      "PR/P1 Parent Creator",
+      "PR/Playlist Platform",
+      "PR/Teacher Resource",
+      "PR/Awards",
+      "PR/Needs Ken",
+      "PR/Do Not Contact - AI Restriction"
+    ],
+    "recommended_tracking_statuses": [
+      "not_started",
+      "queued",
+      "sent_initial",
+      "opened_or_replied",
+      "needs_ken",
+      "assets_requested",
+      "accepted",
+      "declined",
+      "no_response_after_2_followups",
+      "do_not_contact",
+      "blocked_ai_policy"
+    ],
+    "recommended_contact_safety_rules": [
+      "Do not hide AI use if platform requires disclosure or asks directly",
+      "Do not pitch children’s music into adult/edgy outlets",
+      "Do not mass-send identical copy; personalize at least category, song, and why-fit",
+      "Do not contact outlets whose profile explicitly rejects AI-generated music",
+      "Do not imply endorsement, review, playlist add, award, or child-development benefit unless actually obtained",
+      "Do not use manipulative child-targeted CTAs; pitch to parents/teachers/curators, not directly to kids"
+    ]
+  },
+  "outlet_targets": [
+    {
+      "id": "zooglobble",
+      "name": "Zooglobble",
+      "category": "kindie_blog_review_news",
+      "priority": "P0",
+      "brand_fit_score_0_100": 96,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "blog",
+        "newsletter",
+        "YouTube/Vimeo/social links"
+      ],
+      "url": "https://www.zooglobble.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Site includes 'Submitting Music for Review' section; confirm current process before sending",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents and kindie music fans",
+        "age_fit": "family / kids music",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Directly focused on 'Kids Music Worth Sharing' and kindie music discovery",
+        "Best-fit earned media target for a Pancake Robot single, album, or video premiere",
+        "Audience is already primed for parent-tolerable, playful, high-quality children’s music"
+      ],
+      "best_pancake_robot_angles": [
+        "Robot + breakfast + resilience character hook",
+        "Kindie earworm for kids that parents can tolerate",
+        "Premiere a 30-45 second music video clip or visualizer",
+        "Seasonal songs: summer, chores, breakfast, school morning"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A new kindie character at the intersection of robots, breakfast, and absurd morning adventure — designed for 4-7 year-olds but parent-safe enough for repeat play.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No explicit anti-AI music stance found in reviewed public snippets. Because this is a taste-driven kindie editorial site, disclose carefully and lead with human creative direction, parent-safety, and original character IP.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.zooglobble.com/",
+        "https://www.zooglobble.com/?category=Reviews",
+        "https://www.zooglobble.com/?category=Reviews&offset=1426429140000"
+      ]
+    },
+    {
+      "id": "spare_the_rock_spoil_the_child",
+      "name": "Spare the Rock, Spoil the Child",
+      "category": "family_radio_show_podcast",
+      "priority": "P0",
+      "brand_fit_score_0_100": 95,
+      "status": "prospect",
+      "platforms": [
+        "radio",
+        "podcast",
+        "PRX",
+        "affiliate stations"
+      ],
+      "url": "https://sparetherock.com/wordpress/",
+      "social_handles": {},
+      "contact": {
+        "email": "show@sparetherock.com",
+        "submission_path": "Email show / check site for latest submission preference"
+      },
+      "audience": {
+        "primary": "families seeking indie music for kids and grownups",
+        "age_fit": "under 5, 6-10, 11+",
+        "geo": "US/Canada via affiliates and podcast"
+      },
+      "why_it_fits_pancake_robot": [
+        "Weekly family music show; 'indie music for indie kids'",
+        "Plays kids music alongside kid-friendly adult artists, matching Pancake Robot’s parent-tolerable ambition",
+        "Strong distribution via PRX and affiliates"
+      ],
+      "best_pancake_robot_angles": [
+        "High-energy robot breakfast song for weekend family listening",
+        "Back-to-school/morning routine feature",
+        "Kindie track with mimicry triggers: claps, sizzles, beeps, FLIP shout"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "Pancake Robot is a high-energy breakfast-adventure kindie act with a hook-first chorus, two-clap ritual, and parent-safe absurd comedy.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No explicit anti-AI music stance found in reviewed public snippets. High taste sensitivity; pitch only polished, non-generic tracks.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://sparetherock.fireside.fm/",
+        "https://sparetherock.com/wordpress/listen/",
+        "https://tunein.com/podcasts/Rock/Spare-the-Rock-Spoil-the-Child-radio-feed-p399197/",
+        "https://exchange.prx.org/series/32696-spare-the-rock-spoil-the-child"
+      ]
+    },
+    {
+      "id": "youtube_kids_channel_owned",
+      "name": "Owned YouTube / YouTube Kids-Ready Channel",
+      "category": "owned_channel",
+      "priority": "P0",
+      "brand_fit_score_0_100": 94,
+      "status": "prospect",
+      "platforms": [
+        "YouTube",
+        "YouTube Shorts",
+        "YouTube Kids eligibility via compliance"
+      ],
+      "url": "https://www.youtube.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Owned channel; publish official videos/shorts/visualizers"
+      },
+      "audience": {
+        "primary": "parents/kids on YouTube and YouTube Kids surfaces",
+        "age_fit": "4-7 core, family",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Kids music discovery is heavily video-driven",
+        "Pancake Robot is a visual character brand, not just audio",
+        "Owned channel enables consistent character continuity and SEO"
+      ],
+      "best_pancake_robot_angles": [
+        "30-45 sec lyric/visualizer clips",
+        "Full song videos with clear title text",
+        "Vertical Shorts: chorus-only, gesture-led, no clutter"
+      ],
+      "recommended_pitch_type": "owned_distribution",
+      "sample_pitch_hook": "Every song becomes: full video, 30-sec Short, 15-sec hook clip, and a printable/activity link.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "allowed_with_synthetic_disclosure_where_required",
+        "risk_level": "low",
+        "notes": "YouTube requires disclosure for meaningfully altered or synthetically generated realistic content; Pancake Robot animation is fictional, but disclose when required and avoid realistic deception.",
+        "evidence_urls": [
+          "https://support.google.com/youtube/answer/14328491?hl=en"
+        ],
+        "recommended_action": "Use YouTube altered/synthetic disclosure settings when applicable; mark content as made for kids when appropriate after reviewing COPPA requirements."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://support.google.com/youtube/answer/14328491?hl=en"
+      ]
+    },
+    {
+      "id": "saturday_morning_cereal_bowl",
+      "name": "The Saturday Morning Cereal Bowl",
+      "category": "family_music_podcast_radio",
+      "priority": "P0",
+      "brand_fit_score_0_100": 94,
+      "status": "prospect",
+      "platforms": [
+        "podcast",
+        "Podbean",
+        "Apple Podcasts",
+        "SoundCarrot"
+      ],
+      "url": "https://saturdaycerealbowl.podbean.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Check Podbean/site/social for current submission route",
+        "email": null
+      },
+      "audience": {
+        "primary": "families looking for weekly kids/family music",
+        "age_fit": "under 5, 6-10, 11+",
+        "geo": "US/global podcast"
+      },
+      "why_it_fits_pancake_robot": [
+        "Two-hour family music program and podcast",
+        "Historically highlights current and classic kindie music",
+        "Pancake Robot’s upbeat hooks fit radio-friendly family blocks"
+      ],
+      "best_pancake_robot_angles": [
+        "Robot singalong with a clear action cue",
+        "Song built for Saturday morning breakfast/dance party",
+        "Family-safe novelty track with repeatable catchphrase"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "This sounds like a Saturday morning kitchen dance party: Pancake Robot turns breakfast into a singalong with a two-clap chorus drop and a kid-shoutable FLIP hook.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://saturdaycerealbowl.podbean.com/",
+        "https://saturdaycerealbowl.podbean.com/p/about/",
+        "https://soundcarrot.com/shows/the-saturday-morning-cereal-bowl/",
+        "https://podcasts.apple.com/ca/podcast/the-saturday-morning-cereal-bowl/id1016210217"
+      ]
+    },
+    {
+      "id": "nappa_awards",
+      "name": "NAPPA Awards",
+      "category": "family_awards_music",
+      "priority": "P0",
+      "brand_fit_score_0_100": 92,
+      "status": "prospect",
+      "platforms": [
+        "awards",
+        "website",
+        "newsletter",
+        "social",
+        "L.A. Parent media partner"
+      ],
+      "url": "https://www.nappaawards.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Submit through NAPPA entry process; email listed in FAQ for category questions",
+        "email": "elena.epstein@nappaawards.com"
+      },
+      "audience": {
+        "primary": "parents, families, product/media buyers",
+        "age_fit": "children/family",
+        "geo": "US national"
+      },
+      "why_it_fits_pancake_robot": [
+        "NAPPA explicitly evaluates music and music videos",
+        "Awards provide trust badges and reusable credibility for parents",
+        "Useful for long-term SEO and paid/earned social proof"
+      ],
+      "best_pancake_robot_angles": [
+        "Submit best full album or standout single/music video",
+        "Lean into parent-trust, education-through-silliness, and replay value",
+        "Use award status in DistroKid/Spotify/YouTube descriptions if won"
+      ],
+      "recommended_pitch_type": "award_submission",
+      "sample_pitch_hook": "Family music/video submission: Pancake Robot uses breakfast, robots, movement cues, and mistake-recovery comedy to create parent-trustworthy singalong songs.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No explicit anti-AI stance found in reviewed snippets. Award judging may examine authorship/quality; disclose only as required and ensure rights are clean.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.nappaawards.com/get-to-know-nappa/",
+        "https://www.nappaawards.com/frequently-asked-questions/",
+        "https://www.nappaawards.com/product-types/music/"
+      ]
+    },
+    {
+      "id": "ican_radio",
+      "name": "ICAN — International Children’s Arts Network",
+      "category": "children_arts_radio",
+      "priority": "P0",
+      "brand_fit_score_0_100": 91,
+      "status": "prospect",
+      "platforms": [
+        "children's radio",
+        "website"
+      ],
+      "url": "https://icanradio.org/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Contact through ICAN site; confirm music submission process",
+        "email": null
+      },
+      "audience": {
+        "primary": "children, families, educators interested in arts/music/literature",
+        "age_fit": "children/family",
+        "geo": "US/global streaming"
+      },
+      "why_it_fits_pancake_robot": [
+        "Dedicated children’s arts radio station",
+        "Mission includes music, culture, learning, and joy",
+        "Fits safe, imaginative, high-quality audio-first Pancake Robot songs"
+      ],
+      "best_pancake_robot_angles": [
+        "Pancake Robot as safe music for car rides, quiet reading, chores, and classroom listening",
+        "Arts + imagination + movement angle",
+        "Seasonal or global-adventure song themes"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A joyful, character-driven kids song built for screen-free listening: warm, silly, movement-friendly, and safe enough for classrooms.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://icanradio.org/"
+      ]
+    },
+    {
+      "id": "kids_radio",
+      "name": "Kids.Radio",
+      "category": "kids_audio_platform",
+      "priority": "P0",
+      "brand_fit_score_0_100": 90,
+      "status": "prospect",
+      "platforms": [
+        "kids radio",
+        "streaming library",
+        "app",
+        "podcasts"
+      ],
+      "url": "https://kids.radio/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use site contact; investigate catalog submission requirements",
+        "email": null
+      },
+      "audience": {
+        "primary": "families seeking music, podcasts, books, games for kids",
+        "age_fit": "children/family",
+        "geo": "global/app"
+      },
+      "why_it_fits_pancake_robot": [
+        "Audio-first destination built for kids",
+        "Has curated kids radio and children’s music library positioning",
+        "Pancake Robot can be framed as screen-free singalong content"
+      ],
+      "best_pancake_robot_angles": [
+        "Screen-free kid music for car rides and dance breaks",
+        "Character songs with movement cues",
+        "Album playlist inclusion"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "Pancake Robot gives families a screen-free breakfast adventure soundtrack: bright hooks, call-and-response sounds, and safe silly stories.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://kids.radio/"
+      ]
+    },
+    {
+      "id": "spotify_for_artists_editorial",
+      "name": "Spotify for Artists — Editorial Pitch",
+      "category": "official_streaming_editorial_pitch",
+      "priority": "P0",
+      "brand_fit_score_0_100": 90,
+      "status": "prospect",
+      "platforms": [
+        "Spotify"
+      ],
+      "url": "https://artists.spotify.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Pitch one unreleased song in Spotify for Artists at least 7 days before release"
+      },
+      "audience": {
+        "primary": "Spotify editorial and algorithmic audiences",
+        "age_fit": "family/kids if tagged correctly",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Official editorial pitching path",
+        "At minimum, timely pitch gets song into followers’ Release Radar",
+        "Critical hygiene for every release"
+      ],
+      "best_pancake_robot_angles": [
+        "Children's music",
+        "family",
+        "singalong",
+        "movement",
+        "morning routine",
+        "novelty",
+        "seasonal"
+      ],
+      "recommended_pitch_type": "owned_platform_hygiene",
+      "sample_pitch_hook": "Pancake Robot is a bright, parent-safe kids song built around breakfast adventure, two-clap participation, and a chorus children can sing by the second listen.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "platform_accepts_ai_under_rules_via_distributor_disclosure",
+        "risk_level": "low",
+        "notes": "Use distributor/metadata disclosure where required. Spotify pitching itself is official, but AI policy/labels are evolving; avoid spam, impersonation, and unclear authorship.",
+        "evidence_urls": [
+          "https://support.spotify.com/artists/article/pitching-music-to-playlist-editors",
+          "https://support.distrokid.com/hc/en-us/articles/41182362733715-Can-I-Upload-Music-Made-With-AI-Tools-to-DistroKid"
+        ],
+        "recommended_action": "Pitch every unreleased track at least 7 days before release and use DistroKid AI credits/disclosures when applicable."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://support.spotify.com/artists/article/pitching-music-to-playlist-editors",
+        "https://support.distrokid.com/hc/en-us/articles/41182362733715-Can-I-Upload-Music-Made-With-AI-Tools-to-DistroKid",
+        "https://support.distrokid.com/hc/en-us/articles/50784235803411-What-Are-AI-Credits"
+      ]
+    },
+    {
+      "id": "instagram_reels_owned",
+      "name": "Owned Instagram Reels — @pancakerobotmusic",
+      "category": "owned_social_channel",
+      "priority": "P0",
+      "brand_fit_score_0_100": 89,
+      "status": "prospect",
+      "platforms": [
+        "Instagram",
+        "Reels"
+      ],
+      "url": "https://www.instagram.com/pancakerobotmusic/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Owned channel; post hook clips, album art, activity posts, behind-the-scenes"
+      },
+      "audience": {
+        "primary": "parents/caregivers, teachers, kid-content fans",
+        "age_fit": "parent-facing",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Parent-facing awareness channel",
+        "Useful for influencer tagging, paid boosts, and visual consistency",
+        "Best way to build proof before pitching bigger outlets"
+      ],
+      "best_pancake_robot_angles": [
+        "Choretime challenge",
+        "Silly Summer clips",
+        "Pancake Robot Clap",
+        "Parent-safe repeat play"
+      ],
+      "recommended_pitch_type": "owned_distribution",
+      "sample_pitch_hook": "Post a consistent release kit for every song: hook clip, activity idea, carousel lyric, and link-in-bio CTA.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "owned_channel_transparency_required",
+        "risk_level": "low",
+        "notes": "Owned channel; disclose AI use in brand FAQ/bio highlights rather than every casual caption unless platform policy requires it.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": []
+    },
+    {
+      "id": "groover",
+      "name": "Groover",
+      "category": "music_submission_platform_curators",
+      "priority": "P0",
+      "brand_fit_score_0_100": 88,
+      "status": "prospect",
+      "platforms": [
+        "curator marketplace",
+        "blogs",
+        "playlists",
+        "radio"
+      ],
+      "url": "https://groover.co/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Create Groover campaign; disclose AI-generated/AI-assisted status via checkbox; filter curators who accept AI music"
+      },
+      "audience": {
+        "primary": "music curators, blogs, playlists, radios",
+        "age_fit": "varies by curator",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Explicitly allows artists to share AI-generated music with disclosure",
+        "Curators can opt out, which helps avoid anti-AI targets",
+        "Good scalable first-pass outreach system for independent music"
+      ],
+      "best_pancake_robot_angles": [
+        "Target family/kids, novelty pop, indie pop, upbeat playlists",
+        "Use clear disclosure and human creative direction in pitch",
+        "Avoid curators whose profile rejects AI music"
+      ],
+      "recommended_pitch_type": "platform_campaign",
+      "sample_pitch_hook": "A transparent AI-assisted kids/kindie release with original character IP, human-led creative direction, and a polished parent-safe hook.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "explicitly_allows_with_disclosure",
+        "risk_level": "low",
+        "notes": "Groover says AI-generated music can be shared if declared, while individual curators may opt out.",
+        "evidence_urls": [
+          "https://help.groover.co/en/articles/11878939-can-i-share-ai-generated-music-on-groover",
+          "https://help.groover.co/en/articles/11879016-do-i-have-to-accept-ai-generated-music-on-groover"
+        ],
+        "recommended_action": "Use Groover’s AI checkbox; only pitch curators shown as open to AI music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://help.groover.co/en/articles/11878939-can-i-share-ai-generated-music-on-groover",
+        "https://help.groover.co/en/articles/11879016-do-i-have-to-accept-ai-generated-music-on-groover"
+      ]
+    },
+    {
+      "id": "classroom_playlist_curators",
+      "name": "Spotify Classroom / Clean-Up / Movement Playlist Curators",
+      "category": "playlist_segment_not_single_outlet",
+      "priority": "P0",
+      "brand_fit_score_0_100": 88,
+      "status": "prospect",
+      "platforms": [
+        "Spotify",
+        "Apple Music",
+        "YouTube playlists"
+      ],
+      "url": null,
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use Groover/SubmitHub/manual Spotify curator research; build target list by playlist title"
+      },
+      "audience": {
+        "primary": "teachers and parents using transition/movement music",
+        "age_fit": "PreK-2",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Pancake Robot songs naturally map to classroom routines and movement breaks",
+        "Higher conversion than generic kids music playlists",
+        "Best segment for Choretime, cleanup, breakfast, counting, weather, seasons"
+      ],
+      "best_pancake_robot_angles": [
+        "Clean-up song",
+        "Morning routine song",
+        "Movement break",
+        "Counting/colors song",
+        "Summer camp/daycare activity"
+      ],
+      "recommended_pitch_type": "manual_playlist_research_segment",
+      "sample_pitch_hook": "A classroom-safe, high-energy transition song with clear actions kids can follow immediately.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "Curator-by-curator AI stance; filter manually and avoid any profile that rejects AI-generated content.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": []
+    },
+    {
+      "id": "tiktok_owned",
+      "name": "Owned TikTok — Pancake Robot Music",
+      "category": "owned_social_channel",
+      "priority": "P0",
+      "brand_fit_score_0_100": 87,
+      "status": "prospect",
+      "platforms": [
+        "TikTok"
+      ],
+      "url": null,
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Owned channel; create/claim account and post gesture-led clips"
+      },
+      "audience": {
+        "primary": "parents, teachers, kid-song discovery, short-form trend audience",
+        "age_fit": "parent-facing",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Movement hooks and kid-repeatable gestures fit short-form",
+        "Good place to test which chorus clips trigger saves/shares",
+        "Potential feeder for Playlist Push TikTok campaigns"
+      ],
+      "best_pancake_robot_angles": [
+        "Two-clap chorus drop",
+        "Robot arms dance",
+        "Choretime cleanup challenge",
+        "Pancake flip gesture"
+      ],
+      "recommended_pitch_type": "owned_distribution",
+      "sample_pitch_hook": "Every Pancake Robot song needs a gesture-led TikTok loop that parents can copy with kids in 10 seconds.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "owned_channel_transparency_required",
+        "risk_level": "low",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": []
+    },
+    {
+      "id": "kids_can_groove",
+      "name": "Kids Can Groove",
+      "category": "kindie_blog_review",
+      "priority": "P1",
+      "brand_fit_score_0_100": 86,
+      "status": "prospect",
+      "platforms": [
+        "blog",
+        "email"
+      ],
+      "url": "https://kidscangroove.com/",
+      "social_handles": {},
+      "contact": {
+        "email": "kidscangroove@gmail.com",
+        "submission_path": "Email listed on About page"
+      },
+      "audience": {
+        "primary": "families seeking indie music for kids",
+        "age_fit": "kids/family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Focused on indie music for kids",
+        "Strong fit for parent-tolerable, danceable, non-condescending kids music",
+        "Contact email publicly listed"
+      ],
+      "best_pancake_robot_angles": [
+        "Pancake Robot as kindie dance/food/robot novelty",
+        "Album review or single spotlight",
+        "Printable activity tie-in"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "Pancake Robot is a kindie act for kids who like to dance, shout sound effects, and turn breakfast into an adventure.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://kidscangroove.com/about/",
+        "https://kidscangroove.com/category/music-2/reviews/"
+      ]
+    },
+    {
+      "id": "sonata_music_adventures",
+      "name": "Sonata Music Adventures",
+      "category": "youtube_kids_music_educator",
+      "priority": "P1",
+      "brand_fit_score_0_100": 84,
+      "status": "prospect",
+      "platforms": [
+        "YouTube",
+        "classes",
+        "website"
+      ],
+      "url": "https://sonatamusicadventures.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use website contact; pitch collaboration, duet, classroom activity, or creator-to-creator exchange",
+        "email": null
+      },
+      "audience": {
+        "primary": "babies, toddlers, preschoolers, families in music classes and YouTube",
+        "age_fit": "3 months-5 years",
+        "geo": "Canada/global YouTube"
+      },
+      "why_it_fits_pancake_robot": [
+        "Music classes for babies/toddlers/preschoolers",
+        "YouTube channel with large audience in preschool music",
+        "Pancake Robot’s movement and sound-copying mechanics fit class activities"
+      ],
+      "best_pancake_robot_angles": [
+        "Use Pancake Robot clap as classroom activity",
+        "Joint preschool music movement video",
+        "Breakfast rhythm game"
+      ],
+      "recommended_pitch_type": "creator_collaboration",
+      "sample_pitch_hook": "A preschool-ready robot song with built-in clap, sizzle, and flip gestures that can become a repeatable class activity.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://sonatamusicadventures.com/"
+      ]
+    },
+    {
+      "id": "happy_toddler_playtime",
+      "name": "Happy Toddler Playtime",
+      "category": "parenting_activity_influencer_blog",
+      "priority": "P1",
+      "brand_fit_score_0_100": 83,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "Instagram",
+        "Pinterest",
+        "Etsy/shop"
+      ],
+      "url": "https://happytoddlerplaytime.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use Work With Me / Contact page",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents of toddlers/preschoolers seeking crafts, sensory play, printables",
+        "age_fit": "0-12 with toddler/preschool strength",
+        "geo": "US/Canada/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Strong fit for Pancake Robot activity tie-ins: pancake counting, chore songs, color/shape printables",
+        "Sensory/craft audience overlaps with music-and-movement home activities",
+        "Better as sponsored or affiliate-style campaign than editorial music pitch"
+      ],
+      "best_pancake_robot_angles": [
+        "Printable Pancake Robot pancake-stack counting game",
+        "Choretime dance challenge for toddlers",
+        "Summer popsicle/sprinkler craft + song clip"
+      ],
+      "recommended_pitch_type": "paid_or_affiliate_creator_collaboration",
+      "sample_pitch_hook": "A free printable pancake-stack activity paired with a short Pancake Robot song clip for parents who need a quick, happy 5-minute activity.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://happytoddlerplaytime.com/",
+        "https://happytoddlerplaytime.com/instagram/"
+      ]
+    },
+    {
+      "id": "parents_awards",
+      "name": "Parents Awards / Parents.com",
+      "category": "family_awards_parenting_editorial",
+      "priority": "P1",
+      "brand_fit_score_0_100": 83,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "awards",
+        "editorial"
+      ],
+      "url": "https://www.parents.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Review current awards calendar and submission guidelines",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents/caregivers",
+        "age_fit": "baby through family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Parents brand has strong trust with caregivers",
+        "Award seal or editorial mention would be valuable credibility",
+        "Best for album/activity bundle, not just a standalone song"
+      ],
+      "best_pancake_robot_angles": [
+        "Screen-free listening for car rides and dance parties",
+        "Music + printable activity as family product",
+        "Safe routine songs: chores, breakfast, morning transitions"
+      ],
+      "recommended_pitch_type": "award_or_editorial_pitch",
+      "sample_pitch_hook": "A parent-safe, screen-free music character for morning routines and movement breaks — catchy enough for kids, intentionally tolerable for adults.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.parents.com/parents-awards-submission-dates-guidelines-faqs-8717098",
+        "https://www.parents.com/parents-product-review-guidelines-5271118"
+      ]
+    },
+    {
+      "id": "kids_listen",
+      "name": "Kids Listen",
+      "category": "kids_podcast_network_community",
+      "priority": "P1",
+      "brand_fit_score_0_100": 82,
+      "status": "prospect",
+      "platforms": [
+        "network",
+        "directory",
+        "creator community"
+      ],
+      "url": "https://kidslisten.org/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Explore membership/partnership; pitch only if Pancake Robot builds podcast/audio-story extensions",
+        "email": null
+      },
+      "audience": {
+        "primary": "kids podcast creators, families, educators",
+        "age_fit": "children/family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Resource for high-quality screen-free media for children",
+        "Could become valuable if Pancake Robot expands into story-song podcast episodes",
+        "Strong alignment with audio-first kid-safe content standards"
+      ],
+      "best_pancake_robot_angles": [
+        "Pancake Robot micro-podcast: 3-minute story + song",
+        "Kids Listen mashup or cross-promo if accepted",
+        "Creator community learning and ethical kid-audio standards"
+      ],
+      "recommended_pitch_type": "community_membership_or_partnership",
+      "sample_pitch_hook": "Pancake Robot can become a screen-free story-song format: short kitchen adventure, one movement cue, one song, one open-ended question.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://kidslisten.org/about",
+        "https://kidslisten.org/directory/noodle-loaf"
+      ]
+    },
+    {
+      "id": "kids_dance_playlist_curators",
+      "name": "Spotify/YouTube Kids Dance Playlist Curators",
+      "category": "playlist_segment_not_single_outlet",
+      "priority": "P1",
+      "brand_fit_score_0_100": 82,
+      "status": "prospect",
+      "platforms": [
+        "Spotify",
+        "YouTube",
+        "Apple Music"
+      ],
+      "url": null,
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Research playlists by terms: kids dance, movement songs, preschool dance, brain break"
+      },
+      "audience": {
+        "primary": "parents and teachers searching movement music",
+        "age_fit": "3-8",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Pancake Robot’s sonic DNA includes dance, claps, mimicry, and high energy",
+        "Good fit for Shorts/Reels clips",
+        "Can be pitched by song use-case rather than artist fame"
+      ],
+      "best_pancake_robot_angles": [
+        "Pancake Robot Clap",
+        "Robot dance",
+        "FLIP gesture",
+        "Summer movement song"
+      ],
+      "recommended_pitch_type": "manual_playlist_research_segment",
+      "sample_pitch_hook": "A bright kids dance song with an immediate action cue: clap twice, robot arms, FLIP.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": []
+    },
+    {
+      "id": "common_sense_media",
+      "name": "Common Sense Media",
+      "category": "family_media_review_quality_seal",
+      "priority": "P1",
+      "brand_fit_score_0_100": 81,
+      "status": "prospect",
+      "platforms": [
+        "reviews",
+        "selections",
+        "family guidance"
+      ],
+      "url": "https://www.commonsensemedia.org/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use corporate/partnership or editorial contact route; review if independent music submissions are accepted",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents and educators looking for age-appropriate media",
+        "age_fit": "children/family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Age-appropriateness review would be highly reusable trust proof",
+        "Brand guardrails are already aligned to parent safety",
+        "Good long-term target once Pancake Robot has videos/catalog depth"
+      ],
+      "best_pancake_robot_angles": [
+        "Age-safe, no scary themes, no shame, no conflict without resolution",
+        "Music with movement and educational micro-payload",
+        "Screen-free audio plus YouTube Kids-safe visuals"
+      ],
+      "recommended_pitch_type": "review_or_selection_inquiry",
+      "sample_pitch_hook": "Pancake Robot is built to pass a PBS Kids-at-8am safety test: warm, silly, active, and designed around mistake recovery without shame.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.commonsensemedia.org/",
+        "https://www.commonsensemedia.org/about-us/our-mission/faqs"
+      ]
+    },
+    {
+      "id": "busy_toddler",
+      "name": "Busy Toddler",
+      "category": "parenting_activity_blog_influencer",
+      "priority": "P1",
+      "brand_fit_score_0_100": 80,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "Instagram",
+        "newsletter"
+      ],
+      "url": "https://busytoddler.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use site contact/work-with-me route; pitch activity bundle, not standalone music",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents seeking simple toddler/pre-k/kindergarten activities",
+        "age_fit": "baby through tweens, strongest toddler/pre-k",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Hands-on play-based learning audience",
+        "Pancake Robot can package songs with low-prep activities",
+        "Great for chores, summer, sensory bins, fine motor pancake stack activities"
+      ],
+      "best_pancake_robot_angles": [
+        "Song + printable activity",
+        "Screen-light morning routine toolkit",
+        "Pancake Robot 'two-clap cleanup' routine"
+      ],
+      "recommended_pitch_type": "paid_or_affiliate_creator_collaboration",
+      "sample_pitch_hook": "A low-prep activity + song bundle that turns cleanup, breakfast, or color sorting into a two-minute singalong routine.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://busytoddler.com/",
+        "https://busytoddler.com/instagram/"
+      ]
+    },
+    {
+      "id": "soundcarrot",
+      "name": "SoundCarrot",
+      "category": "kids_podcast_directory_discovery",
+      "priority": "P1",
+      "brand_fit_score_0_100": 80,
+      "status": "prospect",
+      "platforms": [
+        "directory",
+        "website"
+      ],
+      "url": "https://soundcarrot.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use problem/contact route or site submission if available; strongest after launching a Pancake Robot podcast/audio show",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents and kids seeking family-safe podcasts",
+        "age_fit": "children/family",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Family podcast discovery site with music category",
+        "Kid-verified/family-friendly positioning fits Pancake Robot audio extensions",
+        "Good discovery channel after song-based podcast episodes exist"
+      ],
+      "best_pancake_robot_angles": [
+        "Pancake Robot story-song podcast",
+        "Music category listing",
+        "Screen-free, distraction-free family audio"
+      ],
+      "recommended_pitch_type": "directory_listing",
+      "sample_pitch_hook": "A screen-free, music-forward kids audio series built around Pancake Robot’s kitchen adventures and singalong hooks.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://soundcarrot.com/",
+        "https://soundcarrot.com/shows/"
+      ]
+    },
+    {
+      "id": "daycare_preschool_operators",
+      "name": "Daycare / Preschool Operator Newsletters",
+      "category": "b2b2parent_education_distribution",
+      "priority": "P1",
+      "brand_fit_score_0_100": 78,
+      "status": "prospect",
+      "platforms": [
+        "email newsletters",
+        "resource pages",
+        "Facebook groups"
+      ],
+      "url": null,
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Build regional list; pitch free song/activity pack to program directors"
+      },
+      "audience": {
+        "primary": "preschool/daycare teachers and directors",
+        "age_fit": "3-6",
+        "geo": "Canada/US"
+      },
+      "why_it_fits_pancake_robot": [
+        "Songs with movement cues solve real transition/routine problems",
+        "Less dependent on consumer influencer gatekeepers",
+        "Can create repeat listens if adopted in routines"
+      ],
+      "best_pancake_robot_angles": [
+        "Clean-up song",
+        "Morning welcome song",
+        "Weather/season song",
+        "Counting stack activity"
+      ],
+      "recommended_pitch_type": "resource_outreach",
+      "sample_pitch_hook": "Free preschool music/activity kit: one song, one printable, one 5-minute movement routine.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "low",
+        "notes": "AI stance usually less central than child safety and usefulness; do not hide AI use if asked.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": []
+    },
+    {
+      "id": "days_with_grey",
+      "name": "Days with Grey",
+      "category": "parenting_activity_blog_influencer",
+      "priority": "P1",
+      "brand_fit_score_0_100": 78,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "Instagram",
+        "shop"
+      ],
+      "url": "https://dayswithgrey.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use contact/work-with-me route; pitch activity cards + song clip",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents wanting manageable play-based learning and screen-free moments",
+        "age_fit": "preschool to early elementary",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Screen-free activity framing aligns to Pancake Robot song/activity bundles",
+        "Can target morning routine and 'breakfast invitation to play' content",
+        "Good parent-facing awareness, less direct music discovery"
+      ],
+      "best_pancake_robot_angles": [
+        "Breakfast invitation to play",
+        "Song + big-kid activity card",
+        "Summer/chores routine clip"
+      ],
+      "recommended_pitch_type": "paid_or_affiliate_creator_collaboration",
+      "sample_pitch_hook": "Pancake Robot turns a daily transition into a manageable moment of learning, movement, and connection.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://dayswithgrey.com/about/",
+        "https://dayswithgrey.com/link-in-bio/"
+      ]
+    },
+    {
+      "id": "noodle_loaf",
+      "name": "Noodle Loaf",
+      "category": "music_education_podcast",
+      "priority": "P1",
+      "brand_fit_score_0_100": 78,
+      "status": "prospect",
+      "platforms": [
+        "podcast",
+        "Kids Listen",
+        "Apple Podcasts"
+      ],
+      "url": "https://www.noodleloaf.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use official site/social contact; pitch collaboration only, not a cold review",
+        "email": null
+      },
+      "audience": {
+        "primary": "families with young kids; music education listeners",
+        "age_fit": "0-8",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Interactive music education, movement, rhythm games, learning through play",
+        "Pancake Robot songs have built-in movement cues, echo sounds, and child participation",
+        "Potential for cross-collab or inspiration more than simple review"
+      ],
+      "best_pancake_robot_angles": [
+        "Echo song / rhythm game built around beep-boop-sizzle",
+        "Guest segment if brand matures",
+        "Use as model for Pancake Robot’s educational audio design"
+      ],
+      "recommended_pitch_type": "collaboration_or_learning_model",
+      "sample_pitch_hook": "Pancake Robot’s hooks are built around participatory sounds kids can copy — beep, sizzle, clap, FLIP — making it a natural fit for music-play audiences.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://podcasts.apple.com/ca/podcast/noodle-loaf-music-education-podcast-for-kids/id1359035306",
+        "https://kidslisten.org/directory/noodle-loaf",
+        "https://www.sensical.tv/podcasts/noodle-loaf"
+      ]
+    },
+    {
+      "id": "the_dad_lab",
+      "name": "TheDadLab",
+      "category": "kids_activity_youtube_creator",
+      "priority": "P1",
+      "brand_fit_score_0_100": 77,
+      "status": "prospect",
+      "platforms": [
+        "YouTube",
+        "Instagram",
+        "TikTok",
+        "website"
+      ],
+      "url": "https://www.youtube.com/@TheDadLab",
+      "social_handles": {},
+      "contact": {
+        "email": "sergei@thedadlab.com",
+        "submission_path": "Business inquiries email listed on YouTube"
+      },
+      "audience": {
+        "primary": "parents/kids interested in science experiments and interactive home activities",
+        "age_fit": "children/family",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Robot/science/experiment adjacency fits Pancake Robot better than most parenting accounts",
+        "Pancake Robot chest-door / kitchen-lab origin story can support STEM-ish content",
+        "High potential for short-form activity collab"
+      ],
+      "best_pancake_robot_angles": [
+        "Kitchen science: pancake bubbles, mixing, flipping, heat/sizzle",
+        "Robot dance meets home experiment",
+        "DIY cardboard Pancake Robot craft with song clip"
+      ],
+      "recommended_pitch_type": "paid_creator_collaboration",
+      "sample_pitch_hook": "A kitchen-lab kids song paired with a simple pancake/robot science activity families can try at home.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.youtube.com/@TheDadLab"
+      ]
+    },
+    {
+      "id": "we_are_teachers",
+      "name": "WeAreTeachers",
+      "category": "teacher_editorial_resource",
+      "priority": "P1",
+      "brand_fit_score_0_100": 77,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "newsletter",
+        "social"
+      ],
+      "url": "https://www.weareteachers.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use editorial/contact route; pitch classroom transition songs or free teacher resource",
+        "email": null
+      },
+      "audience": {
+        "primary": "teachers and school staff",
+        "age_fit": "elementary/classroom",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Teacher audience can use music for routines, transitions, movement breaks",
+        "Pancake Robot can be positioned as classroom-safe, movement-based audio",
+        "Best with free printable/activity resource"
+      ],
+      "best_pancake_robot_angles": [
+        "Cleanup/line-up/morning routine songs",
+        "Counting/colors/shapes in silly contexts",
+        "Screen-free movement break"
+      ],
+      "recommended_pitch_type": "resource_pitch",
+      "sample_pitch_hook": "Free classroom-ready Pancake Robot song/activity kit: two-clap routine, counting stack, and a short movement break for K-2.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.weareteachers.com/music-in-the-classroom/"
+      ]
+    },
+    {
+      "id": "facebook_page_owned",
+      "name": "Owned Facebook Page — Pancake Robot Music",
+      "category": "owned_social_channel",
+      "priority": "P1",
+      "brand_fit_score_0_100": 76,
+      "status": "prospect",
+      "platforms": [
+        "Facebook",
+        "parent groups via page participation"
+      ],
+      "url": null,
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Owned page; avoid spammy group posting; use page as credibility and ad account base"
+      },
+      "audience": {
+        "primary": "parents, grandparents, local family communities",
+        "age_fit": "parent-facing",
+        "geo": "Canada/US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Useful for older parent/grandparent demographic",
+        "Good ad-account and pixel infrastructure",
+        "Potential for local parenting group amplification when genuinely useful"
+      ],
+      "best_pancake_robot_angles": [
+        "Grandparent shareable songs",
+        "Printable activities",
+        "Seasonal albums"
+      ],
+      "recommended_pitch_type": "owned_distribution",
+      "sample_pitch_hook": "Use Facebook less as a viral engine and more as trust infrastructure: page, videos, activity posts, and parent-safe ads.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "owned_channel_transparency_required",
+        "risk_level": "low",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": []
+    },
+    {
+      "id": "playlist_push",
+      "name": "Playlist Push",
+      "category": "playlist_tiktok_creator_submission_platform",
+      "priority": "P1",
+      "brand_fit_score_0_100": 76,
+      "status": "prospect",
+      "platforms": [
+        "Spotify playlist curators",
+        "TikTok creators"
+      ],
+      "url": "https://playlistpush.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Create campaign; target family-safe/upbeat/novelty/children-compatible curators/creators if available"
+      },
+      "audience": {
+        "primary": "Spotify listeners and TikTok viewers reached through vetted curators/creators",
+        "age_fit": "varies",
+        "geo": "North America/Europe strength"
+      },
+      "why_it_fits_pancake_robot": [
+        "Large curator and TikTok creator network",
+        "Curators paid to review, not place, reducing payola risk",
+        "Good for testing short-form creator usage if song has a clear dance/movement hook"
+      ],
+      "best_pancake_robot_angles": [
+        "Choretime dance challenge",
+        "Pancake Robot clap/FLIP gesture",
+        "Summer kids dance clip"
+      ],
+      "recommended_pitch_type": "paid_platform_campaign",
+      "sample_pitch_hook": "A kid-safe novelty hook built around a simple gesture: two claps, robot arms, big FLIP.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No explicit AI-generated music ban found in reviewed public snippets; platform emphasizes real curators, organic playlists, and no guaranteed placements. Verify current campaign eligibility before spend.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://playlistpush.com/",
+        "https://help.playlistpush.com/en/articles/1888826-am-i-paid-to-place-songs-on-my-playlist",
+        "https://help.playlistpush.com/en/articles/2295569-the-playlist-requirements-to-qualify-for-playlist-push",
+        "https://help.playlistpush.com/en/articles/2577524-are-results-guaranteed"
+      ]
+    },
+    {
+      "id": "super_simple_songs_skyship",
+      "name": "Super Simple Songs / Skyship Entertainment",
+      "category": "major_kids_youtube_brand_licensing",
+      "priority": "P2",
+      "brand_fit_score_0_100": 76,
+      "status": "prospect",
+      "platforms": [
+        "YouTube",
+        "streaming",
+        "licensing",
+        "apps"
+      ],
+      "url": "https://skyship.tv/original-content/super-simple-songs/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Licensing/collaboration inquiry only after Pancake Robot has audience proof",
+        "email": null
+      },
+      "audience": {
+        "primary": "preschool children, parents, teachers, ESL learners",
+        "age_fit": "preschool",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Massive preschool music brand; classroom and parent use cases overlap",
+        "Toronto/Canada adjacency may help later",
+        "Aspirational benchmark, not a first-wave cold pitch"
+      ],
+      "best_pancake_robot_angles": [
+        "Licensing/collaboration after traction",
+        "Teacher-friendly songs for classroom transitions",
+        "Canadian kids music partnership"
+      ],
+      "recommended_pitch_type": "long_term_partnership",
+      "sample_pitch_hook": "Pancake Robot could extend breakfast/morning-routine music into classroom-friendly movement songs with clear gestures and simple words.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "high",
+        "notes": "No explicit anti-AI stance found in reviewed snippets, but this is a major children’s entertainment company; approach only when Pancake Robot has proven traction, clean rights, and professional visual consistency.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://skyship.tv/original-content/super-simple-songs/",
+        "https://www.supersimple.com/",
+        "https://en.wikipedia.org/wiki/Super_Simple_Songs"
+      ]
+    },
+    {
+      "id": "wooby_and_fotty",
+      "name": "Wooby & Fotty",
+      "category": "puppet_show_kids_music_creator",
+      "priority": "P2",
+      "brand_fit_score_0_100": 74,
+      "status": "prospect",
+      "platforms": [
+        "Instagram",
+        "Facebook",
+        "TikTok",
+        "YouTube",
+        "Spotify",
+        "Apple Music",
+        "Substack"
+      ],
+      "url": "https://linktr.ee/woobyandfotty",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use Linktree/social contact; pitch creator-to-creator collab",
+        "email": null
+      },
+      "audience": {
+        "primary": "toddler/preschool puppet show viewers and parents",
+        "age_fit": "toddlers/preschoolers",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Character-led kids music/story content",
+        "Could cross over with Pancake Robot via puppet/animated short",
+        "Strong fit for emotions, alphabet, holiday, and singalong themes"
+      ],
+      "best_pancake_robot_angles": [
+        "Pancake Robot visits puppet kitchen",
+        "Happy New Year / choretime / feelings song",
+        "Character duet"
+      ],
+      "recommended_pitch_type": "creator_collaboration",
+      "sample_pitch_hook": "A friendly robot breakfast character meets a cozy puppet world for a tiny singalong about trying again.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://linktr.ee/woobyandfotty"
+      ]
+    },
+    {
+      "id": "homeschool_resource_blogs",
+      "name": "Homeschool Resource Blogs",
+      "category": "education_parent_blog_segment",
+      "priority": "P2",
+      "brand_fit_score_0_100": 73,
+      "status": "prospect",
+      "platforms": [
+        "blogs",
+        "Pinterest",
+        "email newsletters"
+      ],
+      "url": null,
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Build list by preschool/kindergarten homeschool music/activity keywords"
+      },
+      "audience": {
+        "primary": "homeschool parents and co-ops",
+        "age_fit": "PreK-2",
+        "geo": "US/Canada/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Homeschool audience values free printables and themed units",
+        "Pancake Robot can become a seasonal mini-unit wrapper",
+        "Good for long-tail SEO"
+      ],
+      "best_pancake_robot_angles": [
+        "Breakfast unit",
+        "Kitchen science",
+        "Counting/colors/shapes",
+        "Summer activity pack"
+      ],
+      "recommended_pitch_type": "resource_outreach",
+      "sample_pitch_hook": "A free Pancake Robot mini-unit: song + printable + simple movement activity for preschool/kindergarten.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": []
+    },
+    {
+      "id": "music_with_drew",
+      "name": "Music with Drew",
+      "category": "toddler_music_class_creator",
+      "priority": "P2",
+      "brand_fit_score_0_100": 73,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "Instagram",
+        "YouTube/classes"
+      ],
+      "url": "https://www.musicwithdrew.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use site contact/host class routes",
+        "email": null
+      },
+      "audience": {
+        "primary": "toddlers, children under 5, caregivers",
+        "age_fit": "under 5",
+        "geo": "Canada/global online"
+      },
+      "why_it_fits_pancake_robot": [
+        "Toddler music class audience",
+        "Pancake Robot’s clap/gesture hooks could fit live singalong formats",
+        "Better as creator collaboration than review"
+      ],
+      "best_pancake_robot_angles": [
+        "Shake-and-sing breakfast song",
+        "Pancake Robot movement class",
+        "Under-5 singalong clip"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A toddler-ready Pancake Robot song with gestures built in: clap twice, robot arms, sizzle sound, and big FLIP moment.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.musicwithdrew.com/"
+      ]
+    },
+    {
+      "id": "goodnight_fox",
+      "name": "Goodnight Fox",
+      "category": "sensory_play_printables_shop",
+      "priority": "P2",
+      "brand_fit_score_0_100": 72,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "Instagram",
+        "Etsy/shop"
+      ],
+      "url": "https://www.goodnightfox.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use site contact; pitch printable/activity bundle",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents, teachers, homeschool families seeking sensory play/printables",
+        "age_fit": "toddlers/preschoolers",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Printables and sensory play are good wrappers for Pancake Robot music drops",
+        "Potential co-branded printable or affiliate bundle",
+        "Good for parent conversion, not music discovery"
+      ],
+      "best_pancake_robot_angles": [
+        "Pancake stack counting printable",
+        "Breakfast sensory bin soundtrack",
+        "Chore chart + song clip"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A printable pancake-stack activity with a matching singalong clip for toddlers and preschoolers.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.goodnightfox.com/"
+      ]
+    },
+    {
+      "id": "submithub",
+      "name": "SubmitHub",
+      "category": "music_submission_platform_curators",
+      "priority": "P2",
+      "brand_fit_score_0_100": 72,
+      "status": "prospect",
+      "platforms": [
+        "blogs",
+        "playlists",
+        "YouTube channels",
+        "influencers",
+        "labels"
+      ],
+      "url": "https://www.submithub.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use curator filters; manually avoid anti-AI curators and irrelevant genres"
+      },
+      "audience": {
+        "primary": "music bloggers, playlisters, labels, social influencers",
+        "age_fit": "varies by curator",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Large self-serve curator ecosystem",
+        "Potentially useful for novelty pop / family-safe / children’s music if filters support it",
+        "Requires careful curator-by-curator review"
+      ],
+      "best_pancake_robot_angles": [
+        "Novelty/kindie pop",
+        "Family-safe dance song",
+        "AI-assisted indie kids music transparency"
+      ],
+      "recommended_pitch_type": "platform_campaign",
+      "sample_pitch_hook": "Transparent AI-assisted kindie/novelty pop with original character IP and a clean parent-safe chorus.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No explicit platform-level AI music ban found in reviewed snippets. Curator preference is likely individual; verify before pitching.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.submithub.com/about/terms",
+        "https://buzzsonic.com/resource/submithub-submit-music-to-bloggers-playlists-record-labels/"
+      ]
+    },
+    {
+      "id": "teachers_pay_teachers_freebie",
+      "name": "Teachers Pay Teachers — Free Resource Funnel",
+      "category": "teacher_marketplace_distribution",
+      "priority": "P2",
+      "brand_fit_score_0_100": 72,
+      "status": "prospect",
+      "platforms": [
+        "marketplace",
+        "teacher search"
+      ],
+      "url": "https://www.teacherspayteachers.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Create seller account; distribute free Pancake Robot activity sheets tied to songs"
+      },
+      "audience": {
+        "primary": "K-2 teachers and homeschool parents",
+        "age_fit": "PreK-2",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Not an influencer, but useful for searchable classroom resources",
+        "Can drive organic discovery through free printables",
+        "Pairs well with YouTube/Spotify song links"
+      ],
+      "best_pancake_robot_angles": [
+        "Free pancake counting printable",
+        "Robot movement break",
+        "Morning routine chart"
+      ],
+      "recommended_pitch_type": "owned_distribution",
+      "sample_pitch_hook": "A free classroom activity sheet that includes a QR/link to the matching Pancake Robot song.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "low",
+        "notes": "Marketplace listing under your own brand; ensure resources follow platform rules and do not misrepresent content.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.teacherspayteachers.com/"
+      ]
+    },
+    {
+      "id": "music_podcast_for_kids",
+      "name": "The Music Podcast for Kids",
+      "category": "music_education_podcast",
+      "priority": "P2",
+      "brand_fit_score_0_100": 72,
+      "status": "prospect",
+      "platforms": [
+        "podcast",
+        "SoundCarrot"
+      ],
+      "url": "https://soundcarrot.com/shows/the-music-podcast-for-kids/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Check creator website/contact before outreach",
+        "email": null
+      },
+      "audience": {
+        "primary": "kids learning music concepts",
+        "age_fit": "6-10, 11+",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Music education podcast; could fit songs that introduce instruments, tempo, rhythm, or call-response",
+        "Slightly older than Pancake Robot’s core, so use music-learning angles"
+      ],
+      "best_pancake_robot_angles": [
+        "Robot percussion lesson",
+        "Kitchen instruments: spoon, pan, sizzle, clap",
+        "How a chorus hook works"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A playful example of how sound effects, rhythm, and repetition help kids join a song by the second listen.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://soundcarrot.com/shows/the-music-podcast-for-kids/"
+      ]
+    },
+    {
+      "id": "music_blocks_cpr",
+      "name": "Music Blocks — Colorado Public Radio",
+      "category": "music_appreciation_podcast",
+      "priority": "P2",
+      "brand_fit_score_0_100": 71,
+      "status": "prospect",
+      "platforms": [
+        "podcast",
+        "public radio"
+      ],
+      "url": "https://soundcarrot.com/shows/music-blocks/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Pitch only if there is a strong music-appreciation angle; not a direct promo channel",
+        "email": null
+      },
+      "audience": {
+        "primary": "families/classrooms learning music appreciation",
+        "age_fit": "children/family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Explains building blocks of music in family/classroom-friendly format",
+        "Potential angle around hooks, sound effects, and emotional expression"
+      ],
+      "best_pancake_robot_angles": [
+        "How sound effects tell a story",
+        "Why repetition helps singalong",
+        "Kitchen percussion episode idea"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "Pancake Robot is a clean case study in using sound effects and repetition to create participation for young listeners.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://soundcarrot.com/shows/music-blocks/"
+      ]
+    },
+    {
+      "id": "chatterpillars",
+      "name": "Chatterpillars",
+      "category": "speech_language_play_influencer",
+      "priority": "P2",
+      "brand_fit_score_0_100": 70,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "Instagram",
+        "classes/resources"
+      ],
+      "url": "https://www.chatterpillarsplay.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use site email/contact; pitch only speech/movement-safe educational angle",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents/caregivers of young children; speech-language play audience",
+        "age_fit": "infant/toddler/preschool",
+        "geo": "Canada/US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Music + movement + communication development overlap",
+        "Pancake Robot’s mimicry triggers may support speech sound play",
+        "Requires careful non-clinical framing"
+      ],
+      "best_pancake_robot_angles": [
+        "Beep/boop/sizzle vocal play",
+        "Turn-taking song",
+        "Movement + communication prompt"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A playful song designed around easy vocal imitation — beep, boop, sizzle, FLIP — and parent-child turn-taking.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.chatterpillarsplay.com/"
+      ]
+    },
+    {
+      "id": "dailyplaylists",
+      "name": "DailyPlaylists",
+      "category": "playlist_submission_platform",
+      "priority": "P2",
+      "brand_fit_score_0_100": 70,
+      "status": "prospect",
+      "platforms": [
+        "Spotify playlist submissions",
+        "community feedback"
+      ],
+      "url": "https://dailyplaylists.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use platform submissions; filter for family-safe/upbeat/novelty-compatible playlists"
+      },
+      "audience": {
+        "primary": "independent playlist curators",
+        "age_fit": "varies",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Free/pro playlist submission system for independent artists",
+        "Can be useful for scalable low-cost submissions",
+        "Need careful filtering; children’s music may have limited curator coverage"
+      ],
+      "best_pancake_robot_angles": [
+        "Upbeat family-safe song",
+        "Novelty/quirky pop",
+        "Kids dance playlists"
+      ],
+      "recommended_pitch_type": "platform_submission",
+      "sample_pitch_hook": "A bright, family-safe novelty pop track with a kid-shoutable chorus.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://dailyplaylists.com/en/faq/"
+      ]
+    },
+    {
+      "id": "parents_com_editorial",
+      "name": "Parents.com Editorial",
+      "category": "parenting_editorial",
+      "priority": "P2",
+      "brand_fit_score_0_100": 70,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "newsletter",
+        "social"
+      ],
+      "url": "https://www.parents.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Pitch as screen-free music/activity resource, not as a music release"
+      },
+      "audience": {
+        "primary": "parents/caregivers",
+        "age_fit": "toddler/preschool/family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Parents covers sensory play, screen-free entertainment, product recommendations",
+        "Best when Pancake Robot becomes a resource bundle with activities",
+        "High trust but hard to land"
+      ],
+      "best_pancake_robot_angles": [
+        "Screen-free singalong for car rides",
+        "Chores/music routine",
+        "Sensory play song tie-in"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A low-prep song-and-activity bundle for parents who need a quick movement break without turning on a show.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.parents.com/sensory-play-activities-for-toddlers-and-preschoolers-7644819",
+        "https://www.parents.com/listen-to-music-from-cocomelon-screen-free-thanks-to-these-spotify-playlists-11717097"
+      ]
+    },
+    {
+      "id": "macaroni_kid",
+      "name": "Macaroni KID",
+      "category": "local_family_newsletter_network",
+      "priority": "P2",
+      "brand_fit_score_0_100": 69,
+      "status": "prospect",
+      "platforms": [
+        "local newsletters",
+        "events",
+        "website"
+      ],
+      "url": "https://macaronikid.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Pitch local editors with free activity/song kit or event tie-in"
+      },
+      "audience": {
+        "primary": "local parents looking for family activities",
+        "age_fit": "family",
+        "geo": "US/Canada local markets"
+      },
+      "why_it_fits_pancake_robot": [
+        "Hyperlocal parent reach can be useful for seasonal songs and free printables",
+        "Best for free resources, giveaways, or local Oakville/Toronto angle if available",
+        "Scalable via agent outreach to local editors"
+      ],
+      "best_pancake_robot_angles": [
+        "Free Pancake Robot summer activity pack",
+        "Choretime dance challenge",
+        "Local Canadian kids music project"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "Free family activity pack: Pancake Robot song link + printable pancake-stack game for preschoolers.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://macaronikid.com/"
+      ]
+    },
+    {
+      "id": "soundplate",
+      "name": "Soundplate",
+      "category": "playlist_submission_smart_links",
+      "priority": "P2",
+      "brand_fit_score_0_100": 69,
+      "status": "prospect",
+      "platforms": [
+        "playlist submissions",
+        "smart links",
+        "artist pages"
+      ],
+      "url": "https://soundplate.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use free playlist submission forms; avoid irrelevant genres"
+      },
+      "audience": {
+        "primary": "independent playlist curators and artists",
+        "age_fit": "varies",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Free playlist submissions can be used for experimentation",
+        "Smart links/artist page useful for release infrastructure",
+        "Mentions AI mastering tools; no anti-AI stance found in reviewed public snippets"
+      ],
+      "best_pancake_robot_angles": [
+        "Family-safe upbeat pop",
+        "Novelty/dance song",
+        "Seasonal summer playlist"
+      ],
+      "recommended_pitch_type": "platform_submission",
+      "sample_pitch_hook": "A polished, bright, family-safe hook song for kid-friendly dance and novelty playlists.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://soundplate.com/",
+        "https://soundplate.com/unlock-codes-on-soundplate/"
+      ]
+    },
+    {
+      "id": "curator360",
+      "name": "Curator360",
+      "category": "spotify_playlist_submission",
+      "priority": "P2",
+      "brand_fit_score_0_100": 68,
+      "status": "prospect",
+      "platforms": [
+        "Spotify playlists",
+        "email submission"
+      ],
+      "url": "https://curator360.com/",
+      "social_handles": {},
+      "contact": {
+        "email": "hello@curator360.com",
+        "submission_path": "Submit Spotify/private link and short pitch"
+      },
+      "audience": {
+        "primary": "Spotify playlist listeners across multiple genres",
+        "age_fit": "varies",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Simple submission instructions and email route",
+        "No guaranteed placement; editorial-only framing",
+        "Use only if playlists fit kids/family/novelty/upbeat tracks"
+      ],
+      "best_pancake_robot_angles": [
+        "Upbeat novelty pop",
+        "Family-safe dance",
+        "Seasonal summer track"
+      ],
+      "recommended_pitch_type": "playlist_submission",
+      "sample_pitch_hook": "Family-safe novelty pop with a bright, repeatable chorus and a simple movement hook.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://curator360.com/"
+      ]
+    },
+    {
+      "id": "verywell_family",
+      "name": "Verywell Family",
+      "category": "parenting_editorial",
+      "priority": "P2",
+      "brand_fit_score_0_100": 68,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "editorial"
+      ],
+      "url": "https://www.verywellfamily.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Editorial pitch only when tied to expert-backed sensory/play/music article",
+        "email": null
+      },
+      "audience": {
+        "primary": "parents seeking practical child development guidance",
+        "age_fit": "baby/toddler/preschool",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Sensory play, functional play, music, and child development topics overlap",
+        "Not a music review site; needs educational angle or expert contribution",
+        "Potential inclusion in play/sensory/activity article if you have a resource"
+      ],
+      "best_pancake_robot_angles": [
+        "Music as sensory play",
+        "Routine songs and functional play",
+        "Movement songs for toddlers"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A parent-friendly example of how music, repetition, and simple motions can support sensory play and routines.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.verywellfamily.com/defining-functional-play-and-how-it-benefits-children-290165"
+      ]
+    },
+    {
+      "id": "la_parent",
+      "name": "L.A. Parent",
+      "category": "regional_parenting_media",
+      "priority": "P2",
+      "brand_fit_score_0_100": 67,
+      "status": "prospect",
+      "platforms": [
+        "magazine",
+        "website",
+        "newsletter"
+      ],
+      "url": "https://www.laparent.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Use editorial/advertising contact; NAPPA connection may be a better route"
+      },
+      "audience": {
+        "primary": "Los Angeles-area parents",
+        "age_fit": "family",
+        "geo": "Los Angeles/US"
+      },
+      "why_it_fits_pancake_robot": [
+        "NAPPA media partner connection",
+        "Regional parenting media can amplify award wins",
+        "Not first-touch unless Pancake Robot wins/enters NAPPA"
+      ],
+      "best_pancake_robot_angles": [
+        "NAPPA-submitted/winning music",
+        "Family music for routines",
+        "Activity pack"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A NAPPA-aligned family music project with a robot breakfast character and classroom-safe movement songs.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.nappaawards.com/get-to-know-nappa/"
+      ]
+    },
+    {
+      "id": "fatherly",
+      "name": "Fatherly",
+      "category": "parenting_lifestyle_editorial",
+      "priority": "P3",
+      "brand_fit_score_0_100": 62,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "newsletter",
+        "social"
+      ],
+      "url": "https://www.fatherly.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Pitch only with father/creator story, tech angle, or parent-tolerable music angle"
+      },
+      "audience": {
+        "primary": "parents, especially dads",
+        "age_fit": "family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Dad/creator story and parent-tolerable music angle may fit",
+        "Not a primary music discovery target",
+        "Potential if Pancake Robot has a broader 'AI creator dad label' story"
+      ],
+      "best_pancake_robot_angles": [
+        "Dad-built music character",
+        "Making kids songs less painful for parents",
+        "AI-assisted homegrown label story"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A dad-built kids music character designed to be silly for kids and tolerable for parents, with transparent AI-assisted production.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.fatherly.com/"
+      ]
+    },
+    {
+      "id": "romper",
+      "name": "Romper",
+      "category": "parenting_lifestyle_editorial",
+      "priority": "P3",
+      "brand_fit_score_0_100": 61,
+      "status": "prospect",
+      "platforms": [
+        "website",
+        "social"
+      ],
+      "url": "https://www.romper.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Editorial pitch only; better after audience traction"
+      },
+      "audience": {
+        "primary": "millennial parents",
+        "age_fit": "family",
+        "geo": "US/global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Parent lifestyle outlet; possible angle around songs parents can tolerate",
+        "Less directly music-focused than kindie outlets",
+        "Requires strong story, trend, or data hook"
+      ],
+      "best_pancake_robot_angles": [
+        "AI-made kids music done transparently and safely",
+        "Parent-tolerable kids songs",
+        "Morning routine earworms"
+      ],
+      "recommended_pitch_type": "earned_pitch",
+      "sample_pitch_hook": "A parent-built kids music project trying to solve the 'please not that song again' problem with safer, funnier singalongs.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "no_public_anti_ai_stance_found",
+        "risk_level": "medium",
+        "notes": "No clear public anti-AI-music stance found in lightweight public review. Verify profile/pages before outreach.",
+        "evidence_urls": [],
+        "recommended_action": "Use transparent AI disclosure only after confirming the outlet accepts AI-assisted or AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://www.romper.com/"
+      ]
+    },
+    {
+      "id": "musosoup",
+      "name": "Musosoup",
+      "category": "music_pr_platform_caution",
+      "priority": "AVOID_FOR_FULLY_AI",
+      "brand_fit_score_0_100": 20,
+      "status": "avoid_unless_human_authorship_clear",
+      "platforms": [
+        "music PR platform",
+        "blogs",
+        "playlists"
+      ],
+      "url": "https://www.musosoup.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Do not use for fully AI-generated Pancake Robot tracks"
+      },
+      "audience": {
+        "primary": "music curators and independent artists",
+        "age_fit": "varies",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Platform explicitly says it does not accept fully AI-generated music",
+        "Risk of rejection/suspension if Pancake Robot tracks are prompt-based or predominantly AI-generated",
+        "Could be used only if future tracks have clear human authorship and meet their policy"
+      ],
+      "best_pancake_robot_angles": [
+        "Not recommended for current AI-generated pipeline"
+      ],
+      "recommended_pitch_type": "avoid",
+      "sample_pitch_hook": "Do not pitch unless you can evidence human-led composition/performance and policy compliance.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "explicitly_rejects_fully_ai_generated_music",
+        "risk_level": "high",
+        "notes": "Musosoup says it does not accept fully AI-generated music and may decline/remove campaigns.",
+        "evidence_urls": [
+          "https://musosoup.com/blog/musosoup-music-ai-policy"
+        ],
+        "recommended_action": "Exclude from default outreach for Pancake Robot AI-generated music."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://musosoup.com/blog/musosoup-music-ai-policy",
+        "https://www.musosoup.com/"
+      ]
+    },
+    {
+      "id": "bandcamp",
+      "name": "Bandcamp",
+      "category": "music_platform_caution",
+      "priority": "AVOID_FOR_FULLY_AI",
+      "brand_fit_score_0_100": 15,
+      "status": "avoid_unless_policy_changes",
+      "platforms": [
+        "music platform",
+        "community"
+      ],
+      "url": "https://bandcamp.com/",
+      "social_handles": {},
+      "contact": {
+        "submission_path": "Do not use for fully/substantially AI-generated Pancake Robot music unless policy allows"
+      },
+      "audience": {
+        "primary": "music fans and independent artist supporters",
+        "age_fit": "varies",
+        "geo": "global"
+      },
+      "why_it_fits_pancake_robot": [
+        "Recent reporting says Bandcamp banned music created wholly or substantially by AI",
+        "High reputational risk for AI-generated kids music",
+        "Not central to kids music discovery anyway"
+      ],
+      "best_pancake_robot_angles": [
+        "Not recommended"
+      ],
+      "recommended_pitch_type": "avoid",
+      "sample_pitch_hook": "Exclude from current AI music outreach.",
+      "assets_to_send": [
+        "Spotify/Apple/YouTube streaming link or private preview",
+        "30-45 sec vertical hook clip with readable captions",
+        "3000x3000 album art",
+        "15 sec chorus clip for Reels/TikTok/Shorts",
+        "kid-safe lyric excerpt",
+        "one-paragraph parent-safe story behind the song",
+        "AI-use disclosure note: transparent but confident; avoid defensive framing",
+        "visual stills of Pancake Robot with text-safe margins",
+        "optional activity card / printable tied to song theme"
+      ],
+      "ai_music_stance": {
+        "status": "reported_ban_on_wholly_or_substantially_ai_music",
+        "risk_level": "high",
+        "notes": "Reported policy bans wholly/substantially AI-generated music; verify directly if considering use.",
+        "evidence_urls": [
+          "https://pitchfork.com/news/bandcamp-announces-ban-on-ai-music"
+        ],
+        "recommended_action": "Do not use for Pancake Robot unless future releases are clearly compliant."
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email/contact form",
+          "timing": "T-21 to T-14 days",
+          "goal": "Ask if they are open to reviewing/featuring one kid-safe song and one 30-sec clip"
+        },
+        {
+          "step": 2,
+          "channel": "social DM",
+          "timing": "T-10 days if no response",
+          "goal": "Light nudge with hook clip only"
+        },
+        {
+          "step": 3,
+          "channel": "follow-up email",
+          "timing": "T+3 days after release",
+          "goal": "Send public links and parent-safe proof points"
+        }
+      ],
+      "notes_for_marketing_agent": [],
+      "source_urls": [
+        "https://pitchfork.com/news/bandcamp-announces-ban-on-ai-music"
+      ]
+    }
+  ],
+  "starter_pitch_templates": {
+    "kindie_radio_blog": {
+      "subject": "Pancake Robot — new kid-safe kindie song for breakfast dance chaos",
+      "body": "Hi {{first_name}},\n\nI’m sharing Pancake Robot, a new character-driven kids music project built around breakfast, robots, and silly movement songs. The core audience is 4-7, but the goal is parent-tolerable kindie: bright hooks, simple words, no shame/scary themes, and a chorus kids can sing by the second listen.\n\nThe new track, {{song_title}}, is built around {{specific_hook}}. It includes a kid-copyable sound/action cue and a short visual clip if useful.\n\nPrivate listen: {{private_link}}\nPublic release date: {{release_date}}\nAssets: {{asset_link}}\n\nWorth a listen if you’re looking for upbeat, safe, slightly weird family music.\n\nKC",
+      "when_to_use": "Zooglobble, Spare the Rock, SMCB, Kids Can Groove, ICAN"
+    },
+    "parent_activity_creator": {
+      "subject": "Song + printable idea for {{theme}}",
+      "body": "Hi {{first_name}},\n\nI’m building Pancake Robot, a kids music character for preschool/early elementary families. I thought this might fit your audience because the song can be paired with a simple activity: {{activity_idea}}.\n\nThe clip is short, bright, and gesture-based: {{specific_hook}}. I can send a printable, captioned Reel/TikTok clip, and a clean parent-facing description.\n\nOpen to a sponsored post, activity bundle, or simple test collaboration if it fits your calendar.\n\nKC",
+      "when_to_use": "Busy Toddler, Happy Toddler Playtime, Days with Grey, Goodnight Fox, TheDadLab"
+    },
+    "teacher_resource": {
+      "subject": "Free K-2 movement song/activity kit: {{song_title}}",
+      "body": "Hi {{first_name}},\n\nI’m sharing a free classroom-ready song/activity kit from Pancake Robot, a kid-safe music character built around movement, simple words, and silly routines.\n\nThis one is designed for {{classroom_use_case}}. It includes:\n- Song link\n- Lyrics with movement cues\n- Printable activity/QR sheet\n- 5-minute teacher instructions\n\nThe goal is a low-prep transition/movement break that feels fun, not instructional.\n\nKC",
+      "when_to_use": "WeAreTeachers, preschool/daycare newsletters, homeschool blogs, TpT resource landing page"
+    },
+    "playlist_platform_pitch": {
+      "short_pitch_500_chars": "Pancake Robot is a bright, parent-safe kids/kindie track built around breakfast adventure, robot sounds, and a kid-copyable movement hook. The chorus lands fast, uses simple singalong words, and includes a two-clap + FLIP cue designed for preschool/early elementary dance breaks. AI-assisted production under human creative direction; original character/IP; no impersonation."
+    }
+  },
+  "next_agent_actions": [
+    "Create a normalized Airtable/Supabase table from outlet_targets",
+    "Add fields for last_verified_at, AI_policy_checked_at, contact_person, email, handle, last_touch, next_touch, campaign_id, and outcome",
+    "Run a per-outlet verification pass before sending: current contact route, explicit AI policy, recent activity, and best content format",
+    "Generate one release pack per song: streaming links, private preview, short hook clip, social caption, printable/activity, AI disclosure, and one-line parent-safe value prop",
+    "Start with P0 targets and owned channels before expanding into P1/P2"
+  ]
+}

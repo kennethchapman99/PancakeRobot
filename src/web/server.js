@@ -44,6 +44,7 @@ import {
   resolveBrandProfilePath,
 } from '../shared/brand-profile.js';
 import { generateThumbnails } from '../agents/creative-manager.js';
+import { registerMarketingRouter } from './marketing/router-consolidated.js';
 
 // ── Base image upload config ───────────────────────────────────────
 const ALLOWED_IMG_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
@@ -144,6 +145,9 @@ app.use((req, res, next) => {
   res.locals.submittedStatus = SUBMITTED_STATUS;
   next();
 });
+
+// ── MARKETING ROUTER ────────────────────────────────────────────
+registerMarketingRouter(app);
 
 // ── DASHBOARD ──────────────────────────────────────────────────
 app.get('/', (req, res) => {

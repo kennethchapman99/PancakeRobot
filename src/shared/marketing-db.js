@@ -139,6 +139,21 @@ export function initMarketingSchema() {
       data_json TEXT,
       FOREIGN KEY (run_id) REFERENCES marketing_agent_runs(id)
     );
+
+    CREATE TABLE IF NOT EXISTS marketing_campaign_items (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      draft_subject TEXT,
+      draft_body TEXT,
+      gmail_draft_id TEXT,
+      gmail_draft_url TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(campaign_id, target_id)
+    );
   `);
 
   migrateMarketingTargetsColumns(db);
@@ -619,4 +634,64 @@ function parseJsonObject(value) {
   } catch {
     return {};
   }
+}
+
+// ── Campaign detail ────────────────────────────────────────────
+
+export function getCampaignById(id) {
+  initMarketingSchema();
+  const row = getDb().prepare('SELECT * FROM marketing_campaigns WHERE id = ?').get(id);
+  return parseCampaign(row);
+}
+
+// ── Campaign items ─────────────────────────────────────────────
+
+export function getCampaignItems(campaignId) {
+  initMarketingSchema();
+  return getDb().prepare(`
+    SELECT i.*, t.name as target_name, t.type as target_type, t.platform as target_platform,
+           t.fit_score, t.ai_policy, t.contact_email, t.handle, t.submission_url,
+           t.outreach_angle, t.research_summary, t.status as target_status
+    FROM marketing_campaign_items i
+    LEFT JOIN marketing_targets t ON t.id = i.target_id
+    WHERE i.campaign_id = ?
+    ORDER BY i.created_at ASC
+  `).all(campaignId);
+}
+
+export function getCampaignItemById(itemId) {
+  initMarketingSchema();
+  return getDb().prepare(`
+    SELECT i.*, t.name as target_name, t.type as target_type, t.platform as target_platform,
+           t.fit_score, t.ai_policy, t.contact_email, t.handle, t.submission_url,
+           t.outreach_angle, t.research_summary, t.status as target_status, t.raw_json as target_raw_json
+    FROM marketing_campaign_items i
+    LEFT JOIN marketing_targets t ON t.id = i.target_id
+    WHERE i.id = ?
+  `).get(itemId);
+}
+
+export function ensureCampaignItems(campaignId, targetIds) {
+  initMarketingSchema();
+  const db = getDb();
+  const now = new Date().toISOString();
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO marketing_campaign_items (id, campaign_id, target_id, status, created_at, updated_at)
+    VALUES (?, ?, ?, 'queued', ?, ?)
+  `);
+  for (const targetId of targetIds) {
+    const id = `MKT_ITEM_${createHash('sha1').update(`${campaignId}|${targetId}`).digest('hex').slice(0, 12).toUpperCase()}`;
+    insert.run(id, campaignId, targetId, now, now);
+  }
+}
+
+export function updateCampaignItem(itemId, fields = {}) {
+  initMarketingSchema();
+  const allowed = ['status', 'draft_subject', 'draft_body', 'gmail_draft_id', 'gmail_draft_url', 'notes'];
+  const updates = { updated_at: new Date().toISOString() };
+  for (const field of allowed) {
+    if (fields[field] !== undefined) updates[field] = fields[field] ?? null;
+  }
+  const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+  getDb().prepare(`UPDATE marketing_campaign_items SET ${setClause} WHERE id = ?`).run(...Object.values(updates), itemId);
 }
