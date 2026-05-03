@@ -20,6 +20,7 @@ const MUSIC = BRAND_PROFILE.music;
 const SONGWRITING = BRAND_PROFILE.songwriting || {};
 const OUTPUT_SCHEMA = SONGWRITING.output_schema || {};
 const MUSIC_TARGET_LENGTH = MUSIC.target_length;
+const MUSIC_MIN_WORDS = parseRangeLower(MUSIC.normal_word_range);
 const MUSIC_DEFAULT_BPM = MUSIC.default_bpm;
 const MUSIC_DEFAULT_STYLE = MUSIC.default_style;
 const MUSIC_DEFAULT_PROMPT = MUSIC.default_prompt;
@@ -167,7 +168,7 @@ LYRIC RULES:
 
 REQUIREMENTS:
 - Production render target: ${MUSIC.target_length}.
-- WORD COUNT (hard constraint): Target ${MUSIC.normal_word_range} singable words, excluding section labels like [CHORUS]. Minimum is ${MUSIC.min_words} words. Lyrics submitted below ${MUSIC.min_words} words will be REJECTED and you will be asked to redo them. Count your words before submitting.
+- WORD COUNT (hard constraint): Target ${MUSIC.normal_word_range} singable words, excluding section labels like [CHORUS]. Minimum is ${MUSIC_MIN_WORDS} words. Lyrics submitted below ${MUSIC_MIN_WORDS} words will be REJECTED and you will be asked to redo them. Count your words before submitting.
 - Full-length hip-hop support is required. Do not shorten rap verses to protect JSON size; prioritize complete lyrics and keep metadata concise.
 - Start with a plain [INTRO] label followed immediately by the first singable line.
 - First singable line must contain the exact title.
@@ -188,6 +189,12 @@ ${formatOutputSchema()}`;
 function readPositiveInt(value, fallback) {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseRangeLower(range, fallback = 80) {
+  if (!range) return fallback;
+  const lo = Number(String(range).split('-')[0]);
+  return Number.isFinite(lo) && lo > 0 ? lo : fallback;
 }
 
 function buildRetryRevisionNotes({ revisionNotes, lastFailure, rawText = '' }) {
@@ -229,9 +236,8 @@ function validateSongDataShape(songData = {}) {
     failures.push('missing string field: lyrics');
   } else {
     const wordCount = countApproxWords(songData.lyrics);
-    const minWords = Number(MUSIC.min_words || 0);
-    if (minWords > 0 && wordCount < minWords) {
-      failures.push(`lyrics too short: ${wordCount} words; minimum is ${minWords}`);
+    if (MUSIC_MIN_WORDS > 0 && wordCount < MUSIC_MIN_WORDS) {
+      failures.push(`lyrics too short: ${wordCount} words; minimum is ${MUSIC_MIN_WORDS} (lower bound of normal_word_range ${MUSIC.normal_word_range})`);
     }
   }
 

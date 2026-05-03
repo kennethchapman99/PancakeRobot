@@ -12,11 +12,17 @@ import { loadBrandProfile } from './brand-profile.js';
 
 const BRAND_PROFILE = loadBrandProfile();
 
-export const MIN_FULL_SONG_WORDS = Number(BRAND_PROFILE.music.min_words || 120);
+export const MIN_FULL_SONG_WORDS = parseRangeLower(BRAND_PROFILE.music.normal_word_range, 80);
 export const MIN_FULL_SONG_DURATION_SECONDS = inferMinimumDurationSeconds(BRAND_PROFILE.music.target_length) || 90;
 export const MAX_INSTRUMENTAL_INTRO_SECONDS = Number(BRAND_PROFILE.music.max_instrumental_intro_seconds || 5);
 export const FIRST_VOCAL_REQUIRED_BY_SECONDS = Number(BRAND_PROFILE.music.first_vocal_by_seconds || 5);
 export const MAX_RENDER_PROMPT_CHARS = 2000;
+
+function parseRangeLower(range, fallback = 80) {
+  if (!range) return fallback;
+  const lo = Number(String(range).split('-')[0]);
+  return Number.isFinite(lo) && lo > 0 ? lo : fallback;
+}
 
 const ALLOWED_MINIMAX_MUSIC_MODELS = new Set(['music-2.6', 'music-2.6-free']);
 const EMOJI_MATCHER = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
