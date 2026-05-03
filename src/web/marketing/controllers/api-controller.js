@@ -84,6 +84,17 @@ export async function postCreateItemGmailDraftApi(req, res) {
   }
 }
 
+export async function postInboxScanApi(req, res) {
+  try {
+    const { runInboxScan } = await import('../../../agents/marketing-inbox-agent.js');
+    const body = await readBody(req);
+    const result = await runInboxScan({ dryRun: body.dry_run !== 'false' && body.dry_run !== false });
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+}
+
 export async function createAndMaybeGenerate(body = {}) {
   const result = createOutreachRun({
     song_ids: body.song_ids || body.song_id || [],
