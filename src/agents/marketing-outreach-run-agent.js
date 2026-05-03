@@ -6,6 +6,8 @@ import {
   createOutreachItem,
   getOutreachItems,
 } from '../shared/marketing-outreach-db.js';
+import { upsertChannelTask } from '../shared/marketing-channel-tasks-db.js';
+import { logMarketingEvent } from '../shared/marketing-events-db.js';
 import { getAllSongs, getReleaseLinks } from '../shared/db.js';
 import { getActiveProfileId, loadBrandProfile } from '../shared/brand-profile.js';
 
@@ -58,6 +60,14 @@ function createSingleReleaseCampaigns({ brandProfileId, selectedSongs, selectedO
       notes: 'Release-level outreach run. Draft queue only; requires review before Gmail draft/send.',
     });
 
+    logMarketingEvent({
+      event_type: 'campaign_created',
+      campaign_id: campaignId,
+      song_id: song.id,
+      message: `Single-release outreach campaign created for ${song.title || song.id}`,
+      payload: { mode: 'single_release', preset, outlet_count: selectedOutlets.length },
+    });
+
     const items = createItemsForCampaign({
       campaignId,
       brandProfileId,
@@ -92,6 +102,14 @@ function createBundleCampaign({ brandProfileId, selectedSongs, selectedOutlets, 
     approved_target_ids: selectedOutlets.map(o => o.id),
     brand_context: buildBrandContext({ mode: 'bundle', preset, selectedSongs, selectedOutlets }),
     notes: 'Bundle outreach run. Draft queue only; requires review before Gmail draft/send.',
+  });
+
+  logMarketingEvent({
+    event_type: 'campaign_created',
+    campaign_id: campaignId,
+    song_id: selectedSongs[0].id,
+    message: `Bundle outreach campaign created for ${selectedSongs.length} release(s)`,
+    payload: { mode: 'bundle', preset, song_ids: selectedSongs.map(s => s.id), outlet_count: selectedOutlets.length },
   });
 
   const items = createItemsForCampaign({
@@ -139,10 +157,56 @@ function createItemsForCampaign({ campaignId, brandProfileId, mode, selectedSong
       raw_json: { duplicate, outlet, selected_song_ids: selectedSongs.map(s => s.id) },
     });
 
+    logMarketingEvent({
+      event_type: 'outreach_item_created',
+      campaign_id: campaignId,
+      outreach_item_id: itemId,
+      target_id: outlet.id,
+      song_id: primarySong.id,
+      message: `Outreach item created for ${outlet.name}`,
+      payload: { mode, safety, duplicate, selected_song_ids: selectedSongs.map(s => s.id) },
+    });
+
+    createDefaultChannelTask({ campaignId, itemId, outlet, primarySong, safety });
+
     items.push({ item_id: itemId, target_id: outlet.id, outlet_name: outlet.name, status: safety.status, safety_status: safety.safety_status });
   }
 
   return items;
+}
+
+function createDefaultChannelTask({ campaignId, itemId, outlet, primarySong, safety }) {
+  const hasEmail = Boolean(outlet.contact_email);
+  const channelType = hasEmail
+    ? 'email_gmail'
+    : outlet.contact_status === 'has_contact_or_submission_path'
+      ? 'contact_form_manual'
+      : outlet.platform?.toLowerCase().includes('owned')
+        ? 'owned_social_manual'
+        : 'manual_research';
+
+  const actionType = hasEmail
+    ? 'create_gmail_draft'
+    : channelType === 'contact_form_manual'
+      ? 'manual_submit_contact_form'
+      : channelType === 'owned_social_manual'
+        ? 'manual_owned_social_post'
+        : 'manual_find_contact_route';
+
+  upsertChannelTask({
+    campaign_id: campaignId,
+    outreach_item_id: itemId,
+    target_id: outlet.id,
+    song_id: primarySong.id,
+    channel_type: channelType,
+    action_type: actionType,
+    status: safety.status === 'queued' ? 'pending' : 'needs_review',
+    manual_url: hasEmail ? null : outlet.contact_method || outlet.source_url || null,
+    instructions: hasEmail
+      ? 'Generate/review copy, then create Gmail draft. Do not auto-send.'
+      : 'Use the generated pitch and release assets to complete this manually. Mark submitted when done.',
+    payload: { outlet, safety },
+  });
 }
 
 function findDuplicateOutreach({ songIds, targetId }) {
@@ -232,6 +296,7 @@ function normalizeTarget(row) {
     category,
     type: row.type,
     platform: row.platform,
+    source_url: row.source_url,
     fit_score: row.fit_score,
     contact_status: contactStatus(row),
     contact_method: row.contact_method,
