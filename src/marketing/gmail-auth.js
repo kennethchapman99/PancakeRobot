@@ -1,6 +1,7 @@
 /**
  * Gmail OAuth2 authentication helper.
- * Read-only scope. Never sends, archives, or deletes messages.
+ * Reads inbox messages and creates Gmail drafts.
+ * Never sends, archives, or deletes messages.
  * Account is verified against MARKETING_GMAIL_ACCOUNT env var.
  */
 
@@ -9,7 +10,10 @@ import path from 'path';
 import { createServer } from 'http';
 import { google } from 'googleapis';
 
-const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.compose',
+];
 
 function getCredentialsPath() {
   const raw = process.env.MARKETING_GMAIL_CREDENTIALS_PATH || '~/.pancake-robot/gmail_credentials.json';
@@ -67,13 +71,15 @@ export async function authorizeInteractive() {
     const verified = await verifyAccount(oauth2Client);
     if (verified) {
       console.log('[GMAIL-AUTH] Account verified. Auth is ready.');
+      console.log('[GMAIL-AUTH] If draft creation fails with insufficient permissions, delete the token file and re-run auth.');
       return oauth2Client;
     }
     console.warn('[GMAIL-AUTH] Token present but account mismatch — re-authorizing…');
   }
 
-  const authUrl = oauth2Client.generateAuthUrl({ access_type: 'offline', scope: SCOPES });
+  const authUrl = oauth2Client.generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: SCOPES });
   console.log('\n[GMAIL-AUTH] Opening browser for Gmail authorization…');
+  console.log('[GMAIL-AUTH] Scopes:', SCOPES.join(', '));
   console.log('[GMAIL-AUTH] URL:', authUrl);
 
   const code = await waitForOAuthCode(oauth2Client, authUrl);
