@@ -5,6 +5,8 @@ import {
   getOutreachItem,
   updateOutreachItem,
 } from '../shared/marketing-outreach-db.js';
+import { transitionOutreachItem } from '../shared/marketing-outreach-state.js';
+import { getChannelTasks, updateChannelTask } from '../shared/marketing-channel-tasks-db.js';
 import {
   generateDraftForOutreachItem,
   generateDraftsForCampaign,
@@ -76,16 +78,22 @@ async function routeCampaignDetail(req, res) {
   const itemUpdate = pathname.match(/^\/marketing\/campaigns\/[^/]+\/items\/([^/]+)\/update$/);
   if (itemUpdate && req.method === 'POST') {
     const itemId = decodeURIComponent(itemUpdate[1]);
-    ensureItemBelongsToCampaign(itemId, campaign.id);
+    const existing = ensureItemBelongsToCampaign(itemId, campaign.id);
     const body = await parseBody(req);
+    const requestedStatus = body.status || existing.status;
+
     updateOutreachItem(itemId, {
       subject: body.subject || null,
       body: body.body || null,
-      status: body.status || 'draft_generated',
       safety_notes: body.safety_notes || null,
       safety_status: body.safety_status || 'ken_reviewed',
       requires_ken: true,
     });
+
+    if (requestedStatus !== existing.status) {
+      applyRequestedStatusTransition(itemId, existing.status, requestedStatus);
+    }
+
     return redirect(res, campaignUrl(campaign.id, 'Draft updated'));
   }
 
@@ -109,20 +117,52 @@ async function routeCampaignDetail(req, res) {
   const itemManual = pathname.match(/^\/marketing\/campaigns\/[^/]+\/items\/([^/]+)\/manual-submitted$/);
   if (itemManual && req.method === 'POST') {
     const itemId = decodeURIComponent(itemManual[1]);
-    ensureItemBelongsToCampaign(itemId, campaign.id);
+    const existing = ensureItemBelongsToCampaign(itemId, campaign.id);
     const body = await parseBody(req);
-    const existing = getOutreachItem(itemId);
-    updateOutreachItem(itemId, {
-      status: 'manual_submitted',
-      safety_status: 'manual_submitted',
-      safety_notes: appendNote(existing?.safety_notes, body.note || 'Marked manually submitted'),
-      requires_ken: false,
+    transitionOutreachItem(itemId, 'mark_manual_submitted', {
+      actor: 'ken',
+      fields: {
+        safety_status: 'manual_submitted',
+        safety_notes: appendNote(existing?.safety_notes, body.note || 'Marked manually submitted'),
+        requires_ken: false,
+      },
+      message: 'Manual submission marked complete',
+      metadata: { note: body.note || null },
     });
+
+    for (const task of getChannelTasks({ outreach_item_id: itemId })) {
+      if (['contact_form_manual', 'owned_social_manual', 'manual_research'].includes(task.channel_type)) {
+        updateChannelTask(task.id, { status: 'submitted', submitted_at: new Date().toISOString() });
+      }
+    }
+
     return redirect(res, campaignUrl(campaign.id, 'Marked manually submitted'));
   }
 
   res.statusCode = 405;
   return sendHtml(res, shell('Method not allowed', `<main class="p-8">Method not allowed</main>`));
+}
+
+function applyRequestedStatusTransition(itemId, current, requested) {
+  const actionByStatus = {
+    queued: 'queue',
+    draft_generated: 'generate_draft',
+    needs_ken: 'mark_needs_ken',
+    ready_for_gmail_draft: 'mark_ready_for_gmail_draft',
+    manual_submitted: 'mark_manual_submitted',
+    do_not_contact: 'suppress',
+    cancelled: 'cancel',
+  };
+  const action = actionByStatus[requested];
+  if (!action) return;
+  transitionOutreachItem(itemId, action, {
+    actor: 'ken',
+    fields: {
+      safety_status: requested === 'do_not_contact' ? 'suppressed' : 'ken_reviewed',
+      requires_ken: !['manual_submitted', 'cancelled'].includes(requested),
+    },
+    message: `Status changed in campaign detail: ${current} -> ${requested}`,
+  });
 }
 
 function renderCampaignDetailPage(campaign, { message, error }) {
@@ -198,6 +238,11 @@ function renderItemCard(campaign, item) {
     .map(r => `<li>${esc(r.title || r.topic || r.id)}</li>`)
     .join('');
 
+  const channelTasks = getChannelTasks({ outreach_item_id: item.id });
+  const channelHtml = channelTasks.length
+    ? `<div class="mt-2 flex flex-wrap gap-1">${channelTasks.map(t => `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] bg-zinc-100 text-zinc-600">${esc(t.channel_type)} · ${esc(t.status)}</span>`).join('')}</div>`
+    : '';
+
   return `<article class="border border-zinc-200 rounded-xl p-4">
     <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
       <div class="min-w-0">
@@ -211,6 +256,7 @@ function renderItemCard(campaign, item) {
           · AI policy: ${esc(item.outlet_context?.ai_policy || 'unknown')}
           · ${gmailInfo}
         </div>
+        ${channelHtml}
         ${releaseList ? `<ul class="mt-2 text-xs text-zinc-500 list-disc list-inside">${releaseList}</ul>` : ''}
       </div>
       <div class="flex flex-wrap gap-2">
@@ -234,7 +280,6 @@ function renderItemCard(campaign, item) {
           ${statusOption('draft_generated', item.status)}
           ${statusOption('needs_ken', item.status)}
           ${statusOption('ready_for_gmail_draft', item.status)}
-          ${statusOption('gmail_draft_created', item.status)}
           ${statusOption('manual_submitted', item.status)}
           ${statusOption('do_not_contact', item.status)}
         </select>
