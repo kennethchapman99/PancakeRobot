@@ -2,8 +2,8 @@ import { createGmailDraft } from '../marketing/gmail-drafts.js';
 import {
   getOutreachItem,
   getOutreachItems,
-  updateOutreachItem,
 } from '../shared/marketing-outreach-db.js';
+import { transitionOutreachItem } from '../shared/marketing-outreach-state.js';
 
 export async function createGmailDraftForOutreachItem(itemId) {
   const item = getOutreachItem(itemId);
@@ -11,11 +11,15 @@ export async function createGmailDraftForOutreachItem(itemId) {
 
   const preflight = validateDraftableItem(item);
   if (!preflight.ok) {
-    updateOutreachItem(item.id, {
-      status: 'needs_ken',
-      safety_status: 'gmail_draft_blocked',
-      safety_notes: preflight.notes.join('\n'),
-      requires_ken: true,
+    transitionOutreachItem(item.id, 'block_gmail_draft', {
+      actor: 'marketing-gmail-draft-agent',
+      fields: {
+        safety_status: 'gmail_draft_blocked',
+        safety_notes: preflight.notes.join('\n'),
+        requires_ken: true,
+      },
+      message: 'Gmail draft blocked by preflight',
+      metadata: { notes: preflight.notes },
     });
     return { item_id: item.id, ok: false, blocked: true, notes: preflight.notes };
   }
@@ -27,14 +31,18 @@ export async function createGmailDraftForOutreachItem(itemId) {
     body: item.body,
   });
 
-  updateOutreachItem(item.id, {
-    status: 'gmail_draft_created',
-    gmail_draft_id: result.gmail_draft_id,
-    gmail_message_id: result.gmail_message_id,
-    gmail_thread_id: result.gmail_thread_id,
-    safety_status: 'gmail_draft_created',
-    safety_notes: appendNote(item.safety_notes, `Gmail draft created: ${result.gmail_draft_id}`),
-    requires_ken: true,
+  transitionOutreachItem(item.id, 'create_gmail_draft', {
+    actor: 'marketing-gmail-draft-agent',
+    fields: {
+      gmail_draft_id: result.gmail_draft_id,
+      gmail_message_id: result.gmail_message_id,
+      gmail_thread_id: result.gmail_thread_id,
+      safety_status: 'gmail_draft_created',
+      safety_notes: appendNote(item.safety_notes, `Gmail draft created: ${result.gmail_draft_id}`),
+      requires_ken: true,
+    },
+    message: 'Gmail draft created',
+    metadata: result,
   });
 
   return { item_id: item.id, ok: true, ...result };
@@ -42,19 +50,26 @@ export async function createGmailDraftForOutreachItem(itemId) {
 
 export async function createGmailDraftsForCampaign(campaignId) {
   const items = getOutreachItems({ campaign_id: campaignId })
-    .filter(item => !['sent', 'replied', 'do_not_contact', 'gmail_draft_created'].includes(item.status));
+    .filter(item => !['sent', 'replied', 'do_not_contact', 'gmail_draft_created', 'manual_submitted'].includes(item.status));
 
   const results = [];
   for (const item of items) {
     try {
       results.push(await createGmailDraftForOutreachItem(item.id));
     } catch (error) {
-      updateOutreachItem(item.id, {
-        status: 'needs_ken',
-        safety_status: 'gmail_draft_error',
-        safety_notes: appendNote(item.safety_notes, error.message),
-        requires_ken: true,
-      });
+      try {
+        transitionOutreachItem(item.id, 'block_gmail_draft', {
+          actor: 'marketing-gmail-draft-agent',
+          fields: {
+            safety_status: 'gmail_draft_error',
+            safety_notes: appendNote(item.safety_notes, error.message),
+            requires_ken: true,
+          },
+          message: 'Gmail draft creation failed',
+        });
+      } catch {
+        // Preserve original error in result.
+      }
       results.push({ item_id: item.id, ok: false, error: error.message });
     }
   }
