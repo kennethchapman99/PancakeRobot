@@ -15,7 +15,7 @@ dotenv.config({ path: join(__dirname, '../../.env'), override: true });
 import { authorizeInteractive } from '../marketing/gmail-auth.js';
 
 console.log('[GMAIL-AUTH] Starting Gmail authorization…');
-console.log('[GMAIL-AUTH] Scopes: https://www.googleapis.com/auth/gmail.readonly');
+console.log('[GMAIL-AUTH] Scopes: gmail.readonly + gmail.compose (draft creation)');
 if (process.env.MARKETING_GMAIL_ACCOUNT) {
   console.log(`[GMAIL-AUTH] Expected account: ${process.env.MARKETING_GMAIL_ACCOUNT}`);
 }

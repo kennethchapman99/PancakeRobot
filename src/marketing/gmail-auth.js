@@ -67,14 +67,20 @@ export async function authorizeInteractive() {
   const oauth2Client = getOAuth2Client();
 
   if (loadSavedToken(oauth2Client)) {
-    console.log('[GMAIL-AUTH] Existing token loaded — verifying account…');
-    const verified = await verifyAccount(oauth2Client);
-    if (verified) {
-      console.log('[GMAIL-AUTH] Account verified. Auth is ready.');
-      console.log('[GMAIL-AUTH] If draft creation fails with insufficient permissions, delete the token file and re-run auth.');
-      return oauth2Client;
+    console.log('[GMAIL-AUTH] Existing token loaded — checking scopes and account…');
+    // Verify the saved token covers all required scopes
+    const grantedScopes = (oauth2Client.credentials?.scope || '').split(' ').filter(Boolean);
+    const missingScopes = SCOPES.filter(s => !grantedScopes.includes(s));
+    if (missingScopes.length) {
+      console.warn(`[GMAIL-AUTH] Token missing scopes: ${missingScopes.join(', ')} — re-authorizing…`);
+    } else {
+      const verified = await verifyAccount(oauth2Client);
+      if (verified) {
+        console.log('[GMAIL-AUTH] All scopes present. Account verified. Auth is ready.');
+        return oauth2Client;
+      }
+      console.warn('[GMAIL-AUTH] Token present but account mismatch — re-authorizing…');
     }
-    console.warn('[GMAIL-AUTH] Token present but account mismatch — re-authorizing…');
   }
 
   const authUrl = oauth2Client.generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: SCOPES });
