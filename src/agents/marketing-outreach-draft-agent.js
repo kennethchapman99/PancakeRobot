@@ -4,8 +4,9 @@ import { getMarketingTargets } from '../shared/marketing-db.js';
 import {
   getOutreachItem,
   getOutreachItems,
-  updateOutreachItem,
 } from '../shared/marketing-outreach-db.js';
+import { transitionOutreachItem } from '../shared/marketing-outreach-state.js';
+import { getReleaseMarketingPack, getBundleMarketingPack } from '../shared/release-marketing-pack.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const BRAND_PROFILE = loadBrandProfile();
@@ -33,34 +34,52 @@ export async function generateDraftForOutreachItem(itemId, options = {}) {
   const draft = await buildDraft(item, options);
   const safety = validateDraft(draft, item);
 
-  updateOutreachItem(item.id, {
+  const fields = {
     subject: draft.subject,
     body: draft.body,
     safety_status: safety.ok ? 'passed' : 'needs_review',
     safety_notes: [...(draft.safety_notes ? [draft.safety_notes] : []), ...safety.notes].join('\n'),
     generation_method: draft.generation_method,
-    status: safety.ok ? 'draft_generated' : 'needs_ken',
     requires_ken: true,
-  });
+  };
+
+  if (safety.ok) {
+    transitionOutreachItem(item.id, 'generate_draft', {
+      actor: 'marketing-outreach-draft-agent',
+      fields,
+      message: 'Outreach draft generated',
+      metadata: { generation_method: draft.generation_method },
+    });
+  } else {
+    transitionOutreachItem(item.id, 'mark_needs_ken', {
+      actor: 'marketing-outreach-draft-agent',
+      fields,
+      message: 'Outreach draft generated but needs review',
+      metadata: { safety_notes: safety.notes },
+    });
+  }
 
   return { item_id: item.id, ...draft, safety };
 }
 
 export async function generateDraftsForCampaign(campaignId, options = {}) {
   const items = getOutreachItems({ campaign_id: campaignId })
-    .filter(item => !['sent', 'replied', 'do_not_contact'].includes(item.status));
+    .filter(item => !['sent', 'replied', 'do_not_contact', 'gmail_draft_created', 'manual_submitted'].includes(item.status));
 
   const results = [];
   for (const item of items) {
     try {
       results.push(await generateDraftForOutreachItem(item.id, options));
     } catch (error) {
-      updateOutreachItem(item.id, {
-        status: 'needs_ken',
-        safety_status: 'error',
-        safety_notes: error.message,
-        requires_ken: true,
-      });
+      try {
+        transitionOutreachItem(item.id, 'mark_needs_ken', {
+          actor: 'marketing-outreach-draft-agent',
+          fields: { safety_status: 'error', safety_notes: error.message, requires_ken: true },
+          message: 'Draft generation failed',
+        });
+      } catch {
+        // Preserve original generation error in result.
+      }
       results.push({ item_id: item.id, error: error.message });
     }
   }
@@ -106,6 +125,10 @@ function buildContext(item) {
     releaseSongs.map(song => [song.id, getReleaseLinks(song.id)])
   );
 
+  const marketingPack = item.outreach_mode === 'bundle'
+    ? getBundleMarketingPack(releaseSongs.map(song => song.id))
+    : releaseSongs[0] ? getReleaseMarketingPack(releaseSongs[0].id) : null;
+
   return {
     brand: {
       name: BRAND_PROFILE.brand_name || 'Pancake Robot',
@@ -125,6 +148,7 @@ function buildContext(item) {
       distributor: song.distributor,
       links: releaseLinks[song.id] || [],
     })),
+    marketing_pack: marketingPack,
     outlet: {
       id: outlet.id || item.target_id,
       name: outlet.name || item.outlet_name,
