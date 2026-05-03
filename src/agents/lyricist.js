@@ -167,7 +167,7 @@ LYRIC RULES:
 
 REQUIREMENTS:
 - Production render target: ${MUSIC.target_length}.
-- Word count: ${MUSIC.normal_word_range}. Never go below ${MUSIC.min_words} words unless explicitly requested.
+- WORD COUNT (hard constraint): Target ${MUSIC.normal_word_range} singable words, excluding section labels like [CHORUS]. Minimum is ${MUSIC.min_words} words. Lyrics submitted below ${MUSIC.min_words} words will be REJECTED and you will be asked to redo them. Count your words before submitting.
 - Full-length hip-hop support is required. Do not shorten rap verses to protect JSON size; prioritize complete lyrics and keep metadata concise.
 - Start with a plain [INTRO] label followed immediately by the first singable line.
 - First singable line must contain the exact title.
