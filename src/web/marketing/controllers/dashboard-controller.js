@@ -35,7 +35,8 @@ export async function postOutreachRun(req, res) {
   try {
     const body = await readBody(req);
     const result = await createAndMaybeGenerate(body);
-    const msg = `Outreach run created: ${result.campaign_count} campaign(s), ${result.item_count} item(s)${result.generated_drafts ? `, ${result.generated_drafts} draft(s)` : ''}`;
+    const draftNote = result.generated_drafts === 'queued' ? '; drafts generating in background' : (result.generated_drafts ? `, ${result.generated_drafts} draft(s)` : '');
+    const msg = `Outreach run created: ${result.campaign_count} campaign(s), ${result.item_count} item(s)${draftNote}`;
     redirect(res, `/marketing?message=${encodeURIComponent(msg)}`);
   } catch (error) {
     redirect(res, `/marketing?error=${encodeURIComponent(error.message)}`);
@@ -53,13 +54,13 @@ export async function postInboxScan(req, res) {
 }
 
 function renderBulkOutreach(releases, outlets, summary) {
-  const releaseRows = releases.map(({ song, links }) => `<label class="flex items-start gap-3 border border-zinc-200 rounded-lg p-3 hover:bg-zinc-50"><input type="checkbox" name="song_ids" value="${attr(song.id)}" class="mt-1"><span><span class="block font-semibold text-sm">${esc(song.title || song.topic || song.id)}</span><span class="block text-xs text-zinc-500">${esc(song.status)} · ${links.length ? esc(links.map(l => l.platform).slice(0,3).join(', ')) : 'links pending'}</span></span></label>`).join('');
+  const releaseRows = releases.map(({ song, links }) => `<label class="flex items-start gap-3 border border-zinc-200 rounded-lg p-3 hover:bg-zinc-50"><input type="checkbox" name="song_ids" value="${attr(song.id)}" class="mt-1"><span class="flex-1 min-w-0"><span class="block font-semibold text-sm">${esc(song.title || song.topic || song.id)}</span><span class="block text-xs text-zinc-500">${esc(song.status)} · ${links.length ? esc(links.map(l => l.platform).slice(0,3).join(', ')) : 'links pending'}</span></span><a href="/songs/${attr(song.id)}" class="shrink-0 text-xs text-blue-600 hover:underline mt-0.5" onclick="event.stopPropagation()">View →</a></label>`).join('');
   return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">
     <div class="flex items-start justify-between gap-4 mb-5"><div><h2 class="font-bold text-lg">Bulk Outreach Run</h2><p class="text-sm text-zinc-500 mt-1">Select releases and outlet group. Creates review-gated draft rows only.</p></div><div class="text-right text-xs text-zinc-500"><div>${summary.total || 0} outreach item(s)</div><div>${summary.draft_generated || 0} draft(s) · ${summary.requires_ken || 0} need Ken</div></div></div>
     <form method="POST" action="/marketing/outreach-run" class="space-y-4">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div><div class="font-semibold text-sm mb-2">Releases</div><div class="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-1">${releaseRows || emptyBox('No release-ready songs found.')}</div></div>
-        <div><div class="font-semibold text-sm mb-2">Outlet group</div><div class="space-y-2">
+        <div><div class="flex items-center justify-between mb-2"><span class="font-semibold text-sm">Releases</span><a href="/marketing/releases/new" class="text-xs text-blue-600 hover:underline">+ Add release</a></div><div class="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-1">${releaseRows || emptyBox('No release-ready songs. <a href="/marketing/releases/new" class="text-blue-600 hover:underline">Add one</a> or promote a song in the Song Catalog.')}</div></div>
+        <div><div class="font-semibold text-sm mb-2 flex items-center gap-3">Outlet group <a href="/marketing/outlets" class="text-xs font-normal text-blue-600 hover:underline">Browse all outlets →</a></div><div class="space-y-2">
           ${presetRadio('safe_p0', `Safe P0 Launch (${outlets.filter(o => o.priority === 'P0' && o.outreach_allowed === true).length})`, true)}
           ${presetRadio('safe_p0_p1', `Safe P0 + P1 (${outlets.filter(o => ['P0','P1'].includes(o.priority) && o.outreach_allowed === true).length})`)}
           ${presetRadio('playlist', `Playlist / curators (${outlets.filter(o => o.type === 'playlist' && o.outreach_allowed === true).length})`)}
@@ -67,8 +68,21 @@ function renderBulkOutreach(releases, outlets, summary) {
           ${presetRadio('all_safe', `All safe (${outlets.filter(o => o.outreach_allowed === true).length})`)}
         </div><div class="mt-4 font-semibold text-sm mb-2">Mode</div><div class="space-y-2">${modeRadio('single_release', 'One campaign per selected release', true)}${modeRadio('bundle', 'Bundle selected releases into one pitch')}</div><label class="mt-4 flex gap-2 text-sm"><input type="checkbox" name="generate_drafts" value="true" checked>Generate draft copy now</label></div>
       </div>
-      <div class="flex items-center justify-between pt-2"><p class="text-xs text-zinc-500">Nothing sends automatically.</p><button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Create outreach run</button></div>
+      <div class="flex items-center justify-between pt-2"><p class="text-xs text-zinc-500">Nothing sends automatically.</p><button id="outreach-run-btn" class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Create outreach run</button></div>
     </form>
+    <div id="outreach-run-progress" class="hidden mt-4 flex items-center gap-3 text-sm text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3">
+      <svg class="animate-spin h-4 w-4 text-emerald-600 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+      <span>Creating outreach run and generating drafts… this may take 30–60 seconds.</span>
+    </div>
+    <script>
+      document.querySelector('form[action="/marketing/outreach-run"]').addEventListener('submit', function() {
+        var btn = document.getElementById('outreach-run-btn');
+        btn.disabled = true;
+        btn.textContent = 'Working…';
+        btn.classList.replace('bg-emerald-600', 'bg-zinc-400');
+        document.getElementById('outreach-run-progress').classList.remove('hidden');
+      });
+    </script>
   </section>`;
 }
 
@@ -88,6 +102,10 @@ function renderInboxTriage({ summary, messages }) {
 
 function releaseReadySongs() {
   const statuses = new Set(['submitted_to_distributor', 'published', 'approved', 'ready_to_publish', 'metadata_ready']);
-  return getAllSongs().filter(song => statuses.has(song.status)).slice(0, 50).map(song => ({ song, links: getReleaseLinks(song.id) }));
+  const seen = new Set();
+  return getAllSongs()
+    .filter(song => statuses.has(song.status) && !seen.has(song.id) && seen.add(song.id))
+    .slice(0, 50)
+    .map(song => ({ song, links: getReleaseLinks(song.id) }));
 }
 function safeInbox() { try { return { summary: getInboxSummary(), messages: getInboxMessages(50).filter(m => m.requires_ken || ['safe_reply_candidate','opportunity','creator_reply','playlist_reply','blog_media_reply','needs_ken','submission_confirmation','platform_admin','account_admin','do_not_contact'].includes(m.classification)) }; } catch { return { summary: null, messages: [] }; } }

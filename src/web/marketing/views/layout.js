@@ -25,6 +25,7 @@ export function renderMarketingLayout(title, body) {
         <a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/ideas">Idea Vault</a>
         <a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/songs">Song Catalog</a>
         <a class="block rounded-lg px-3 py-2 bg-zinc-700 text-white" href="/marketing">Marketing</a>
+        <a class="block rounded-lg px-3 py-2 pl-6 text-zinc-400 hover:bg-zinc-800 text-xs" href="/marketing/outlets">↳ Outlets</a>
         <a class="block rounded-lg px-3 py-2 text-zinc-300 hover:bg-zinc-800" href="/brand">Brand</a>
       </div>
     </nav>

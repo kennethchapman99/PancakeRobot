@@ -87,7 +87,7 @@ export function createOutreachItem(item) {
     safety_status: item.safety_status || 'pending',
     safety_notes: item.safety_notes || null,
     selected_assets_json: JSON.stringify(item.selected_assets || []),
-    release_context_json: JSON.stringify(item.release_context || {}),
+    release_context_json: JSON.stringify(item.release_context || []),
     outlet_context_json: JSON.stringify(item.outlet_context || {}),
     subject: item.subject || null,
     body: item.body || null,
@@ -163,7 +163,7 @@ function parseOutreachItem(row) {
     requires_ken: Boolean(row.requires_ken),
     bundle_song_ids: parseJsonArray(row.bundle_song_ids_json),
     selected_assets: parseJsonArray(row.selected_assets_json),
-    release_context: parseJsonObject(row.release_context_json),
+    release_context: parseJsonArray(row.release_context_json),
     outlet_context: parseJsonObject(row.outlet_context_json),
     raw: parseJsonObject(row.raw_json),
   };

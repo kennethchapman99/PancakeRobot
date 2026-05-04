@@ -104,16 +104,12 @@ export async function createAndMaybeGenerate(body = {}) {
   });
 
   if (parseBool(body.generate_drafts)) {
-    let generated = 0;
-    let failed = 0;
-    const draft_results = [];
+    const deterministic = parseBool(body.deterministic);
     for (const campaign of result.campaigns || []) {
-      const draftResult = await generateDraftsForCampaign(campaign.campaign_id, { deterministic: parseBool(body.deterministic) });
-      generated += draftResult.generated || 0;
-      failed += draftResult.failed || 0;
-      draft_results.push(draftResult);
+      generateDraftsForCampaign(campaign.campaign_id, { deterministic })
+        .catch(err => console.error('[draft-gen] campaign', campaign.campaign_id, err.message));
     }
-    return { ...result, generated_drafts: generated, failed_drafts: failed, draft_results };
+    return { ...result, generated_drafts: 'queued' };
   }
 
   return result;

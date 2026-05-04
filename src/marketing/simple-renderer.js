@@ -363,9 +363,12 @@ async function mp4({ imagePath, audioPath, outputPath, hook, durationOverride })
   if (!await commandWorks('ffmpeg')) return { skipped: true, reason: 'ffmpeg_not_found' };
   const duration = durationOverride || hook.hook_duration_sec || 15;
   const start = hook.hook_start_sec || 0;
+  const frames = Math.round(duration * 30);
   fs.mkdirSync(dirname(outputPath), { recursive: true });
+  // Scale to 20% larger than output to give zoompan room, then gently zoom in over the clip duration
+  const vf = `scale=1296:2304:force_original_aspect_ratio=increase,crop=1296:2304,zoompan=z='min(pzoom+0.0002,1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=1080x1920:fps=30,format=yuv420p`;
   try {
-    await execFileAsync('ffmpeg', ['-y', '-loop', '1', '-framerate', '30', '-i', imagePath, '-ss', String(start), '-t', String(duration), '-i', audioPath, '-t', String(duration), '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p', '-c:v', 'libx264', '-preset', 'veryfast', '-r', '30', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', outputPath], { timeout: 120000, maxBuffer: 1024 * 1024 * 10 });
+    await execFileAsync('ffmpeg', ['-y', '-loop', '1', '-framerate', '30', '-i', imagePath, '-ss', String(start), '-t', String(duration), '-i', audioPath, '-t', String(duration), '-vf', vf, '-c:v', 'libx264', '-preset', 'veryfast', '-r', '30', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', outputPath], { timeout: 120000, maxBuffer: 1024 * 1024 * 10 });
     return { skipped: false, path: outputPath };
   } catch (err) {
     return { skipped: true, reason: `ffmpeg_failed: ${err.message}` };
@@ -405,10 +408,10 @@ export async function renderMarketingAssets(assets, hook) {
     ['tiktokHook',  join(work, 'tiktok-hook-base.jpg'),       1080, 1920, ['NEW SONG', 'OUT NOW'],     'listen now',        null,  'tiktok',    'fullBleedHero'],
     ['tiktokLyrics',join(work, 'tiktok-lyrics-base.jpg'),    1080, 1920, [assets.title],              'new release',       lyric, 'tiktok',    'lyricsCard'],
     ['tiktokLoop',  join(work, 'tiktok-loop-base.jpg'),       1080, 1920, profileHeadline,             'official sound',    null,  'tiktok',    'characterHero'],
-    ['ig-feed-announcement-1080x1350.png', join(assets.dirs.instagramDir, 'ig-feed-announcement-1080x1350.png'), 1080, 1350, ['NEW SONG', 'OUT NOW'], 'Listen everywhere', null, 'instagram', 'default'],
-    ['ig-square-post-1080x1080.png',       join(assets.dirs.instagramDir, 'ig-square-post-1080x1080.png'),       1080, 1080, ['NEW SONG'],            'Link in bio',       null, 'instagram', 'default'],
-    ['ig-reel-cover.jpg',                  join(assets.dirs.instagramDir, 'ig-reel-cover.jpg'),                  1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'instagram', 'default'],
-    ['tiktok-cover.jpg',                   join(assets.dirs.tiktokDir,    'tiktok-cover.jpg'),                   1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'tiktok',    'default'],
+    ['ig-feed-announcement-1080x1350.png', join(assets.dirs.instagramDir, 'ig-feed-announcement-1080x1350.png'), 1080, 1350, ['NEW SONG', 'OUT NOW'], 'Listen everywhere', null, 'instagram', 'fullBleedHero'],
+    ['ig-square-post-1080x1080.png',       join(assets.dirs.instagramDir, 'ig-square-post-1080x1080.png'),       1080, 1080, profileHeadline,         null,                null, 'instagram', 'characterHero'],
+    ['ig-reel-cover.jpg',                  join(assets.dirs.instagramDir, 'ig-reel-cover.jpg'),                  1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'instagram', 'storyCTA'],
+    ['tiktok-cover.jpg',                   join(assets.dirs.tiktokDir,    'tiktok-cover.jpg'),                   1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'tiktok',    'storyCTA'],
   ];
 
   const map = {};

@@ -162,7 +162,7 @@ async function runSetup() {
 // NEW SONG PIPELINE
 // ─────────────────────────────────────────────────────────────
 
-async function runNewSongPipeline(topic) {
+async function runNewSongPipeline(topic, existingSongId = null) {
   if (!topic) {
     console.error(chalk.red('ERROR: Please provide a topic: --new "your topic here"'));
     process.exit(1);
@@ -171,13 +171,13 @@ async function runNewSongPipeline(topic) {
   printBanner();
   console.log(chalk.bold.green(`NEW SONG PIPELINE — Topic: "${topic}"\n`));
 
-  const songId = generateSongId();
+  const songId = existingSongId || generateSongId();
   const songDir = join(__dirname, `../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
 
   let totalCost = 0;
 
-  // Initialize song in DB
+  // Initialize song in DB (upsert preserves existing fields when reusing an ID)
   upsertSong({
     id: songId,
     topic,
@@ -648,8 +648,10 @@ async function main() {
     }
 
     case '--new': {
-      const topic = args.slice(1).join(' ');
-      await runNewSongPipeline(topic);
+      const idFlagIdx = args.indexOf('--id');
+      const existingSongId = idFlagIdx !== -1 ? args[idFlagIdx + 1] : null;
+      const topicArgs = args.slice(1).filter((_, i) => (i + 1) !== idFlagIdx && (i + 1) !== idFlagIdx + 1);
+      await runNewSongPipeline(topicArgs.join(' '), existingSongId);
       break;
     }
 

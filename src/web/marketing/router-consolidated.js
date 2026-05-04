@@ -1,5 +1,7 @@
 import express from 'express';
 import { renderMarketingDashboard, postOutreachRun, postInboxScan } from './controllers/dashboard-controller.js';
+import { renderOutletsPage } from './controllers/outlets-controller.js';
+import { renderNewRelease, postNewRelease, handleNewReleaseUpload } from './controllers/releases-controller.js';
 import {
   renderCampaignDetail,
   postGenerateCampaignDrafts,
@@ -28,6 +30,11 @@ export function registerMarketingRouter(app) {
   router.post('/marketing/outreach-run', postOutreachRun);
   router.post('/marketing/agents/inbox-scan', postInboxScan);
   router.post('/marketing/inbox-scan', postInboxScan);
+
+  router.get('/marketing/outlets', renderOutletsPage);
+
+  router.get('/marketing/releases/new', renderNewRelease);
+  router.post('/marketing/releases', handleNewReleaseUpload, postNewRelease);
 
   router.get('/marketing/campaigns/:campaignId', renderCampaignDetail);
   router.post('/marketing/campaigns/:campaignId/generate-drafts', postGenerateCampaignDrafts);

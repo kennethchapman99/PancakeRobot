@@ -421,8 +421,7 @@ app.post('/api/songs/:id/generate', (req, res) => {
   pipelineJobs.set(jobId, {
     status: 'running',
     logs: [],
-    songId: null,       // will be parsed from output
-    originalSongId: song.id,
+    songId: song.id,
     spawnedProfileId,
     error: null,
     startedAt: Date.now(),
@@ -430,7 +429,7 @@ app.post('/api/songs/:id/generate', (req, res) => {
 
   const orchestratorPath = join(__dirname, '../orchestrator.js');
   const activeProfilePath = resolveBrandProfilePath(spawnedProfileId);
-  const child = spawn('node', [orchestratorPath, '--new', topic], {
+  const child = spawn('node', [orchestratorPath, '--new', '--id', song.id, topic], {
     cwd: join(__dirname, '../..'),
     env: { ...process.env, WEB_PIPELINE: '1', FORCE_COLOR: '0', BRAND_PROFILE_PATH: activeProfilePath },
   });
@@ -481,20 +480,7 @@ app.post('/api/songs/:id/generate', (req, res) => {
     if (code === 0) {
       job.status = 'done';
       job.logs.push('✅ Pipeline complete!');
-      // DB fallback: if we still don't have a song ID, find most recently created song
-      if (!job.songId) {
-        try {
-          const recent = getAllSongs()
-            .filter(s => s.created_at > new Date(job.startedAt).toISOString())
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-          if (recent) {
-            job.songId = recent.id;
-            job.logs.push(`📀 Song ID: ${recent.id}`);
-          }
-        } catch {}
-      }
-      // Stamp the generated song with the brand profile used
-      if (job.songId && job.spawnedProfileId) {
+      if (job.spawnedProfileId) {
         try { upsertSong({ id: job.songId, brand_profile_id: job.spawnedProfileId }); } catch {}
       }
     } else {
