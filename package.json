@@ -18,6 +18,7 @@
     "marketing:gmail:scan": "node src/scripts/scan-marketing-inbox.js",
     "marketing:targets:import": "node src/scripts/import-marketing-targets.js",
     "marketing:targets:match": "node src/scripts/match-release-targets.js",
+    "marketing:targets:seed-test": "node src/scripts/seed-test-marketing-target.js",
     "marketing:outlets:seed": "node src/scripts/seed-marketing-outlets-to-targets.js",
     "report": "node src/orchestrator.js --report",
     "research": "node src/orchestrator.js --research",
