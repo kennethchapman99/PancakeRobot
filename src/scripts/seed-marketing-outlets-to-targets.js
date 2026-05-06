@@ -27,8 +27,10 @@ import {
   addSuppressionRule,
   getSuppressionRules,
   getMarketingTargetStats,
+  getMarketingTargetById,
 } from '../shared/marketing-db.js';
 import { getActiveProfileId } from '../shared/brand-profile.js';
+import { getDbPath } from '../shared/db.js';
 
 function getArg(name) {
   const idx = process.argv.indexOf(name);
@@ -159,10 +161,25 @@ function buildContactability(outlet) {
   const methods = [];
   if (contact.email) methods.push({ type: 'email', value: contact.email, source_url: outlet.url || null, confidence: 'high' });
   if (contact.submission_path) methods.push({ type: 'contact_form', value: contact.submission_path, source_url: outlet.url || null, confidence: 'medium' });
+  if (!methods.length && String(outlet.category || '').toLowerCase().includes('owned')) {
+    methods.push({ type: 'owned_channel', value: outlet.url || 'owned channel', source_url: outlet.url || null, confidence: 'high' });
+  }
+  let status = 'manual_research_needed';
+  let bestChannel = 'unknown';
+  if (contact.email) {
+    status = 'contactable';
+    bestChannel = 'email';
+  } else if (String(outlet.category || '').toLowerCase().includes('owned')) {
+    status = 'owned_action';
+    bestChannel = 'owned_channel';
+  } else if (contact.submission_path) {
+    status = 'contactable_manual';
+    bestChannel = 'contact_form';
+  }
   return {
-    status: methods.length ? 'contactable' : 'needs_manual_review',
+    status,
     free_contact_method_found: methods.length > 0,
-    best_channel: contact.email ? 'email' : contact.submission_path ? 'contact_form' : 'unknown',
+    best_channel: bestChannel,
     contact_methods: methods,
     evidence_url: outlet.url || null,
     notes: methods.length ? null : 'No usable free outreach route found.',
@@ -174,10 +191,10 @@ function buildEligibility(outlet, aiPolicyDetails, costPolicy, contactability) {
   const reasonCodes = [];
   if (costPolicy.requires_payment) reasonCodes.push(costPolicy.cost_type === 'membership' ? 'paid_membership_required' : 'requires_payment');
   if (aiPolicyDetails.status === 'banned') reasonCodes.push('ai_music_banned');
-  if (contactability.status !== 'contactable' || contactability.free_contact_method_found !== true) reasonCodes.push('no_contact_method');
+  if (!['contactable', 'contactable_manual', 'owned_action'].includes(contactability.status) || contactability.free_contact_method_found !== true) reasonCodes.push('no_contact_method');
   if (doNotContact) reasonCodes.push('do_not_contact');
   return {
-    eligible: !costPolicy.requires_payment && aiPolicyDetails.status !== 'banned' && contactability.status === 'contactable' && contactability.free_contact_method_found === true && !doNotContact,
+    eligible: !costPolicy.requires_payment && aiPolicyDetails.status !== 'banned' && ['contactable', 'contactable_manual', 'owned_action'].includes(contactability.status) && contactability.free_contact_method_found === true && !doNotContact,
     reason_codes: [...new Set(reasonCodes)],
     reason_summary: reasonCodes.length ? reasonCodes.join(', ') : 'Eligible for outreach.',
     last_checked_at: new Date().toISOString(),
@@ -209,14 +226,14 @@ function normalizeOutletToMarketingTarget(outlet, brandProfileId) {
     type: mapOutletType(outlet.category),
     platform: (outlet.platforms || []).join(', '),
     source_url: sourceUrl,
-    submission_url: null,
+    submission_url: /^https?:\/\//i.test(contact.submission_path || '') ? contact.submission_path : null,
     contact_method: contactMethod(outlet),
     contact_email: contact.email || null,
     handle: Object.values(outlet.social_handles || {}).find(Boolean) || null,
     official_website_url: outlet.url || null,
-    contact_page_url: null,
+    contact_page_url: /^https?:\/\//i.test(contact.submission_path || '') ? contact.submission_path : outlet.url || null,
     public_email: contact.email || null,
-    submission_form_url: null,
+    submission_form_url: /^https?:\/\//i.test(contact.submission_path || '') ? contact.submission_path : null,
     instagram_url: socialUrl(outlet.social_handles?.instagram, 'instagram'),
     tiktok_url: socialUrl(outlet.social_handles?.tiktok, 'tiktok'),
     youtube_url: socialUrl(outlet.social_handles?.youtube, 'youtube'),
@@ -299,7 +316,13 @@ let skipped = 0;
 
 for (const outlet of outlets) {
   try {
+    const existing = getMarketingTargetById(outlet.id, { brand_profile_id: brandProfileId });
     const target = normalizeOutletToMarketingTarget(outlet, brandProfileId);
+    if (existing && ['suppressed', 'do_not_contact', 'bounced', 'paid_only'].includes(existing.suppression_status || '')) {
+      target.suppression_status = existing.suppression_status;
+      target.suppression_reason = existing.suppression_reason || target.rejected_reason || null;
+      target.suppression_source = existing.suppression_source || 'marketing_outlets_seed';
+    }
     upsertMarketingTarget(target);
     imported++;
 
@@ -324,6 +347,7 @@ const stats = getMarketingTargetStats(brandProfileId);
 console.log('[MARKETING-OUTLETS] Seed complete');
 console.log(JSON.stringify({
   sourcePath,
+  dbPath: getDbPath(),
   brandProfileId,
   schemaVersion: parsed.schema_version || null,
   imported,

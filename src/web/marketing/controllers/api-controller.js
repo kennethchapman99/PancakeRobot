@@ -1,18 +1,20 @@
-import { getMarketingTargets, getMarketingTargetStats } from '../../../shared/marketing-db.js';
+import { getMarketingTargetStats } from '../../../shared/marketing-db.js';
 import { getActiveProfileId } from '../../../shared/brand-profile.js';
 import { getOutreachEvents, getOutreachItems, getOutreachSummary } from '../../../shared/marketing-outreach-db.js';
 import { createOutreachRun, getEligibleOutlets } from '../../../agents/marketing-outreach-run-agent.js';
 import { generateDraftsForCampaign } from '../../../agents/marketing-outreach-draft-agent.js';
 import { createGmailDraftForOutreachItem, createGmailDraftsForCampaign } from '../../../agents/marketing-gmail-draft-agent.js';
-import { hydrateOutletsWithHistory } from '../../../shared/marketing-outlets.js';
 import { readBody, parseBool } from '../utils/http.js';
+import { getActiveBrandOutlets, getMarketingOutletsDiagnostics, isTestOrDemoTarget } from '../../../shared/marketing-outlet-health.js';
 
 export function getOutletsSummaryApi(req, res) {
-  const outlets = hydrateOutletsWithHistory(getMarketingTargets({}));
+  const brandProfileId = getActiveProfileId();
+  const outlets = getActiveBrandOutlets({ brandProfileId, includeTestData: parseBool(req.query.show_test_data) });
   res.json({
     ok: true,
-    brand_profile_id: getActiveProfileId(),
-    stats: getMarketingTargetStats(getActiveProfileId()),
+    brand_profile_id: brandProfileId,
+    stats: getMarketingTargetStats(brandProfileId),
+    diagnostics: getMarketingOutletsDiagnostics({ brandProfileId }),
     summary: summarizeOutlets(outlets),
   });
 }
@@ -24,7 +26,9 @@ export function getOutletsApi(req, res) {
     type: req.query.type || undefined,
   };
 
-  let outlets = hydrateOutletsWithHistory(getMarketingTargets(filters));
+  const brandProfileId = getActiveProfileId();
+  const includeTestData = parseBool(req.query.show_test_data);
+  let outlets = getActiveBrandOutlets({ brandProfileId, includeTestData, filters });
   if (req.query.priority) outlets = outlets.filter(o => o.priority === req.query.priority);
   if (req.query.category) outlets = outlets.filter(o => o.category === req.query.category);
   if (req.query.ai_policy) outlets = outlets.filter(o => o.ai_policy === req.query.ai_policy);
@@ -33,13 +37,21 @@ export function getOutletsApi(req, res) {
   if (req.query.best_channel) outlets = outlets.filter(o => o.contactability.best_channel === req.query.best_channel);
   if (req.query.eligible !== undefined) outlets = outlets.filter(o => String(o.eligible) === req.query.eligible);
   if (req.query.outreach_allowed !== undefined) outlets = outlets.filter(o => String(o.outreach_allowed) === req.query.outreach_allowed);
+  if (req.query.show_excluded === 'false') outlets = outlets.filter(o => o.eligible === true);
+  if (!includeTestData) outlets = outlets.filter(o => !isTestOrDemoTarget(o));
   if (req.query.release_id) {
     const releaseId = String(req.query.release_id);
     outlets = outlets.filter(o => !o.outreach_history.some(event => event.release_id === releaseId));
   }
 
   outlets.sort(sortOutlet);
-  res.json({ ok: true, count: outlets.length, outlets });
+  res.json({
+    ok: true,
+    brand_profile_id: brandProfileId,
+    count: outlets.length,
+    diagnostics: getMarketingOutletsDiagnostics({ brandProfileId }),
+    outlets,
+  });
 }
 
 export function getOutreachItemsApi(req, res) {
@@ -108,6 +120,8 @@ export async function postInboxScanApi(req, res) {
 
 export async function createAndMaybeGenerate(body = {}, options = {}) {
   const { awaitDraftGeneration = false } = options;
+  const shouldGenerateDrafts = parseBool(body.generate_drafts);
+  const shouldCreateGmailDrafts = body.create_gmail_drafts === undefined ? shouldGenerateDrafts : parseBool(body.create_gmail_drafts);
   const result = createOutreachRun({
     song_ids: body.song_ids || body.song_id || [],
     outlet_ids: resolveOutletIdsFromBody(body),
@@ -116,26 +130,54 @@ export async function createAndMaybeGenerate(body = {}, options = {}) {
     allow_same_release: parseBool(body.allow_same_release),
   });
 
-  if (parseBool(body.generate_drafts)) {
+  if (shouldGenerateDrafts) {
     const deterministic = parseBool(body.deterministic);
     if (awaitDraftGeneration) {
       let generated = 0;
       let failed = 0;
       const draft_results = [];
+      let gmail_created = 0;
+      let gmail_blocked = 0;
+      let gmail_failed = 0;
+      const gmail_results = [];
       for (const campaign of result.campaigns || []) {
         const draftResult = await generateDraftsForCampaign(campaign.campaign_id, { deterministic });
         generated += draftResult.generated || 0;
         failed += draftResult.failed || 0;
         draft_results.push(draftResult);
+        if (shouldCreateGmailDrafts) {
+          const gmailResult = await createGmailDraftsForCampaign(campaign.campaign_id, { dryRun: parseBool(body.dry_run) });
+          gmail_created += gmailResult.created || 0;
+          gmail_blocked += gmailResult.blocked || 0;
+          gmail_failed += gmailResult.failed || 0;
+          gmail_results.push(gmailResult);
+        }
       }
-      return { ...result, generated_drafts: generated, failed_drafts: failed, draft_results };
+      return {
+        ...result,
+        generated_drafts: generated,
+        failed_drafts: failed,
+        draft_results,
+        gmail_drafts_created: gmail_created,
+        gmail_drafts_blocked: gmail_blocked,
+        gmail_drafts_failed: gmail_failed,
+        gmail_results,
+      };
     }
 
     for (const campaign of result.campaigns || []) {
-      generateDraftsForCampaign(campaign.campaign_id, { deterministic })
-        .catch(err => console.error('[draft-gen] campaign', campaign.campaign_id, err.message));
+      (async () => {
+        try {
+          await generateDraftsForCampaign(campaign.campaign_id, { deterministic });
+          if (shouldCreateGmailDrafts) {
+            await createGmailDraftsForCampaign(campaign.campaign_id, { dryRun: parseBool(body.dry_run) });
+          }
+        } catch (err) {
+          console.error('[draft-gen] campaign', campaign.campaign_id, err.message);
+        }
+      })();
     }
-    return { ...result, generated_drafts: 'queued' };
+    return { ...result, generated_drafts: 'queued', gmail_drafts_created: shouldCreateGmailDrafts ? 'queued' : 0 };
   }
 
   return result;

@@ -3,6 +3,7 @@ import path from 'path';
 import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import { getDb } from './db.js';
+import { getActiveProfileId } from './brand-profile.js';
 import { renderMarketingTemplate } from './marketing-context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -327,6 +328,12 @@ export function getMarketingTargets(filters = {}) {
   initMarketingSchema();
   const clauses = [];
   const params = [];
+  const brandProfileId = filters.brand_profile_id === undefined ? getActiveProfileId() : filters.brand_profile_id;
+
+  if (brandProfileId !== null && brandProfileId !== '') {
+    clauses.push('brand_profile_id = ?');
+    params.push(brandProfileId);
+  }
 
   if (filters.status) {
     clauses.push('status = ?');
@@ -348,7 +355,15 @@ export function getMarketingTargets(filters = {}) {
 
 export function getApprovedMarketingTargets() {
   initMarketingSchema();
-  return getDb().prepare(`SELECT * FROM marketing_targets WHERE status = 'approved' ORDER BY updated_at DESC`).all();
+  return getDb().prepare(`SELECT * FROM marketing_targets WHERE status = 'approved' AND brand_profile_id = ? ORDER BY updated_at DESC`).all(getActiveProfileId());
+}
+
+export function getMarketingTargetById(id, { brand_profile_id = getActiveProfileId() } = {}) {
+  initMarketingSchema();
+  if (brand_profile_id === null) {
+    return getDb().prepare('SELECT * FROM marketing_targets WHERE id = ?').get(id);
+  }
+  return getDb().prepare('SELECT * FROM marketing_targets WHERE id = ? AND brand_profile_id = ?').get(id, brand_profile_id);
 }
 
 export function upsertMarketingTarget(target) {

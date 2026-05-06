@@ -19,6 +19,14 @@ const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor;
 
 let _db = null;
 
+export function getDbPath() {
+  return DB_PATH;
+}
+
+export function getDbAppSlug() {
+  return APP_SLUG;
+}
+
 export function getDb() {
   if (_db) return _db;
 

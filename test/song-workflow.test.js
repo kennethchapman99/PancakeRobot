@@ -34,9 +34,11 @@ test('submitted songs switch to pack generation after HyperFollow is present', a
   assert.equal(action.blocking, true);
 });
 
-test('submitted songs switch to release kit publishing and then outreach', async () => {
+test('submitted songs switch straight to outreach once HyperFollow and generated assets exist', async () => {
   const { getSongNextAction } = await import(`../src/shared/song-workflow.js?workflow=${Date.now()}b`);
-  const shared = {
+  const action = getSongNextAction(
+    { id: 'SONG_3', status: 'submitted to DistroKid' },
+    {
     marketing_links: { smart_link: 'https://hyperfollow.example/song' },
     marketing_assets: {
       square_post_url: 'https://assets.example/square.png',
@@ -47,19 +49,9 @@ test('submitted songs switch to release kit publishing and then outreach', async
       missing_required_fields: [],
       missing_recommended_fields: ['audio_download_url'],
     },
-  };
-
-  const publishAction = getSongNextAction({ id: 'SONG_3', status: 'submitted to DistroKid' }, shared);
-  assert.equal(publishAction.nextActionKey, 'PUBLISH_RELEASE_KIT');
-
-  const outreachAction = getSongNextAction(
-    { id: 'SONG_3', status: 'submitted to DistroKid' },
-    {
-      ...shared,
-      marketing_assets: { ...shared.marketing_assets, release_kit_published: true },
     },
   );
-  assert.equal(outreachAction.nextActionKey, 'START_OUTREACH');
-  assert.equal(outreachAction.blocking, false);
-  assert.ok(outreachAction.missing.includes('audio download link'));
+  assert.equal(action.nextActionKey, 'START_OUTREACH');
+  assert.equal(action.blocking, false);
+  assert.ok(action.missing.includes('audio download link'));
 });

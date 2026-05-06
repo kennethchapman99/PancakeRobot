@@ -53,7 +53,10 @@ export async function postOutreachRun(req, res) {
     const body = await readBody(req);
     const result = await createAndMaybeGenerate(body, { awaitDraftGeneration: true });
     const draftNote = typeof result.generated_drafts === 'number' ? `; ${result.generated_drafts} draft(s) generated` : '';
-    const msg = `Outreach run created: ${result.campaign_count} campaign(s), ${result.item_count} item(s)${draftNote}`;
+    const gmailNote = typeof result.gmail_drafts_created === 'number'
+      ? `; ${result.gmail_drafts_created} Gmail draft(s) created${result.gmail_drafts_failed ? `, ${result.gmail_drafts_failed} failed` : ''}${result.gmail_drafts_blocked ? `, ${result.gmail_drafts_blocked} blocked` : ''}`
+      : '';
+    const msg = `Outreach run created: ${result.campaign_count} campaign(s), ${result.item_count} item(s)${draftNote}${gmailNote}`;
     const firstCampaignId = result.campaigns?.[0]?.campaign_id;
     if (firstCampaignId) return redirect(res, campaignUrl(firstCampaignId, msg));
     redirect(res, `/marketing?message=${encodeURIComponent(msg)}`);
@@ -128,7 +131,7 @@ function renderReleaseOutreach(releases, outlets, summary) {
     <div class="flex items-start justify-between gap-4 mb-5">
       <div>
         <h2 class="font-bold text-lg">Release Outreach</h2>
-        <p class="text-sm text-zinc-500 mt-1">Only eligible outlets with email addresses appear here. Outlets already contacted for the same release are hidden unless you override.</p>
+        <p class="text-sm text-zinc-500 mt-1">Eligible email, contact-form, and owned-channel outlets appear here. Test/demo rows are hidden, and outlets already contacted for the same release are hidden unless you override.</p>
       </div>
       <div class="text-right text-xs text-zinc-500">
         <div>${summary.total || 0} outreach item(s)</div>
@@ -273,6 +276,7 @@ function renderReleaseCard(song, links, outlets, hasMarketingImage = false, mark
         <input type="hidden" name="song_id" value="${attr(song.id)}">
         <input type="hidden" name="mode" value="single_release">
         <input type="hidden" name="generate_drafts" value="true">
+        <input type="hidden" name="create_gmail_drafts" value="true">
         <div class="space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div class="text-sm font-semibold text-zinc-700">Release Items</div>
@@ -288,7 +292,7 @@ function renderReleaseCard(song, links, outlets, hasMarketingImage = false, mark
           Allow re-contacting outlets already contacted for this release
         </label>
         <div class="flex items-center justify-between gap-3">
-          <p class="text-xs text-zinc-500">Requires manual review before anything is actually sent.</p>
+          <p class="text-xs text-zinc-500">Creates polished Gmail drafts with release art and links. Nothing is sent automatically.</p>
           <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Create outreach run</button>
         </div>
       </form>

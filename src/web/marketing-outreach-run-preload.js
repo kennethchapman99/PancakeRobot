@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 import { createOutreachRun, getEligibleOutlets } from '../agents/marketing-outreach-run-agent.js';
 import { generateDraftsForCampaign, generateDraftForOutreachItem } from '../agents/marketing-outreach-draft-agent.js';
+import { createGmailDraftsForCampaign } from '../agents/marketing-gmail-draft-agent.js';
 import { getOutreachItems, getOutreachSummary } from '../shared/marketing-outreach-db.js';
 import { getMarketingCampaigns } from '../shared/marketing-db.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
@@ -90,7 +91,7 @@ async function routeOutreachRun(req, res) {
   if (pathname === '/marketing/outreach-run' && req.method === 'POST') {
     const body = await parseBody(req);
     const result = await createAndMaybeGenerate(body);
-    const message = `Outreach run created: ${result.campaign_count} campaign(s), ${result.item_count} outreach item(s)${result.generated_drafts ? `, ${result.generated_drafts} draft(s) generated` : ''}`;
+    const message = `Outreach run created: ${result.campaign_count} campaign(s), ${result.item_count} outreach item(s)${result.generated_drafts ? `, ${result.generated_drafts} draft(s) generated` : ''}${result.gmail_drafts_created ? `, ${result.gmail_drafts_created} Gmail draft(s) created` : ''}`;
     return redirect(res, `/marketing?message=${encodeURIComponent(message)}`);
   }
 
@@ -120,6 +121,8 @@ async function routeOutreachRun(req, res) {
 }
 
 async function createAndMaybeGenerate(body = {}) {
+  const shouldGenerateDrafts = parseBool(body.generate_drafts);
+  const shouldCreateGmailDrafts = body.create_gmail_drafts === undefined ? shouldGenerateDrafts : parseBool(body.create_gmail_drafts);
   const result = createOutreachRun({
     song_ids: body.song_ids || body.song_id || [],
     outlet_ids: resolveOutletIdsFromBody(body),
@@ -127,17 +130,37 @@ async function createAndMaybeGenerate(body = {}) {
     preset: body.preset || null,
   });
 
-  if (parseBool(body.generate_drafts)) {
+  if (shouldGenerateDrafts) {
     let generated = 0;
     let failed = 0;
     const draft_results = [];
+    let gmail_created = 0;
+    let gmail_failed = 0;
+    let gmail_blocked = 0;
+    const gmail_results = [];
     for (const campaign of result.campaigns || []) {
       const draftResult = await generateDraftsForCampaign(campaign.campaign_id, { deterministic: parseBool(body.deterministic) });
       generated += draftResult.generated || 0;
       failed += draftResult.failed || 0;
       draft_results.push(draftResult);
+      if (shouldCreateGmailDrafts) {
+        const gmailResult = await createGmailDraftsForCampaign(campaign.campaign_id, { dryRun: parseBool(body.dry_run) });
+        gmail_created += gmailResult.created || 0;
+        gmail_failed += gmailResult.failed || 0;
+        gmail_blocked += gmailResult.blocked || 0;
+        gmail_results.push(gmailResult);
+      }
     }
-    return { ...result, generated_drafts: generated, failed_drafts: failed, draft_results };
+    return {
+      ...result,
+      generated_drafts: generated,
+      failed_drafts: failed,
+      draft_results,
+      gmail_drafts_created: gmail_created,
+      gmail_drafts_failed: gmail_failed,
+      gmail_drafts_blocked: gmail_blocked,
+      gmail_results,
+    };
   }
 
   return result;
@@ -232,11 +255,12 @@ function renderBulkOutreachSection() {
             <input type="checkbox" name="generate_drafts" value="true" checked class="mt-1">
             <span>Generate reviewable draft copy now using LLM when available; deterministic fallback if not</span>
           </label>
+          <input type="hidden" name="create_gmail_drafts" value="true">
         </div>
       </div>
 
       <div class="flex items-center justify-between gap-3 pt-2">
-        <p class="text-xs text-zinc-500">This creates draft queue rows only. It does not send email or create Gmail drafts.</p>
+        <p class="text-xs text-zinc-500">This creates polished Gmail drafts with release art and links. It does not send email.</p>
         <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Create outreach run</button>
       </div>
     </form>

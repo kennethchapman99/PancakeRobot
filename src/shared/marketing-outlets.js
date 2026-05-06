@@ -24,7 +24,8 @@ export function normalizeOutletForApp(row, options = {}) {
   const aiMusicStance = raw.ai_music_stance || pitchPrefs.ai_music_stance || {};
   const priority = raw.priority || pitchPrefs.priority || null;
   const category = raw.category || pitchPrefs.category || row.type || null;
-  const doNotContact = row?.status === 'do_not_contact' || ['suppressed', 'do_not_contact'].includes(row?.suppression_status) || raw.do_not_contact === true;
+  const internalTest = looksLikeTestDemo(row, raw);
+  const doNotContact = row?.status === 'do_not_contact' || ['suppressed', 'do_not_contact'].includes(row?.suppression_status) || raw.do_not_contact === true || internalTest;
 
   const costPolicy = normalizeCostPolicy(row, raw);
   const aiPolicyDetails = normalizeAiPolicyDetails(row, raw, aiMusicStance);
@@ -85,6 +86,7 @@ export function normalizeOutletForApp(row, options = {}) {
     eligible: outreachEligibility.eligible,
     outreach_allowed: outreachEligibility.eligible,
     do_not_contact: doNotContact,
+    internal_test: internalTest,
     last_contact: lastContact,
     last_contact_at: row.last_contact_at || lastContact?.contacted_at || null,
     last_contact_release_marketing_id: row.last_contact_release_marketing_id || null,
@@ -230,10 +232,12 @@ function normalizeContactability(row, raw) {
 
   let status = stored.status || null;
   if (!status) {
-    if (freeContactMethodFound) status = 'contactable';
-    else if (contact.submission_path || row.contact_method || row.source_url) status = 'needs_manual_review';
-    else status = 'not_contactable';
+    if (contactMethods.some(method => method.type === 'email')) status = 'contactable';
+    else if (isOwnedChannel(row, raw)) status = 'owned_action';
+    else if (contactMethods.some(method => method.type === 'contact_form')) status = 'contactable_manual';
+    else status = 'manual_research_needed';
   }
+  if (status === 'needs_manual_review' || status === 'not_contactable') status = 'manual_research_needed';
 
   const bestChannel = stored.best_channel || contactMethods[0]?.type || inferBestChannel(row, raw);
 
@@ -254,7 +258,7 @@ function normalizeOutreachEligibility(row, { costPolicy, aiPolicyDetails, contac
   const eligible = (
     costPolicy.requires_payment !== true
     && aiPolicyDetails.status !== 'banned'
-    && contactability.status === 'contactable'
+    && ['contactable', 'contactable_manual', 'owned_action'].includes(contactability.status)
     && contactability.free_contact_method_found === true
     && doNotContact !== true
     && !['paid_only', 'bounced', 'no_contact_method', 'ai_banned'].includes(row?.suppression_status)
@@ -268,6 +272,32 @@ function normalizeOutreachEligibility(row, { costPolicy, aiPolicyDetails, contac
   };
 }
 
+function looksLikeTestDemo(row, raw) {
+  if (raw?.internal_test === true) return true;
+  const values = [
+    row?.id,
+    row?.name,
+    row?.contact_email,
+    row?.public_email,
+    row?.source_url,
+    row?.official_website_url,
+    raw?.id,
+    raw?.name,
+    raw?.url,
+    raw?.contact?.email,
+    raw?.contact?.submission_path,
+  ].filter(Boolean).map(value => String(value).toLowerCase());
+
+  return values.some(value =>
+    /\btest\b/.test(value)
+    || value.endsWith('.example')
+    || value.includes('.example/')
+    || value.includes('.example?')
+    || value.includes('example.com')
+    || value.includes('example.test')
+  );
+}
+
 function deriveReasonCodes({ costPolicy, aiPolicyDetails, contactability, doNotContact }) {
   const codes = [];
   if (costPolicy.requires_payment === true) {
@@ -277,7 +307,7 @@ function deriveReasonCodes({ costPolicy, aiPolicyDetails, contactability, doNotC
   }
   if (aiPolicyDetails.status === 'banned') codes.push('ai_music_banned');
   if (contactability.free_contact_method_found !== true) codes.push('no_contact_method');
-  if (contactability.status === 'not_contactable') codes.push('no_contact_method');
+  if (contactability.status === 'manual_research_needed') codes.push('no_contact_method');
   if (doNotContact) codes.push('do_not_contact');
   return [...new Set(codes)];
 }
@@ -358,11 +388,18 @@ function inferContactMethods(row, raw) {
 
 function inferBestChannel(row, raw) {
   if (row.public_email || row.contact_email || raw.contact?.email) return 'email';
+  if (isOwnedChannel(row, raw)) return 'owned_channel';
   if (row.submission_form_url || row.contact_method || raw.contact?.submission_path) return 'contact_form';
   if (row.instagram_url || raw.instagram_url) return 'instagram_dm';
   if (row.tiktok_url || raw.tiktok_url) return 'tiktok_dm';
   if (row.youtube_url || raw.youtube_url) return 'youtube_about';
   return 'unknown';
+}
+
+function isOwnedChannel(row, raw) {
+  const category = String(raw.category || row.type || '').toLowerCase();
+  const name = String(raw.name || row.name || '').toLowerCase();
+  return category.includes('owned') || name.includes('owned ');
 }
 
 function confidenceFromRisk(riskLevel) {

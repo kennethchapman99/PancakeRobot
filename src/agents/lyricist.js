@@ -378,6 +378,9 @@ export function findForbiddenElementContamination(songData, forbiddenElements = 
 }
 
 function collectSingableSongText(songData = {}) {
+  const audioPromptStrings = songData.audio_prompt && typeof songData.audio_prompt === 'object' && !Array.isArray(songData.audio_prompt)
+    ? Object.values(songData.audio_prompt).filter(value => typeof value === 'string')
+    : [];
   const parts = [
     songData.title,
     songData.lyrics,
@@ -385,6 +388,7 @@ function collectSingableSongText(songData = {}) {
     ...(Array.isArray(songData.chorus_lines) ? songData.chorus_lines : []),
     songData.physical_action_cue,
     songData.funny_long_word,
+    ...audioPromptStrings,
   ];
 
   return parts.filter(Boolean).join('\n');

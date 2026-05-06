@@ -1,5 +1,5 @@
 import { createGmailDraft } from '../marketing/gmail-drafts.js';
-import { buildAttachmentPlanForOutreachItem } from '../shared/marketing-email-assets.js';
+import { buildAttachmentPlanForOutreachItem, buildHtmlBodyForOutreachItem } from '../shared/marketing-email-assets.js';
 import {
   getOutreachItem,
   getOutreachItems,
@@ -31,7 +31,9 @@ export async function createGmailDraftForOutreachItem(itemId, options = {}) {
     to,
     subject: item.subject,
     body: item.body,
+    bodyHtml: buildHtmlBodyForOutreachItem(item),
     attachments: attachmentPlan.attachments,
+    inlineImages: attachmentPlan.inlineImages,
     dryRun: options.dryRun === true,
   });
 
@@ -45,7 +47,7 @@ export async function createGmailDraftForOutreachItem(itemId, options = {}) {
       safety_status: 'gmail_draft_created',
       safety_notes: appendNote(
         item.safety_notes,
-        `${result.dryRun ? 'Dry-run Gmail draft simulated' : `Gmail draft created: ${result.gmail_draft_id}`}${attachmentPlan.attachedLabels.length ? `; attached ${attachmentPlan.attachedLabels.join(', ')}` : ''}`,
+        `${result.dryRun ? 'Dry-run Gmail draft simulated' : `Gmail draft created: ${result.gmail_draft_id}`}${attachmentPlan.heroImage ? `; inline image ${attachmentPlan.heroImage.label || 'added'}` : ''}${attachmentPlan.attachedLabels.length ? `; attached ${attachmentPlan.attachedLabels.join(', ')}` : ''}`,
       ),
       requires_ken: true,
     },

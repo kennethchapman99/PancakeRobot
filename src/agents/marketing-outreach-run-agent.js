@@ -1,6 +1,5 @@
 import {
   createMarketingCampaign,
-  getMarketingTargets,
 } from '../shared/marketing-db.js';
 import {
   createOutreachItem,
@@ -10,13 +9,15 @@ import { upsertChannelTask } from '../shared/marketing-channel-tasks-db.js';
 import { logMarketingEvent } from '../shared/marketing-events-db.js';
 import { getAllSongs, getReleaseLinks, getSong } from '../shared/db.js';
 import { getActiveProfileId, loadBrandProfile } from '../shared/brand-profile.js';
-import { getOutreachHistoryByTargetIds, normalizeOutletForApp, outletContactedForRelease } from '../shared/marketing-outlets.js';
+import { outletContactedForRelease } from '../shared/marketing-outlets.js';
 import { getMarketingReleaseEntries, getOrCreateReleaseMarketing } from '../shared/marketing-releases.js';
+import { assertMarketingOutletsReadyForOutreach, canUseForRealOutreach, getActiveBrandOutlets, isEmailTarget } from '../shared/marketing-outlet-health.js';
 
 const BRAND_PROFILE = loadBrandProfile();
 
 export function createOutreachRun({ song_ids = [], outlet_ids = [], mode = 'single_release', preset = null, allow_same_release = false, dry_run = true, release_marketing_id = null } = {}) {
   const brandProfileId = getActiveProfileId();
+  assertMarketingOutletsReadyForOutreach({ brandProfileId });
   const songIds = normalizeIds(song_ids);
   const outletIds = normalizeIds(outlet_ids);
 
@@ -41,16 +42,12 @@ export function createOutreachRun({ song_ids = [], outlet_ids = [], mode = 'sing
 
 export function getEligibleOutlets() {
   return getAllOutletsForSelection()
-    .filter(outlet => outlet.eligible === true && outletHasEmail(outlet))
+    .filter(canUseForRealOutreach)
     .sort(sortOutlets);
 }
 
 export function getAllOutletsForSelection() {
-  const rows = getMarketingTargets({});
-  const historyByTargetId = getOutreachHistoryByTargetIds(rows.map(row => row.id));
-  return rows
-    .map(row => normalizeOutletForApp(row, { outreachHistory: historyByTargetId.get(row.id) || [] }))
-    .sort(sortOutlets);
+  return getActiveBrandOutlets({ includeTestData: false }).sort(sortOutlets);
 }
 
 function createSingleReleaseCampaigns({ brandProfileId, selectedSongs, selectedOutlets, excludedOutlets = [], preset, allowSameRelease, dryRun, releaseMarketingId }) {
@@ -228,22 +225,22 @@ function partitionOutletsForSelection(selectedOutletCandidates = []) {
 }
 
 function getSelectionExclusionReason(outlet) {
-  if (!outletHasEmail(outlet)) return 'no usable contact method';
+  if (!canUseForRealOutreach(outlet)) return outlet.outreach_eligibility?.reason_summary || 'no usable contact method';
   if (['do_not_contact', 'suppressed'].includes(outlet.status) || outlet.do_not_contact) return 'do not contact';
   if (['do_not_contact', 'ai_banned', 'paid_only', 'bounced', 'no_contact_method'].includes(outlet.suppression_status)) return outlet.suppression_status.replace(/_/g, ' ');
   if (outlet.ai_policy === 'banned') return 'AI banned';
   if (outlet.cost_policy?.requires_payment === true) return 'paid-only';
-  if (outlet.contactability?.free_contact_method_found !== true) return 'no usable contact method';
+  if (!['contactable', 'contactable_manual', 'owned_action'].includes(outlet.contactability?.status)) return 'no usable contact method';
   return null;
 }
 
 function createDefaultChannelTask({ campaignId, itemId, outlet, primarySong, safety }) {
-  const hasEmail = Boolean(outlet.public_email || outlet.contact?.email);
+  const hasEmail = isEmailTarget(outlet);
   const channelType = hasEmail
     ? 'email_gmail'
-    : outlet.contactability?.best_channel === 'contact_form' || outlet.contact?.method
+    : outlet.contactability?.status === 'contactable_manual' || outlet.contactability?.best_channel === 'contact_form' || outlet.contact?.method
       ? 'contact_form_manual'
-      : ['instagram_dm', 'tiktok_dm', 'youtube_about'].includes(outlet.contactability?.best_channel)
+      : outlet.contactability?.status === 'owned_action' || ['instagram_dm', 'tiktok_dm', 'youtube_about', 'owned_channel'].includes(outlet.contactability?.best_channel)
         ? 'owned_social_manual'
         : 'manual_research';
 
@@ -286,10 +283,10 @@ function computeSafety(outlet, duplicate) {
   const notes = [];
   if (duplicate) notes.push(`Duplicate outreach exists for ${duplicate.song_id}: ${duplicate.latest_status}`);
   if (outlet.ai_policy === 'unclear') notes.push('AI policy unclear; include disclosure or review carefully');
-  if (outlet.contactability?.status !== 'contactable') notes.push('Contact route needs manual research');
+  if (outlet.contactability?.status === 'manual_research_needed') notes.push('Contact route needs manual research');
 
   if (duplicate) return { status: 'needs_ken', safety_status: 'duplicate_review', safety_notes: notes.join('\n') };
-  if (outlet.contactability?.status !== 'contactable') return { status: 'needs_ken', safety_status: 'missing_contact', safety_notes: notes.join('\n') };
+  if (outlet.contactability?.status === 'manual_research_needed') return { status: 'needs_ken', safety_status: 'missing_contact', safety_notes: notes.join('\n') };
   return { status: 'queued', safety_status: 'passed', safety_notes: notes.join('\n') || 'Passed deterministic preflight' };
 }
 
@@ -355,10 +352,6 @@ function sortOutlets(a, b) {
   const pb = priorityOrder[b.priority] ?? 5;
   if (pa !== pb) return pa - pb;
   return (b.fit_score || 0) - (a.fit_score || 0);
-}
-
-function outletHasEmail(outlet) {
-  return Boolean(outlet?.public_email || outlet?.contact_email || outlet?.contact?.email);
 }
 
 export function getReleaseReadySongs() {

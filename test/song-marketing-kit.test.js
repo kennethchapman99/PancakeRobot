@@ -21,8 +21,10 @@ test('outreach link blocks omit blank fields and only include download links for
   };
 
   const socialBlock = buildOutreachLinkBlock({ links, outreachType: 'social' });
-  assert.match(socialBlock, /Promo assets:/);
+  assert.match(socialBlock, /Listen \/ stream:/);
+  assert.match(socialBlock, /Instagram:/);
   assert.doesNotMatch(socialBlock, /Download audio:/);
+  assert.doesNotMatch(socialBlock, /Promo assets:/);
   assert.doesNotMatch(socialBlock, /TikTok:/);
 
   const radioBlock = buildOutreachLinkBlock({ links, outreachType: 'radio' });
@@ -66,11 +68,12 @@ test('readiness scoring treats missing marketing fields as warnings instead of b
     },
   });
 
-  assert.equal(readiness.score, 0);
+  assert.equal(readiness.score, 50);
   assert.ok(readiness.missing_required_fields.includes('smart_link'));
   assert.ok(readiness.missing_required_fields.includes('contact_email'));
   assert.ok(readiness.missing_required_fields.includes('base_or_fallback_image'));
-  assert.ok(readiness.missing_recommended_fields.includes('social_asset_set'));
+  assert.ok(readiness.missing_required_fields.includes('social_asset_set'));
+  assert.ok(readiness.missing_recommended_fields.includes('social_links'));
   assert.ok(readiness.warnings.some(w => /release kit/i.test(w)));
 });
 

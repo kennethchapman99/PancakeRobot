@@ -21,6 +21,7 @@
     "marketing:targets:match": "node src/scripts/match-release-targets.js",
     "marketing:targets:seed-test": "node src/scripts/seed-test-marketing-target.js",
     "marketing:outlets:seed": "node src/scripts/seed-marketing-outlets-to-targets.js",
+    "marketing:outlets:doctor": "node src/scripts/doctor-marketing-outlets.js",
     "marketing:outlets:enrich": "node src/scripts/enrich-marketing-outlets.js",
     "report": "node src/orchestrator.js --report",
     "research": "node src/orchestrator.js --research",

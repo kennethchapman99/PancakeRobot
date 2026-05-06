@@ -1,6 +1,7 @@
 const dryRun = process.argv.includes('--dry-run');
 const useMainDb = process.argv.includes('--use-main-db');
 const explicitSlug = process.env.PIPELINE_APP_SLUG;
+const { execFileSync } = await import('node:child_process');
 
 if (!useMainDb && !explicitSlug) {
   process.env.PIPELINE_APP_SLUG = `music-pipeline-test-release-flow-${Date.now()}`;
@@ -19,6 +20,14 @@ console.log(`[release-marketing-test] Mode: ${dryRun ? 'dry-run' : 'write'}`);
 console.log(`[release-marketing-test] Scope: ${useMainDb ? 'main-db-compatible unique IDs' : 'isolated test DB'}`);
 
 const summary = [];
+
+if (!useMainDb) {
+  execFileSync(process.execPath, ['src/scripts/seed-marketing-outlets-to-targets.js'], {
+    cwd: process.cwd(),
+    env: { ...process.env, PIPELINE_APP_SLUG: dbSlug },
+    stdio: 'inherit',
+  });
+}
 
 const { upsertSong, getSong, getDb } = await import('../shared/db.js');
 const { upsertMarketingTarget, getMarketingCampaigns } = await import('../shared/marketing-db.js');
@@ -174,48 +183,51 @@ function seedTargets() {
   const rows = [
     {
       id: validTargetId,
-      name: `Family Playlist Test ${suffix}`,
+      brand_profile_id: 'default',
+      name: `Family Playlist ${suffix}`,
       type: 'playlist',
       platform: 'email',
-      source_url: `https://familyplaylist.example/${runToken}`,
-      contact_email: 'editor@familyplaylist.example',
-      public_email: 'editor@familyplaylist.example',
+      source_url: `https://familyplaylist.outreach.local/${runToken}`,
+      contact_email: 'editor@familyplaylist.outreach.local',
+      public_email: 'editor@familyplaylist.outreach.local',
       status: 'approved',
       ai_policy: 'allowed',
       fit_score: 90,
-      contactability: { status: 'contactable', free_contact_method_found: true, best_channel: 'email', contact_methods: [{ type: 'email', value: 'editor@familyplaylist.example' }] },
+      contactability: { status: 'contactable', free_contact_method_found: true, best_channel: 'email', contact_methods: [{ type: 'email', value: 'editor@familyplaylist.outreach.local' }] },
       cost_policy: { requires_payment: false, cost_type: 'free' },
       outreach_eligibility: { eligible: true, reason_codes: [] },
     },
     {
       id: paidTargetId,
-      name: `Paid Submission Test ${suffix}`,
+      brand_profile_id: 'default',
+      name: `Paid Submission ${suffix}`,
       type: 'blog',
       platform: 'email',
-      source_url: `https://paidsubmit.example/${runToken}`,
-      contact_email: 'paid@paidsubmit.example',
-      public_email: 'paid@paidsubmit.example',
+      source_url: `https://paidsubmit.outreach.local/${runToken}`,
+      contact_email: 'paid@paidsubmit.outreach.local',
+      public_email: 'paid@paidsubmit.outreach.local',
       status: 'approved',
       ai_policy: 'allowed',
       suppression_status: 'paid_only',
       fit_score: 70,
-      contactability: { status: 'contactable', free_contact_method_found: true, best_channel: 'email', contact_methods: [{ type: 'email', value: 'paid@paidsubmit.example' }] },
+      contactability: { status: 'contactable', free_contact_method_found: true, best_channel: 'email', contact_methods: [{ type: 'email', value: 'paid@paidsubmit.outreach.local' }] },
       cost_policy: { requires_payment: true, cost_type: 'paid_submission' },
       outreach_eligibility: { eligible: false, reason_codes: ['paid_submission_only'] },
     },
     {
       id: aiBannedTargetId,
-      name: `AI Banned Test ${suffix}`,
+      brand_profile_id: 'default',
+      name: `AI Banned ${suffix}`,
       type: 'blog',
       platform: 'email',
-      source_url: `https://aibanned.example/${runToken}`,
-      contact_email: 'editor@aibanned.example',
-      public_email: 'editor@aibanned.example',
+      source_url: `https://aibanned.outreach.local/${runToken}`,
+      contact_email: 'editor@aibanned.outreach.local',
+      public_email: 'editor@aibanned.outreach.local',
       status: 'approved',
       ai_policy: 'banned',
       suppression_status: 'ai_banned',
       fit_score: 80,
-      contactability: { status: 'contactable', free_contact_method_found: true, best_channel: 'email', contact_methods: [{ type: 'email', value: 'editor@aibanned.example' }] },
+      contactability: { status: 'contactable', free_contact_method_found: true, best_channel: 'email', contact_methods: [{ type: 'email', value: 'editor@aibanned.outreach.local' }] },
       cost_policy: { requires_payment: false, cost_type: 'free' },
       outreach_eligibility: { eligible: false, reason_codes: ['ai_music_banned'] },
     },

@@ -1,5 +1,5 @@
-import { getMarketingTargets } from '../../../shared/marketing-db.js';
-import { hydrateOutletsWithHistory } from '../../../shared/marketing-outlets.js';
+import { getActiveProfileId } from '../../../shared/brand-profile.js';
+import { getActiveBrandOutlets, getMarketingOutletsDiagnostics, isTestOrDemoTarget } from '../../../shared/marketing-outlet-health.js';
 import { renderMarketingLayout } from '../views/layout.js';
 import { esc, attr } from '../utils/http.js';
 
@@ -12,28 +12,25 @@ const AI_POLICY_LABELS = {
 };
 
 export function renderOutletsPage(req, res) {
+  const brandProfileId = getActiveProfileId();
   const filters = {
     status: req.query.status || undefined,
     type: req.query.type || undefined,
     q: req.query.q || undefined,
   };
+  const showTestData = req.query.show_test_data === 'true';
+  const showExcluded = req.query.show_excluded !== 'false';
+  const eligibleOnly = req.query.eligible === 'true';
+  const diagnostics = getMarketingOutletsDiagnostics({ brandProfileId });
 
-  let outlets = hydrateOutletsWithHistory(getMarketingTargets(filters));
-  const showOnlyEligible = req.query.eligible !== 'false';
+  let outlets = getActiveBrandOutlets({ brandProfileId, includeTestData: showTestData, filters });
   if (req.query.priority) outlets = outlets.filter(o => o.priority === req.query.priority);
   if (req.query.cost_status) outlets = outlets.filter(o => o.cost_status === req.query.cost_status);
   if (req.query.ai_policy) outlets = outlets.filter(o => o.ai_policy === req.query.ai_policy);
   if (req.query.contactability) outlets = outlets.filter(o => o.contactability.status === req.query.contactability);
   if (req.query.best_channel) outlets = outlets.filter(o => o.contactability.best_channel === req.query.best_channel);
-  if (showOnlyEligible) {
-    outlets = outlets.filter(o =>
-      o.eligible === true
-      && o.contactability.status === 'contactable'
-      && o.cost_status === 'free'
-      && ['allowed', 'not_found'].includes(o.ai_policy)
-      && o.do_not_contact !== true
-    );
-  }
+  if (!showExcluded || eligibleOnly) outlets = outlets.filter(o => o.eligible === true);
+  if (!showTestData) outlets = outlets.filter(o => !isTestOrDemoTarget(o));
 
   outlets.sort((a, b) => {
     const pa = PRIORITY_ORDER[a.priority] ?? 5;
@@ -41,17 +38,16 @@ export function renderOutletsPage(req, res) {
     return pa !== pb ? pa - pb : (b.fit_score || 0) - (a.fit_score || 0);
   });
 
-  const statusCounts = {};
-  outlets.forEach(o => { statusCounts[o.status] = (statusCounts[o.status] || 0) + 1; });
-
   const rows = outlets.map(o => {
     const aiInfo = AI_POLICY_LABELS[o.ai_policy] || { label: o.ai_policy || '—', cls: 'bg-zinc-100 text-zinc-700' };
     const eligibleCls = o.eligible ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800';
     const contactabilityCls = o.contactability.status === 'contactable'
       ? 'bg-emerald-100 text-emerald-800'
-      : o.contactability.status === 'needs_manual_review'
-        ? 'bg-amber-100 text-amber-800'
-        : 'bg-zinc-100 text-zinc-700';
+      : ['contactable_manual', 'owned_action'].includes(o.contactability.status)
+        ? 'bg-sky-100 text-sky-800'
+        : o.contactability.status === 'manual_research_needed'
+          ? 'bg-amber-100 text-amber-800'
+          : 'bg-zinc-100 text-zinc-700';
     const costCls = o.cost_status === 'paid'
       ? 'bg-red-100 text-red-800'
       : o.cost_status === 'unclear'
@@ -66,7 +62,6 @@ export function renderOutletsPage(req, res) {
     const contact = o.contactability.contact_methods[0]
       ? `<span class="text-xs text-zinc-600">${esc(o.contactability.contact_methods[0].value)}</span>`
       : `<span class="text-xs text-zinc-400">—</span>`;
-
     const name = o.url
       ? `<a href="${attr(o.url)}" target="_blank" rel="noopener" class="font-medium text-blue-700 hover:underline">${esc(o.name)}</a>`
       : `<span class="font-medium">${esc(o.name)}</span>`;
@@ -88,31 +83,52 @@ export function renderOutletsPage(req, res) {
     </tr>`;
   }).join('');
 
+  const summaryCards = `<div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-9 gap-2 mb-4">
+    ${statCard('Source JSON outlets', diagnostics.sourceOutletCount)}
+    ${statCard('Active DB outlets', diagnostics.activeBrandOutletCount)}
+    ${statCard('Eligible', diagnostics.eligibleCount)}
+    ${statCard('Contactable', diagnostics.contactableCount)}
+    ${statCard('Email', diagnostics.emailCount)}
+    ${statCard('Contact form/manual', diagnostics.contactFormCount)}
+    ${statCard('Owned channel', diagnostics.ownedChannelCount)}
+    ${statCard('Excluded', diagnostics.excludedCount)}
+    ${statCard('Test/demo hidden', diagnostics.hiddenTestDemoCount)}
+  </div>`;
+
   const filterBar = `<form method="GET" action="/marketing/outlets" class="flex flex-wrap gap-2 items-end">
+    <input type="hidden" name="show_excluded" value="false">
     <input name="q" value="${attr(req.query.q || '')}" placeholder="Search name…" class="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm w-48">
     <select name="priority" class="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm">
       <option value="">All priorities</option>
-      ${['P0','P1','P2','P3'].map(p => `<option value="${p}"${req.query.priority === p ? ' selected' : ''}>${p}</option>`).join('')}
+      ${['P0', 'P1', 'P2', 'P3'].map(p => `<option value="${p}"${req.query.priority === p ? ' selected' : ''}>${p}</option>`).join('')}
     </select>
     <select name="type" class="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm">
       <option value="">All types</option>
-      ${['playlist','podcast','publication','educator','parent_creator','radio','blog'].map(t => `<option value="${t}"${req.query.type === t ? ' selected' : ''}>${t}</option>`).join('')}
+      ${['playlist', 'podcast', 'publication', 'educator', 'parent_creator', 'radio', 'blog', 'community', 'kids_music_channel', 'media'].map(t => `<option value="${t}"${req.query.type === t ? ' selected' : ''}>${t}</option>`).join('')}
     </select>
     <select name="cost_status" class="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm">
       <option value="">All costs</option>
-      ${['free','paid','unclear'].map(v => `<option value="${v}"${req.query.cost_status === v ? ' selected' : ''}>${v}</option>`).join('')}
+      ${['free', 'paid', 'unclear'].map(v => `<option value="${v}"${req.query.cost_status === v ? ' selected' : ''}>${v}</option>`).join('')}
     </select>
     <select name="ai_policy" class="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm">
       <option value="">All AI policies</option>
-      ${['allowed','not_found','unclear','banned'].map(v => `<option value="${v}"${req.query.ai_policy === v ? ' selected' : ''}>${v}</option>`).join('')}
+      ${['allowed', 'not_found', 'unclear', 'banned'].map(v => `<option value="${v}"${req.query.ai_policy === v ? ' selected' : ''}>${v}</option>`).join('')}
     </select>
     <select name="contactability" class="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm">
       <option value="">All contactability</option>
-      ${['contactable','not_contactable','needs_manual_review'].map(v => `<option value="${v}"${req.query.contactability === v ? ' selected' : ''}>${v}</option>`).join('')}
+      ${['contactable', 'contactable_manual', 'owned_action', 'manual_research_needed'].map(v => `<option value="${v}"${req.query.contactability === v ? ' selected' : ''}>${v}</option>`).join('')}
     </select>
     <label class="flex items-center gap-2 text-sm px-2 py-1.5">
-      <input type="checkbox" name="eligible" value="false" ${showOnlyEligible ? '' : 'checked'}>
+      <input type="checkbox" name="show_excluded" value="true" ${showExcluded ? 'checked' : ''}>
       Show excluded too
+    </label>
+    <label class="flex items-center gap-2 text-sm px-2 py-1.5">
+      <input type="checkbox" name="eligible" value="true" ${eligibleOnly ? 'checked' : ''}>
+      Eligible only
+    </label>
+    <label class="flex items-center gap-2 text-sm px-2 py-1.5">
+      <input type="checkbox" name="show_test_data" value="true" ${showTestData ? 'checked' : ''}>
+      Show test data
     </label>
     <button class="bg-zinc-800 text-white rounded-lg px-3 py-1.5 text-sm">Filter</button>
     <a href="/marketing/outlets" class="text-sm text-zinc-500 hover:underline py-1.5">Clear</a>
@@ -146,9 +162,19 @@ export function renderOutletsPage(req, res) {
       <div class="flex items-center justify-between gap-4 mb-4">
         <div>
           <h1 class="text-2xl font-extrabold">Outlets</h1>
-          <p class="text-sm text-zinc-500 mt-1">${outlets.length} outlet(s) · <a href="/marketing" class="text-blue-600 hover:underline">← Marketing</a></p>
+          <p class="text-sm text-zinc-500 mt-1">${outlets.length} visible outlet(s) · active brand <span class="font-mono">${esc(brandProfileId)}</span> · <a href="/marketing" class="text-blue-600 hover:underline">← Marketing</a></p>
         </div>
       </div>
+      ${summaryCards}
+      <details class="mb-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+        <summary class="cursor-pointer text-sm font-semibold text-zinc-700">Diagnostics</summary>
+        <div class="mt-3 text-xs text-zinc-600 space-y-1">
+          <div>Active DB path: <span class="font-mono">${esc(diagnostics.activeDbPath)}</span></div>
+          <div>Source JSON path: <span class="font-mono">${esc(diagnostics.sourcePath)}</span></div>
+          <div>Preset counts: safe_p0 ${diagnostics.presetCounts.safe_p0}, safe_p0_p1 ${diagnostics.presetCounts.safe_p0_p1}, all_safe ${diagnostics.presetCounts.all_safe}, playlist ${diagnostics.presetCounts.playlist}, parent_teacher ${diagnostics.presetCounts.parent_teacher}</div>
+          ${diagnostics.issues.length ? `<div class="text-red-700">Issues: ${esc(diagnostics.issues.join(' | '))}</div>` : '<div class="text-emerald-700">Preflight checks are passing.</div>'}
+        </div>
+      </details>
       ${filterBar}
     </section>
     <section class="bg-white border border-zinc-200 rounded-2xl p-6">${table}</section>
@@ -168,4 +194,8 @@ function formatDateTime(value) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(date);
+}
+
+function statCard(label, value) {
+  return `<div class="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"><div class="text-[10px] uppercase tracking-wide text-zinc-400">${esc(label)}</div><div class="mt-1 text-lg font-semibold text-zinc-900">${esc(String(value))}</div></div>`;
 }
