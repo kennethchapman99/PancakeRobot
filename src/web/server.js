@@ -32,6 +32,8 @@ import {
   getPerformanceSnapshots,
   getDashboardStats,
 } from '../shared/db.js';
+import { getMarketingTargets } from '../shared/marketing-db.js';
+import { getOutreachHistoryByTargetIds, normalizeOutletForApp } from '../shared/marketing-outlets.js';
 import { runSuggestPipeline } from '../shared/suggest.js';
 import {
   DEFAULT_PROFILE_ID,
@@ -45,6 +47,24 @@ import {
 } from '../shared/brand-profile.js';
 import { generateThumbnails } from '../agents/creative-manager.js';
 import { registerMarketingRouter } from './marketing/router-consolidated.js';
+import { scanMarketingPack, scanSongBaseImage } from '../shared/song-catalog-marketing.js';
+import {
+  getSongMarketingKit,
+  saveSongMarketingKit,
+  syncSongMarketingKitFromPack,
+  buildReleaseKitViewModel,
+  MARKETING_LINK_FIELDS,
+  MARKETING_ASSET_FIELDS,
+} from '../shared/song-marketing-kit.js';
+import {
+  SONG_STATUSES,
+  SONG_STATUS_OPTIONS,
+  normalizeSongStatus,
+  getSongStatusBadgeClass,
+  getSongStatusLabel,
+  isRecognizedSongStatusInput,
+} from '../shared/song-status.js';
+import { getSongNextAction } from '../shared/song-workflow.js';
 
 // ── Base image upload config ───────────────────────────────────────
 const ALLOWED_IMG_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
@@ -81,14 +101,15 @@ const APP_TITLE = BRAND_PROFILE.app_title || BRAND_NAME;
 const DEFAULT_AUDIENCE_RANGE = BRAND_PROFILE.audience.age_range;
 const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor || 'Distributor';
 const DISTRIBUTOR_URL = BRAND_PROFILE.distribution.research_default_url || '';
-const SUBMITTED_STATUS = 'submitted_to_distributor';
+const SUBMITTED_STATUS = SONG_STATUSES.SUBMITTED_TO_DISTROKID;
 
 // ── Middleware ──────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
-// Serve generated output files (audio, thumbnails) under /media/
+// Serve generated output files under /media/
 app.use('/media', express.static(join(__dirname, '../../output')));
+app.use('/base-images', express.static(join(__dirname, '../../base images')));
 app.set('view engine', 'ejs');
 app.set('views', join(__dirname, 'views'));
 app.use(expressLayouts);
@@ -102,6 +123,18 @@ app.use((req, res, next) => {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
+  res.locals.formatDateTime = (iso) => {
+    if (!iso) return '—';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
   res.locals.timeAgo = (iso) => {
     if (!iso) return '—';
     const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
@@ -111,28 +144,21 @@ app.use((req, res, next) => {
     return `${Math.floor(secs / 86400)}d ago`;
   };
   res.locals.statusBadge = (status) => {
+    if (isRecognizedSongStatusInput(status)) {
+      return getSongStatusBadgeClass(status);
+    }
     const map = {
       new: 'badge-gray',
       shortlisted: 'badge-blue',
       in_review: 'badge-yellow',
       promoted: 'badge-green',
       archived: 'badge-dim',
-      draft: 'badge-gray',
-      writing: 'badge-yellow',
-      lyrics_ready: 'badge-blue',
-      audio_in_progress: 'badge-yellow',
-      audio_ready: 'badge-blue',
-      artwork_ready: 'badge-blue',
-      metadata_ready: 'badge-blue',
-      ready_to_publish: 'badge-green',
-      submitted_to_distributor: 'badge-purple',
-      published: 'badge-emerald',
-      paused: 'badge-gray',
-      approved: 'badge-emerald',
       rejected: 'badge-red',
     };
     return map[status] || 'badge-gray';
   };
+  res.locals.songStatusOptions = SONG_STATUS_OPTIONS;
+  res.locals.songStatusLabel = getSongStatusLabel;
   res.locals.currentPath = req.path;
   res.locals.brandProfile = BRAND_PROFILE;
   res.locals.brandName = BRAND_NAME;
@@ -539,53 +565,67 @@ app.get('/songs', (req, res) => {
   let songs = getAllSongs().map(s => {
     const songDir = join(__dirname, '../../output/songs', s.id);
     const fsAssets = scanSongDir(songDir);
-    const thumbs = fsAssets.thumbnails || [];
-    // Prefer youtube_landscape, then any thumbnail
-    const thumb = thumbs.find(t => t.name.includes('youtube_landscape') || t.name.includes('landscape'))
-      || thumbs.find(t => !t.name.includes('spotify_square'))
-      || thumbs[0]
-      || null;
+    const metadata = readSongMetadata(songDir);
+    const lyricsContent = readTextFile(fsAssets.lyrics);
     const audio = (fsAssets.audioFiles || [])[0] || null;
+    const links = getReleaseLinks(s.id);
+    const marketingPack = scanMarketingPack(s.id);
+    const marketingSummary = getSongCatalogMarketingSummary(s.id, { releaseLinks: links });
+    const normalizedStatus = normalizeSongStatus(s.status);
+    const previewImageUrl = marketingSummary.baseImage?.url || marketingSummary.socialImages[0]?.url || null;
     return {
       ...s,
+      status: normalizedStatus,
       progress: getChecklistProgress(s.id),
-      thumbnailUrl: thumb ? thumb.url : null,
+      previewImageUrl,
       hasAudio: audio !== null,
+      durationSeconds: getSongDurationSeconds(metadata),
+      durationLabel: formatDuration(getSongDurationSeconds(metadata)),
+      wordCount: countLyricsWords(lyricsContent),
+      description: summarizeSongDescription(s),
+      releaseLinkCount: links.length,
+      hasMarketingPack: marketingPack.status === 'built',
+      hasLyrics: Boolean(fsAssets.lyrics),
+      hasArtwork: Boolean(previewImageUrl),
+      lastOutreachAt: s.last_outreach?.contacted_at || s.last_outreach?.updated_at || null,
     };
   });
 
   const { q, status, sort, brand } = req.query;
+  const normalizedFilterStatus = status ? normalizeSongStatus(status) : '';
 
   // Count totals BEFORE filtering for tab badges
   const totalCounts = {
     all: songs.length,
-    approved: songs.filter(s => s.status === 'approved').length,
-    draft: songs.filter(s => s.status === 'draft' || s.status === 'writing').length,
+    draft: songs.filter(s => s.status === SONG_STATUSES.DRAFT).length,
+    editing: songs.filter(s => s.status === SONG_STATUSES.EDITING).length,
+    submitted: songs.filter(s => s.status === SONG_STATUSES.SUBMITTED_TO_DISTROKID).length,
+    outreachComplete: songs.filter(s => s.status === SONG_STATUSES.OUTREACH_COMPLETE).length,
+    archived: songs.filter(s => s.status === SONG_STATUSES.ARCHIVED).length,
   };
 
   if (q) {
     const lq = q.toLowerCase();
     songs = songs.filter(s =>
       (s.title || '').toLowerCase().includes(lq) ||
-      (s.topic || '').toLowerCase().includes(lq)
+      (s.topic || '').toLowerCase().includes(lq) ||
+      (s.concept || '').toLowerCase().includes(lq) ||
+      (s.notes || '').toLowerCase().includes(lq)
     );
   }
-  if (status) songs = songs.filter(s => s.status === status);
+  if (normalizedFilterStatus) songs = songs.filter(s => s.status === normalizedFilterStatus);
   if (brand) songs = songs.filter(s => s.brand_profile_id === brand);
 
-  // Always sort: approved first, then by date
   if (sort === 'readiness') songs.sort((a, b) => b.progress.pct - a.progress.pct);
+  else if (sort === 'title') songs.sort((a, b) => String(a.title || a.topic || '').localeCompare(String(b.title || b.topic || '')));
+  else if (sort === 'status') songs.sort((a, b) => songStatusSortOrder(a.status) - songStatusSortOrder(b.status) || new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
   else if (sort === 'created') songs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   else {
-    songs.sort((a, b) => {
-      if (a.status === 'approved' && b.status !== 'approved') return -1;
-      if (b.status === 'approved' && a.status !== 'approved') return 1;
-      return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
-    });
+    songs.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
   }
 
   const profiles = listBrandProfiles();
-  res.render('songs/index', { songs, q: q || '', filterStatus: status || '', filterBrand: brand || '', sort: sort || '', totalCounts, profiles });
+  res.render('songs/index', { songs, q: q || '', filterStatus: normalizedFilterStatus || '', filterBrand: brand || '', sort: sort || '', totalCounts, profiles });
 });
 
 app.get('/songs/:id', (req, res) => {
@@ -613,11 +653,24 @@ app.get('/songs/:id', (req, res) => {
 
   const marketingPack = scanMarketingPack(song.id);
   const baseImage = scanSongBaseImage(song.id);
+  const releaseOutreachRows = buildReleaseOutreachRows(song.id);
+  const marketingKit = getSongMarketingKit(song, { releaseLinks: links, marketingPack, baseImage });
+  const requestedTab = String(req.query.tab || '').toLowerCase();
+  const initialTab = resolveSongDetailInitialTab({
+    requestedTab,
+    song,
+    lyricsContent,
+    audioPromptContent,
+    metadataParsed,
+  });
 
   res.render('songs/detail', {
     song, idea, assets, checklist, progress, links, snapshots, fsAssets,
     lyricsContent, audioPromptContent, metadataParsed, brandParsed,
-    marketingPack, baseImage,
+    marketingPack, baseImage, releaseOutreachRows, marketingKit,
+    nextAction: getSongNextAction(song, marketingKit),
+    initialTab,
+    showDebugDiagnostics: req.query.debug === '1' || process.env.NODE_ENV !== 'production',
   });
 });
 
@@ -643,61 +696,34 @@ app.post('/songs/:id', (req, res) => {
   res.redirect(`/songs/${req.params.id}`);
 });
 
-// API: generate thumbnails on demand
-// In-memory job store for thumbnail jobs
-const thumbJobs = new Map(); // jobId → { status, logs, count, error }
-
-app.post('/api/songs/:id/thumbnails', async (req, res) => {
+app.post('/songs/:id/marketing-kit', (req, res) => {
   const song = getSong(req.params.id);
-  if (!song) return res.status(404).json({ error: 'Song not found' });
+  if (!song) return res.status(404).render('404', { message: 'Song not found' });
 
-  const jobId = `thumb_${song.id}_${Date.now()}`;
-  thumbJobs.set(jobId, { status: 'running', logs: [], count: 0, error: null });
+  const marketing_links = Object.fromEntries(MARKETING_LINK_FIELDS.map(field => [field, req.body[field] || '']));
+  const marketing_assets = Object.fromEntries(
+    MARKETING_ASSET_FIELDS
+      .filter(field => Object.prototype.hasOwnProperty.call(req.body, field))
+      .map(field => [field, req.body[field] || ''])
+  );
+  if (Object.prototype.hasOwnProperty.call(req.body, 'release_kit_published')) {
+    marketing_assets.release_kit_published = req.body.release_kit_published === 'on';
+  }
 
-  // Run thumbnail generation in background via child process so we get stdout
-  const scriptPath = join(__dirname, '../scripts/generate-thumbs.js');
-  const child = spawn('node', [scriptPath, song.id], {
-    cwd: join(__dirname, '../..'),
-    env: { ...process.env, FORCE_COLOR: '0' },
-  });
+  const saved = saveSongMarketingKit(song.id, { marketing_links, marketing_assets });
+  syncReleaseLinksFromMarketingKit(song.id, saved.marketing_links);
+  res.redirect(`/songs/${song.id}?message=${encodeURIComponent('Marketing kit saved.')}`);
+});
 
-  const job = thumbJobs.get(jobId);
-  const stripAnsi = (s) => s
-    .replace(/\x1B\[[0-9;]*[mGKHFABCDEFsuhl]/g, '')
-    .replace(/\x1B\][^\x07]*\x07/g, '')
-    .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '')
-    .trim();
+app.get('/release-kit/:id', (req, res) => {
+  const viewModel = buildReleaseKitViewModel(req.params.id);
+  if (!viewModel) return res.status(404).render('404', { message: 'Release kit not found' });
+  const preview = req.query.preview === '1';
+  res.render('release-kit', { releaseKit: viewModel, preview });
+});
 
-  const handleLine = (line) => {
-    const clean = stripAnsi(line);
-    if (!clean) return;
-    job.logs.push(clean);
-    // Parse count from completion line
-    const m = clean.match(/Generated (\d+) thumbnail/);
-    if (m) job.count = parseInt(m[1], 10);
-  };
-
-  let stdoutBuf = '', stderrBuf = '';
-  child.stdout.on('data', (d) => {
-    stdoutBuf += d.toString();
-    const lines = stdoutBuf.split('\n');
-    stdoutBuf = lines.pop();
-    lines.forEach(handleLine);
-  });
-  child.stderr.on('data', (d) => {
-    stderrBuf += d.toString();
-    const lines = stderrBuf.split('\n');
-    stderrBuf = lines.pop();
-    lines.forEach(handleLine);
-  });
-  child.on('close', (code) => {
-    if (stdoutBuf) handleLine(stdoutBuf);
-    if (stderrBuf) handleLine(stderrBuf);
-    job.status = code === 0 ? 'done' : 'error';
-    if (code !== 0) job.error = `Process exited with code ${code}`;
-  });
-
-  res.json({ ok: true, jobId });
+app.post('/api/songs/:id/thumbnails', async (_req, res) => {
+  res.status(410).json({ error: 'Thumbnail generation has been retired. Use the base image and release asset builder instead.' });
 });
 
 // ── SONG REVISION ──────────────────────────────────────────────
@@ -756,47 +782,11 @@ app.get('/api/songs/revise/stream/:jobId', (req, res) => {
   tick();
 });
 
-app.get('/api/songs/thumbnails/stream/:jobId', (req, res) => {
-  const job = thumbJobs.get(req.params.jobId);
-  if (!job) return res.status(404).json({ error: 'Job not found' });
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  let cursor = 0;
-  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-
-  const tick = () => {
-    while (cursor < job.logs.length) {
-      send('log', { message: job.logs[cursor++] });
-    }
-    if (job.status === 'done') {
-      send('complete', { count: job.count });
-      return res.end();
-    }
-    if (job.status === 'error') {
-      send('error', { message: job.error || 'Thumbnail generation failed' });
-      return res.end();
-    }
-    setTimeout(tick, 300);
-  };
-  tick();
-  req.on('close', () => {});
+app.get('/api/songs/thumbnails/stream/:jobId', (_req, res) => {
+  res.status(410).json({ error: 'Thumbnail generation has been retired.' });
 });
 
 // ── BASE IMAGE (Phase 4) ────────────────────────────────────────────────────
-
-function scanSongBaseImage(songId) {
-  const refDir = join(__dirname, '../../output/songs', songId, 'reference');
-  if (!fs.existsSync(refDir)) return null;
-  const files = fs.readdirSync(refDir).filter(f => f.startsWith('base-image'));
-  if (!files.length) return null;
-  const name = files[0];
-  const abs = join(refDir, name);
-  return { path: abs, url: `/media/songs/${songId}/reference/${name}`, name };
-}
 
 function clearSongBaseImage(songId) {
   const refDir = join(__dirname, '../../output/songs', songId, 'reference');
@@ -816,6 +806,7 @@ app.post('/api/songs/:id/base-image', (req, res) => {
   baseImageUpload.single('base_image')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No valid image file provided (png/jpg/jpeg/webp)' });
+    saveSongMarketingKit(req.params.id, { marketing_assets: { base_image_url: scanSongBaseImage(req.params.id)?.url || '' } });
     const info = scanSongBaseImage(req.params.id);
     res.json({ ok: true, baseImage: info });
   });
@@ -826,42 +817,13 @@ app.delete('/api/songs/:id/base-image', (req, res) => {
   const song = getSong(req.params.id);
   if (!song) return res.status(404).json({ error: 'Song not found' });
   clearSongBaseImage(req.params.id);
+  saveSongMarketingKit(req.params.id, { marketing_assets: { base_image_url: '' } });
   res.json({ ok: true });
 });
 
 // ── SOCIAL ASSET PACK (Phase 6) ─────────────────────────────────────────────
 
 const socialPackJobs = new Map(); // jobId → { status, logs, error, outputDir, dashboardUrl }
-
-function scanMarketingPack(songId) {
-  const packDir = join(__dirname, '../../output/marketing-ready', songId);
-  const metaPath = join(packDir, 'metadata.json');
-  const dashPath = join(packDir, 'index.html');
-  if (!fs.existsSync(packDir)) return { exists: false, status: 'not_built', dashboardUrl: null, readiness: {} };
-
-  const metaExists = fs.existsSync(metaPath);
-  const dashExists = fs.existsSync(dashPath);
-  let meta = null;
-  try { if (metaExists) meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch {}
-
-  const songDir = join(__dirname, '../../output/songs', songId);
-  const distDir = join(__dirname, '../../output/distribution-ready', songId);
-  const hasAudio = fs.existsSync(join(distDir, 'upload-this.mp3')) || fs.existsSync(join(songDir, 'audio.mp3'));
-  const hasCover = fs.existsSync(join(distDir)) && fs.readdirSync(distDir).some(f => /\.(png|jpg|jpeg)$/i.test(f));
-  const hasCharacter = !!(process.env.MARKETING_CHARACTER_ASSET && fs.existsSync(process.env.MARKETING_CHARACTER_ASSET));
-  const baseImg = scanSongBaseImage(songId);
-  const linksPath = join(songDir, 'metadata.json');
-  let hasLink = false;
-  try { const m = JSON.parse(fs.readFileSync(linksPath, 'utf8')); hasLink = !!(m?.hyperfollow_url || m?.streaming_link); } catch {}
-
-  return {
-    exists: true,
-    status: metaExists ? 'built' : 'not_built',
-    dashboardUrl: dashExists ? `/media/marketing-ready/${songId}/index.html` : null,
-    readiness: { finalAudio: hasAudio, coverArt: hasCover, characterAsset: hasCharacter, baseImagePresent: !!baseImg, linkPresent: hasLink },
-    meta,
-  };
-}
 
 app.post('/api/songs/:id/social-assets', (req, res) => {
   const song = getSong(req.params.id);
@@ -873,11 +835,12 @@ app.post('/api/songs/:id/social-assets', (req, res) => {
   const {
     mode = '', provider = '', formats = '', useBaseImage, regenerateBaseArt, renderVideos, requireApprovalBeforeVideo,
   } = req.body || {};
+  const normalizedFormats = Array.isArray(formats) ? formats.join(',') : formats;
 
   const args = [join(__dirname, '../scripts/build-marketing-pack.js'), '--song-id', song.id];
   if (mode) args.push('--mode', mode);
   if (provider) args.push('--provider', provider);
-  if (formats) args.push('--formats', formats);
+  if (normalizedFormats) args.push('--formats', normalizedFormats);
   if (useBaseImage === false || useBaseImage === 'false') args.push('--no-use-base-image');
   if (regenerateBaseArt === true || regenerateBaseArt === 'true') args.push('--regenerate-base-art');
   if (renderVideos === false || renderVideos === 'false') args.push('--no-render-videos');
@@ -905,11 +868,23 @@ app.post('/api/songs/:id/social-assets', (req, res) => {
     job.status = code === 0 ? 'done' : 'error';
     if (code !== 0) job.error = `Process exited ${code}`;
     const packInfo = scanMarketingPack(song.id);
+    try { syncSongMarketingKitFromPack(song.id, { marketingPack: packInfo }); } catch {}
     job.dashboardUrl = packInfo.dashboardUrl;
     job.outputDir = packInfo.exists ? join(__dirname, '../../output/marketing-ready', song.id) : null;
   });
 
   res.json({ ok: true, jobId });
+});
+
+app.post('/api/songs/:id/marketing-assets/approve', express.json(), (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ ok: false, error: 'Song not found' });
+  const assetKey = String(req.body.assetKey || '').trim();
+  if (!assetKey) return res.status(400).json({ ok: false, error: 'assetKey is required' });
+  const kit = getSongMarketingKit(song.id);
+  const approvals = { ...(kit.marketing_assets.asset_approvals || {}), [assetKey]: req.body.approved !== false };
+  const saved = saveSongMarketingKit(song.id, { marketing_assets: { asset_approvals: approvals } });
+  res.json({ ok: true, approvals: saved.marketing_assets.asset_approvals });
 });
 
 app.get('/api/songs/social-assets/stream/:jobId', (req, res) => {
@@ -944,6 +919,9 @@ app.post('/api/songs/:id/checklist/:key', (req, res) => {
 // API: update song status
 app.post('/api/songs/:id/status', (req, res) => {
   const { status } = req.body;
+  if (!SONG_STATUS_OPTIONS.some(option => option.value === status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
   updateSongStatus(req.params.id, status);
   res.json({ ok: true });
 });
@@ -969,9 +947,7 @@ app.delete('/api/songs/:id', (req, res) => {
 });
 
 app.post('/api/songs/:id/approve', (req, res) => {
-  if (!getSong(req.params.id)) return res.status(404).json({ error: 'Song not found' });
-  updateSongStatus(req.params.id, 'approved');
-  res.json({ ok: true });
+  res.status(410).json({ error: 'Status approval endpoint removed. Use a canonical song status instead.' });
 });
 
 // Mark as submitted to the active profile distributor (with optional link)
@@ -993,8 +969,7 @@ app.post('/api/songs/:id/publish', (req, res) => {
 app.post('/api/songs/bulk-status', (req, res) => {
   const { ids, status } = req.body;
   if (!Array.isArray(ids) || !status) return res.status(400).json({ error: 'ids[] and status required' });
-  const validStatuses = ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','ready_to_publish','submitted_to_distributor','published','paused','archived'];
-  if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  if (!SONG_STATUS_OPTIONS.some(option => option.value === status)) return res.status(400).json({ error: 'Invalid status' });
   let updated = 0;
   for (const id of ids) {
     try { updateSongStatus(id, status); updated++; } catch { /* skip unknown ids */ }
@@ -1092,8 +1067,7 @@ function scanSongDir(songDir) {
   // Thumbnails
   const thumbDir = join(songDir, 'thumbnails');
   result.thumbnails = fs.existsSync(thumbDir)
-    ? fs.readdirSync(thumbDir)
-        .filter(f => f.endsWith('.png'))
+    ? filterVisibleThumbnailNames(fs.readdirSync(thumbDir))
         .map(f => {
           const p = join(thumbDir, f);
           return { path: p, url: toWebUrl(p), name: f };
@@ -1101,6 +1075,142 @@ function scanSongDir(songDir) {
     : [];
 
   return result;
+}
+
+function readTextFile(filePath) {
+  try {
+    return filePath && fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+  } catch {
+    return '';
+  }
+}
+
+function readSongMetadata(songDir) {
+  const filePath = join(songDir, 'metadata.json');
+  try {
+    return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getSongDurationSeconds(metadata) {
+  const raw = metadata?.duration_seconds ?? metadata?.durationSeconds ?? metadata?.length_seconds ?? null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
+
+function formatDuration(durationSeconds) {
+  if (!durationSeconds) return '—';
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = String(durationSeconds % 60).padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+function countLyricsWords(text) {
+  if (!text) return 0;
+  return text
+    .replace(/\[[^\]]+\]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length;
+}
+
+function summarizeSongDescription(song) {
+  return song.concept || song.notes || song.topic || 'No description yet.';
+}
+
+function songStatusSortOrder(status) {
+  const normalized = normalizeSongStatus(status);
+  const order = [
+    SONG_STATUSES.DRAFT,
+    SONG_STATUSES.EDITING,
+    SONG_STATUSES.SUBMITTED_TO_DISTROKID,
+    SONG_STATUSES.OUTREACH_COMPLETE,
+    SONG_STATUSES.ARCHIVED,
+  ];
+  const index = order.indexOf(normalized);
+  return index === -1 ? order.length : index;
+}
+
+function filterVisibleThumbnailNames(files) {
+  const pngs = files.filter(f => f.endsWith('.png'));
+  const finals = new Set(
+    pngs
+      .filter(f => f.endsWith('-final.png'))
+      .map(f => f.replace(/-final\.png$/, ''))
+  );
+
+  return pngs.filter(f => {
+    if (!f.endsWith('-base.png')) return true;
+    const stem = f.replace(/-base\.png$/, '');
+    return !finals.has(stem);
+  });
+}
+
+function buildReleaseOutreachRows(songId) {
+  const targets = getMarketingTargets({});
+  const targetIds = targets.map(target => target.id);
+  const allHistory = getOutreachHistoryByTargetIds(targetIds);
+  const releaseHistory = getOutreachHistoryByTargetIds(targetIds, { release_id: songId });
+  const outletsById = new Map(
+    targets.map(target => [
+      target.id,
+      normalizeOutletForApp(target, { outreachHistory: allHistory.get(target.id) || [] }),
+    ])
+  );
+
+  return Array.from(releaseHistory.entries())
+    .map(([targetId, history]) => {
+      const outlet = outletsById.get(targetId);
+      if (!outlet || !history.length) return null;
+      const latest = history[0];
+      return {
+        outlet_id: targetId,
+        outlet_name: outlet.name,
+        recipient: latest.recipient_email || latest.recipient_name || '—',
+        contacted_at: latest.contacted_at,
+        channel: latest.channel || outlet.contactability.best_channel || 'unknown',
+        last_message: latest.message_body || latest.message_preview || '',
+        replied: history.some(event => event.status === 'replied'),
+        do_not_contact: outlet.do_not_contact === true,
+        bounced: history.some(event => event.status === 'bounced'),
+        last_contact_overall: outlet.last_contact,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.contacted_at || 0) - new Date(a.contacted_at || 0));
+}
+
+function resolveSongDetailInitialTab({ requestedTab, song, lyricsContent, audioPromptContent, metadataParsed }) {
+  const normalizedRequested = String(requestedTab || '').trim().toLowerCase();
+  if (normalizedRequested === 'preview') return 'marketing';
+
+  const allowed = new Set(['lyrics', 'prompt', 'meta', 'marketing', 'performance']);
+  if (allowed.has(normalizedRequested)) return normalizedRequested;
+
+  if (normalizeSongStatus(song?.status) === SONG_STATUSES.SUBMITTED_TO_DISTROKID) return 'marketing';
+  if (lyricsContent) return 'lyrics';
+  if (audioPromptContent) return 'prompt';
+  if (metadataParsed) return 'meta';
+  return 'marketing';
+}
+
+function syncReleaseLinksFromMarketingKit(songId, links = {}) {
+  const mapping = [
+    ['smart_link', 'HyperFollow'],
+    ['spotify_url', 'Spotify'],
+    ['apple_music_url', 'Apple Music'],
+    ['youtube_music_url', 'YouTube Music'],
+    ['youtube_video_url', 'YouTube'],
+    ['cover_art_url', 'Cover Art'],
+    ['lyrics_url', 'Lyrics'],
+  ];
+  for (const [field, platform] of mapping) {
+    const url = String(links[field] || '').trim();
+    if (url) upsertReleaseLink(songId, platform, url);
+  }
 }
 
 // ── START ───────────────────────────────────────────────────────

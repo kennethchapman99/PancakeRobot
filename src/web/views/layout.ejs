@@ -92,24 +92,6 @@
 
       removeClosest(document.getElementById('pct-label'), '.bg-white.border.border-zinc-200.rounded-xl.p-5.mb-6');
 
-      const emptyThumbnailNode = Array.from(document.querySelectorAll('div, button'))
-        .find((node) => {
-          const text = node.textContent || '';
-          return text.includes('No thumbnails yet') || text.includes('Generate Thumbnails');
-        });
-
-      if (emptyThumbnailNode) {
-        const thumbnailColumn = emptyThumbnailNode.closest('.col-span-2') || emptyThumbnailNode.closest('.bg-zinc-50.border.border-dashed');
-        const mediaGrid = thumbnailColumn?.closest('.grid');
-        thumbnailColumn?.remove();
-
-        const audioColumn = mediaGrid?.querySelector('.col-span-1');
-        if (audioColumn && !mediaGrid.querySelector('.col-span-2')) {
-          audioColumn.classList.remove('col-span-1');
-          audioColumn.classList.add('col-span-full');
-        }
-      }
-
       const checklistHeading = Array.from(document.querySelectorAll('h2'))
         .find((heading) => heading.textContent?.trim() === 'Publishing Checklist');
       removeClosest(checklistHeading, 'section');
@@ -129,13 +111,14 @@
     const metaUrl = `/media/songs/${encodeURIComponent(songId)}/audio/generation-meta.json?ts=${Date.now()}`;
 
     const inferFromAudioDom = () => {
-      const source = document.querySelector('audio source[src*="-paid.mp3"], audio source[src*="-free.mp3"]');
+      const source = document.querySelector('audio source[src*="/audio/"]');
       if (!source) return null;
       const src = source.getAttribute('src') || '';
       const isFree = src.includes('-free.mp3');
+      const isPaid = src.includes('-paid.mp3');
       return {
-        model: isFree ? 'music-2.6-free' : 'music-2.6',
-        render_tier: isFree ? 'free' : 'paid',
+        model: isFree ? 'music-2.6-free' : isPaid ? 'music-2.6' : 'unknown model',
+        render_tier: isFree ? 'free' : isPaid ? 'paid' : 'unknown',
         inferred_from_filename: true,
       };
     };

@@ -7,6 +7,7 @@ import {
 } from '../shared/marketing-db.js';
 import { getActiveProfileId, loadBrandProfile } from '../shared/brand-profile.js';
 import { getAllSongs, getReleaseLinks } from '../shared/db.js';
+import { getMarketingReleaseEntries } from '../shared/marketing-releases.js';
 
 const require = createRequire(import.meta.url);
 const express = require('express');
@@ -164,6 +165,7 @@ function getEligibleOutletsForRelease(_songId) {
     .map(normalizeOutletForDashboard)
     .filter(o => o.status !== 'do_not_contact')
     .filter(o => o.ai_policy !== 'banned')
+    .filter(o => Boolean(o.contact_email || o.public_email))
     .sort((a, b) => {
       const priorityOrder = { P0: 0, P1: 1, P2: 2, P3: 3, AVOID_FOR_FULLY_AI: 9 };
       const pa = priorityOrder[a.priority] ?? 5;
@@ -192,6 +194,7 @@ function normalizeOutletForDashboard(row) {
     contact_status: contactStatus(row),
     contact_method: row.contact_method,
     contact_email: row.contact_email,
+    public_email: row.public_email,
     ai_policy: row.ai_policy,
     ai_risk_score: row.ai_risk_score,
     ai_risk_level: aiMusicStance.risk_level || riskLevelFromScore(row.ai_risk_score),
@@ -214,7 +217,7 @@ function renderMarketingDashboard({ message, error }) {
       <div class="flex items-start justify-between gap-4">
         <div>
           <h1 class="text-3xl font-extrabold">Marketing Mission Control</h1>
-          <p class="text-sm text-zinc-500 mt-2">Create release-level outreach campaigns by selecting the outlets/channels for each song.</p>
+          <p class="text-sm text-zinc-500 mt-2">Create release-level outreach campaigns by selecting email-capable outlets for each song.</p>
         </div>
         <form method="POST" action="/marketing/agents/inbox-scan">
           <button class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Scan Gmail inbox</button>
@@ -234,11 +237,11 @@ function renderReleaseOutreachSection(entries, campaignsBySong, outlets) {
     return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">${heading}<div class="border border-dashed rounded-xl p-8 text-center text-zinc-500">No release-ready songs yet.</div></section>`;
   }
 
-  const cards = entries.map(({ song, links }) => renderReleaseCard(song, links, campaignsBySong[song.id] || [], outlets)).join('');
+  const cards = entries.map(({ song, links, hasMarketingImage }) => renderReleaseCard(song, links, campaignsBySong[song.id] || [], outlets, hasMarketingImage)).join('');
   return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">${heading}<div class="space-y-4">${cards}</div></section>`;
 }
 
-function renderReleaseCard(song, links, campaigns, outlets) {
+function renderReleaseCard(song, links, campaigns, outlets, hasMarketingImage = false) {
   const safeP0 = outlets.filter(o => o.priority === 'P0' && o.outreach_allowed === true).slice(0, 12);
   const safeOther = outlets.filter(o => o.priority !== 'P0' && o.outreach_allowed === true).slice(0, 8);
   const manual = outlets.filter(o => o.outreach_allowed === 'manual_review_only').slice(0, 6);
@@ -275,6 +278,7 @@ function renderReleaseCard(song, links, campaigns, outlets) {
         <div class="flex flex-wrap items-center gap-2">
           <h3 class="font-bold text-lg">${esc(song.title || song.topic || song.id)}</h3>
           <span class="${badge(song.status)}">${esc(song.status)}</span>
+          ${hasMarketingImage ? '<span title="Marketing image available" class="text-xs">🖼️</span>' : ''}
         </div>
         <div class="mt-1 text-xs text-zinc-500">${linksHtml}</div>
         ${existingCampaigns}
@@ -296,11 +300,7 @@ function renderReleaseCard(song, links, campaigns, outlets) {
 }
 
 function getReleaseReadySongs() {
-  const statuses = new Set(['submitted_to_distributor', 'published', 'approved', 'ready_to_publish', 'metadata_ready']);
-  return getAllSongs()
-    .filter(song => statuses.has(song.status))
-    .slice(0, 25)
-    .map(song => ({ song, links: getReleaseLinks(song.id) }));
+  return getMarketingReleaseEntries(25);
 }
 
 function getCampaignsForSong(songId) {
@@ -337,7 +337,7 @@ function normalizeIds(value) {
 
 function contactStatus(row) {
   if (row.status === 'do_not_contact') return 'avoid';
-  if (row.contact_email) return 'has_email';
+  if (row.contact_email || row.public_email) return 'has_email';
   if (row.contact_method) return 'has_contact_or_submission_path';
   if (String(row.platform || '').toLowerCase().includes('owned')) return 'owned_channel';
   return 'manual_research_needed';
@@ -385,8 +385,8 @@ function banner(text, color) {
 }
 
 function badge(status) {
-  if (['published', 'approved', 'ready_to_publish', 'metadata_ready'].includes(status)) return 'badge badge-ok';
-  if (['rejected', 'error'].includes(status)) return 'badge badge-bad';
+  if (['submitted to DistroKid', 'outreach complete'].includes(status)) return 'badge badge-ok';
+  if (['error'].includes(status)) return 'badge badge-bad';
   return 'badge badge-warn';
 }
 

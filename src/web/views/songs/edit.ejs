@@ -23,8 +23,8 @@
       <label class="block text-sm font-medium text-zinc-700 mb-1">Status</label>
       <select name="status"
         class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','ready_to_publish','submitted_to_distributor','published','paused','archived']) { %>
-          <option value="<%= s %>" <%= song.status === s ? 'selected' : '' %>><%= s.replace(/_/g,' ') %></option>
+        <% for (const option of songStatusOptions) { %>
+          <option value="<%= option.value %>" <%= song.status === option.value ? 'selected' : '' %>><%= option.label %></option>
         <% } %>
       </select>
     </div>

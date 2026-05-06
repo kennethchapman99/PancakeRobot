@@ -17,6 +17,7 @@ import {
 } from '../shared/song-qa.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
 import { sanitizeLyricsForProvider } from '../shared/lyrics-sanitizer.js';
+import { buildUniqueSongFilename } from '../shared/song-filenames.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BRAND_PROFILE = loadBrandProfile();
@@ -103,7 +104,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     return { audioFiles: [], skipped: false, error: 'generation timed out or failed', instructionsPath, preRenderQA, providerLyricsReport };
   }
 
-  const filename = `${songId}-v1-${modelConfig.tier}.mp3`;
+  const filename = buildUniqueSongFilename({ dir: audioDir, title, ext: 'mp3' });
   const filePath = join(audioDir, filename);
 
   try {

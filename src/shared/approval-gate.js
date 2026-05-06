@@ -87,15 +87,6 @@ export async function approveSong({
     || 'not found';
   console.log(chalk.cyan('  │') + `  Audio:  ${audioInfo.substring(0, 34)}`.padEnd(45) + chalk.cyan('│'));
 
-  // Thumbnail info
-  const thumbDir = join(resolvedSongDir, 'thumbnails');
-  const finalPngs = fs.existsSync(thumbDir)
-    ? fs.readdirSync(thumbDir).filter(f => f.endsWith('-final.png'))
-    : [];
-  const thumbInfo = finalPngs.length > 0
-    ? `${finalPngs.length} final PNG(s) with title text`
-    : 'no thumbnails';
-  console.log(chalk.cyan('  │') + `  Thumbs: ${thumbInfo.substring(0, 34)}`.padEnd(45) + chalk.cyan('│'));
   console.log(chalk.cyan('  └─────────────────────────────────────────┘'));
   console.log('');
 

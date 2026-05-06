@@ -8,6 +8,7 @@ import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { loadBrandProfile } from './brand-profile.js';
+import { SONG_STATUSES, normalizeSongStatus } from './song-status.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_SLUG = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
@@ -74,7 +75,12 @@ function initSchema(db) {
       distribution_status TEXT,
       brand_score INTEGER,
       total_cost_usd REAL DEFAULT 0,
-      brand_profile_id TEXT
+      brand_profile_id TEXT,
+      is_test INTEGER DEFAULT 0,
+      marketing_links_json TEXT,
+      marketing_assets_json TEXT,
+      marketing_readiness_json TEXT,
+      last_outreach_json TEXT
     );
 
     CREATE TABLE IF NOT EXISTS ideas (
@@ -184,6 +190,11 @@ function initSchema(db) {
     ['publishing_status', "TEXT DEFAULT 'not_started'"],
     ['published_at', 'TEXT'],
     ['brand_profile_id', 'TEXT'],
+    ['is_test', 'INTEGER DEFAULT 0'],
+    ['marketing_links_json', 'TEXT'],
+    ['marketing_assets_json', 'TEXT'],
+    ['marketing_readiness_json', 'TEXT'],
+    ['last_outreach_json', 'TEXT'],
   ];
   for (const [col, type] of newSongCols) {
     if (!songCols.includes(col)) {
@@ -210,8 +221,50 @@ function initSchema(db) {
   }
   db.exec(`
     UPDATE songs
-    SET status = 'submitted_to_distributor'
-    WHERE status IN ('submitted_to_distrokid', 'submitted_to_tunecore')
+    SET status = '${SONG_STATUSES.SUBMITTED_TO_DISTROKID}'
+    WHERE lower(trim(COALESCE(status, ''))) IN (
+      'submitted_to_distrokid',
+      'submitted to distrokid',
+      'submitted_to_distributor',
+      'submitted to distributor'
+    )
+  `);
+  db.exec(`
+    UPDATE songs
+    SET status = '${SONG_STATUSES.EDITING}'
+    WHERE lower(trim(COALESCE(status, ''))) = 'editing'
+  `);
+  db.exec(`
+    UPDATE songs
+    SET status = '${SONG_STATUSES.ARCHIVED}'
+    WHERE lower(trim(COALESCE(status, ''))) = 'archived'
+  `);
+  db.exec(`
+    UPDATE songs
+    SET status = '${SONG_STATUSES.OUTREACH_COMPLETE}'
+    WHERE lower(trim(COALESCE(status, ''))) IN ('outreach complete', 'outreach_complete')
+  `);
+  db.exec(`
+    UPDATE songs
+    SET status = '${SONG_STATUSES.DRAFT}'
+    WHERE lower(trim(COALESCE(status, ''))) NOT IN (
+      'draft',
+      'editing',
+      'archived',
+      'submitted to distrokid',
+      'outreach complete'
+    )
+  `);
+
+  // Backfill known synthetic/test rows so they stop leaking into catalog views.
+  db.exec(`
+    UPDATE songs
+    SET is_test = 1
+    WHERE COALESCE(is_test, 0) = 0
+      AND (
+        id LIKE 'SONG_RELEASE_MARKETING_TEST%'
+        OR notes LIKE '%test-release-marketing-flow%'
+      )
   `);
 }
 
@@ -258,6 +311,7 @@ export function upsertSong(song) {
   const db = getDb();
   const now = new Date().toISOString();
   const existing = db.prepare('SELECT * FROM songs WHERE id = ?').get(song.id);
+  const normalizedStatus = song.status !== undefined ? normalizeSongStatus(song.status) : undefined;
 
   if (existing) {
     // PATCH update — only overwrite non-null/undefined values
@@ -268,13 +322,18 @@ export function upsertSong(song) {
       'release_date', 'distributor', 'distributor_submission_date', 'publishing_status',
       'published_at', 'lyrics_path', 'audio_prompt_path', 'thumbnail_path',
       'metadata_path', 'music_service', 'distribution_status', 'brand_score',
-      'total_cost_usd', 'brand_profile_id',
+      'total_cost_usd', 'brand_profile_id', 'marketing_links_json', 'marketing_assets_json',
+      'marketing_readiness_json', 'last_outreach_json', 'is_test',
     ];
     for (const key of patchable) {
       if (song[key] !== undefined && song[key] !== null) {
-        updates[key] = song[key];
+        updates[key] = key === 'status' ? normalizedStatus : song[key];
       }
     }
+    if (song.marketing_links !== undefined) updates.marketing_links_json = stringifyOptionalJson(song.marketing_links);
+    if (song.marketing_assets !== undefined) updates.marketing_assets_json = stringifyOptionalJson(song.marketing_assets);
+    if (song.marketing_readiness !== undefined) updates.marketing_readiness_json = stringifyOptionalJson(song.marketing_readiness);
+    if (song.last_outreach !== undefined) updates.last_outreach_json = stringifyOptionalJson(song.last_outreach);
     const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
     const vals = [...Object.values(updates), song.id];
     db.prepare(`UPDATE songs SET ${setClauses} WHERE id = ?`).run(...vals);
@@ -285,9 +344,10 @@ export function upsertSong(song) {
          concept, target_age_range, genre_tags, mood_tags, keywords, notes,
          release_date, distributor, distributor_submission_date, publishing_status,
          published_at, lyrics_path, audio_prompt_path, thumbnail_path, metadata_path,
-         music_service, distribution_status, brand_score, total_cost_usd, brand_profile_id)
+         music_service, distribution_status, brand_score, total_cost_usd, brand_profile_id,
+         is_test, marketing_links_json, marketing_assets_json, marketing_readiness_json, last_outreach_json)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       song.id,
       song.created_at || now,
@@ -295,7 +355,7 @@ export function upsertSong(song) {
       song.title || null,
       song.slug || null,
       song.topic || null,
-      song.status || 'draft',
+      normalizedStatus || SONG_STATUSES.DRAFT,
       song.originating_idea_id || null,
       song.concept || null,
       song.target_age_range || null,
@@ -316,7 +376,12 @@ export function upsertSong(song) {
       song.distribution_status || null,
       song.brand_score || null,
       song.total_cost_usd || 0,
-      song.brand_profile_id || null
+      song.brand_profile_id || null,
+      song.is_test ? 1 : 0,
+      stringifyOptionalJson(song.marketing_links),
+      stringifyOptionalJson(song.marketing_assets),
+      stringifyOptionalJson(song.marketing_readiness),
+      stringifyOptionalJson(song.last_outreach),
     );
   }
 }
@@ -325,13 +390,17 @@ export function getSong(id) {
   return parseSong(getDb().prepare('SELECT * FROM songs WHERE id = ?').get(id));
 }
 
-export function getAllSongs() {
-  return getDb().prepare('SELECT * FROM songs ORDER BY created_at DESC').all().map(parseSong);
+export function getAllSongs(options = {}) {
+  const includeTests = options.includeTests === true;
+  const sql = includeTests
+    ? 'SELECT * FROM songs ORDER BY created_at DESC'
+    : 'SELECT * FROM songs WHERE COALESCE(is_test, 0) = 0 ORDER BY created_at DESC';
+  return getDb().prepare(sql).all().map(parseSong);
 }
 
 export function updateSongStatus(id, status) {
   const db = getDb();
-  db.prepare(`UPDATE songs SET status = ?, updated_at = ? WHERE id = ?`).run(status, new Date().toISOString(), id);
+  db.prepare(`UPDATE songs SET status = ?, updated_at = ? WHERE id = ?`).run(normalizeSongStatus(status), new Date().toISOString(), id);
 }
 
 export function deleteSong(id) {
@@ -348,10 +417,16 @@ function parseSong(s) {
   const { tunecore_submission_date: legacySubmissionDate, ...song } = s;
   return {
     ...song,
+    status: normalizeSongStatus(s.status),
     distributor_submission_date: s.distributor_submission_date || legacySubmissionDate || null,
     genre_tags: parseJsonArray(s.genre_tags),
     mood_tags: parseJsonArray(s.mood_tags),
     keywords: parseJsonArray(s.keywords),
+    marketing_links: parseJsonObject(s.marketing_links_json),
+    marketing_assets: parseJsonObject(s.marketing_assets_json),
+    marketing_readiness: parseJsonObject(s.marketing_readiness_json),
+    last_outreach: parseJsonObject(s.last_outreach_json),
+    is_test: Boolean(s.is_test),
   };
 }
 
@@ -444,6 +519,20 @@ export function getAllIdeas() {
 function parseIdea(i) {
   if (!i) return null;
   return { ...i, tags: parseJsonArray(i.tags) };
+}
+
+function stringifyOptionalJson(value) {
+  return value && typeof value === 'object' ? JSON.stringify(value) : null;
+}
+
+function parseJsonObject(value) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -669,9 +758,9 @@ export function getDashboardStats() {
   const songs = db.prepare(`
     SELECT
       COUNT(*) as total,
-      SUM(CASE WHEN status IN ('draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready') THEN 1 ELSE 0 END) as in_progress,
-      SUM(CASE WHEN status IN ('ready_to_publish','metadata_ready') THEN 1 ELSE 0 END) as ready,
-      SUM(CASE WHEN status IN ('submitted_to_distributor','published') THEN 1 ELSE 0 END) as published
+      SUM(CASE WHEN status IN ('${SONG_STATUSES.DRAFT}','${SONG_STATUSES.EDITING}') THEN 1 ELSE 0 END) as in_progress,
+      SUM(CASE WHEN status = '${SONG_STATUSES.SUBMITTED_TO_DISTROKID}' THEN 1 ELSE 0 END) as ready,
+      SUM(CASE WHEN status = '${SONG_STATUSES.OUTREACH_COMPLETE}' THEN 1 ELSE 0 END) as published
     FROM songs
   `).get();
 

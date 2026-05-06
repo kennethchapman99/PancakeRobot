@@ -3,8 +3,8 @@ import { createOutreachRun, getEligibleOutlets } from '../agents/marketing-outre
 import { generateDraftsForCampaign, generateDraftForOutreachItem } from '../agents/marketing-outreach-draft-agent.js';
 import { getOutreachItems, getOutreachSummary } from '../shared/marketing-outreach-db.js';
 import { getMarketingCampaigns } from '../shared/marketing-db.js';
-import { getAllSongs, getReleaseLinks } from '../shared/db.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
+import { getMarketingReleaseEntries } from '../shared/marketing-releases.js';
 
 const require = createRequire(import.meta.url);
 const express = require('express');
@@ -163,14 +163,14 @@ function renderBulkOutreachSection() {
   const campaigns = getMarketingCampaigns(25).filter(c => c.focus_song_id);
   const summary = getOutreachSummary();
 
-  const releaseRows = releases.map(({ song, links }) => {
+  const releaseRows = releases.map(({ song, links, hasMarketingImage }) => {
     const linkSummary = links.length
       ? links.slice(0, 3).map(l => esc(l.platform)).join(', ')
       : 'links pending';
     return `<label class="flex items-start gap-3 border border-zinc-200 rounded-lg p-3 hover:bg-zinc-50">
       <input type="checkbox" name="song_ids" value="${attr(song.id)}" class="mt-1">
       <span class="min-w-0">
-        <span class="block font-semibold text-sm">${esc(song.title || song.topic || song.id)}</span>
+        <span class="block font-semibold text-sm">${esc(song.title || song.topic || song.id)}${hasMarketingImage ? ' <span title="Marketing image available">🖼️</span>' : ''}</span>
         <span class="block text-xs text-zinc-500">${esc(song.status)} · ${esc(linkSummary)}</span>
       </span>
     </label>`;
@@ -195,7 +195,7 @@ function renderBulkOutreachSection() {
     <div class="flex items-start justify-between gap-4 mb-5">
       <div>
         <h2 class="font-bold text-lg">Bulk Outreach Run</h2>
-        <p class="text-sm text-zinc-500 mt-1">Select one or more releases, choose an outlet preset, and create review-gated outreach draft rows.</p>
+        <p class="text-sm text-zinc-500 mt-1">Select one or more releases, choose an email-capable outlet preset, and create review-gated outreach draft rows.</p>
       </div>
       <div class="text-right text-xs text-zinc-500">
         <div>${summary.total || 0} outreach item(s)</div>
@@ -254,11 +254,7 @@ function modeRadio(value, label, checked = false) {
 }
 
 function getReleaseReadySongs() {
-  const statuses = new Set(['submitted_to_distributor', 'published', 'approved', 'ready_to_publish', 'metadata_ready']);
-  return getAllSongs()
-    .filter(song => statuses.has(song.status))
-    .slice(0, 50)
-    .map(song => ({ song, links: getReleaseLinks(song.id) }));
+  return getMarketingReleaseEntries(50);
 }
 
 function normalizeIds(value) {

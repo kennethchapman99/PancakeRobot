@@ -396,7 +396,7 @@ export async function renderMarketingAssets(assets, hook) {
     baseImagePath = assets.baseImagePath;
     console.log(`[RENDERER] Resolved base image: ${baseImagePath} (source: uploaded)`);
   } else {
-    baseImagePath = assets.source.copiedCover || assets.source.coverPath || null;
+    baseImagePath = assets.source.copiedCover || assets.source.coverPath || assets.source.copiedBrandFallback || assets.source.brandFallbackPath || null;
     console.log(`[RENDERER] Resolved base image: ${baseImagePath || 'none'} (source: cover-art-fallback)`);
   }
 
@@ -410,12 +410,18 @@ export async function renderMarketingAssets(assets, hook) {
     ['tiktokLoop',  join(work, 'tiktok-loop-base.jpg'),       1080, 1920, profileHeadline,             'official sound',    null,  'tiktok',    'characterHero'],
     ['ig-feed-announcement-1080x1350.png', join(assets.dirs.instagramDir, 'ig-feed-announcement-1080x1350.png'), 1080, 1350, ['NEW SONG', 'OUT NOW'], 'Listen everywhere', null, 'instagram', 'fullBleedHero'],
     ['ig-square-post-1080x1080.png',       join(assets.dirs.instagramDir, 'ig-square-post-1080x1080.png'),       1080, 1080, profileHeadline,         null,                null, 'instagram', 'characterHero'],
+    ['outreach-hero-1600x900.png',         join(assets.outputDir, 'outreach-hero-1600x900.png'),                 1600, 900, [assets.artist],           assets.title,        null, 'press',     'fullBleedHero'],
+    ['no-text-variation.png',              join(assets.outputDir, 'no-text-variation.png'),                      1080, 1080, [],                       null,                null, 'press',     'fullBleedHero'],
     ['ig-reel-cover.jpg',                  join(assets.dirs.instagramDir, 'ig-reel-cover.jpg'),                  1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'instagram', 'storyCTA'],
     ['tiktok-cover.jpg',                   join(assets.dirs.tiktokDir,    'tiktok-cover.jpg'),                   1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'tiktok',    'storyCTA'],
   ];
+  const requestedFormats = new Set((assets.requestedFormats || []).map(value => String(value).trim()).filter(Boolean));
+  const filteredJobs = requestedFormats.size
+    ? jobs.filter(([name]) => requestedFormats.has(name))
+    : jobs;
 
   const map = {};
-  for (const [name, path, width, height, headline, subhead, lyricText, platform, layout] of jobs) {
+  for (const [name, path, width, height, headline, subhead, lyricText, platform, layout] of filteredJobs) {
     await poster({ assets, outputPath: path, width, height, headline, subhead, lyricText, platform, baseImagePath, layout });
     map[name] = path;
     if (/\.(png|jpe?g)$/i.test(name)) generated.push({ platform, type: 'image', name, path });
@@ -431,7 +437,7 @@ export async function renderMarketingAssets(assets, hook) {
     ['tiktok-character-loop.mp4', 'tiktok', map.tiktokLoop, join(assets.dirs.tiktokDir, 'tiktok-character-loop.mp4'), Math.min(10, hook.hook_duration_sec || 10)],
   ];
 
-  for (const [name, platform, imagePath, outputPath, durationOverride] of videos) {
+  for (const [name, platform, imagePath, outputPath, durationOverride] of videos.filter(([name]) => !requestedFormats.size || requestedFormats.has(name))) {
     const result = await mp4({ imagePath, audioPath, outputPath, hook, durationOverride });
     if (result.skipped) skipped.push({ name, reason: result.reason });
     else generated.push({ platform, type: 'video', name, path: outputPath });

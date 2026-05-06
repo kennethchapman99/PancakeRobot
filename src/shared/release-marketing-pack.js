@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getSong, getReleaseLinks } from './db.js';
 import { loadBrandProfile } from './brand-profile.js';
+import { getSongMarketingKit } from './song-marketing-kit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '../..');
@@ -14,6 +15,7 @@ export function getReleaseMarketingPack(songId) {
 
   const brand = loadBrandProfile();
   const releaseLinks = getReleaseLinks(songId);
+  const marketingKit = getSongMarketingKit(song);
   const songDirs = findLikelySongOutputDirs(song);
   const files = songDirs.flatMap(dir => scanDirSafe(dir));
 
@@ -24,9 +26,14 @@ export function getReleaseMarketingPack(songId) {
       social: brand.social || {},
       ai_disclosure: brand.ai_disclosure || 'The music is AI-assisted and human-directed.',
     },
+    marketing_links: marketingKit.marketing_links,
+    marketing_assets: marketingKit.marketing_assets,
+    marketing_readiness: marketingKit.marketing_readiness,
     streaming_links: releaseLinks.map(link => ({ platform: link.platform, url: link.url })),
     primary_link: choosePrimaryLink(releaseLinks),
     cover_art: findFiles(files, ['cover', 'album', 'art'], ['.png', '.jpg', '.jpeg']).map(fileInfo),
+    lyrics_assets: findFiles(files, ['lyric'], ['.md', '.txt', '.pdf']).map(fileInfo),
+    audio_previews: findFiles(files, ['preview', 'snippet', 'hook', 'sample'], ['.mp3', '.wav', '.m4a']).map(fileInfo),
     social_clips: findFiles(files, ['clip', 'reel', 'short', 'tiktok'], ['.mp4', '.mov', '.webm']).map(fileInfo),
     social_images: findFiles(files, ['instagram', 'facebook', 'social', 'post'], ['.png', '.jpg', '.jpeg']).map(fileInfo),
     captions: findFiles(files, ['caption', 'social'], ['.txt', '.md', '.json']).map(fileInfo),

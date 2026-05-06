@@ -1,6 +1,7 @@
 <% title = song.title || song.id %>
+<% const workflowAction = nextAction || {}; %>
 
-<div class="p-8 max-w-4xl" x-data="songDetail()" @keydown.escape.window="closeThumbTerminal(); editOpen = false">
+<div class="p-8 max-w-4xl" x-data="songDetail()" @keydown.escape.window="editOpen = false">
 
   <!-- Back + header -->
   <a href="/songs" class="text-sm text-zinc-500 hover:text-zinc-700 mb-6 inline-flex items-center gap-1">← Song Catalog</a>
@@ -9,10 +10,8 @@
     <div>
       <h1 class="text-2xl font-bold"><%= song.title || song.topic || song.id %></h1>
       <div class="flex items-center gap-2 mt-2">
-        <span class="<%= statusBadge(song.status) %>"><%= song.status %></span>
+        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold <%= statusBadge(song.status) %>"><%= songStatusLabel(song.status) %></span>
         <span class="text-sm text-zinc-400">Created <%= formatDate(song.created_at) %></span>
-        <span class="text-sm text-zinc-300">·</span>
-        <span class="text-sm text-zinc-500">📦 <%= song.distributor || defaultDistributor || 'Distributor' %></span>
         <% if (song.brand_score) { %>
         <span class="text-sm text-zinc-300">·</span>
         <span class="text-sm text-zinc-500">Brand: <%= song.brand_score %>/100</span>
@@ -23,8 +22,9 @@
       <%
         const noAssets = (!fsAssets.audioFiles || fsAssets.audioFiles.length === 0) && (!fsAssets.lyrics);
         const hasLyrics = !!fsAssets.lyrics;
+        const releaseLocked = song.status === 'submitted to DistroKid' || song.status === 'outreach complete';
       %>
-      <% if (hasLyrics) { %>
+      <% if (hasLyrics && !releaseLocked) { %>
       <!-- Edit Song — AI lyric revision -->
       <button @click="editOpen = !editOpen"
          :class="editOpen ? 'bg-violet-700 text-white' : 'bg-violet-600 hover:bg-violet-700 text-white'"
@@ -32,17 +32,19 @@
         ✏️ Edit Song
       </button>
       <% } %>
+      <% if (!releaseLocked) { %>
       <!-- Generate / Regenerate -->
       <a href="/songs/<%= song.id %>/generate"
          class="<%= noAssets ? 'bg-amber-500 hover:bg-amber-600 text-white font-bold shadow' : 'border border-zinc-200 text-zinc-500 hover:bg-zinc-50' %> text-sm px-4 py-2 rounded-lg transition flex items-center gap-1.5">
         🚀 <%= noAssets ? 'Generate Song' : 'Regenerate' %>
       </a>
       <a href="/songs/<%= song.id %>/edit" class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg hover:bg-zinc-50 transition">Edit Details</a>
+      <% } %>
       <select onchange="updateStatus('<%= song.id %>', this.value)"
         class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg focus:outline-none bg-white">
-        <% for (const s of ['draft','writing','lyrics_ready','audio_in_progress','audio_ready','artwork_ready','metadata_ready','approved','submitted_to_distributor','published','paused','archived']) { %>
-          <option value="<%= s %>" <%= song.status === s ? 'selected' : '' %>>
-            <%= s === 'approved' ? '✅ approved' : s === 'submitted_to_distributor' ? '📤 submitted to distributor' : s === 'published' ? '🎵 published' : s.replace(/_/g,' ') %>
+        <% for (const option of songStatusOptions) { %>
+          <option value="<%= option.value %>" <%= song.status === option.value ? 'selected' : '' %>>
+            <%= option.label %>
           </option>
         <% } %>
       </select>
@@ -114,21 +116,72 @@
   </div>
   <% } %>
 
-  <!-- Distributor submit banner — approved songs only -->
-  <% if (song.status === 'approved') { %>
-  <div class="bg-gradient-to-r from-emerald-600 to-green-500 rounded-2xl p-5 mb-6 text-white flex items-center justify-between gap-4" x-data="distributorSubmit()">
-    <div>
-      <div class="font-bold text-lg mb-0.5">✅ Ready to Distribute</div>
-      <div class="text-emerald-100 text-sm">Upload to <%= defaultDistributor || 'your distributor' %> to publish on streaming platforms.</div>
+  <!-- Distribution status -->
+  <% if (song.status === 'submitted to DistroKid') { %>
+  <div class="bg-gradient-to-r from-fuchsia-100 via-rose-50 to-amber-50 border border-fuchsia-200 rounded-3xl p-6 mb-6 shadow-sm">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="inline-flex items-center rounded-full bg-fuchsia-700 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">Submitted to DistroKid</span>
+          <% if (song.distributor_submission_date) { %>
+          <span class="text-sm text-fuchsia-700">Submitted <%= song.distributor_submission_date %></span>
+          <% } %>
+        </div>
+        <div>
+          <h2 class="text-2xl font-black text-zinc-900">Submitted to DistroKid</h2>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-zinc-700">Next step: add the HyperFollow link, generate the release assets from the base image, then start outreach. Release-kit sharing links are optional in phase 1.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span class="inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 border border-fuchsia-200">Next action: <%= workflowAction.label || 'Review marketing readiness' %></span>
+          <% if (workflowAction.blocking) { %>
+          <span class="inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 border border-amber-200">Blocking step</span>
+          <% } %>
+        </div>
+        <div>
+          <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Missing right now</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <% if (workflowAction.missing && workflowAction.missing.length) { %>
+              <% for (const item of workflowAction.missing.slice(0, 6)) { %>
+              <span class="inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 border border-zinc-200"><%= item %></span>
+              <% } %>
+            <% } else { %>
+            <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 border border-emerald-200">No blocking fields</span>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2 shrink-0 min-w-64">
+        <a href="<%= workflowAction.href || '/songs/' + encodeURIComponent(song.id) + '?tab=marketing' %>" class="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white hover:bg-zinc-800 transition"><%= workflowAction.label || 'Open Marketing Tab' %></a>
+        <% if (workflowAction.nextActionKey === 'START_OUTREACH') { %>
+        <a href="/marketing/outlets" class="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition">Open Outlet Database</a>
+        <% } else { %>
+        <a href="/songs/<%= encodeURIComponent(song.id) %>?tab=marketing" class="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition">Open Marketing Tab</a>
+        <% } %>
+      </div>
     </div>
-    <button @click="open = true" class="shrink-0 bg-white text-emerald-700 font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-50 transition text-sm shadow">
-      📤 Submit to <%= defaultDistributor || 'Distributor' %>
+  </div>
+  <% } else if (song.status === 'outreach complete') { %>
+  <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6 flex items-center gap-4">
+    <div class="text-3xl">✅</div>
+    <div>
+      <div class="font-bold text-emerald-800">Outreach complete</div>
+      <div class="text-sm text-emerald-600">This release has finished the current distribution and outreach cycle.</div>
+    </div>
+  </div>
+  <% } else { %>
+  <div class="bg-gradient-to-r from-zinc-900 to-zinc-800 rounded-2xl p-5 mb-6 text-white flex items-center justify-between gap-4" x-data="distributorSubmit()">
+    <div>
+      <div class="font-bold text-lg mb-0.5">Distribution Status</div>
+      <div class="text-zinc-300 text-sm">When this track is uploaded to <%= defaultDistributor || 'DistroKid' %>, mark it submitted here.</div>
+    </div>
+    <button @click="open = true" class="shrink-0 bg-white text-zinc-900 font-bold px-5 py-2.5 rounded-xl hover:bg-zinc-100 transition text-sm shadow">
+      📤 Mark Submitted
     </button>
 
     <!-- Submit modal -->
     <div x-show="open" x-cloak class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-8">
       <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" @click.stop>
-        <h3 class="text-lg font-bold text-zinc-900 mb-1">📤 Submit to <%= defaultDistributor || 'Distributor' %></h3>
+        <h3 class="text-lg font-bold text-zinc-900 mb-1">📤 Submit to <%= defaultDistributor || 'DistroKid' %></h3>
         <p class="text-sm text-zinc-500 mb-4"><%= song.title || song.topic %></p>
         <div class="bg-zinc-50 rounded-xl p-4 mb-5 text-xs text-zinc-600 space-y-2">
           <p>1. Go to <% if (distributorUrl) { %><a href="<%= distributorUrl %>" target="_blank" class="text-blue-600 underline"><%= defaultDistributor || 'your distributor' %></a><% } else { %><%= defaultDistributor || 'your distributor' %><% } %> and upload your audio and cover art</p>
@@ -148,14 +201,6 @@
       </div>
     </div>
   </div>
-  <% } else if (song.status === 'submitted_to_distributor') { %>
-  <div class="bg-purple-50 border border-purple-200 rounded-2xl p-5 mb-6 flex items-center gap-4">
-    <div class="text-3xl">📤</div>
-    <div>
-      <div class="font-bold text-purple-800">Submitted to <%= song.distributor || defaultDistributor || 'Distributor' %></div>
-      <% if (song.distributor_submission_date) { %><div class="text-sm text-purple-600">Submitted on <%= song.distributor_submission_date %></div><% } %>
-    </div>
-  </div>
   <% } %>
 
   <!-- Checklist progress banner -->
@@ -172,67 +217,27 @@
     <div class="text-xs text-zinc-400 mt-1.5"><%= progress.done %> of <%= progress.total %> steps complete</div>
   </div>
 
-  <!-- ── MEDIA ROW: Audio Player + Thumbnails ── -->
+  <!-- ── MEDIA ROW: Audio ── -->
   <% const hasAudio = fsAssets.audioFiles && fsAssets.audioFiles.length > 0; %>
-  <% const hasThumbs = fsAssets.thumbnails && fsAssets.thumbnails.length > 0; %>
-  <% if (hasAudio || hasThumbs) { %>
-  <div class="grid grid-cols-3 gap-6 mb-6">
-
-    <!-- Audio Player -->
-    <div class="col-span-1">
-      <% if (hasAudio) { %>
-      <div class="bg-zinc-900 rounded-2xl p-5 text-white">
-        <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">Audio</div>
-        <% for (let i = 0; i < fsAssets.audioFiles.length; i++) { const af = fsAssets.audioFiles[i]; %>
-        <div class="mb-3">
-          <div class="text-xs text-zinc-500 mb-1.5 truncate"><%= af.name || 'Track ' + (i+1) %></div>
-          <audio controls class="w-full" style="height:38px;" preload="metadata">
-            <source src="<%= af.url %>" type="audio/mpeg">
-          </audio>
-          <% if (af.size) { %><div class="text-xs text-zinc-600 mt-1"><%= (af.size / 1024 / 1024).toFixed(1) %> MB</div><% } %>
-        </div>
-        <% } %>
-      </div>
-      <% } else { %>
-      <div class="bg-zinc-100 rounded-2xl p-5 text-center text-zinc-400">
-        <div class="text-3xl mb-2">🎵</div>
-        <div class="text-xs">No audio generated yet</div>
-      </div>
-      <% } %>
-    </div>
-
-    <!-- Thumbnail Gallery -->
-    <div class="col-span-2">
-      <% if (hasThumbs) { %>
-      <div class="bg-white border border-zinc-200 rounded-2xl p-4">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Thumbnails</div>
-          <button onclick="generateThumbnails('<%= song.id %>')" id="thumb-btn"
-            class="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-3 py-1 rounded-lg transition font-medium">
-            🔄 Regenerate
-          </button>
-        </div>
-        <div class="flex gap-3 overflow-x-auto pb-1">
-          <% for (const thumb of fsAssets.thumbnails) { %>
-          <div class="shrink-0">
-            <img src="<%= thumb.url %>" alt="<%= thumb.name %>"
-                 class="rounded-lg object-cover border border-zinc-200 cursor-pointer hover:border-zinc-400 hover:shadow-md transition"
-                 style="height:110px; width:auto;"
-                 onclick="openLightbox('<%= thumb.url %>', '<%= thumb.name %>')">
-            <div class="text-xs text-zinc-400 mt-1 text-center" style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-              <%= thumb.name.replace(/-final\.png$|-base\.png$|\.png$/, '') %>
-            </div>
-          </div>
-          <% } %>
-        </div>
+  <% if (hasAudio) { %>
+  <div class="mb-6">
+    <div class="bg-zinc-900 rounded-2xl p-5 text-white">
+      <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">Audio</div>
+      <% for (let i = 0; i < fsAssets.audioFiles.length; i++) { const af = fsAssets.audioFiles[i]; %>
+      <div class="mb-3">
+        <div class="text-xs text-zinc-500 mb-1.5 truncate"><%= af.name || 'Track ' + (i+1) %></div>
+        <audio controls class="w-full" style="height:38px;" preload="metadata">
+          <source src="<%= af.url %>" type="audio/mpeg">
+        </audio>
+        <% if (af.size) { %><div class="text-xs text-zinc-600 mt-1"><%= (af.size / 1024 / 1024).toFixed(1) %> MB</div><% } %>
       </div>
       <% } %>
     </div>
   </div>
   <% } else { %>
   <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6 text-center">
-    <div class="text-4xl mb-3">🎵 🖼️</div>
-    <div class="text-sm text-zinc-600 mb-4">No audio or thumbnails yet — click Generate to run the full AI pipeline.</div>
+    <div class="text-4xl mb-3">🎵</div>
+    <div class="text-sm text-zinc-600 mb-4">No audio generated yet. Generate the song first, then review the release asset flow in the marketing tab.</div>
     <a href="/songs/<%= song.id %>/generate"
        class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow">
       🚀 Generate Song
@@ -240,45 +245,8 @@
   </div>
   <% } %>
 
-  <!-- Thumbnail Terminal Modal -->
-  <div id="thumb-terminal-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-8 hidden">
-    <div class="bg-zinc-950 rounded-2xl shadow-2xl overflow-hidden w-full max-w-2xl">
-      <!-- Title bar -->
-      <div class="flex items-center gap-2 px-4 py-3 bg-zinc-900 border-b border-zinc-800">
-        <span class="w-3 h-3 rounded-full bg-red-500 cursor-pointer" onclick="closeThumbTerminal()"></span>
-        <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-        <span class="w-3 h-3 rounded-full bg-green-500"></span>
-        <span class="ml-3 text-xs text-zinc-500 font-mono"><%= appTitle || brandName || 'music pipeline' %> — thumbnail generator</span>
-        <span id="thumb-status-badge" class="ml-auto text-xs font-semibold font-mono text-green-400">
-          <span class="inline-flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Running
-          </span>
-        </span>
-      </div>
-      <!-- Log output -->
-      <div id="thumb-log" class="p-5 font-mono text-sm space-y-0.5 overflow-y-auto" style="min-height:240px; max-height:400px;">
-        <div class="text-zinc-600 mb-2">$ node src/scripts/generate-thumbs.js <%= song.id %></div>
-        <div class="text-zinc-700 mb-3">────────────────────────────────────────</div>
-      </div>
-      <!-- Footer -->
-      <div class="px-4 py-3 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between">
-        <span class="text-xs text-zinc-500" id="thumb-footer-msg">Generating artwork via Cloudflare Flux…</span>
-        <button onclick="closeThumbTerminal()" class="text-xs text-zinc-400 hover:text-white px-3 py-1 rounded border border-zinc-700 hover:border-zinc-500 transition">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Lightbox -->
-  <div id="lightbox" onclick="closeLightbox()" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8 hidden">
-    <div class="relative max-w-5xl w-full" onclick="event.stopPropagation()">
-      <img id="lightbox-img" src="" alt="" class="w-full rounded-xl shadow-2xl">
-      <div id="lightbox-label" class="text-white text-sm text-center mt-3 opacity-70"></div>
-      <button onclick="closeLightbox()" class="absolute -top-4 -right-4 bg-white text-zinc-900 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow hover:bg-zinc-100">✕</button>
-    </div>
-  </div>
-
-  <!-- ── CONTENT TABS: Lyrics / Audio Prompt / Metadata / Marketing / Preview ── -->
-  <div class="mb-6" x-data="{ tab: '<%= lyricsContent ? 'lyrics' : audioPromptContent ? 'prompt' : metadataParsed ? 'meta' : 'marketing' %>' }" @switch-tab="tab = $event.detail">
+  <!-- ── CONTENT TABS: Lyrics / Audio Prompt / Metadata / Marketing / Performance ── -->
+  <div class="mb-6" x-data="{ tab: '<%= initialTab %>' }" @switch-tab="tab = $event.detail">
     <!-- Tab bar -->
     <div class="flex gap-1 border-b border-zinc-200 mb-4">
       <% if (lyricsContent) { %>
@@ -299,11 +267,9 @@
       <button @click="tab='marketing'"
         :class="tab==='marketing' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
         class="px-4 py-2.5 text-sm transition">📦 Marketing</button>
-      <% if (marketingPack && marketingPack.dashboardUrl) { %>
-      <button @click="tab='preview'"
-        :class="tab==='preview' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
-        class="px-4 py-2.5 text-sm transition">🎬 Preview</button>
-      <% } %>
+      <button @click="tab='performance'"
+        :class="tab==='performance' ? 'border-b-2 border-zinc-900 text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-zinc-600'"
+        class="px-4 py-2.5 text-sm transition">📈 Performance</button>
     </div>
 
     <!-- Lyrics tab -->
@@ -357,103 +323,269 @@
 
     <!-- Marketing tab -->
     <div x-show="tab==='marketing'" x-cloak>
-      <section class="bg-white border border-zinc-200 rounded-xl" x-data="marketingPack('<%= song.id %>')">
+      <% const mk = marketingKit || {}; const mLinks = mk.marketing_links || {}; const mAssets = mk.marketing_assets || {}; const mReady = mk.marketing_readiness || { score: 0, missing_required_fields: [], missing_recommended_fields: [], warnings: [] }; const mValidation = mk.validation || { warnings: [], errors: [] }; const imageSource = mk.image_source || {}; const fallbackLabel = imageSource.source_label || (mAssets.base_image_url ? 'Release base image' : mAssets.fallback_image_url ? 'Fallback image' : 'Missing'); const releaseKitPreviewUrl = '/release-kit/' + encodeURIComponent(song.id) + '?preview=1'; const releaseKitPublicUrl = '/release-kit/' + encodeURIComponent(song.id); const assetCards = [ ['square_post_url','Square Instagram Post','ig-square-post-1080x1080.png'], ['vertical_post_url','Vertical TikTok/Reels/Stories','tiktok-cover.jpg'], ['portrait_post_url','4:5 Instagram Feed','ig-feed-announcement-1080x1350.png'], ['outreach_banner_url','16:9 Outreach Hero','outreach-hero-1600x900.png'], ['cover_safe_promo_url','Cover-art-safe Promo','ig-reel-cover.jpg'], ['no_text_variation_url','No-text Variation','no-text-variation.png'] ]; const releaseAssetFormats = ['ig-square-post-1080x1080.png','ig-feed-announcement-1080x1350.png','tiktok-cover.jpg','outreach-hero-1600x900.png','ig-reel-cover.jpg','no-text-variation.png']; %>
+      <section id="marketing-links" class="bg-white border border-zinc-200 rounded-xl mb-6">
         <div class="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
-          <h2 class="font-semibold text-sm text-zinc-700">Marketing Pack</h2>
-          <% if (marketingPack && marketingPack.status === 'built') { %>
-          <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Built</span>
-          <% } else { %>
-          <span class="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full font-medium">Not built</span>
+          <div>
+            <h2 class="font-semibold text-sm text-zinc-700">Marketing Kit</h2>
+            <div class="text-xs text-zinc-500 mt-1">Phase 1 baseline: HyperFollow + generated release assets. Extra hosted share links are optional.</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button form="marketing-kit-form" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">Save Changes</button>
+            <span class="text-xs px-2 py-1 rounded-full <%= mReady.score >= 80 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' %>">Readiness <%= mReady.score || 0 %></span>
+            <span class="text-xs text-zinc-400">Saved <%= marketingKit?.marketing_assets?.release_kit_last_saved_at ? formatDateTime(marketingKit.marketing_assets.release_kit_last_saved_at) : '—' %></span>
+          </div>
+        </div>
+        <form id="marketing-kit-form" method="POST" action="/songs/<%= song.id %>/marketing-kit" class="p-4 space-y-5">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <section class="border border-zinc-200 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-sm text-zinc-700">Release Links</h3>
+                <button type="button" onclick="copyMarketingLinkBlock()" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Copy Outreach Link Block</button>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <% const linkLabels = { smart_link:'HyperFollow URL', spotify_url:'Spotify URL', apple_music_url:'Apple Music URL', youtube_music_url:'YouTube Music URL', youtube_video_url:'YouTube video URL', artist_website_url:'Artist website URL', instagram_url:'Instagram URL', tiktok_url:'TikTok URL', contact_email:'Contact email', release_kit_url:'Release kit URL', audio_download_url:'Audio download URL', promo_assets_folder_url:'Promo assets folder URL', cover_art_url:'Cover art URL', lyrics_url:'Lyrics URL' }; %>
+                <% for (const field of ['smart_link','spotify_url','apple_music_url','youtube_music_url','youtube_video_url','artist_website_url','instagram_url','tiktok_url','contact_email']) { %>
+                <label class="block">
+                  <span class="text-xs text-zinc-500"><%= linkLabels[field] %></span>
+                  <input name="<%= field %>" value="<%= mLinks[field] || '' %>" type="<%= field === 'contact_email' ? 'email' : 'url' %>" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm">
+                </label>
+                <% } %>
+              </div>
+              <div class="mt-3 text-[11px] text-zinc-500">HyperFollow is the primary CTA. Phase 1 outreach only needs this link plus generated release assets.</div>
+            </section>
+
+            <section id="release-kit-actions" class="border border-zinc-200 rounded-xl p-4" x-data="marketingPack('<%= song.id %>')" x-init="register()">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-sm text-zinc-700">Base Image / Release Assets</h3>
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" onclick="copyText('<%= releaseKitPublicUrl %>')" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Copy Release Kit Link</button>
+                  <a href="<%= releaseKitPreviewUrl %>" target="_blank" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Preview Release Kit</a>
+                </div>
+              </div>
+              <label class="block text-sm">
+                <span class="text-xs text-zinc-500">Base image URL</span>
+                <input name="base_image_url" value="<%= mAssets.base_image_url || '' %>" type="text" spellcheck="false" readonly class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-zinc-50 text-zinc-600">
+              </label>
+              <div class="mt-2 text-[11px] text-zinc-500">Phase 1 only needs a base image and generated release assets. Base image URL is managed by the upload/replace control below.</div>
+              <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="border border-zinc-200 rounded-lg p-3">
+                  <div class="text-xs font-medium text-zinc-600 mb-2">Current creative source</div>
+                  <% if (imageSource.active_image_url || mAssets.base_image_url || baseImage) { %>
+                  <img src="<%= imageSource.active_image_url || mAssets.base_image_url || baseImage.url %>" alt="Base image" class="w-full h-32 object-cover rounded-lg border border-zinc-200">
+                  <% } else { %>
+                  <div class="w-full h-32 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center text-xs text-zinc-400">No release base image</div>
+                  <% } %>
+                  <div class="mt-2 text-[11px] text-zinc-500">Using <%= fallbackLabel %></div>
+                  <% if (imageSource.warning) { %><div class="mt-2 text-[11px] text-amber-700"><%= imageSource.warning %></div><% } %>
+                  <% if (mAssets.fallback_image_url) { %><div class="mt-2 text-[11px] text-zinc-500 break-all">Fallback URL: <%= mAssets.fallback_image_url %></div><% } %>
+                </div>
+                <div class="border border-zinc-200 rounded-lg p-3">
+                  <div class="text-xs font-medium text-zinc-600 mb-2">Base image controls</div>
+                  <label class="flex flex-col gap-2 cursor-pointer">
+                    <input type="file" accept=".png,.jpg,.jpeg,.webp" class="hidden" onchange="uploadBaseImage('<%= song.id %>', this)">
+                    <span class="inline-flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs px-3 py-2 rounded-lg transition">Upload / Replace Base Image</span>
+                  </label>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onclick="clearBaseImage('<%= song.id %>')" class="border border-zinc-200 rounded-lg px-3 py-2 text-xs hover:bg-zinc-50">Clear Base Image</button>
+                    <button type="button" @click="buildPack('<%= song.id %>', <%- JSON.stringify(releaseAssetFormats) %>)" :disabled="packState === 'running'" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-lg disabled:opacity-50">
+                      <span x-show="packState !== 'running'"><%= mAssets.generated_at ? 'Regenerate Release Assets' : 'Generate Release Assets' %></span>
+                      <span x-show="packState === 'running'">Generating…</span>
+                    </button>
+                    <% if (marketingPack && marketingPack.dashboardUrl) { %>
+                    <a href="<%= marketingPack.dashboardUrl %>" target="_blank" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-lg transition">Open Pack Preview</a>
+                    <% } %>
+                  </div>
+                  <div class="mt-3 text-[11px] text-zinc-500">This is the release-asset pipeline: it uses the current base image and builds the core social set used for release.</div>
+                  <div class="mt-3 text-[11px] text-zinc-500">Generation source: <%= mAssets.generation_source || 'not selected yet' %></div>
+                  <div class="mt-3 text-[11px] text-zinc-500">Release kit preview/share is optional in phase 1. You can start outreach without publishing anything externally.</div>
+                </div>
+              </div>
+              <div id="pack-terminal-<%= song.id %>" x-show="packState !== 'idle'" x-cloak class="mt-3 border border-zinc-200 bg-zinc-950 rounded-xl overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+                  <span class="text-zinc-300 text-xs font-mono">Release Asset Build</span>
+                  <span x-html="packBadge" class="text-xs"></span>
+                </div>
+                <div id="pack-log-<%= song.id %>" class="font-mono text-xs p-4 max-h-48 overflow-y-auto space-y-0.5 text-zinc-300"></div>
+                <div class="px-4 py-2 text-xs text-zinc-500" x-text="packFooter"></div>
+              </div>
+            </section>
+          </div>
+
+          <section class="border border-zinc-200 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-semibold text-sm text-zinc-700">Optional Share Links</h3>
+                <div class="text-[11px] text-zinc-500 mt-1">Not required for the phase-1 outreach baseline. Useful later for blog, radio, or public sharing.</div>
+              </div>
+              <a href="<%= releaseKitPreviewUrl %>" target="_blank" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Open Release Kit</a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <% for (const field of ['release_kit_url','audio_download_url','promo_assets_folder_url','cover_art_url','lyrics_url']) { %>
+              <label class="block">
+                <span class="text-xs text-zinc-500"><%= linkLabels[field] %></span>
+                <input name="<%= field %>" value="<%= mLinks[field] || '' %>" type="text" inputmode="url" spellcheck="false" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm">
+              </label>
+              <% } %>
+            </div>
+            <div class="mt-2 text-[11px] text-zinc-500">App-relative paths like <span class="font-mono">/media/...</span> and <span class="font-mono">/release-kit/...</span> are valid here. Leave these blank in phase 1 if you are not hosting anything externally.</div>
+          </section>
+
+          <section class="border border-zinc-200 rounded-xl p-4">
+            <h3 class="font-semibold text-sm text-zinc-700 mb-3">Validation Summary</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 text-xs">
+              <% const checklist = [ ['Has smart link', !!mLinks.smart_link, 'Complete'], ['Has generated release assets', !!(mAssets.generated_at || mAssets.square_post_url || mAssets.vertical_post_url || mAssets.portrait_post_url || mAssets.outreach_banner_url || mAssets.cover_safe_promo_url || mAssets.no_text_variation_url), 'Complete'], ['Has at least one streaming link', !!(mLinks.smart_link || mLinks.spotify_url || mLinks.apple_music_url || mLinks.youtube_music_url || mLinks.youtube_video_url), 'Complete'], ['Has social profile links', !!(mLinks.instagram_url || mLinks.tiktok_url), 'Recommended'], ['Has contact email', !!mLinks.contact_email, 'Complete'], ['Has base image or fallback image', !!(mAssets.base_image_url || mAssets.fallback_image_url), 'Complete'], ['Has optional release kit URL', !!mLinks.release_kit_url, 'Optional'], ['Has optional audio download', !!mLinks.audio_download_url, 'Optional'], ['Has optional promo assets folder', !!mLinks.promo_assets_folder_url, 'Optional'] ]; %>
+              <% for (const [label, ok, priority] of checklist) { %>
+              <div class="flex items-center justify-between border border-zinc-200 rounded-lg px-3 py-2">
+                <div><div class="text-zinc-700"><%= label %></div><div class="text-[10px] text-zinc-400"><%= priority %></div></div>
+                <span class="px-2 py-0.5 rounded-full <%= ok ? 'bg-emerald-100 text-emerald-700' : priority === 'Complete' ? 'bg-red-100 text-red-700' : priority === 'Optional' ? 'bg-zinc-100 text-zinc-500' : 'bg-amber-100 text-amber-700' %>"><%= ok ? 'Complete' : priority === 'Optional' ? 'Optional' : 'Missing' %></span>
+              </div>
+              <% } %>
+            </div>
+            <% if ((mValidation.errors || []).length || (mValidation.warnings || []).length || (mReady.warnings || []).length) { %>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+                <div class="text-xs font-semibold text-red-700 mb-1">Validation</div>
+                <div class="space-y-1 text-[11px] text-red-700"><% for (const issue of (mValidation.errors || [])) { %><div><%= issue %></div><% } %><% if (!(mValidation.errors || []).length) { %><div>No blocking format errors.</div><% } %></div>
+              </div>
+              <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <div class="text-xs font-semibold text-amber-700 mb-1">Warnings</div>
+                <div class="space-y-1 text-[11px] text-amber-700"><% for (const issue of ([...(mValidation.warnings || []), ...(mReady.warnings || [])].slice(0, 6))) { %><div><%= issue %></div><% } %></div>
+              </div>
+            </div>
+            <% } %>
+          </section>
+
+          <section class="border border-zinc-200 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-sm text-zinc-700">Generated Asset Previews</h3>
+              <div class="text-xs text-zinc-400">Links only in outreach; no automatic file attachments</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              <% for (const [key, label, formatName] of assetCards) { const assetUrl = mAssets[key] || ''; const approved = !!(mAssets.asset_approvals && mAssets.asset_approvals[key]); %>
+              <div class="border border-zinc-200 rounded-xl p-3">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div class="text-sm font-medium text-zinc-700"><%= label %></div>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full <%= approved ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500' %>"><%= approved ? 'approved' : 'pending' %></span>
+                </div>
+                <% if (assetUrl) { %>
+                  <% if (assetUrl.endsWith('.mp4')) { %>
+                  <video controls class="w-full h-36 rounded-lg border border-zinc-200 bg-zinc-950"><source src="<%= assetUrl %>"></video>
+                  <% } else { %>
+                  <img src="<%= assetUrl %>" alt="<%= label %>" class="w-full h-36 object-cover rounded-lg border border-zinc-200">
+                  <% } %>
+                <% } else { %>
+                <div class="w-full h-36 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center text-xs text-zinc-400">Missing</div>
+                <% } %>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button type="button" class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50" onclick="copyText('<%= assetUrl %>')">Copy URL</button>
+                  <button type="button" class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50" onclick="buildPackWithFormats('<%= song.id %>', ['<%= formatName %>'])">Regenerate</button>
+                  <% if (assetUrl) { %><a href="<%= assetUrl %>" download class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50">Download</a><% } %>
+                  <button type="button" class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50" onclick="approveMarketingAsset('<%= song.id %>', '<%= key %>')">Mark Approved</button>
+                </div>
+              </div>
+              <% } %>
+            </div>
+          </section>
+
+          <textarea id="marketing-link-block" class="hidden"><%= mk.outreach_link_block || '' %></textarea>
+          <div class="sticky bottom-4 flex justify-end gap-3">
+            <a href="<%= releaseKitPreviewUrl %>" target="_blank" class="border border-zinc-200 rounded-lg px-4 py-2 text-sm hover:bg-zinc-50">Preview Release Kit</a>
+            <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Save Marketing Kit</button>
+          </div>
+        </form>
+      </section>
+
+    </div>
+
+    <!-- Performance tab -->
+    <div x-show="tab==='performance'" x-cloak class="space-y-6">
+      <section id="release-outreach" class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between gap-4">
+          <div>
+            <h2 class="font-semibold text-sm text-zinc-700">Release Outreach</h2>
+            <div class="text-xs text-zinc-500 mt-1">Track outlet contact history and jump straight into the release-specific outreach workflow. Phase 1 only needs HyperFollow plus generated release assets.</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="/marketing/outlets" class="text-xs border border-zinc-200 rounded-lg px-3 py-2 hover:bg-zinc-50">Open Outlet Database</a>
+            <a href="/marketing#release-<%= encodeURIComponent(song.id) %>" class="text-xs bg-zinc-900 text-white rounded-lg px-3 py-2 hover:bg-zinc-700">Start Outreach</a>
+          </div>
+        </div>
+        <% if (typeof releaseOutreachRows === 'undefined' || !releaseOutreachRows || releaseOutreachRows.length === 0) { %>
+        <div class="px-5 py-8 text-center">
+          <div class="text-sm font-medium text-zinc-700">No outreach recorded for this release yet.</div>
+          <div class="mt-2 text-xs text-zinc-500">Generate the release assets, then start targeted outreach from the outlet database. Release-kit share links are optional in phase 1.</div>
+          <div class="mt-4 flex flex-wrap justify-center gap-2">
+            <a href="/marketing#release-<%= encodeURIComponent(song.id) %>" class="inline-flex rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700">Start Outreach</a>
+            <a href="/marketing/outlets" class="inline-flex rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Open Outlet Database</a>
+          </div>
+        </div>
+        <% } else { %>
+        <div class="divide-y divide-zinc-100">
+          <% for (const row of releaseOutreachRows) { %>
+          <div class="px-5 py-4">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="font-medium text-sm text-zinc-800"><%= row.outlet_name %></div>
+                <div class="text-xs text-zinc-500 mt-1"><%= row.recipient %> · <%= row.channel %> · <%= formatDate(row.contacted_at) %></div>
+              </div>
+              <div class="flex flex-wrap gap-1 shrink-0">
+                <span class="<%= row.replied ? 'badge-green' : 'badge-gray' %>"><%= row.replied ? 'replied' : 'no reply yet' %></span>
+                <span class="<%= row.do_not_contact ? 'badge-red' : 'badge-gray' %>"><%= row.do_not_contact ? 'do not contact' : 'contactable' %></span>
+                <span class="<%= row.bounced ? 'badge-red' : 'badge-gray' %>"><%= row.bounced ? 'bounced' : 'not bounced' %></span>
+              </div>
+            </div>
+            <details class="mt-2">
+              <summary class="cursor-pointer text-xs text-blue-600 hover:underline">View last message</summary>
+              <div class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700 whitespace-pre-wrap"><%= row.last_message %></div>
+            </details>
+          </div>
           <% } %>
         </div>
-        <div class="px-4 py-3 space-y-3">
+        <% } %>
+      </section>
 
-          <!-- Readiness checks -->
-          <div class="space-y-1 text-xs">
-            <% const r = (marketingPack && marketingPack.readiness) || {}; %>
-            <% const checks = [['finalAudio','Final audio'],['coverArt','Cover art'],['characterAsset','Character asset'],['baseImagePresent','Base image'],['linkPresent','Release link']]; %>
-            <% for (const [key, label] of checks) { %>
-            <div class="flex items-center gap-2">
-              <span class="<%= r[key] ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
-              <span class="text-zinc-600"><%= label %></span>
-              <span class="ml-auto text-zinc-400"><%= r[key] ? '✓' : '—' %></span>
-            </div>
-            <% } %>
-          </div>
-
-          <!-- Base image -->
-          <div class="border-t border-zinc-100 pt-3">
-            <div class="text-xs font-medium text-zinc-600 mb-2">Base Image</div>
-            <% if (baseImage) { %>
-            <div class="relative mb-2">
-              <img src="<%= baseImage.url %>" alt="Base image" class="w-full h-28 object-cover rounded-lg border border-zinc-200">
-              <button onclick="clearBaseImage('<%= song.id %>')" class="absolute top-1 right-1 bg-white/90 text-red-500 rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-50" title="Clear base image">✕</button>
-            </div>
-            <% } %>
-            <label class="flex flex-col gap-1 cursor-pointer">
-              <span class="text-xs text-zinc-500"><%= baseImage ? 'Replace' : 'Upload' %> base image (png/jpg/webp)</span>
-              <input type="file" accept=".png,.jpg,.jpeg,.webp" class="hidden" onchange="uploadBaseImage('<%= song.id %>', this)">
-              <span class="inline-flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs px-3 py-1.5 rounded-lg transition">📷 <%= baseImage ? 'Replace Image' : 'Upload Image' %></span>
-            </label>
-          </div>
-
-          <!-- Build options -->
-          <div class="border-t border-zinc-100 pt-3 space-y-2 text-xs">
-            <div class="text-xs font-medium text-zinc-600">Build options</div>
-            <select id="pack-mode-<%= song.id %>" class="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none">
-              <option value="">Default</option>
-              <option value="full_social_pack">Full social pack</option>
-              <option value="render_from_existing_visuals">Render from existing visuals</option>
-              <option value="captions_checklist_only">Captions & checklist only</option>
-              <option value="generate_new_base_art">Generate new base art</option>
-            </select>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="pack-regen-<%= song.id %>"> <span class="text-zinc-600">Regenerate base art</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="pack-novideos-<%= song.id %>"> <span class="text-zinc-600">Skip video render</span>
-            </label>
-          </div>
-
-          <!-- Buttons -->
-          <div class="flex gap-2 pt-1">
-            <button @click="buildPack('<%= song.id %>')" :disabled="packState === 'running'"
-              class="flex-1 bg-zinc-900 hover:bg-zinc-700 text-white text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50">
-              <span x-show="packState !== 'running'"><%= (marketingPack && marketingPack.status === 'built') ? '🔄 Rebuild Pack' : '🚀 Build Pack' %></span>
-              <span x-show="packState === 'running'">⏳ Building…</span>
-            </button>
-            <% if (marketingPack && marketingPack.dashboardUrl) { %>
-            <button @click="$dispatch('switch-tab', 'preview')"
-              class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg transition">Open Preview</button>
-            <% } %>
-          </div>
+      <section class="bg-white border border-zinc-200 rounded-xl">
+        <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-zinc-700">Performance Analytics</h2>
+          <% if (snapshots.length === 0) { %>
+          <span class="text-xs text-zinc-400">No analytics connected</span>
+          <% } %>
         </div>
-
-        <!-- Pack terminal -->
-        <div x-show="packState !== 'idle'" x-cloak class="border-t border-zinc-200 bg-zinc-950 rounded-b-xl overflow-hidden">
-          <div class="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-            <span class="text-zinc-300 text-xs font-mono">Marketing Pack Build</span>
-            <span x-html="packBadge" class="text-xs"></span>
-          </div>
-          <div id="pack-log-<%= song.id %>" class="font-mono text-xs p-4 max-h-48 overflow-y-auto space-y-0.5 text-zinc-300">
-          </div>
-          <div class="px-4 py-2 text-xs text-zinc-500" x-text="packFooter"></div>
+        <% if (snapshots.length === 0) { %>
+        <div class="px-5 py-10 text-center text-zinc-400">
+          <div class="text-3xl mb-2">📊</div>
+          <div class="text-sm text-zinc-600">No performance data yet.</div>
+          <div class="text-xs mt-1 text-zinc-400">Connect release analytics when available and the release timeline will show up here.</div>
         </div>
+        <% } else { %>
+        <div class="divide-y divide-zinc-100">
+          <% for (const snap of snapshots) { %>
+          <div class="px-5 py-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-zinc-700"><%= snap.platform %></span>
+              <span class="text-xs text-zinc-400"><%= snap.snapshot_date %></span>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <% for (const [k, v] of Object.entries(snap.metrics || {})) { %>
+              <div class="bg-zinc-50 rounded-lg px-3 py-2">
+                <div class="text-xs text-zinc-400"><%= k %></div>
+                <div class="text-sm font-bold text-zinc-800"><%= Number(v).toLocaleString() %></div>
+              </div>
+              <% } %>
+            </div>
+          </div>
+          <% } %>
+        </div>
+        <% } %>
       </section>
     </div>
-
-    <!-- Preview tab -->
-    <% if (marketingPack && marketingPack.dashboardUrl) { %>
-    <div x-show="tab==='preview'" x-cloak class="bg-white border border-zinc-200 rounded-xl overflow-hidden" style="height:82vh;">
-      <iframe src="<%= marketingPack.dashboardUrl %>" class="w-full h-full border-0" title="Marketing Pack Preview"></iframe>
-    </div>
-    <% } %>
 
   </div>
 
   <div class="grid grid-cols-3 gap-6">
 
-    <!-- LEFT COLUMN: Overview + Linked Idea + Publishing Checklist -->
+    <!-- LEFT COLUMN: Overview + Linked Idea -->
     <div class="col-span-2 space-y-6">
 
       <!-- Overview -->
@@ -480,10 +612,12 @@
             <div class="text-zinc-800"><%= song.target_age_range %></div>
           </div>
           <% } %>
+          <% if (song.distributor) { %>
           <div>
             <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Distributor</div>
-            <div class="text-zinc-800 font-medium"><%= song.distributor || defaultDistributor || 'Distributor' %></div>
+            <div class="text-zinc-800 font-medium"><%= song.distributor %></div>
           </div>
+          <% } %>
           <% if (song.release_date) { %>
           <div>
             <div class="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide font-medium">Release Date</div>
@@ -528,147 +662,10 @@
       </section>
       <% } %>
 
-      <!-- Performance -->
-      <section class="bg-white border border-zinc-200 rounded-xl">
-        <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <h2 class="font-semibold text-sm text-zinc-700">Performance</h2>
-          <% if (snapshots.length === 0) { %>
-          <span class="text-xs text-zinc-400">No data yet</span>
-          <% } %>
-        </div>
-        <% if (snapshots.length === 0) { %>
-        <div class="px-5 py-10 text-center text-zinc-400">
-          <div class="text-3xl mb-2">📊</div>
-          <div class="text-sm">No performance data yet.</div>
-          <div class="text-xs mt-1 text-zinc-300">Stats will appear here once the song is published and analytics are connected.</div>
-          <div class="mt-4 flex flex-wrap justify-center gap-3 text-xs text-zinc-400">
-            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">Spotify streams</span>
-            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">YouTube views</span>
-            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">YouTube watch time</span>
-            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">YouTube Music plays</span>
-            <span class="bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg">Apple Music plays</span>
-          </div>
-        </div>
-        <% } else { %>
-        <div class="divide-y divide-zinc-100">
-          <% for (const snap of snapshots) { %>
-          <div class="px-5 py-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-zinc-700"><%= snap.platform %></span>
-              <span class="text-xs text-zinc-400"><%= snap.snapshot_date %></span>
-            </div>
-            <div class="flex flex-wrap gap-3">
-              <% for (const [k, v] of Object.entries(snap.metrics || {})) { %>
-              <div class="bg-zinc-50 rounded-lg px-3 py-2">
-                <div class="text-xs text-zinc-400"><%= k %></div>
-                <div class="text-sm font-bold text-zinc-800"><%= Number(v).toLocaleString() %></div>
-              </div>
-              <% } %>
-            </div>
-          </div>
-          <% } %>
-        </div>
-        <% } %>
-      </section>
-
     </div>
 
-    <!-- RIGHT COLUMN: Files + Checklist + Links -->
+    <!-- RIGHT COLUMN: Workflow support -->
     <div class="space-y-6">
-
-      <!-- Assets from filesystem -->
-      <section class="bg-white border border-zinc-200 rounded-xl">
-        <div class="px-4 py-3 border-b border-zinc-100">
-          <h2 class="font-semibold text-sm text-zinc-700">Files</h2>
-        </div>
-        <div class="px-4 py-3 space-y-2 text-sm">
-
-          <!-- Lyrics -->
-          <div class="flex items-center gap-2">
-            <span class="<%= fsAssets.lyrics ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
-            <span class="text-zinc-600">Lyrics</span>
-            <% if (fsAssets.lyrics) { %><span class="text-xs text-zinc-400 ml-auto">lyrics.md</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">missing</span><% } %>
-          </div>
-
-          <!-- Audio Prompt -->
-          <div class="flex items-center gap-2">
-            <span class="<%= fsAssets.audioPrompt ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
-            <span class="text-zinc-600">Audio Prompt</span>
-            <% if (fsAssets.audioPrompt) { %><span class="text-xs text-zinc-400 ml-auto">audio-prompt.md</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">missing</span><% } %>
-          </div>
-
-          <!-- Audio files -->
-          <div class="flex items-center gap-2">
-            <span class="<%= fsAssets.audioFiles && fsAssets.audioFiles.length > 0 ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
-            <span class="text-zinc-600">Audio</span>
-            <span class="text-xs text-zinc-400 ml-auto">
-              <%= fsAssets.audioFiles && fsAssets.audioFiles.length > 0 ? fsAssets.audioFiles.length + ' file(s)' : 'missing' %>
-            </span>
-          </div>
-
-          <!-- Thumbnails -->
-          <div class="flex items-center gap-2">
-            <span class="<%= fsAssets.thumbnails && fsAssets.thumbnails.length > 0 ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
-            <span class="text-zinc-600">Thumbnails</span>
-            <span class="text-xs text-zinc-400 ml-auto">
-              <%= fsAssets.thumbnails && fsAssets.thumbnails.length > 0 ? fsAssets.thumbnails.length + ' PNG' : 'missing' %>
-            </span>
-          </div>
-
-          <!-- Metadata -->
-          <div class="flex items-center gap-2">
-            <span class="<%= fsAssets.metadata ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
-            <span class="text-zinc-600">Metadata JSON</span>
-            <% if (fsAssets.metadata) { %><span class="text-xs text-zinc-400 ml-auto">✓</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">missing</span><% } %>
-          </div>
-
-          <!-- Brand Review -->
-          <div class="flex items-center gap-2">
-            <span class="<%= fsAssets.brandReview ? 'text-emerald-500' : 'text-zinc-200' %>">●</span>
-            <span class="text-zinc-600">Brand Review</span>
-            <% if (song.brand_score) { %><span class="text-xs text-zinc-400 ml-auto"><%= song.brand_score %>/100</span><% } else if (fsAssets.brandReview) { %><span class="text-xs text-zinc-400 ml-auto">✓</span><% } else { %><span class="text-xs text-zinc-400 ml-auto">—</span><% } %>
-          </div>
-
-        </div>
-        <div class="px-4 py-3 border-t border-zinc-100 text-xs text-zinc-400">
-          Files are in <code class="font-mono">output/songs/<%= song.id %>/</code>
-        </div>
-      </section>
-
-      <!-- Release Links -->
-      <section class="bg-white border border-zinc-200 rounded-xl">
-        <div class="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
-          <h2 class="font-semibold text-sm text-zinc-700">Release Links</h2>
-        </div>
-        <% if (links.length === 0) { %>
-        <div class="px-4 py-4 text-sm text-zinc-400 text-center">No release links yet</div>
-        <% } else { %>
-        <div class="divide-y divide-zinc-100">
-          <% for (const link of links) { %>
-          <div class="px-4 py-3 flex items-center justify-between">
-            <span class="text-sm text-zinc-700"><%= link.platform %></span>
-            <a href="<%= link.url %>" target="_blank" class="text-xs text-blue-600 hover:underline">Open ↗</a>
-          </div>
-          <% } %>
-        </div>
-        <% } %>
-
-        <!-- Add link form -->
-        <div class="px-4 py-3 border-t border-zinc-100" x-data="{ show: false }">
-          <button @click="show = !show" class="text-xs text-zinc-500 hover:text-zinc-700">+ Add link</button>
-          <div x-show="show" x-cloak class="mt-2 space-y-2">
-            <select id="link-platform" class="w-full text-xs border border-zinc-200 rounded px-2 py-1.5 focus:outline-none">
-              <% for (const p of ['Spotify','YouTube','Apple Music','YouTube Music', defaultDistributor || 'Distributor','Amazon Music','Tidal']) { %>
-              <option><%= p %></option>
-              <% } %>
-            </select>
-            <input id="link-url" type="url" placeholder="https://…"
-              class="w-full text-xs border border-zinc-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-zinc-400">
-            <button onclick="addLink('<%= song.id %>')"
-              class="w-full bg-zinc-900 text-white text-xs px-3 py-1.5 rounded hover:bg-zinc-700">Save</button>
-          </div>
-        </div>
-      </section>
 
       <!-- DB Assets -->
       <% if (assets.length > 0) { %>
@@ -688,6 +685,20 @@
           <% } %>
         </div>
       </section>
+      <% } %>
+
+      <% if (showDebugDiagnostics) { %>
+      <details class="bg-zinc-50 border border-zinc-200 rounded-xl">
+        <summary class="px-4 py-3 cursor-pointer text-sm font-semibold text-zinc-700">Debug Diagnostics</summary>
+        <div class="px-4 pb-4 space-y-2 text-xs text-zinc-500">
+          <div>Files: <code class="font-mono">output/songs/<%= song.id %>/</code></div>
+          <div>Lyrics: <%= fsAssets.lyrics ? 'present' : 'missing' %></div>
+          <div>Audio prompt: <%= fsAssets.audioPrompt ? 'present' : 'missing' %></div>
+          <div>Audio files: <%= fsAssets.audioFiles?.length || 0 %></div>
+          <div>Metadata: <%= fsAssets.metadata ? 'present' : 'missing' %></div>
+          <div>Brand review: <%= fsAssets.brandReview ? 'present' : 'missing' %></div>
+        </div>
+      </details>
       <% } %>
 
     </div>
@@ -815,105 +826,27 @@ function updateChecklist(songId, key, status) {
   });
 }
 
-function addLink(songId) {
-  const platform = document.getElementById('link-platform').value;
-  const url = document.getElementById('link-url').value;
-  if (!url) return;
-  fetch('/api/songs/' + songId + '/links', {
+function copyText(value) {
+  if (!value) return;
+  navigator.clipboard.writeText(value).catch(() => {});
+}
+
+function copyMarketingLinkBlock() {
+  const value = document.getElementById('marketing-link-block')?.value || '';
+  if (!value) return;
+  copyText(value);
+}
+
+function approveMarketingAsset(songId, assetKey) {
+  fetch('/api/songs/' + songId + '/marketing-assets/approve', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ platform, url })
-  }).then(() => window.location.reload());
+    body: JSON.stringify({ assetKey, approved: true }),
+  }).then(r => r.json()).then(d => {
+    if (!d.ok) throw new Error(d.error || 'Approval failed');
+    window.location.reload();
+  }).catch(err => alert(err.message));
 }
-
-function generateThumbnails(songId) {
-  const btn = document.getElementById('thumb-btn');
-  if (btn) { btn.textContent = '⏳ Generating…'; btn.disabled = true; }
-
-  // Show terminal modal
-  const modal = document.getElementById('thumb-terminal-modal');
-  const log = document.getElementById('thumb-log');
-  const badge = document.getElementById('thumb-status-badge');
-  const footer = document.getElementById('thumb-footer-msg');
-
-  // Reset log to just the header lines
-  log.innerHTML = `
-    <div class="text-zinc-600 mb-2">$ node src/scripts/generate-thumbs.js ${songId}</div>
-    <div class="text-zinc-700 mb-3">────────────────────────────────────────</div>
-  `;
-  badge.innerHTML = '<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Running</span>';
-  footer.textContent = 'Generating artwork via Cloudflare Flux…';
-  modal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-
-  fetch('/api/songs/' + songId + '/thumbnails', { method: 'POST' })
-    .then(r => r.json())
-    .then(d => {
-      if (!d.jobId) throw new Error(d.error || 'No job ID returned');
-      const es = new EventSource('/api/songs/thumbnails/stream/' + d.jobId);
-
-      const appendLine = (text, cls) => {
-        const div = document.createElement('div');
-        div.className = 'leading-relaxed whitespace-pre-wrap break-words ' + (cls || 'text-zinc-300');
-        div.textContent = text;
-        log.appendChild(div);
-        log.scrollTop = log.scrollHeight;
-      };
-
-      es.addEventListener('log', e => {
-        const { message } = JSON.parse(e.data);
-        let cls = 'text-zinc-300';
-        if (message.startsWith('✅') || message.startsWith('✓')) cls = 'text-emerald-400 font-semibold';
-        else if (message.startsWith('⚠')) cls = 'text-amber-400';
-        else if (message.startsWith('❌') || message.startsWith('✗')) cls = 'text-red-400';
-        else if (message.startsWith('[CREATIVE')) cls = 'text-cyan-300';
-        appendLine(message, cls);
-      });
-
-      es.addEventListener('complete', e => {
-        const { count } = JSON.parse(e.data);
-        badge.innerHTML = '✓ Complete';
-        badge.className = badge.className.replace('text-green-400', 'text-emerald-400');
-        footer.textContent = `✅ ${count} thumbnail(s) generated — reloading…`;
-        es.close();
-        if (btn) { btn.textContent = '🔄 Regenerate'; btn.disabled = false; }
-        setTimeout(() => window.location.reload(), 1500);
-      });
-
-      es.addEventListener('error', e => {
-        if (e.data) {
-          const msg = (() => { try { return JSON.parse(e.data).message; } catch { return e.data; } })();
-          badge.innerHTML = '✗ Failed';
-          badge.className = badge.className.replace('text-green-400', 'text-red-400');
-          footer.textContent = '❌ ' + msg;
-          es.close();
-          if (btn) { btn.textContent = '🖼️ Generate Thumbnails'; btn.disabled = false; }
-        }
-      });
-    })
-    .catch(err => {
-      footer.textContent = '❌ ' + err.message;
-      badge.innerHTML = '✗ Failed';
-      if (btn) { btn.textContent = '🖼️ Generate Thumbnails'; btn.disabled = false; }
-    });
-}
-
-function closeThumbTerminal() {
-  document.getElementById('thumb-terminal-modal').classList.add('hidden');
-  document.body.style.overflow = '';
-}
-
-function openLightbox(url, name) {
-  document.getElementById('lightbox-img').src = url;
-  document.getElementById('lightbox-label').textContent = name;
-  document.getElementById('lightbox').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-function closeLightbox() {
-  document.getElementById('lightbox').classList.add('hidden');
-  document.body.style.overflow = '';
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 // Marketing Pack (Phase 6)
 function marketingPack(songId) {
@@ -921,8 +854,13 @@ function marketingPack(songId) {
     packState: 'idle',  // idle | running | done | error
     packFooter: '',
     packBadge: '',
-    buildPack(id) {
-      const mode = document.getElementById('pack-mode-' + id)?.value || '';
+    register() {
+      window.__marketingPackInstances = window.__marketingPackInstances || {};
+      window.__marketingPackInstances[songId] = this;
+    },
+    buildPack(id, formats = []) {
+      const modeControl = document.getElementById('pack-mode-' + id);
+      const mode = modeControl ? (modeControl.value || '') : 'render_from_existing_visuals';
       const regenerateBaseArt = document.getElementById('pack-regen-' + id)?.checked || false;
       const noVideos = document.getElementById('pack-novideos-' + id)?.checked || false;
       this.packState = 'running';
@@ -930,11 +868,12 @@ function marketingPack(songId) {
       this.packBadge = '<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Running</span>';
       const log = document.getElementById('pack-log-' + id);
       if (log) log.innerHTML = '';
+      document.getElementById('pack-terminal-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
       fetch('/api/songs/' + id + '/social-assets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, regenerateBaseArt, renderVideos: !noVideos }),
+        body: JSON.stringify({ mode, useBaseImage: true, regenerateBaseArt, renderVideos: !noVideos, formats }),
       }).then(r => r.json()).then(d => {
         if (!d.jobId) throw new Error(d.error || 'No job ID');
         const es = new EventSource('/api/songs/social-assets/stream/' + d.jobId);
@@ -970,6 +909,18 @@ function marketingPack(songId) {
       }).catch(err => { this.packState = 'error'; this.packFooter = '❌ ' + err.message; });
     },
   };
+}
+
+function buildPackWithFormats(songId, formats) {
+  if (window.__marketingPackInstances && window.__marketingPackInstances[songId]) {
+    window.__marketingPackInstances[songId].buildPack(songId, formats || []);
+    return;
+  }
+  fetch('/api/songs/' + songId + '/social-assets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formats: formats || [] }),
+  }).then(() => window.location.reload());
 }
 
 function uploadBaseImage(songId, input) {

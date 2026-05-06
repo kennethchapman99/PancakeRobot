@@ -1,6 +1,22 @@
 import express from 'express';
 import { renderMarketingDashboard, postOutreachRun } from './controllers/dashboard-controller.js';
 import {
+  renderNewRelease,
+  postNewRelease,
+  handleNewReleaseUpload,
+  postPromoteRelease,
+  renderReleaseMarketing,
+  postUpdateReleaseReadiness,
+  postUpdateReleaseDistribution,
+  postBuildReleaseAssets,
+  postSelectReleaseAudience,
+  postGenerateReleaseDrafts,
+  postCreateReleaseGmailDrafts,
+  postScanReleaseInbox,
+  postReleaseInboxAction,
+  postUpdateReleaseResults,
+} from './controllers/releases-controller.js';
+import {
   renderCampaignDetail,
   postGenerateCampaignDrafts,
   postCreateCampaignGmailDrafts,
@@ -13,6 +29,7 @@ import {
   getOutletsApi,
   getOutletsSummaryApi,
   getOutreachItemsApi,
+  getOutreachEventsApi,
   getOutreachSummaryApi,
   postCreateOutreachRunApi,
   postGenerateOutreachDraftsApi,
@@ -25,6 +42,19 @@ export function registerMarketingRouter(app) {
 
   router.get('/marketing', renderMarketingDashboard);
   router.post('/marketing/outreach-run', postOutreachRun);
+  router.get('/marketing/releases/new', renderNewRelease);
+  router.post('/marketing/releases', handleNewReleaseUpload, postNewRelease);
+  router.post('/songs/:songId/promote-release', postPromoteRelease);
+  router.get('/marketing/releases/:releaseMarketingId', renderReleaseMarketing);
+  router.post('/marketing/releases/:releaseMarketingId/readiness', postUpdateReleaseReadiness);
+  router.post('/marketing/releases/:releaseMarketingId/distribution', postUpdateReleaseDistribution);
+  router.post('/marketing/releases/:releaseMarketingId/assets/build', postBuildReleaseAssets);
+  router.post('/marketing/releases/:releaseMarketingId/audience', postSelectReleaseAudience);
+  router.post('/marketing/releases/:releaseMarketingId/outreach-drafts/generate', postGenerateReleaseDrafts);
+  router.post('/marketing/releases/:releaseMarketingId/outreach-drafts/gmail', postCreateReleaseGmailDrafts);
+  router.post('/marketing/releases/:releaseMarketingId/gmail-inbox/scan', postScanReleaseInbox);
+  router.post('/marketing/releases/:releaseMarketingId/gmail-inbox/:messageId/:action', postReleaseInboxAction);
+  router.post('/marketing/releases/:releaseMarketingId/results', postUpdateReleaseResults);
 
   router.get('/marketing/campaigns/:campaignId', renderCampaignDetail);
   router.post('/marketing/campaigns/:campaignId/generate-drafts', postGenerateCampaignDrafts);
@@ -37,6 +67,7 @@ export function registerMarketingRouter(app) {
   router.get('/api/marketing/outlets', getOutletsApi);
   router.get('/api/marketing/outlets/summary', getOutletsSummaryApi);
   router.get('/api/marketing/outreach-items', getOutreachItemsApi);
+  router.get('/api/marketing/outreach-events', getOutreachEventsApi);
   router.get('/api/marketing/outreach-summary', getOutreachSummaryApi);
   router.post('/api/marketing/outreach-run', postCreateOutreachRunApi);
   router.post('/api/marketing/outreach-drafts/generate', postGenerateOutreachDraftsApi);

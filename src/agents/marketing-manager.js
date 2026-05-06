@@ -9,6 +9,7 @@ import {
   createMarketingCampaign,
 } from '../shared/marketing-db.js';
 import { getMarketingContext } from '../shared/marketing-context.js';
+import { SONG_STATUSES } from '../shared/song-status.js';
 
 /**
  * Thin-slice marketing research importer.
@@ -171,7 +172,7 @@ export async function runDraftCampaignPlanner({ focusSongId = null } = {}) {
 }
 
 function chooseDefaultFocusSong(songs) {
-  const priority = ['published', 'submitted_to_distrokid', 'ready_to_publish', 'metadata_ready', 'audio_ready', 'approved'];
+  const priority = [SONG_STATUSES.OUTREACH_COMPLETE, SONG_STATUSES.SUBMITTED_TO_DISTROKID, SONG_STATUSES.EDITING, SONG_STATUSES.DRAFT];
   return [...songs].sort((a, b) => {
     const ai = priority.includes(a.status) ? priority.indexOf(a.status) : priority.length;
     const bi = priority.includes(b.status) ? priority.indexOf(b.status) : priority.length;

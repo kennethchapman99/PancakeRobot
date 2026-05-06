@@ -8,6 +8,7 @@ import { basename, dirname, extname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { getSong } from '../shared/db.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
+import { resolveDefaultBaseImage } from '../shared/song-catalog-marketing.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '../..');
@@ -15,7 +16,21 @@ const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
 const DEFAULT_ARTIST = BRAND_PROFILE.distribution.default_artist || BRAND_NAME;
 
+function extractHandleFromUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const match = raw.match(/(?:instagram\.com|tiktok\.com|youtube\.com)\/@?([A-Za-z0-9._]+)/i);
+  if (!match?.[1]) return null;
+  return `@${match[1]}`;
+}
+
 function defaultHandle() {
+  const social = BRAND_PROFILE.social || {};
+  const configuredHandle = extractHandleFromUrl(social.instagram_url)
+    || extractHandleFromUrl(social.tiktok_url)
+    || extractHandleFromUrl(social.youtube_channel_url)
+    || extractHandleFromUrl(social.website_url);
+  if (configuredHandle) return configuredHandle;
   return `@${DEFAULT_ARTIST.toLowerCase().replace(/[^a-z0-9]+/g, '')}`;
 }
 
@@ -23,6 +38,14 @@ function logoAssetPath() {
   const logoPath = BRAND_PROFILE.ui.logo_path || '/logo.png';
   if (logoPath.startsWith('/')) return join(REPO_ROOT, 'src/web/public', logoPath.replace(/^\//, ''));
   return join(REPO_ROOT, logoPath);
+}
+
+function defaultMarketingImagePath() {
+  const configured = BRAND_PROFILE.marketing?.default_marketing_image_url || null;
+  if (!configured) return null;
+  if (/^https?:\/\//i.test(configured)) return null;
+  if (configured.startsWith('/')) return join(REPO_ROOT, 'src/web/public', configured.replace(/^\//, ''));
+  return join(REPO_ROOT, configured);
 }
 
 function exists(path) {
@@ -130,6 +153,7 @@ export function collectMarketingAssets(songId, options = {}) {
     join(songDir, 'metadata.json'),
   ]);
   const metadata = readJson(metadataPath) || {};
+  const defaultBaseImage = resolveDefaultBaseImage(songId);
 
   const audioCandidates = [
     join(distributionDir, 'upload-this.mp3'),
@@ -140,15 +164,24 @@ export function collectMarketingAssets(songId, options = {}) {
   ];
   const audioPath = firstExisting(audioCandidates);
 
-  const thumbImages = filesIn(join(songDir, 'thumbnails'), path => /\.(png|jpg|jpeg)$/i.test(path));
   const distributionImages = filesIn(distributionDir, path => /\.(png|jpg|jpeg)$/i.test(path));
-  const coverPath = preferredImage([...distributionImages, ...thumbImages]);
+  const requestedSourceArtworkPath = options.sourceArtworkPath && exists(options.sourceArtworkPath)
+    ? options.sourceArtworkPath
+    : null;
+  const coverPath = requestedSourceArtworkPath || preferredImage(distributionImages) || defaultBaseImage?.path || null;
 
   const characterPath = firstExisting([
     process.env.MARKETING_CHARACTER_ASSET,
+    defaultMarketingImagePath(),
     logoAssetPath(),
     join(REPO_ROOT, 'src/web/public/logo.png'),
     coverPath,
+  ]);
+  const brandFallbackPath = firstExisting([
+    defaultBaseImage?.path,
+    defaultMarketingImagePath(),
+    logoAssetPath(),
+    join(REPO_ROOT, 'src/web/public/logo.png'),
   ]);
 
   const lyricsPath = firstExisting([
@@ -168,6 +201,7 @@ export function collectMarketingAssets(songId, options = {}) {
   const copiedAudio = audioPath ? copyIfExists(audioPath, join(sourceDir, `final-audio${extname(audioPath) || '.mp3'}`)) : null;
   const copiedCover = coverPath ? copyIfExists(coverPath, join(sourceDir, `cover-art${extname(coverPath) || '.png'}`)) : null;
   const copiedCharacter = characterPath ? copyIfExists(characterPath, join(sourceDir, `character-asset${extname(characterPath) || '.png'}`)) : null;
+  const copiedBrandFallback = brandFallbackPath ? copyIfExists(brandFallbackPath, join(sourceDir, `brand-fallback${extname(brandFallbackPath) || '.png'}`)) : null;
   const copiedLyrics = join(sourceDir, 'lyrics-clean.txt');
   fs.writeFileSync(copiedLyrics, lyricsClean || title);
 
@@ -181,6 +215,7 @@ export function collectMarketingAssets(songId, options = {}) {
     hyperfollowUrl,
     metadata,
     metadataPath,
+    requestedFormats: Array.isArray(options.formats) ? options.formats : [],
     lyricsRaw,
     lyricsClean,
     lyricsPath,
@@ -189,13 +224,16 @@ export function collectMarketingAssets(songId, options = {}) {
     distributionDir,
     outputDir,
     dirs: { instagramDir, tiktokDir, sourceDir, workingDir },
+    sourceArtworkPath: requestedSourceArtworkPath || coverPath,
     source: {
       audioPath,
       coverPath,
       characterPath,
+      brandFallbackPath,
       copiedAudio,
       copiedCover,
       copiedCharacter,
+      copiedBrandFallback,
       copiedLyrics,
     },
     relative: {
@@ -206,6 +244,7 @@ export function collectMarketingAssets(songId, options = {}) {
       copiedAudio: rel(copiedAudio),
       copiedCover: rel(copiedCover),
       copiedCharacter: rel(copiedCharacter),
+      copiedBrandFallback: rel(copiedBrandFallback),
     },
   };
 }

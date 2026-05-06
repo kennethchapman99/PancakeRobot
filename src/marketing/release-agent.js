@@ -12,6 +12,8 @@ import { generateCaptions } from './captions.js';
 import { renderMarketingAssets } from './video-renderer.js';
 import { runMarketingQA } from './qa.js';
 import { generateUploadChecklist } from './upload-checklist.js';
+import { getOrCreateReleaseMarketing, syncReleaseMarketingAssetPack } from '../shared/marketing-releases.js';
+import { getSongMarketingKit, saveSongMarketingKit, syncSongMarketingKitFromPack } from '../shared/song-marketing-kit.js';
 
 function rel(root, path) {
   return path ? relative(root, path) : null;
@@ -109,8 +111,17 @@ export async function buildMarketingReleasePack(songId, options = {}) {
   } = options;
 
   const captionsOnly = mode === 'captions_checklist_only';
+  const releaseMarketing = getOrCreateReleaseMarketing(songId);
+  const preservedMarketingLinks = getSongMarketingKit(songId).marketing_links || {};
+  const sourceArtworkPath = options.sourceArtworkPath
+    || releaseMarketing.asset_pack?.sourceArtworkPath
+    || null;
 
-  const assets = collectMarketingAssets(songId, options);
+  const assets = collectMarketingAssets(songId, { ...options, sourceArtworkPath });
+  if (!assets.baseImagePath && sourceArtworkPath && fs.existsSync(sourceArtworkPath)) {
+    assets.baseImagePath = sourceArtworkPath;
+    assets.hasBaseImage = true;
+  }
 
   // Inject base image path if one exists
   if (options.useBaseImage !== false) {
@@ -156,6 +167,11 @@ export async function buildMarketingReleasePack(songId, options = {}) {
   const qaReport = await runMarketingQA(assets, renderResult, hook, captions);
   generateUploadChecklist(assets, hook, captions, qaReport, renderResult);
 
+  const manifestAssets = [
+    ...buildManifestAssets(renderResult.generated || [], assets),
+    ...buildSupportingManifestAssets(assets, captionsOnly),
+  ];
+
   const metadata = {
     song_id: assets.songId,
     title: assets.title,
@@ -168,6 +184,7 @@ export async function buildMarketingReleasePack(songId, options = {}) {
     provider: options.provider || options.imageProvider || process.env.MARKETING_IMAGE_PROVIDER || 'none',
     base_image_source: assets.hasBaseImage ? 'uploaded' : 'none',
     base_image_path: assets.hasBaseImage ? rel(assets.repoRoot, assets.baseImagePath) : null,
+    source_artwork_path: assets.sourceArtworkPath ? rel(assets.repoRoot, assets.sourceArtworkPath) : null,
     requested_formats: options.formats || null,
     hook_start_sec: hook.hook_start_sec,
     hook_end_sec: hook.hook_end_sec,
@@ -177,7 +194,11 @@ export async function buildMarketingReleasePack(songId, options = {}) {
     source_cover_path: assets.relative.coverPath,
     source_character_path: assets.relative.characterPath,
     output_dir: assets.relative.outputDir,
-    generated_assets: (renderResult.generated || []).map(item => ({ ...item, path: rel(assets.repoRoot, item.path) })),
+    generated_assets: manifestAssets.map(item => ({
+      ...item,
+      path: item.path ? rel(assets.repoRoot, item.path) : null,
+      pathOrUrl: item.pathOrUrl || (item.path ? rel(assets.repoRoot, item.path) : null),
+    })),
     skipped_assets: renderResult.skipped || [],
     qa_status: qaReport.passed ? 'pass' : 'needs_review',
     qa_warnings: qaReport.warnings || [],
@@ -190,6 +211,19 @@ export async function buildMarketingReleasePack(songId, options = {}) {
 
   writeJson(join(assets.outputDir, 'metadata.json'), metadata);
   writeDashboard(assets, metadata, renderResult, qaReport);
+  try {
+    const synced = syncSongMarketingKitFromPack(songId, { marketingPack: { meta: metadata } });
+    saveSongMarketingKit(songId, {
+      marketing_links: preservedMarketingLinks,
+      marketing_assets: synced.marketing_assets,
+    });
+  } catch {}
+  syncReleaseMarketingAssetPack(songId, {
+    sourceArtworkPath: assets.sourceArtworkPath || assets.baseImagePath || assets.source.coverPath || null,
+    sourceArtworkLocked: options.sourceArtworkLocked !== false,
+    generatedAt: metadata.generated_at,
+    assets: metadata.generated_assets,
+  });
 
   return {
     ok: qaReport.passed,
@@ -200,4 +234,63 @@ export async function buildMarketingReleasePack(songId, options = {}) {
     metadata,
     qaReport,
   };
+}
+
+function buildManifestAssets(generatedAssets, assets) {
+  return generatedAssets.map(item => {
+    const type = inferAssetType(item);
+    const sourceArtworkUsed = usesSourceArtwork(item, assets);
+    return {
+      id: `asset_${item.name.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}`,
+      type,
+      status: 'generated',
+      name: item.name,
+      platform: item.platform || null,
+      path: item.path,
+      pathOrUrl: item.path,
+      promptUsed: assets.baseImagePath || assets.sourceArtworkPath
+        ? `Rendered with source artwork ${rel(assets.repoRoot, assets.baseImagePath || assets.sourceArtworkPath)}`
+        : 'Rendered without explicit source artwork',
+      sourceArtworkUsed,
+    };
+  });
+}
+
+function buildSupportingManifestAssets(assets, captionsOnly) {
+  return [
+    {
+      id: 'caption_set',
+      type: 'caption_set',
+      status: 'generated',
+      path: join(assets.outputDir, 'captions.md'),
+      pathOrUrl: join(assets.outputDir, 'captions.md'),
+      promptUsed: 'Generated from release caption templates',
+      sourceArtworkUsed: false,
+    },
+    {
+      id: 'spotify_pitch',
+      type: 'spotify_pitch',
+      status: captionsOnly ? 'skipped' : 'generated',
+      path: join(assets.outputDir, 'upload-checklist.md'),
+      pathOrUrl: join(assets.outputDir, 'upload-checklist.md'),
+      promptUsed: 'Generated from upload checklist builder',
+      sourceArtworkUsed: false,
+    },
+  ];
+}
+
+function inferAssetType(item) {
+  const name = String(item.name || '').toLowerCase();
+  if (name.includes('square')) return 'square_cover';
+  if (name.includes('story') || name.includes('reel') || name.includes('tiktok') || name.endsWith('.mp4')) return 'vertical_video';
+  if (name.includes('lyric')) return 'lyric_card';
+  return 'email_banner';
+}
+
+function usesSourceArtwork(item, assets) {
+  const sourceArtwork = assets.baseImagePath || assets.sourceArtworkPath;
+  if (!sourceArtwork) return false;
+  if (item.type === 'video') return true;
+  return ['fullBleedHero', 'lyricsCard', 'characterHero', 'storyCTA'].some(layout => String(item.name || '').toLowerCase().includes(layout.toLowerCase().replace(/[A-Z]/g, m => `-${m.toLowerCase()}`)))
+    || /\.(png|jpe?g)$/i.test(String(item.path || ''));
 }

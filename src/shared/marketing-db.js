@@ -37,6 +37,23 @@ export function initMarketingSchema() {
       contact_method TEXT,
       contact_email TEXT,
       handle TEXT,
+      official_website_url TEXT,
+      contact_page_url TEXT,
+      public_email TEXT,
+      submission_form_url TEXT,
+      instagram_url TEXT,
+      tiktok_url TEXT,
+      youtube_url TEXT,
+      facebook_url TEXT,
+      twitter_url TEXT,
+      threads_url TEXT,
+      playlist_link_url TEXT,
+      best_free_contact_method TEXT,
+      backup_contact_method TEXT,
+      contactability_json TEXT,
+      cost_policy_json TEXT,
+      ai_policy_details_json TEXT,
+      outreach_eligibility_json TEXT,
       audience TEXT,
       geo TEXT,
       genres_json TEXT,
@@ -109,11 +126,15 @@ export function initMarketingSchema() {
       updated_at TEXT NOT NULL,
       name TEXT NOT NULL,
       status TEXT DEFAULT 'draft',
+      release_marketing_id TEXT,
       focus_song_id TEXT,
       objective TEXT,
       audience TEXT,
       channel_mix_json TEXT,
       approved_target_ids_json TEXT,
+      excluded_target_ids_json TEXT,
+      exclusion_summary TEXT,
+      dry_run INTEGER DEFAULT 0,
       brand_context_json TEXT,
       notes TEXT
     );
@@ -154,9 +175,28 @@ export function initMarketingSchema() {
       updated_at TEXT NOT NULL,
       UNIQUE(campaign_id, target_id)
     );
+
+    CREATE TABLE IF NOT EXISTS release_marketing (
+      id TEXT PRIMARY KEY,
+      song_id TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      artist_name TEXT,
+      brand_profile_id TEXT,
+      release_type TEXT DEFAULT 'single',
+      release_status TEXT DEFAULT 'draft',
+      release_date TEXT,
+      readiness_json TEXT,
+      distribution_json TEXT,
+      asset_pack_json TEXT,
+      results_json TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   migrateMarketingTargetsColumns(db);
+  migrateMarketingCampaignColumns(db);
   syncMarketingSetupItemsFromConfig();
 }
 
@@ -165,6 +205,23 @@ function migrateMarketingTargetsColumns(db) {
     ['brand_profile_id', 'TEXT'],
     ['contact_email', 'TEXT'],
     ['handle', 'TEXT'],
+    ['official_website_url', 'TEXT'],
+    ['contact_page_url', 'TEXT'],
+    ['public_email', 'TEXT'],
+    ['submission_form_url', 'TEXT'],
+    ['instagram_url', 'TEXT'],
+    ['tiktok_url', 'TEXT'],
+    ['youtube_url', 'TEXT'],
+    ['facebook_url', 'TEXT'],
+    ['twitter_url', 'TEXT'],
+    ['threads_url', 'TEXT'],
+    ['playlist_link_url', 'TEXT'],
+    ['best_free_contact_method', 'TEXT'],
+    ['backup_contact_method', 'TEXT'],
+    ['contactability_json', 'TEXT'],
+    ['cost_policy_json', 'TEXT'],
+    ['ai_policy_details_json', 'TEXT'],
+    ['outreach_eligibility_json', 'TEXT'],
     ['geo', 'TEXT'],
     ['genres_json', 'TEXT'],
     ['content_types_json', 'TEXT'],
@@ -174,9 +231,29 @@ function migrateMarketingTargetsColumns(db) {
     ['freshness_status', "TEXT DEFAULT 'unknown'"],
     ['rejected_reason', 'TEXT'],
     ['suppression_status', "TEXT DEFAULT 'none'"],
+    ['last_contact_at', 'TEXT'],
+    ['last_contact_release_marketing_id', 'TEXT'],
+    ['last_contact_release_title', 'TEXT'],
+    ['last_contact_subject', 'TEXT'],
+    ['last_contact_body_preview', 'TEXT'],
+    ['last_outcome', 'TEXT'],
+    ['suppression_reason', 'TEXT'],
+    ['suppression_source', 'TEXT'],
   ];
   for (const [col, type] of newCols) {
     try { db.exec(`ALTER TABLE marketing_targets ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+  }
+}
+
+function migrateMarketingCampaignColumns(db) {
+  const newCols = [
+    ['release_marketing_id', 'TEXT'],
+    ['excluded_target_ids_json', 'TEXT'],
+    ['exclusion_summary', 'TEXT'],
+    ['dry_run', 'INTEGER DEFAULT 0'],
+  ];
+  for (const [col, type] of newCols) {
+    try { db.exec(`ALTER TABLE marketing_campaigns ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
   }
 }
 
@@ -295,6 +372,23 @@ export function upsertMarketingTarget(target) {
     contact_method: optionalText(target.contact_method),
     contact_email: optionalText(target.contact_email),
     handle: optionalText(target.handle),
+    official_website_url: optionalText(target.official_website_url),
+    contact_page_url: optionalText(target.contact_page_url),
+    public_email: optionalText(target.public_email),
+    submission_form_url: optionalText(target.submission_form_url),
+    instagram_url: optionalText(target.instagram_url),
+    tiktok_url: optionalText(target.tiktok_url),
+    youtube_url: optionalText(target.youtube_url),
+    facebook_url: optionalText(target.facebook_url),
+    twitter_url: optionalText(target.twitter_url),
+    threads_url: optionalText(target.threads_url),
+    playlist_link_url: optionalText(target.playlist_link_url),
+    best_free_contact_method: optionalText(target.best_free_contact_method),
+    backup_contact_method: optionalText(target.backup_contact_method),
+    contactability_json: target.contactability ? JSON.stringify(target.contactability) : optionalText(target.contactability_json),
+    cost_policy_json: target.cost_policy ? JSON.stringify(target.cost_policy) : optionalText(target.cost_policy_json),
+    ai_policy_details_json: target.ai_policy_details ? JSON.stringify(target.ai_policy_details) : optionalText(target.ai_policy_details_json),
+    outreach_eligibility_json: target.outreach_eligibility ? JSON.stringify(target.outreach_eligibility) : optionalText(target.outreach_eligibility_json),
     audience: optionalText(target.audience),
     geo: optionalText(target.geo),
     genres_json: target.genres ? JSON.stringify(target.genres) : optionalText(target.genres_json),
@@ -312,6 +406,14 @@ export function upsertMarketingTarget(target) {
     approved_at: target.status === 'approved' ? now : existing?.approved_at || null,
     rejected_reason: optionalText(target.rejected_reason),
     suppression_status: optionalText(target.suppression_status) || 'none',
+    last_contact_at: optionalText(target.last_contact_at),
+    last_contact_release_marketing_id: optionalText(target.last_contact_release_marketing_id),
+    last_contact_release_title: optionalText(target.last_contact_release_title),
+    last_contact_subject: optionalText(target.last_contact_subject),
+    last_contact_body_preview: optionalText(target.last_contact_body_preview),
+    last_outcome: optionalText(target.last_outcome),
+    suppression_reason: optionalText(target.suppression_reason),
+    suppression_source: optionalText(target.suppression_source),
     notes: optionalText(target.notes),
     raw_json: JSON.stringify(target.raw_json || target),
   };
@@ -319,16 +421,26 @@ export function upsertMarketingTarget(target) {
   getDb().prepare(`
     INSERT INTO marketing_targets
       (id, created_at, updated_at, brand_profile_id, name, type, platform, source_url, submission_url,
-       contact_method, contact_email, handle, audience, geo, genres_json, content_types_json,
+       contact_method, contact_email, handle, official_website_url, contact_page_url, public_email, submission_form_url,
+       instagram_url, tiktok_url, youtube_url, facebook_url, twitter_url, threads_url, playlist_link_url,
+       best_free_contact_method, backup_contact_method, contactability_json, cost_policy_json,
+       ai_policy_details_json, outreach_eligibility_json, audience, geo, genres_json, content_types_json,
        fit_score, ai_policy, ai_risk_score, recommendation, research_summary, outreach_angle,
        pitch_preferences, last_verified_at, freshness_status, status, approved_at, rejected_reason,
-       suppression_status, notes, raw_json)
+       suppression_status, last_contact_at, last_contact_release_marketing_id, last_contact_release_title,
+       last_contact_subject, last_contact_body_preview, last_outcome, suppression_reason, suppression_source,
+       notes, raw_json)
     VALUES
       (@id, @created_at, @updated_at, @brand_profile_id, @name, @type, @platform, @source_url, @submission_url,
-       @contact_method, @contact_email, @handle, @audience, @geo, @genres_json, @content_types_json,
+       @contact_method, @contact_email, @handle, @official_website_url, @contact_page_url, @public_email, @submission_form_url,
+       @instagram_url, @tiktok_url, @youtube_url, @facebook_url, @twitter_url, @threads_url, @playlist_link_url,
+       @best_free_contact_method, @backup_contact_method, @contactability_json, @cost_policy_json,
+       @ai_policy_details_json, @outreach_eligibility_json, @audience, @geo, @genres_json, @content_types_json,
        @fit_score, @ai_policy, @ai_risk_score, @recommendation, @research_summary, @outreach_angle,
        @pitch_preferences, @last_verified_at, @freshness_status, @status, @approved_at, @rejected_reason,
-       @suppression_status, @notes, @raw_json)
+       @suppression_status, @last_contact_at, @last_contact_release_marketing_id, @last_contact_release_title,
+       @last_contact_subject, @last_contact_body_preview, @last_outcome, @suppression_reason, @suppression_source,
+       @notes, @raw_json)
     ON CONFLICT(name, source_url) DO UPDATE SET
       updated_at = excluded.updated_at,
       brand_profile_id = COALESCE(excluded.brand_profile_id, brand_profile_id),
@@ -338,6 +450,23 @@ export function upsertMarketingTarget(target) {
       contact_method = excluded.contact_method,
       contact_email = excluded.contact_email,
       handle = excluded.handle,
+      official_website_url = excluded.official_website_url,
+      contact_page_url = excluded.contact_page_url,
+      public_email = excluded.public_email,
+      submission_form_url = excluded.submission_form_url,
+      instagram_url = excluded.instagram_url,
+      tiktok_url = excluded.tiktok_url,
+      youtube_url = excluded.youtube_url,
+      facebook_url = excluded.facebook_url,
+      twitter_url = excluded.twitter_url,
+      threads_url = excluded.threads_url,
+      playlist_link_url = excluded.playlist_link_url,
+      best_free_contact_method = excluded.best_free_contact_method,
+      backup_contact_method = excluded.backup_contact_method,
+      contactability_json = excluded.contactability_json,
+      cost_policy_json = excluded.cost_policy_json,
+      ai_policy_details_json = excluded.ai_policy_details_json,
+      outreach_eligibility_json = excluded.outreach_eligibility_json,
       audience = excluded.audience,
       geo = excluded.geo,
       genres_json = excluded.genres_json,
@@ -353,6 +482,14 @@ export function upsertMarketingTarget(target) {
       freshness_status = excluded.freshness_status,
       rejected_reason = excluded.rejected_reason,
       suppression_status = excluded.suppression_status,
+      last_contact_at = COALESCE(excluded.last_contact_at, marketing_targets.last_contact_at),
+      last_contact_release_marketing_id = COALESCE(excluded.last_contact_release_marketing_id, marketing_targets.last_contact_release_marketing_id),
+      last_contact_release_title = COALESCE(excluded.last_contact_release_title, marketing_targets.last_contact_release_title),
+      last_contact_subject = COALESCE(excluded.last_contact_subject, marketing_targets.last_contact_subject),
+      last_contact_body_preview = COALESCE(excluded.last_contact_body_preview, marketing_targets.last_contact_body_preview),
+      last_outcome = COALESCE(excluded.last_outcome, marketing_targets.last_outcome),
+      suppression_reason = COALESCE(excluded.suppression_reason, marketing_targets.suppression_reason),
+      suppression_source = COALESCE(excluded.suppression_source, marketing_targets.suppression_source),
       notes = excluded.notes,
       raw_json = excluded.raw_json
   `).run(payload);
@@ -362,7 +499,12 @@ export function upsertMarketingTarget(target) {
 
 export function updateMarketingTarget(id, fields = {}) {
   initMarketingSchema();
-  const allowed = ['status', 'notes', 'recommendation', 'ai_policy', 'ai_risk_score', 'fit_score'];
+  const allowed = [
+    'status', 'notes', 'recommendation', 'ai_policy', 'ai_risk_score', 'fit_score',
+    'suppression_status', 'suppression_reason', 'suppression_source',
+    'last_contact_at', 'last_contact_release_marketing_id', 'last_contact_release_title',
+    'last_contact_subject', 'last_contact_body_preview', 'last_outcome',
+  ];
   const updates = { updated_at: new Date().toISOString() };
 
   for (const field of allowed) {
@@ -381,20 +523,24 @@ export function createMarketingCampaign(campaign) {
   const id = campaign.id || `MKT_CAMPAIGN_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   getDb().prepare(`
     INSERT INTO marketing_campaigns
-      (id, created_at, updated_at, name, status, focus_song_id, objective, audience, channel_mix_json, approved_target_ids_json, brand_context_json, notes)
+      (id, created_at, updated_at, name, status, release_marketing_id, focus_song_id, objective, audience, channel_mix_json, approved_target_ids_json, excluded_target_ids_json, exclusion_summary, dry_run, brand_context_json, notes)
     VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     now,
     now,
     campaign.name,
     campaign.status || 'draft',
+    campaign.release_marketing_id || null,
     campaign.focus_song_id || null,
     campaign.objective || null,
     campaign.audience || null,
     JSON.stringify(campaign.channel_mix || []),
     JSON.stringify(campaign.approved_target_ids || []),
+    JSON.stringify(campaign.excluded_target_ids || []),
+    campaign.exclusion_summary || null,
+    campaign.dry_run ? 1 : 0,
     JSON.stringify(campaign.brand_context || {}),
     campaign.notes || null,
   );
@@ -406,12 +552,52 @@ export function getMarketingCampaigns(limit = 25) {
   return getDb().prepare('SELECT * FROM marketing_campaigns ORDER BY created_at DESC LIMIT ?').all(limit).map(parseCampaign);
 }
 
+export function getMarketingCampaignById(id) {
+  initMarketingSchema();
+  return parseCampaign(getDb().prepare('SELECT * FROM marketing_campaigns WHERE id = ?').get(id));
+}
+
+export function updateMarketingCampaign(id, fields = {}) {
+  initMarketingSchema();
+  const updates = { updated_at: new Date().toISOString() };
+  const mapping = {
+    name: value => value,
+    status: value => value,
+    release_marketing_id: value => value,
+    focus_song_id: value => value,
+    objective: value => value,
+    audience: value => value,
+    channel_mix: value => JSON.stringify(value || []),
+    approved_target_ids: value => JSON.stringify(value || []),
+    excluded_target_ids: value => JSON.stringify(value || []),
+    exclusion_summary: value => value,
+    dry_run: value => value ? 1 : 0,
+    brand_context: value => JSON.stringify(value || {}),
+    notes: value => value,
+  };
+  for (const [key, serializer] of Object.entries(mapping)) {
+    if (fields[key] !== undefined) {
+      const column = key === 'channel_mix' ? 'channel_mix_json'
+        : key === 'approved_target_ids' ? 'approved_target_ids_json'
+        : key === 'excluded_target_ids' ? 'excluded_target_ids_json'
+        : key === 'brand_context' ? 'brand_context_json'
+        : key;
+      updates[column] = serializer(fields[key]);
+    }
+  }
+  const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+  getDb().prepare(`UPDATE marketing_campaigns SET ${setClause} WHERE id = ?`).run(...Object.values(updates), id);
+  return getMarketingCampaignById(id);
+}
+
 function parseCampaign(row) {
   if (!row) return null;
   return {
     ...row,
+    dry_run: Boolean(row.dry_run),
     channel_mix: parseJsonArray(row.channel_mix_json),
     approved_target_ids: parseJsonArray(row.approved_target_ids_json),
+    excluded_target_ids: parseJsonArray(row.excluded_target_ids_json),
     brand_context: parseJsonObject(row.brand_context_json),
   };
 }

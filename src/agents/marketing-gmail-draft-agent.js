@@ -1,11 +1,12 @@
 import { createGmailDraft } from '../marketing/gmail-drafts.js';
+import { buildAttachmentPlanForOutreachItem } from '../shared/marketing-email-assets.js';
 import {
   getOutreachItem,
   getOutreachItems,
 } from '../shared/marketing-outreach-db.js';
 import { transitionOutreachItem } from '../shared/marketing-outreach-state.js';
 
-export async function createGmailDraftForOutreachItem(itemId) {
+export async function createGmailDraftForOutreachItem(itemId, options = {}) {
   const item = getOutreachItem(itemId);
   if (!item) throw new Error(`Outreach item not found: ${itemId}`);
 
@@ -25,20 +26,27 @@ export async function createGmailDraftForOutreachItem(itemId) {
   }
 
   const to = item.outlet_context?.contact_email || item.outlet_context?.contact?.email || null;
+  const attachmentPlan = buildAttachmentPlanForOutreachItem(item);
   const result = await createGmailDraft({
     to,
     subject: item.subject,
     body: item.body,
+    attachments: attachmentPlan.attachments,
+    dryRun: options.dryRun === true,
   });
 
   transitionOutreachItem(item.id, 'create_gmail_draft', {
     actor: 'marketing-gmail-draft-agent',
     fields: {
       gmail_draft_id: result.gmail_draft_id,
+      gmail_draft_url: result.gmail_draft_url,
       gmail_message_id: result.gmail_message_id,
       gmail_thread_id: result.gmail_thread_id,
       safety_status: 'gmail_draft_created',
-      safety_notes: appendNote(item.safety_notes, `Gmail draft created: ${result.gmail_draft_id}`),
+      safety_notes: appendNote(
+        item.safety_notes,
+        `${result.dryRun ? 'Dry-run Gmail draft simulated' : `Gmail draft created: ${result.gmail_draft_id}`}${attachmentPlan.attachedLabels.length ? `; attached ${attachmentPlan.attachedLabels.join(', ')}` : ''}`,
+      ),
       requires_ken: true,
     },
     message: 'Gmail draft created',
@@ -48,14 +56,14 @@ export async function createGmailDraftForOutreachItem(itemId) {
   return { item_id: item.id, ok: true, ...result };
 }
 
-export async function createGmailDraftsForCampaign(campaignId) {
+export async function createGmailDraftsForCampaign(campaignId, options = {}) {
   const items = getOutreachItems({ campaign_id: campaignId })
     .filter(item => !['sent', 'replied', 'do_not_contact', 'gmail_draft_created', 'manual_submitted'].includes(item.status));
 
   const results = [];
   for (const item of items) {
     try {
-      results.push(await createGmailDraftForOutreachItem(item.id));
+      results.push(await createGmailDraftForOutreachItem(item.id, options));
     } catch (error) {
       try {
         transitionOutreachItem(item.id, 'block_gmail_draft', {

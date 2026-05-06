@@ -28,6 +28,7 @@ import fs from 'fs';
 
 import { upsertSong, getSong, getAllSongs } from './shared/db.js';
 import { approveSong } from './shared/approval-gate.js';
+import { SONG_STATUSES, getSongStatusLabel, normalizeSongStatus } from './shared/song-status.js';
 import { formatCost } from './shared/costs.js';
 import { loadBrandProfile } from './shared/brand-profile.js';
 import { runSuggestPipeline } from './shared/suggest.js';
@@ -37,7 +38,6 @@ import { buildBrand, reviewSong, loadBrandBible } from './agents/brand-manager.j
 import { writeLyrics } from './agents/lyricist.js';
 import { researchDistribution, generateMetadata } from './agents/product-manager.js';
 import { researchServices, updateFinancialReport, generateFullReport } from './agents/financial-manager.js';
-import { generateThumbnails } from './agents/creative-manager.js';
 import { runQAChecklist, generateHumanTasks, startScheduler } from './agents/ops-manager.js';
 import { generateMusic } from './agents/music-generator.js';
 
@@ -309,30 +309,6 @@ async function runNewSongPipeline(topic, existingSongId = null) {
     }
   }
 
-  // ─────────────────────────────
-  // 6. Generate thumbnails
-  // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 6/9: Generating thumbnails...\n'));
-  const thumbnailResult = await generateThumbnails({
-    songId,
-    title: lyricsResult.title,
-    topic,
-    metadata,
-  });
-
-  // Block if thumbnails were skipped (no CF credentials)
-  if (thumbnailResult.skipped) {
-    const forceSkip = process.argv.includes('--force-skip-media');
-    if (!forceSkip) {
-      throw new Error(
-        'Thumbnail generation skipped — CF_ACCOUNT_ID and CF_API_TOKEN are required.\n' +
-        'Get them at https://dash.cloudflare.com → AI → Workers AI\n' +
-        'To bypass during dev/testing: add --force-skip-media flag'
-      );
-    }
-    console.log(chalk.yellow('⚠ Thumbnails skipped (--force-skip-media set)'));
-  }
-
   upsertSong({
     id: songId,
     topic,
@@ -341,15 +317,14 @@ async function runNewSongPipeline(topic, existingSongId = null) {
     lyrics_path: lyricsResult.lyricsPath,
     audio_prompt_path: lyricsResult.audioPromptPath,
     metadata_path: metadataPath,
-    thumbnail_path: thumbnailResult.thumbDir,
     brand_score: brandReview.scores?.overall,
     total_cost_usd: totalCost,
   });
 
   // ─────────────────────────────
-  // 7. OPS QA
+  // 6. OPS QA
   // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 7/9: Running QA checklist...\n'));
+  console.log(chalk.bold('\n📌 Step 6/8: Running QA checklist...\n'));
   const qaReport = runQAChecklist({
     songId,
     songDir,
@@ -357,7 +332,6 @@ async function runNewSongPipeline(topic, existingSongId = null) {
     audioPromptPath: lyricsResult.audioPromptPath,
     brandReview,
     metadata,
-    thumbnails: thumbnailResult.generatedThumbnails,
   });
 
   // QA warnings shown, failures throw inside approval gate as second safety net
@@ -370,9 +344,9 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   }
 
   // ─────────────────────────────
-  // 8. Human approval gate
+  // 7. Human approval gate
   // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 8/9: Human approval gate...\n'));
+  console.log(chalk.bold('\n📌 Step 7/8: Human approval gate...\n'));
   const approval = await approveSong({
     songId,
     title: lyricsResult.title,
@@ -390,17 +364,16 @@ async function runNewSongPipeline(topic, existingSongId = null) {
       id: songId,
       topic,
       title: lyricsResult.title,
-      status: 'approved',
+      status: SONG_STATUSES.DRAFT,
       lyrics_path: lyricsResult.lyricsPath,
       audio_prompt_path: lyricsResult.audioPromptPath,
       metadata_path: metadataPath,
-      thumbnail_path: thumbnailResult.thumbDir,
       brand_score: brandReview.scores?.overall,
       total_cost_usd: totalCost,
     });
 
     // Build distribution package with active-profile metadata and upload instructions
-    console.log(chalk.bold('\n📌 Step 9/9: Building distribution package...\n'));
+    console.log(chalk.bold('\n📌 Step 8/8: Building distribution package...\n'));
     const { distDir } = await generateHumanTasks({
       songId,
       title: lyricsResult.title,
@@ -409,12 +382,11 @@ async function runNewSongPipeline(topic, existingSongId = null) {
       metadata,
       lyricsPath: lyricsResult.lyricsPath,
       audioPromptPath: lyricsResult.audioPromptPath,
-      thumbnailDir: thumbnailResult.thumbDir,
       brandScore: brandReview.scores?.overall,
       totalCost,
     });
 
-    console.log(chalk.bgGreen.black('\n ✓ SONG APPROVED — READY FOR DISTRIBUTION \n'));
+    console.log(chalk.bgGreen.black('\n ✓ SONG PACKAGE READY \n'));
     console.log(`  Distribution package: ${chalk.bold(distDir)}`);
     console.log(`  Open DISTRIBUTOR-UPLOAD.md for pre-filled upload values`);
 
@@ -431,7 +403,7 @@ async function runNewSongPipeline(topic, existingSongId = null) {
       id: songId,
       topic,
       title: lyricsResult.title,
-      status: 'rejected',
+      status: SONG_STATUSES.DRAFT,
       lyrics_path: lyricsResult.lyricsPath,
       audio_prompt_path: lyricsResult.audioPromptPath,
       total_cost_usd: totalCost,
@@ -487,8 +459,8 @@ async function approveSongCommand(songId) {
     process.exit(1);
   }
 
-  upsertSong({ ...song, status: 'approved' });
-  console.log(chalk.green(`✓ Song ${songId} approved`));
+  upsertSong({ ...song, status: SONG_STATUSES.DRAFT });
+  console.log(chalk.green(`✓ Song ${songId} package approved; status kept as ${SONG_STATUSES.DRAFT}`));
 
   // Generate human tasks if not already done
   const humanTaskPath = join(__dirname, `../output/human-tasks/${songId}-human-tasks.md`);
@@ -502,7 +474,7 @@ async function approveSongCommand(songId) {
       metadata: null,
       lyricsPath: song.lyrics_path,
       audioPromptPath: song.audio_prompt_path,
-      thumbnailDir: song.thumbnail_path,
+      thumbnailDir: null,
       brandScore: song.brand_score,
       totalCost: song.total_cost_usd,
     });
@@ -518,8 +490,8 @@ async function rejectSongCommand(songId, reason) {
     process.exit(1);
   }
 
-  upsertSong({ ...song, status: 'rejected' });
-  console.log(chalk.red(`✗ Song ${songId} rejected. Reason: ${reason || 'none'}`));
+  upsertSong({ ...song, status: SONG_STATUSES.DRAFT });
+  console.log(chalk.red(`✗ Song ${songId} rejected. Status reset to ${SONG_STATUSES.DRAFT}. Reason: ${reason || 'none'}`));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -553,12 +525,6 @@ function verifySong(songId) {
   const hasAudioDir = fs.existsSync(audioDir) && fs.readdirSync(audioDir).some(f => f.endsWith('.mp3') || f.endsWith('.wav'));
   const audioOk = hasAudioRoot || hasAudioDir;
   checks.push({ label: 'Audio file (MP3/WAV)', ok: audioOk, warn: !audioOk });
-
-  // Thumbnails
-  const thumbDir = join(songDir, 'thumbnails');
-  const pngs = fs.existsSync(thumbDir) ? fs.readdirSync(thumbDir).filter(f => f.endsWith('.png')) : [];
-  const thumbOk = pngs.length >= 1;
-  checks.push({ label: `Thumbnails (${pngs.length} PNG${pngs.length !== 1 ? 's' : ''})`, ok: thumbOk, warn: !thumbOk });
 
   // Metadata
   const metaOk = fs.existsSync(join(songDir, 'metadata.json'));
@@ -602,10 +568,11 @@ function listSongs() {
   }
 
   const statusColors = {
-    draft: chalk.yellow,
-    approved: chalk.green,
-    rejected: chalk.red,
-    published: chalk.blue,
+    [SONG_STATUSES.DRAFT]: chalk.yellow,
+    [SONG_STATUSES.EDITING]: chalk.cyan,
+    [SONG_STATUSES.SUBMITTED_TO_DISTROKID]: chalk.magenta,
+    [SONG_STATUSES.OUTREACH_COMPLETE]: chalk.green,
+    [SONG_STATUSES.ARCHIVED]: chalk.gray,
   };
 
   console.log(chalk.bold('\nAll Songs:\n'));
@@ -613,11 +580,12 @@ function listSongs() {
   console.log('─'.repeat(90));
 
   for (const song of songs) {
-    const color = statusColors[song.status] || chalk.white;
+    const normalizedStatus = normalizeSongStatus(song.status);
+    const color = statusColors[normalizedStatus] || chalk.white;
     console.log(
       `${song.id.padEnd(22)} ` +
       `${(song.title || '—').substring(0, 28).padEnd(30)} ` +
-      `${color(song.status.padEnd(12))} ` +
+      `${color(getSongStatusLabel(normalizedStatus).padEnd(22))} ` +
       `${(song.brand_score?.toString() || '—').padEnd(6)} ` +
       `${formatCost(song.total_cost_usd || 0)}`
     );

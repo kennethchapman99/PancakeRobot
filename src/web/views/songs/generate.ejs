@@ -151,7 +151,7 @@ window.pipelineData = function() {
 
   <!-- Pipeline steps indicator -->
   <div class="grid grid-cols-4 gap-2 mb-8 text-center text-xs text-zinc-500">
-    <% for (const [icon, label] of [['✍️','Lyrics'],['🎵','Music'],['🖼️','Thumbnails'],['📦','Package']]) { %>
+    <% for (const [icon, label] of [['✍️','Lyrics'],['🎵','Music'],['🧪','QA'],['📦','Package']]) { %>
     <div class="bg-white border border-zinc-200 rounded-xl py-3 px-2">
       <div class="text-2xl mb-1"><%= icon %></div>
       <div class="font-medium"><%= label %></div>
@@ -204,14 +204,14 @@ window.pipelineData = function() {
   </div>
 
   <div x-show="state === 'running'" class="text-xs text-zinc-400 text-center mb-6">
-    Full pipeline takes 2–5 minutes — lyrics → music → thumbnails → packaging
+    Full pipeline takes 2–5 minutes — lyrics → music → QA → packaging
   </div>
 
   <div x-show="state === 'done'" style="display:none"
        class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex items-center justify-between gap-4">
     <div>
       <div class="font-bold text-emerald-800 text-lg mb-1">🎉 Song Ready!</div>
-      <div class="text-sm text-emerald-700">Lyrics, audio, and thumbnails generated. Click to review and approve.</div>
+      <div class="text-sm text-emerald-700">Lyrics and audio are ready. Review the song, then use the marketing tab to build release assets from the base image.</div>
       <div class="text-xs text-zinc-400 mt-1 font-mono" x-show="completeSongId" x-text="'Song ID: ' + completeSongId"></div>
     </div>
     <a :href="songUrl"

@@ -5,133 +5,92 @@
   function brandLabel(id) { return id ? (brandMap[id] || id) : null; }
 %>
 
-<div class="p-8" x-data="catalog()" @keydown.escape.window="if(selecting) cancelSelect(); else closeDeleteModal()">
-
-  <div class="flex items-center justify-between mb-6">
+<div class="p-4 sm:p-6 lg:p-8" x-data="catalog()">
+  <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
     <div>
-      <h1 class="text-2xl font-bold">Song Catalog</h1>
-      <p class="text-sm text-zinc-500 mt-1" id="song-count"><%= songs.length %> song<%= songs.length !== 1 ? 's' : '' %></p>
+      <h1 class="text-3xl font-black tracking-tight text-zinc-900">Song Catalog</h1>
+      <p class="mt-1 text-sm text-zinc-500" id="song-count"><%= songs.length %> song<%= songs.length !== 1 ? 's' : '' %></p>
     </div>
-    <div class="flex items-center gap-2">
-      <button @click="toggleSelect()" :class="selecting ? 'bg-zinc-800 text-white' : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50'"
-        class="text-sm px-3 py-1.5 rounded-lg transition">
-        <span x-text="selecting ? 'Cancel' : '☑ Select'"></span>
-      </button>
-      <a href="/ideas" class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg hover:bg-zinc-50 transition text-zinc-600">💡 From Idea</a>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="/ideas" class="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50">From Idea</a>
     </div>
   </div>
 
-  <!-- Bulk action toolbar — appears when selecting -->
-  <div x-show="selecting" x-cloak
-       class="sticky top-0 z-30 bg-zinc-900 text-white rounded-xl px-5 py-3 mb-5 flex items-center gap-4 shadow-xl">
-    <label class="flex items-center gap-2 text-sm cursor-pointer select-none">
-      <input type="checkbox" class="rounded" @change="toggleAll($event.target.checked)" :checked="selected.length === totalCards && totalCards > 0">
-      <span x-text="selected.length ? selected.length + ' selected' : 'Select all'"></span>
-    </label>
-    <div class="flex-1"></div>
-    <div class="flex items-center gap-3" x-show="selected.length > 0">
-      <select x-model="bulkStatus" class="text-xs bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-1.5 focus:outline-none text-white">
-        <option value="">Change status to…</option>
-        <option value="approved">✅ approved</option>
-        <option value="draft">draft</option>
-        <option value="submitted_to_distributor">submitted to distributor</option>
-        <option value="published">published</option>
-        <option value="paused">paused</option>
-        <option value="archived">archived</option>
+  <form method="GET" action="/songs" class="mb-4 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <div class="grid gap-3 lg:grid-cols-[minmax(0,1.8fr)_180px_180px_180px_auto_auto]">
+      <input type="text" name="q" value="<%= q %>" placeholder="Search songs, notes, or topics…"
+        class="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900">
+
+      <select name="status" class="rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-700 focus:outline-none">
+        <option value="">All statuses</option>
+        <% for (const option of songStatusOptions) { %>
+          <option value="<%= option.value %>" <%= filterStatus === option.value ? 'selected' : '' %>><%= option.label %></option>
+        <% } %>
       </select>
-      <button @click="applyBulkStatus()" :disabled="!bulkStatus"
-        class="text-xs bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-white font-semibold px-4 py-1.5 rounded-lg transition">
-        Apply
-      </button>
-      <button @click="bulkDelete()" class="text-xs bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-1.5 rounded-lg transition">
-        🗑 Delete (<span x-text="selected.length"></span>)
-      </button>
-    </div>
-  </div>
 
-  <%
-    const approvedSongs = songs.filter(s => s.status === 'approved');
-    const otherSongs = songs.filter(s => s.status !== 'approved');
-  %>
-
-  <!-- ── EXPORT-READY HERO BANNER ── -->
-  <% if (approvedSongs.length > 0 && !filterStatus) { %>
-  <div class="bg-gradient-to-r from-emerald-600 to-green-500 rounded-2xl p-6 mb-8 text-white shadow-lg">
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-2xl">🎵</span>
-          <h2 class="text-xl font-bold"><%= approvedSongs.length %> song<%= approvedSongs.length !== 1 ? 's' : '' %> ready for <%= defaultDistributor || 'distribution' %></h2>
-        </div>
-        <p class="text-emerald-100 text-sm">These songs have passed the full pipeline — lyrics, audio, thumbnails, and brand review. Export them to your active distributor to publish.</p>
-        <div class="flex flex-wrap gap-2 mt-3">
-          <% for (const s of approvedSongs.slice(0, 5)) { %>
-          <span class="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium"><%= s.title || s.topic %></span>
-          <% } %>
-          <% if (approvedSongs.length > 5) { %><span class="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full">+<%= approvedSongs.length - 5 %> more</span><% } %>
-        </div>
-      </div>
-      <a href="/songs?status=approved"
-         class="shrink-0 bg-white text-emerald-700 font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-50 transition text-sm shadow">
-        View All →
-      </a>
-    </div>
-  </div>
-  <% } %>
-
-  <!-- Filters -->
-  <form method="GET" action="/songs" class="flex flex-wrap gap-3 mb-5">
-    <input type="text" name="q" value="<%= q %>" placeholder="Search songs…"
-      class="border border-zinc-200 rounded-lg px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-zinc-900">
-
-    <select name="sort" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-      <option value="" <%= sort === '' ? 'selected' : '' %>>Recently Updated</option>
-      <option value="created" <%= sort === 'created' ? 'selected' : '' %>>Newest First</option>
-      <option value="readiness" <%= sort === 'readiness' ? 'selected' : '' %>>Most Ready</option>
-    </select>
-
-    <% if ((profiles || []).length > 1) { %>
-    <select name="brand" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-      <option value="">All brands</option>
-      <% for (const p of profiles) { %>
-        <option value="<%= p.id %>" <%= filterBrand === p.id ? 'selected' : '' %>><%= p.name %></option>
+      <% if ((profiles || []).length > 1) { %>
+      <select name="brand" class="rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-700 focus:outline-none">
+        <option value="">All brands</option>
+        <% for (const p of profiles) { %>
+          <option value="<%= p.id %>" <%= filterBrand === p.id ? 'selected' : '' %>><%= p.name %></option>
+        <% } %>
+      </select>
+      <% } else { %>
+      <input type="hidden" name="brand" value="<%= filterBrand || '' %>">
       <% } %>
-    </select>
-    <% } %>
 
-    <button type="submit" class="bg-zinc-100 border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-200 transition">Search</button>
-    <% if (q || filterStatus || filterBrand) { %>
-      <a href="/songs" class="text-sm px-4 py-2 text-zinc-500 hover:text-zinc-700 transition self-center">Clear</a>
-    <% } %>
+      <select name="sort" class="rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-700 focus:outline-none">
+        <option value="" <%= sort === '' ? 'selected' : '' %>>Recently Updated</option>
+        <option value="created" <%= sort === 'created' ? 'selected' : '' %>>Newest First</option>
+        <option value="title" <%= sort === 'title' ? 'selected' : '' %>>Title A–Z</option>
+        <option value="status" <%= sort === 'status' ? 'selected' : '' %>>Status</option>
+        <option value="readiness" <%= sort === 'readiness' ? 'selected' : '' %>>Most Ready</option>
+      </select>
+
+      <button type="submit" class="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700">Apply</button>
+      <% if (q || filterStatus || filterBrand || sort) { %>
+      <a href="/songs" class="rounded-2xl border border-zinc-200 px-4 py-3 text-center text-sm font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-700">Clear</a>
+      <% } %>
+    </div>
   </form>
 
-  <!-- Quick filter tabs -->
-  <div class="flex gap-1 mb-6 border-b border-zinc-200 -mx-8 px-8 overflow-x-auto">
-    <%
-      const allSongsForCount = songs; // already filtered by server if filterStatus set
-      // Re-count from raw — use the passed-in totals from server
-      const tabs = [
-        ['', 'All Songs', totalCounts.all],
-        ['approved', '✅ Approved', totalCounts.approved],
-        ['draft', 'Drafts', totalCounts.draft],
-      ];
-    %>
-    <% for (const [val, label, count] of tabs) { %>
-    <a href="/songs?status=<%= val %><%= q ? '&q=' + encodeURIComponent(q) : '' %><%= filterBrand ? '&brand=' + encodeURIComponent(filterBrand) : '' %>"
-       class="shrink-0 pb-2.5 px-3 text-sm border-b-2 transition-colors whitespace-nowrap
-         <%= filterStatus === val ? (val === 'approved' ? 'border-emerald-500 text-emerald-700 font-semibold' : 'border-zinc-900 text-zinc-900 font-semibold') : 'border-transparent text-zinc-400 hover:text-zinc-700' %>">
-      <%= label %>
-      <span class="ml-1.5 text-xs <%= filterStatus === val ? (val === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-200 text-zinc-600') : 'text-zinc-400' %> px-1.5 py-0.5 rounded-full font-medium"><%= count %></span>
-    </a>
-    <% } %>
+  <div class="mb-6 flex flex-wrap gap-2">
+    <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm">All <%= totalCounts.all %></span>
+    <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm">Draft <%= totalCounts.draft %></span>
+    <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm">Editing <%= totalCounts.editing %></span>
+    <span class="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-3 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm">Submitted <%= totalCounts.submitted %></span>
+    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm">Outreach Complete <%= totalCounts.outreachComplete %></span>
+    <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-500 shadow-sm">Archived <%= totalCounts.archived %></span>
+  </div>
+
+  <div x-show="selected.length > 0" x-cloak class="sticky top-4 z-20 mb-5 rounded-2xl border border-zinc-900 bg-zinc-900 px-4 py-3 text-white shadow-2xl">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex items-center gap-3 text-sm">
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" class="rounded border-zinc-600 bg-zinc-800" @change="toggleAll($event.target.checked)" :checked="selected.length === totalCards && totalCards > 0">
+          <span x-text="selected.length + ' selected'"></span>
+        </label>
+        <button @click="clearSelection()" class="text-zinc-300 transition hover:text-white">Clear</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <select x-model="bulkStatus" class="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-white focus:outline-none">
+          <option value="">Set status…</option>
+          <% for (const option of songStatusOptions) { %>
+            <option value="<%= option.value %>"><%= option.label %></option>
+          <% } %>
+        </select>
+        <button @click="applyBulkStatus()" :disabled="!bulkStatus" class="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-100 disabled:opacity-40">Update Status</button>
+        <button @click="archiveSelected()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Archive</button>
+      </div>
+    </div>
   </div>
 
   <% if (songs.length === 0) { %>
-    <div class="text-center py-20 text-zinc-400">
-      <div class="text-5xl mb-4">🎵</div>
+    <div class="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-20 text-center text-zinc-400">
+      <div class="mb-4 text-5xl">🎵</div>
       <div class="text-lg font-medium text-zinc-500">No songs found</div>
-      <div class="text-sm mt-2">
-        <% if (q || filterStatus) { %>
+      <div class="mt-2 text-sm">
+        <% if (q || filterStatus || filterBrand) { %>
           Try adjusting your filters, or <a href="/songs" class="underline">clear them</a>.
         <% } else { %>
           <a href="/ideas" class="underline">Promote an idea</a> to get started.
@@ -139,245 +98,176 @@
       </div>
     </div>
   <% } else { %>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-    <% for (const song of songs) { %>
-    <%
-      const isApproved = song.status === 'approved';
-    %>
-    <div class="group relative flex flex-col rounded-2xl overflow-hidden transition-all
-                <%= isApproved
-                  ? 'bg-white ring-2 ring-emerald-400 shadow-emerald-100 shadow-lg hover:shadow-emerald-200 hover:ring-emerald-500'
-                  : 'bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md' %>"
-         id="song-card-<%= song.id %>"
-         :class="selected.includes('<%= song.id %>') ? 'ring-2 ring-zinc-900' : ''">
+    <div class="hidden rounded-2xl px-5 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 lg:grid"
+         style="grid-template-columns: 44px minmax(0,2.9fr) 118px minmax(0,1.5fr) 185px 185px;">
+      <div>Select</div>
+      <div>Song</div>
+      <div>Brand</div>
+      <div>Description</div>
+      <div>Status</div>
+      <div>Quick Actions</div>
+    </div>
 
-      <!-- APPROVED green header strip -->
-      <% if (isApproved) { %>
-      <div class="bg-gradient-to-r from-emerald-500 to-green-400 px-4 py-2 flex items-center justify-between">
-        <span class="text-white text-xs font-bold tracking-wide flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-          APPROVED — Ready to Distribute
-        </span>
-        <span class="text-emerald-100 text-xs"><%= timeAgo(song.updated_at || song.created_at) %></span>
-      </div>
+    <div class="space-y-4">
+      <% for (const song of songs) { %>
+      <article id="song-card-<%= song.id %>"
+        class="rounded-[28px] border border-zinc-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_18px_45px_rgba(15,23,42,0.09)]"
+        :class="selected.includes('<%= song.id %>') ? 'ring-2 ring-zinc-900 border-zinc-900' : ''">
+        <div class="grid gap-4 p-4 lg:items-center lg:p-5"
+             style="grid-template-columns: 1fr;"
+             >
+          <div class="flex items-start gap-4 lg:hidden">
+            <input type="checkbox" class="mt-1 h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+              :checked="selected.includes('<%= song.id %>')"
+              @change="toggleOne('<%= song.id %>', $event.target.checked)">
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <a href="/songs/<%= song.id %>" class="text-lg font-bold leading-tight text-zinc-900 hover:text-zinc-700"><%= song.title || song.topic || song.id %></a>
+                <% if (song.brand_profile_id) { %>
+                <span class="rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700"><%= brandLabel(song.brand_profile_id) %></span>
+                <% } %>
+              </div>
+              <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                <span><%= song.durationLabel %></span>
+                <span>•</span>
+                <span><%= song.wordCount %> words</span>
+                <span>•</span>
+                <span><%= timeAgo(song.updated_at || song.created_at) %></span>
+              </div>
+              <p class="mt-3 line-clamp-2 text-sm leading-6 text-zinc-600"><%= song.description %></p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span class="rounded-full border px-2.5 py-1 text-[11px] font-semibold <%= statusBadge(song.status) %>"><%= songStatusLabel(song.status) %></span>
+                <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"><%= song.releaseLinkCount %> link<%= song.releaseLinkCount === 1 ? '' : 's' %></span>
+                <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"><%= song.hasMarketingPack ? 'marketing pack' : 'no pack yet' %></span>
+                <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"><%= song.hasAudio ? 'audio' : 'no audio' %></span>
+                <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"><%= song.hasArtwork ? 'artwork' : 'no artwork' %></span>
+              </div>
+              <div class="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                <select onchange="changeSongStatus('<%= song.id %>', this.value)" class="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 focus:outline-none">
+                  <% for (const option of songStatusOptions) { %>
+                    <option value="<%= option.value %>" <%= song.status === option.value ? 'selected' : '' %>><%= option.label %></option>
+                  <% } %>
+                </select>
+                <a href="/songs/<%= song.id %>" class="rounded-xl border border-zinc-200 px-3 py-2 text-center text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">Open</a>
+                <a href="/songs/<%= song.id %>?tab=marketing" class="rounded-xl bg-zinc-900 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-zinc-700">Marketing</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="hidden lg:grid lg:items-center lg:gap-4" style="grid-template-columns: 44px minmax(0,2.9fr) 118px minmax(0,1.5fr) 185px 185px;">
+            <div>
+              <input type="checkbox" class="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+                :checked="selected.includes('<%= song.id %>')"
+                @change="toggleOne('<%= song.id %>', $event.target.checked)">
+            </div>
+
+            <div class="min-w-0">
+              <div class="flex items-center gap-3">
+                <% if (song.previewImageUrl) { %>
+                  <img src="<%= song.previewImageUrl %>" alt="<%= song.title || song.topic %>" class="h-14 w-14 shrink-0 rounded-2xl border border-zinc-200 object-cover">
+                <% } else { %>
+                  <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-gradient-to-br from-zinc-100 to-zinc-200 text-xl text-zinc-400">🎵</div>
+                <% } %>
+                <div class="min-w-0">
+                  <a href="/songs/<%= song.id %>" class="block truncate text-base font-bold text-zinc-900 hover:text-zinc-700"><%= song.title || song.topic || song.id %></a>
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                    <span><%= song.durationLabel %></span>
+                    <span>•</span>
+                    <span><%= song.wordCount %> words</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <% if (song.brand_profile_id) { %>
+                <span class="inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700"><%= brandLabel(song.brand_profile_id) %></span>
+              <% } else { %>
+                <span class="text-xs text-zinc-400">—</span>
+              <% } %>
+            </div>
+
+            <div class="min-w-0">
+              <p class="line-clamp-2 text-sm leading-6 text-zinc-600"><%= song.description %></p>
+            </div>
+
+            <div>
+              <span class="mb-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold <%= statusBadge(song.status) %>"><%= songStatusLabel(song.status) %></span>
+              <select onchange="changeSongStatus('<%= song.id %>', this.value)" class="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 focus:outline-none">
+                <% for (const option of songStatusOptions) { %>
+                  <option value="<%= option.value %>" <%= song.status === option.value ? 'selected' : '' %>><%= option.label %></option>
+                <% } %>
+              </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <a href="/songs/<%= song.id %>" class="rounded-xl border border-zinc-200 px-3 py-2 text-center text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">Open Song</a>
+              <div class="grid grid-cols-2 gap-2">
+                <a href="/songs/<%= song.id %>/edit" class="rounded-xl border border-zinc-200 px-3 py-2 text-center text-xs font-medium text-zinc-600 transition hover:bg-zinc-50">Edit</a>
+                <a href="/songs/<%= song.id %>?tab=marketing" class="rounded-xl bg-zinc-900 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-zinc-700">Marketing</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
       <% } %>
-
-      <!-- Select checkbox (select mode) -->
-      <div x-show="selecting" class="absolute <%= isApproved ? 'top-9' : 'top-2' %> left-2 z-10">
-        <input type="checkbox" class="w-4 h-4 rounded accent-zinc-900 cursor-pointer"
-               :checked="selected.includes('<%= song.id %>')"
-               @change="toggleOne('<%= song.id %>', $event.target.checked)">
-      </div>
-
-      <!-- Delete button — top right, hover only when NOT selecting -->
-      <button x-show="!selecting"
-        onclick="deleteSong('<%= song.id %>', '<%= (song.title || song.topic || song.id).replace(/'/g, "\\'") %>')"
-        class="absolute <%= isApproved ? 'top-9' : 'top-2' %> right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs backdrop-blur-sm"
-        title="Delete song">✕</button>
-
-      <!-- Thumbnail -->
-      <a href="/songs/<%= song.id %>" class="block relative <%= isApproved ? 'aspect-video' : 'aspect-video' %> bg-gradient-to-br from-zinc-100 to-zinc-200 overflow-hidden">
-        <% if (song.thumbnailUrl) { %>
-          <img src="<%= song.thumbnailUrl %>" alt="<%= song.title %>"
-               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-        <% } else { %>
-          <div class="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-2">
-            <span class="text-4xl">🎵</span>
-            <span class="text-xs font-medium">No thumbnail yet</span>
-          </div>
-        <% } %>
-
-        <!-- Status badge (non-approved only) -->
-        <% if (!isApproved) { %>
-        <div class="absolute top-2 left-2">
-          <span class="<%= statusBadge(song.status) %> shadow-sm text-xs px-2 py-0.5 rounded-full font-medium">
-            <%= (song.status || 'draft').replace(/_/g,' ') %>
-          </span>
-        </div>
-        <% } %>
-
-        <!-- Audio indicator -->
-        <% if (song.hasAudio) { %>
-        <div class="absolute bottom-2 left-2">
-          <span class="bg-black/60 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur-sm flex items-center gap-1">
-            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
-            audio
-          </span>
-        </div>
-        <% } %>
-      </a>
-
-      <!-- Card body -->
-      <div class="p-4 flex-1 flex flex-col gap-2">
-        <a href="/songs/<%= song.id %>" class="block">
-          <h3 class="font-semibold text-sm leading-snug line-clamp-2 <%= isApproved ? 'text-zinc-900' : 'text-zinc-800' %>">
-            <%= song.title || song.topic || song.id %>
-          </h3>
-          <% if (song.topic && song.title && song.topic !== song.title) { %>
-            <p class="text-xs text-zinc-400 mt-0.5 truncate"><%= song.topic %></p>
-          <% } %>
-        </a>
-        <% if (song.brand_profile_id) { %>
-          <span class="self-start text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium"><%= brandLabel(song.brand_profile_id) %></span>
-        <% } %>
-
-        <% if (isApproved) { %>
-        <!-- Approved action row -->
-        <div class="flex gap-2 pt-2 mt-auto border-t border-emerald-100">
-          <a href="/songs/<%= song.id %>" class="flex-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-2 rounded-lg transition text-center">
-            View & Distribute →
-          </a>
-        </div>
-        <% } else { %>
-        <!-- Non-approved: progress bar + approve button -->
-        <div class="space-y-1 mt-auto">
-          <div class="flex items-center justify-between text-xs text-zinc-500">
-            <span><%= song.progress.done %>/<%= song.progress.total %> steps</span>
-            <span class="font-medium"><%= song.progress.pct %>%</span>
-          </div>
-          <div class="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-            <div class="h-full rounded-full transition-all
-              <%= song.progress.pct >= 100 ? 'bg-emerald-500' : song.progress.pct >= 60 ? 'bg-green-500' : song.progress.pct >= 30 ? 'bg-amber-400' : 'bg-zinc-300' %>"
-              style="width: <%= song.progress.pct %>%"></div>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 pt-2 border-t border-zinc-100">
-          <button onclick="approveSong('<%= song.id %>')"
-            class="flex-1 text-xs bg-zinc-100 hover:bg-emerald-50 hover:text-emerald-700 text-zinc-600 font-medium px-2 py-1.5 rounded-lg transition">
-            Mark Approved
-          </button>
-          <span class="text-xs text-zinc-400"><%= timeAgo(song.updated_at || song.created_at) %></span>
-        </div>
-        <% } %>
-      </div>
-
     </div>
-    <% } %>
-  </div>
   <% } %>
-</div>
-
-<!-- Delete confirmation modal -->
-<div id="delete-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-8 hidden">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
-    <div class="text-xl mb-2">🗑️ Delete Song?</div>
-    <p class="text-sm text-zinc-600 mb-1">This will permanently remove:</p>
-    <p class="text-sm font-bold text-zinc-900 mb-3" id="delete-song-name"></p>
-    <p class="text-xs text-zinc-400 mb-6">The database record is deleted. Output files on disk are kept — remove them manually from <code class="font-mono text-xs">output/songs/</code> if needed.</p>
-    <div class="flex gap-3">
-      <button id="delete-confirm-btn" onclick="confirmDelete()"
-        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2.5 rounded-xl transition text-sm">
-        Delete
-      </button>
-      <button onclick="closeDeleteModal()"
-        class="flex-1 border border-zinc-200 text-zinc-600 px-4 py-2.5 rounded-xl hover:bg-zinc-50 transition text-sm">
-        Cancel
-      </button>
-    </div>
-  </div>
 </div>
 
 <script>
 window.catalog = function() {
   return {
-    selecting: false,
     selected: [],
     bulkStatus: '',
     get totalCards() { return document.querySelectorAll('[id^="song-card-"]').length; },
-
-    toggleSelect() {
-      this.selecting = !this.selecting;
-      if (!this.selecting) { this.selected = []; this.bulkStatus = ''; }
-    },
-    cancelSelect() { this.selecting = false; this.selected = []; this.bulkStatus = ''; },
     toggleOne(id, checked) {
-      if (checked) { if (!this.selected.includes(id)) this.selected.push(id); }
-      else { this.selected = this.selected.filter(s => s !== id); }
+      if (checked) {
+        if (!this.selected.includes(id)) this.selected.push(id);
+      } else {
+        this.selected = this.selected.filter(item => item !== id);
+      }
     },
     toggleAll(checked) {
       if (checked) {
         this.selected = Array.from(document.querySelectorAll('[id^="song-card-"]')).map(el => el.id.replace('song-card-', ''));
-      } else { this.selected = []; }
+      } else {
+        this.selected = [];
+      }
     },
-
+    clearSelection() {
+      this.selected = [];
+      this.bulkStatus = '';
+    },
     async applyBulkStatus() {
       if (!this.bulkStatus || !this.selected.length) return;
-      const ids = [...this.selected];
-      const status = this.bulkStatus;
-      const r = await fetch('/api/songs/bulk-status', {
+      const response = await fetch('/api/songs/bulk-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, status }),
+        body: JSON.stringify({ ids: [...this.selected], status: this.bulkStatus }),
       });
-      const d = await r.json();
-      if (d.ok) { window.location.reload(); }
-      else alert('Bulk update failed: ' + (d.error || 'unknown'));
+      const data = await response.json();
+      if (!data.ok) return alert(data.error || 'Bulk status update failed');
+      window.location.reload();
     },
-
-    async bulkDelete() {
-      if (!this.selected.length) return;
-      const count = this.selected.length;
-      if (!confirm(`Delete ${count} song${count !== 1 ? 's' : ''}? This removes all files from disk too.`)) return;
-      const ids = [...this.selected];
-      for (const id of ids) {
-        await fetch('/api/songs/' + id, { method: 'DELETE' });
-        const card = document.getElementById('song-card-' + id);
-        if (card) card.remove();
-      }
-      this.selected = [];
-      this.selecting = false;
-      const remaining = document.querySelectorAll('[id^="song-card-"]').length;
-      const el = document.getElementById('song-count');
-      if (el) el.textContent = remaining + ' song' + (remaining !== 1 ? 's' : '');
+    async archiveSelected() {
+      this.bulkStatus = 'archived';
+      await this.applyBulkStatus();
     },
   };
 };
 
-let _deleteSongId = null;
-
-function deleteSong(songId, songName) {
-  _deleteSongId = songId;
-  document.getElementById('delete-song-name').textContent = songName;
-  const btn = document.getElementById('delete-confirm-btn');
-  btn.textContent = 'Delete'; btn.disabled = false;
-  document.getElementById('delete-modal').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeDeleteModal() {
-  _deleteSongId = null;
-  document.getElementById('delete-modal').classList.add('hidden');
-  document.body.style.overflow = '';
-  const btn = document.getElementById('delete-confirm-btn');
-  if (btn) { btn.textContent = 'Delete'; btn.disabled = false; }
-}
-
-function confirmDelete() {
-  if (!_deleteSongId) return;
-  const btn = document.getElementById('delete-confirm-btn');
-  btn.textContent = 'Deleting…'; btn.disabled = true;
-  const idToDelete = _deleteSongId;
-  fetch('/api/songs/' + idToDelete, { method: 'DELETE' })
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok) {
-        closeDeleteModal();
-        const card = document.getElementById('song-card-' + idToDelete);
-        if (card) card.remove();
-        const remaining = document.querySelectorAll('[id^="song-card-"]').length;
-        const el = document.getElementById('song-count');
-        if (el) el.textContent = remaining + ' song' + (remaining !== 1 ? 's' : '');
-      } else {
-        btn.textContent = 'Delete'; btn.disabled = false;
-        alert('Delete failed: ' + (d.error || 'unknown error'));
-      }
-    })
-    .catch(err => { btn.textContent = 'Delete'; btn.disabled = false; alert('Error: ' + err.message); });
-}
-
-function approveSong(songId) {
-  fetch('/api/songs/' + songId + '/approve', { method: 'POST' })
-    .then(r => r.json())
-    .then(d => { if (d.ok) window.location.reload(); else alert('Failed: ' + (d.error || 'unknown')); });
+async function changeSongStatus(songId, status) {
+  const response = await fetch('/api/songs/' + songId + '/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  const data = await response.json();
+  if (!data.ok) {
+    alert(data.error || 'Status update failed');
+    return;
+  }
+  window.location.reload();
 }
 </script>

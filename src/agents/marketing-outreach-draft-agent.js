@@ -8,6 +8,7 @@ import {
 import { transitionOutreachItem } from '../shared/marketing-outreach-state.js';
 import { getReleaseMarketingPack, getBundleMarketingPack } from '../shared/release-marketing-pack.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
+import { buildAttachmentPlanForOutreachItem, buildBrandSocialLinks } from '../shared/marketing-email-assets.js';
 
 const BRAND_PROFILE = loadBrandProfile();
 
@@ -100,12 +101,12 @@ async function buildDraft(item, options = {}) {
     const response = await runAgent('marketing-outreach-draft', AGENT_DEF, task, { maxRetries: 0 });
     const parsed = parseAgentJson(response.text);
     if (!parsed.subject || !parsed.body) throw new Error('LLM response missing subject/body');
-    return {
+    return ensureDraftHasReleaseLinks({
       subject: String(parsed.subject).trim(),
       body: String(parsed.body).trim(),
       safety_notes: parsed.safety_notes ? String(parsed.safety_notes).trim() : '',
       generation_method: 'llm',
-    };
+    }, context);
   } catch (error) {
     const fallback = deterministicDraft(context, 'deterministic_after_llm_error');
     fallback.safety_notes = `LLM failed; deterministic fallback used: ${error.message}`;
@@ -130,11 +131,19 @@ function buildContext(item) {
     : releaseSongs[0] ? getReleaseMarketingPack(releaseSongs[0].id) : null;
 
   return {
+    item: {
+      id: item.id,
+      song_id: item.song_id,
+      outreach_mode: item.outreach_mode,
+      bundle_song_ids: item.bundle_song_ids || [],
+      release_context: item.release_context || [],
+    },
     brand: {
       name: BRAND_PROFILE.brand_name || 'Pancake Robot',
       description: BRAND_PROFILE.description || BRAND_PROFILE.brand_description || '',
       audience: BRAND_PROFILE.audience || {},
       social: BRAND_PROFILE.social || {},
+      social_links: buildBrandSocialLinks({ releaseLinks: Object.values(releaseLinks).flat() }),
       disclosure: 'AI-assisted and human-directed music project',
     },
     outreach_mode: item.outreach_mode,
@@ -185,6 +194,9 @@ function deterministicDraft(context, generationMethod) {
   const linkLines = primaryLinks.length
     ? primaryLinks.map(link => `${link.platform}: ${link.url}`).join('\n')
     : '[Add public streaming / preview links before sending]';
+  const socialLines = (context.brand.social_links || []).map(link => `${link.label}: ${link.url}`).join('\n');
+  const attachmentPlan = buildAttachmentPlanForOutreachItem(context.item || {});
+  const linkBlock = attachmentPlan.outreachLinkBlock || '';
   const angle = context.outlet.outreach_angle || context.outlet.research_summary || '';
   const needsDisclosure = context.safety_requirements.include_ai_disclosure;
 
@@ -204,15 +216,19 @@ function deterministicDraft(context, generationMethod) {
     `Release${isBundle ? 's' : ''}:`,
     ...releases.map(song => `- ${song.title || song.topic || song.id}`),
     '',
-    'Links:',
-    linkLines,
+    linkBlock ? 'Links:' : '',
+    linkBlock || linkLines,
+    socialLines ? `\nArtist links:\n${socialLines}` : '',
     '',
-    'Happy to send a cleaner asset pack, clips, cover art, or any other info that helps.',
+    'Happy to share anything else that helps.',
     '',
     `Best,\nKen (${brandName})`,
   ].filter(line => line !== '').join('\n');
 
-  return { subject, body, safety_notes: 'Deterministic draft generated; review before use.', generation_method: generationMethod };
+  return ensureDraftHasReleaseLinks(
+    { subject, body, safety_notes: 'Deterministic draft generated; review before use.', generation_method: generationMethod },
+    context,
+  );
 }
 
 function validateDraft(draft, item) {
@@ -241,6 +257,30 @@ function validateDraft(draft, item) {
 
 function firstSentence(text) {
   return String(text || '').split(/[.!?]\s/)[0].slice(0, 220);
+}
+
+function ensureDraftHasReleaseLinks(draft, context) {
+  const releaseLines = (context.releases || [])
+    .flatMap(release => (release.links || []).filter(link => link?.url).map(link => `${link.platform}: ${link.url}`));
+  const body = String(draft.body || '');
+  const attachmentPlan = buildAttachmentPlanForOutreachItem(context.item || {});
+  const socialLines = (context.brand.social_links || []).map(link => `${link.label}: ${link.url}`);
+  const outreachLinkBlock = attachmentPlan.outreachLinkBlock || '';
+  const missingReleaseLines = releaseLines.filter(line => !body.includes(line.split(': ').slice(1).join(': ')));
+  const missingSocialLines = socialLines.filter(line => !body.includes(line.split(': ').slice(1).join(': ')));
+  const missingOutreachBlock = outreachLinkBlock && !body.includes(outreachLinkBlock.split('\n')[0]);
+
+  if (!missingReleaseLines.length && !missingSocialLines.length && !missingOutreachBlock) return draft;
+
+  const addendum = [];
+  if (missingOutreachBlock) addendum.push(outreachLinkBlock, '');
+  if (missingReleaseLines.length) addendum.push('Links:', ...missingReleaseLines, '');
+  if (missingSocialLines.length) addendum.push('Artist links:', ...missingSocialLines, '');
+
+  return {
+    ...draft,
+    body: `${body.trim()}${addendum.length ? `\n\n${addendum.join('\n')}` : ''}`.trim(),
+  };
 }
 
 function safeParse(value) {

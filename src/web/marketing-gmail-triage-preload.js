@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 import { getInboxMessages, getInboxSummary } from '../shared/marketing-inbox-db.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
+import { buildBrandSocialLinks } from '../shared/marketing-email-assets.js';
 
 const require = createRequire(import.meta.url);
 const express = require('express');
@@ -96,10 +97,14 @@ function renderGmailTriageSection() {
     const from = msg.from_name
       ? `${msg.from_name} <${msg.from_email || ''}>`
       : msg.from_email || '';
+    const gmailUrl = buildGmailMessageUrl(msg);
+    const subjectHtml = gmailUrl
+      ? `<a href="${esc(gmailUrl)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline">${esc(msg.subject || '(no subject)')}</a>`
+      : `<div class="font-semibold">${esc(msg.subject || '(no subject)')}</div>`;
 
     return `<tr class="align-top border-b last:border-b-0">
       <td class="py-4 pr-4 font-medium max-w-xs">
-        <div class="font-semibold">${esc(msg.subject || '(no subject)')}</div>
+        ${subjectHtml}
         <div class="text-xs text-zinc-500 mt-0.5">${esc(from)}</div>
         <div class="text-xs text-zinc-400 mt-0.5">${msg.received_at ? esc(new Date(msg.received_at).toLocaleString()) : ''}</div>
       </td>
@@ -139,13 +144,8 @@ function buildSuggestedReply(msg) {
   const hasPress = /blog|press|review|media|feature|interview/.test(combined);
   const hasCollaboration = /collab|partner|sponsor|brand deal/.test(combined);
 
-  const links = [];
-  if (social.spotify_artist_url) links.push(`Spotify: ${social.spotify_artist_url}`);
-  if (social.youtube_channel_url) links.push(`YouTube: ${social.youtube_channel_url}`);
-  if (social.instagram_url) links.push(`Instagram: ${social.instagram_url}`);
-  if (social.tiktok_url) links.push(`TikTok: ${social.tiktok_url}`);
+  const links = buildBrandSocialLinks().map(link => `${link.label}: ${link.url}`);
   if (social.linktree_url) links.push(`All links: ${social.linktree_url}`);
-  if (social.website_url) links.push(`Website: ${social.website_url}`);
   if (social.press_kit_url) links.push(`Press kit: ${social.press_kit_url}`);
   const linkBlock = links.length ? links.join('\n') : '[Add social links in Brand Profile → social section]';
 
@@ -162,6 +162,12 @@ function buildSuggestedReply(msg) {
   }
 
   return `Hi,\n\nThanks so much for reaching out.\n\n${brand} is a children's music project with upbeat, silly songs for kids and families.\n\nHere are our links:\n${linkBlock}\n\nLet me know what would be most helpful.\n\nBest,\nKen (${brand})\n${email}`;
+}
+
+function buildGmailMessageUrl(msg) {
+  if (msg.gmail_thread_id) return `https://mail.google.com/mail/u/0/#inbox/${encodeURIComponent(msg.gmail_thread_id)}`;
+  if (msg.gmail_message_id) return `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(msg.gmail_message_id)}`;
+  return null;
 }
 
 function inboxBadge(cls) {

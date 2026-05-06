@@ -171,44 +171,6 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
     }
   }
 
-  // ── Thumbnails ─────────────────────────────────────────────
-  const thumbDir = join(songDir, 'thumbnails');
-  if (!fs.existsSync(thumbDir)) {
-    warn('Thumbnails', 'Directory missing — creative-manager must run');
-  } else {
-    const finalPngs = fs.readdirSync(thumbDir).filter(f => f.endsWith('-final.png'));
-    const basePngs = fs.readdirSync(thumbDir).filter(f => f.endsWith('-base.png'));
-    const allPngs = fs.readdirSync(thumbDir).filter(f => f.endsWith('.png'));
-
-    if (allPngs.length === 0) {
-      warn('Thumbnails', 'No PNG files — creative-manager must run (check CF_ACCOUNT_ID and CF_API_TOKEN in .env)');
-    } else {
-      const preferredPngs = finalPngs.length > 0 ? finalPngs : allPngs;
-      const validPreferred = preferredPngs.filter(f => {
-        try { return hasValidPngHeader(join(thumbDir, f)); } catch { return false; }
-      });
-      const invalidPreferred = preferredPngs.filter(f => !validPreferred.includes(f));
-      const invalidBasePngs = basePngs.filter(f => {
-        try { return !hasValidPngHeader(join(thumbDir, f)); } catch { return true; }
-      });
-
-      if (validPreferred.length === 0) {
-        fail('Thumbnails', `${preferredPngs[0]} is not a valid PNG (bad magic bytes)`);
-      } else if (finalPngs.length === 0) {
-        warn('Thumbnails', `${validPreferred.length} valid PNG(s) present but no *-final.png with title text — title overlay may have failed`);
-      } else {
-        pass('Thumbnails', `${validPreferred.length} final PNG(s) with title text + ${basePngs.length} base PNG(s)`);
-      }
-
-      if (invalidPreferred.length > 0) {
-        warn('Thumbnails', `${invalidPreferred.length} preferred thumbnail file(s) failed PNG validation: ${invalidPreferred.join(', ')}`);
-      }
-      if (invalidBasePngs.length > 0 && finalPngs.length > 0) {
-        warn('Thumbnails', `${invalidBasePngs.length} base artifact(s) failed PNG validation but valid final thumbnail(s) exist: ${invalidBasePngs.join(', ')}`);
-      }
-    }
-  }
-
   const passed = failures.length === 0;
 
   const qaReport = {

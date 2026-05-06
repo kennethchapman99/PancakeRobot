@@ -52,7 +52,7 @@ When crafting image prompts, match this character exactly and be extremely speci
 /**
  * Generate thumbnails for a song using Cloudflare Workers AI (Flux Schnell)
  */
-export async function generateThumbnails({ songId, title, topic, metadata }) {
+export async function generateThumbnails({ songId, title, topic, metadata, generateImages = true, preserveBaseImages = false }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   const thumbDir = join(songDir, 'thumbnails');
   fs.mkdirSync(thumbDir, { recursive: true });
@@ -150,6 +150,12 @@ Output as JSON:
   // Save prompts
   fs.writeFileSync(join(thumbDir, 'image-prompts.json'), JSON.stringify(promptData, null, 2));
 
+  if (!generateImages) {
+    console.log('\n[CREATIVE-MANAGER] Auto image generation disabled for pipeline runs');
+    fs.writeFileSync(join(thumbDir, 'THUMBNAIL_INSTRUCTIONS.md'), buildManualInstructions(promptData, title));
+    return { thumbDir, generatedThumbnails: [], promptData, deferred: true };
+  }
+
   // Check Cloudflare credentials
   const cfAccountId = process.env.CF_ACCOUNT_ID;
   const cfApiToken = process.env.CF_API_TOKEN;
@@ -220,6 +226,9 @@ Output as JSON:
         const finalPath = thumb.filePath.replace('-base.png', '-final.png');
         await addTitleText(thumb.filePath, finalPath, title, thumb.formatName);
         thumb.finalPath = finalPath;
+        if (!preserveBaseImages) {
+          try { fs.unlinkSync(thumb.filePath); } catch {}
+        }
         console.log(`[CREATIVE-MANAGER] ✓ Title text added → ${finalPath.split('/').pop()}`);
       } catch (err) {
         console.log(`[CREATIVE-MANAGER] ⚠ Title text failed for ${thumb.formatName}: ${err.message}`);

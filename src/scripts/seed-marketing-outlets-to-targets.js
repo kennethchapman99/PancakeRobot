@@ -73,6 +73,17 @@ function mapAiPolicy(outlet) {
   return 'unclear';
 }
 
+function mapAiPolicyDetails(outlet) {
+  const stance = outlet.ai_music_stance || {};
+  const status = mapAiPolicy(outlet);
+  return {
+    status: status === 'unclear' && !stance.status ? 'not_found' : status,
+    evidence_url: Array.isArray(stance.evidence_urls) && stance.evidence_urls.length ? stance.evidence_urls[0] : null,
+    evidence_text: stance.notes || null,
+    confidence: stance.risk_level === 'low' ? 'high' : stance.risk_level === 'medium' ? 'medium' : 'high',
+  };
+}
+
 function mapAiRiskScore(riskLevel) {
   if (riskLevel === 'low') return 20;
   if (riskLevel === 'medium') return 50;
@@ -105,6 +116,74 @@ function contactMethod(outlet) {
   return contact.submission_path || contact.email || null;
 }
 
+function socialUrl(handle, platform) {
+  if (!handle) return null;
+  if (/^https?:\/\//i.test(handle)) return handle;
+  const clean = String(handle).replace(/^@/, '');
+  const base = {
+    instagram: 'https://www.instagram.com/',
+    tiktok: 'https://www.tiktok.com/@',
+    youtube: 'https://www.youtube.com/@',
+    facebook: 'https://www.facebook.com/',
+    twitter: 'https://x.com/',
+    threads: 'https://www.threads.net/@',
+  }[platform];
+  return base ? `${base}${clean}` : null;
+}
+
+function buildCostPolicy(outlet) {
+  if (outlet.id === 'kids_listen') {
+    return {
+      requires_payment: true,
+      cost_type: 'membership',
+      cost_amount: 100,
+      cost_currency: 'USD',
+      evidence_url: 'https://kidslisten.org/creator-membership',
+      evidence_text: 'General Membership - $100/yr',
+      confidence: 'high',
+    };
+  }
+  return {
+    requires_payment: false,
+    cost_type: 'free',
+    cost_amount: null,
+    cost_currency: null,
+    evidence_url: null,
+    evidence_text: null,
+    confidence: 'low',
+  };
+}
+
+function buildContactability(outlet) {
+  const contact = outlet.contact || {};
+  const methods = [];
+  if (contact.email) methods.push({ type: 'email', value: contact.email, source_url: outlet.url || null, confidence: 'high' });
+  if (contact.submission_path) methods.push({ type: 'contact_form', value: contact.submission_path, source_url: outlet.url || null, confidence: 'medium' });
+  return {
+    status: methods.length ? 'contactable' : 'needs_manual_review',
+    free_contact_method_found: methods.length > 0,
+    best_channel: contact.email ? 'email' : contact.submission_path ? 'contact_form' : 'unknown',
+    contact_methods: methods,
+    evidence_url: outlet.url || null,
+    notes: methods.length ? null : 'No usable free outreach route found.',
+  };
+}
+
+function buildEligibility(outlet, aiPolicyDetails, costPolicy, contactability) {
+  const doNotContact = mapTargetStatus(outlet) === 'do_not_contact';
+  const reasonCodes = [];
+  if (costPolicy.requires_payment) reasonCodes.push(costPolicy.cost_type === 'membership' ? 'paid_membership_required' : 'requires_payment');
+  if (aiPolicyDetails.status === 'banned') reasonCodes.push('ai_music_banned');
+  if (contactability.status !== 'contactable' || contactability.free_contact_method_found !== true) reasonCodes.push('no_contact_method');
+  if (doNotContact) reasonCodes.push('do_not_contact');
+  return {
+    eligible: !costPolicy.requires_payment && aiPolicyDetails.status !== 'banned' && contactability.status === 'contactable' && contactability.free_contact_method_found === true && !doNotContact,
+    reason_codes: [...new Set(reasonCodes)],
+    reason_summary: reasonCodes.length ? reasonCodes.join(', ') : 'Eligible for outreach.',
+    last_checked_at: new Date().toISOString(),
+  };
+}
+
 function domainFromUrl(value) {
   try {
     if (!value || !String(value).startsWith('http')) return null;
@@ -117,8 +196,11 @@ function domainFromUrl(value) {
 function normalizeOutletToMarketingTarget(outlet, brandProfileId) {
   const contact = outlet.contact || {};
   const audience = outlet.audience || {};
-  const stance = outlet.ai_music_stance || {};
   const sourceUrl = firstSourceUrl(outlet);
+  const aiPolicyDetails = mapAiPolicyDetails(outlet);
+  const costPolicy = buildCostPolicy(outlet);
+  const contactability = buildContactability(outlet);
+  const outreachEligibility = buildEligibility(outlet, aiPolicyDetails, costPolicy, contactability);
 
   return {
     id: outlet.id,
@@ -131,6 +213,23 @@ function normalizeOutletToMarketingTarget(outlet, brandProfileId) {
     contact_method: contactMethod(outlet),
     contact_email: contact.email || null,
     handle: Object.values(outlet.social_handles || {}).find(Boolean) || null,
+    official_website_url: outlet.url || null,
+    contact_page_url: null,
+    public_email: contact.email || null,
+    submission_form_url: null,
+    instagram_url: socialUrl(outlet.social_handles?.instagram, 'instagram'),
+    tiktok_url: socialUrl(outlet.social_handles?.tiktok, 'tiktok'),
+    youtube_url: socialUrl(outlet.social_handles?.youtube, 'youtube'),
+    facebook_url: socialUrl(outlet.social_handles?.facebook, 'facebook'),
+    twitter_url: socialUrl(outlet.social_handles?.twitter || outlet.social_handles?.x, 'twitter'),
+    threads_url: socialUrl(outlet.social_handles?.threads, 'threads'),
+    playlist_link_url: null,
+    best_free_contact_method: contact.email || contact.submission_path || null,
+    backup_contact_method: null,
+    contactability,
+    cost_policy: costPolicy,
+    ai_policy_details: aiPolicyDetails,
+    outreach_eligibility: outreachEligibility,
     audience: [audience.primary, audience.age_fit].filter(Boolean).join(' | '),
     geo: audience.geo || null,
     genres: ['children', 'kindie', 'family', 'kids music'],
@@ -140,8 +239,8 @@ function normalizeOutletToMarketingTarget(outlet, brandProfileId) {
       ...(outlet.platforms || []),
     ].filter(Boolean),
     fit_score: outlet.brand_fit_score_0_100 || null,
-    ai_policy: mapAiPolicy(outlet),
-    ai_risk_score: mapAiRiskScore(stance.risk_level),
+    ai_policy: aiPolicyDetails.status,
+    ai_risk_score: mapAiRiskScore((outlet.ai_music_stance || {}).risk_level),
     recommendation: mapRecommendation(outlet),
     research_summary: (outlet.why_it_fits_pancake_robot || []).filter(Boolean).join('\n'),
     outreach_angle: outlet.sample_pitch_hook || (outlet.best_pancake_robot_angles || []).filter(Boolean).join('\n'),

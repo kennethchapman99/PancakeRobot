@@ -28,13 +28,13 @@
       <div class="text-3xl font-bold text-amber-600"><%= stats.songs.in_progress || 0 %></div>
       <div class="text-sm text-zinc-500 mt-1">In Progress</div>
     </a>
-    <a href="/songs?status=ready_to_publish" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
+    <a href="/songs?status=submitted%20to%20DistroKid" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
       <div class="text-3xl font-bold text-green-600"><%= stats.songs.ready || 0 %></div>
-      <div class="text-sm text-zinc-500 mt-1">Ready to Publish</div>
+      <div class="text-sm text-zinc-500 mt-1">Submitted</div>
     </a>
-    <a href="/songs?status=published" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
+    <a href="/songs?status=outreach%20complete" class="bg-white rounded-xl border border-zinc-200 p-5 hover:border-zinc-300 transition">
       <div class="text-3xl font-bold text-emerald-600"><%= stats.songs.published || 0 %></div>
-      <div class="text-sm text-zinc-500 mt-1">Published</div>
+      <div class="text-sm text-zinc-500 mt-1">Outreach Complete</div>
     </a>
   </div>
 
@@ -92,7 +92,7 @@
                   <span class="text-xs text-zinc-400"><%= song.progress.pct %>% ready</span>
                 </div>
               </div>
-              <span class="<%= statusBadge(song.status) %>"><%= song.status %></span>
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold <%= statusBadge(song.status) %>"><%= songStatusLabel(song.status) %></span>
             </a>
           <% } %>
         </div>

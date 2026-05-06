@@ -28,6 +28,7 @@ const server = app.listen(0, async () => {
 
     // API routes — outreach
     ['GET /api/marketing/outreach-items returns 200',           'GET',  '/api/marketing/outreach-items',       200, b => b.ok === true],
+    ['GET /api/marketing/outreach-events returns 200',          'GET',  '/api/marketing/outreach-events',      200, b => b.ok === true],
     ['GET /api/marketing/outreach-summary returns 200',         'GET',  '/api/marketing/outreach-summary',     200, b => b.ok === true],
 
     // 404 for unknown routes
