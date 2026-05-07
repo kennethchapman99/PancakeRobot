@@ -1,5 +1,6 @@
 import {
   createMarketingCampaign,
+  getMarketingCampaigns,
 } from '../shared/marketing-db.js';
 import {
   createOutreachItem,
@@ -10,7 +11,7 @@ import { logMarketingEvent } from '../shared/marketing-events-db.js';
 import { getAllSongs, getReleaseLinks, getSong } from '../shared/db.js';
 import { getActiveProfileId, loadBrandProfile } from '../shared/brand-profile.js';
 import { outletContactedForRelease } from '../shared/marketing-outlets.js';
-import { getMarketingReleaseEntries, getOrCreateReleaseMarketing } from '../shared/marketing-releases.js';
+import { getMarketingReleaseEntries, getOrCreateReleaseMarketing, getReleaseMarketingById } from '../shared/marketing-releases.js';
 import { assertMarketingOutletsReadyForOutreach, canUseForRealOutreach, getActiveBrandOutlets, isEmailTarget } from '../shared/marketing-outlet-health.js';
 
 const BRAND_PROFILE = loadBrandProfile();
@@ -50,6 +51,17 @@ export function getAllOutletsForSelection() {
   return getActiveBrandOutlets({ includeTestData: false }).sort(sortOutlets);
 }
 
+export function getCanonicalEmailOutletsForSelection() {
+  const seen = new Map();
+  for (const outlet of getAllOutletsForSelection()
+    .filter(outlet => isEmailTarget(outlet) && canUseForRealOutreach(outlet))
+    .sort(sortCanonicalEmailOutlets)) {
+    const key = buildCanonicalOutletSelectionKey(outlet);
+    if (!seen.has(key)) seen.set(key, outlet);
+  }
+  return [...seen.values()].sort(sortCanonicalEmailOutlets);
+}
+
 function createSingleReleaseCampaigns({ brandProfileId, selectedSongs, selectedOutlets, excludedOutlets = [], preset, allowSameRelease, dryRun, releaseMarketingId }) {
   const campaigns = [];
 
@@ -77,6 +89,7 @@ function createSingleReleaseCampaigns({ brandProfileId, selectedSongs, selectedO
       excluded_target_ids: [...excludedOutlets, ...sameReleaseExcluded].map(o => o.id),
       exclusion_summary: [...excludedOutlets, ...sameReleaseExcluded].map(o => `${o.name || o.id}: ${o.reason}`).join('; '),
       dry_run: dryRun,
+      ...getLatestSavedTemplateForRelease(releaseMarketing.id),
       brand_context: buildBrandContext({ mode: 'single_release', preset, selectedSongs: [song], selectedOutlets: releaseEligibleOutlets }),
       notes: `Release-level outreach run. ${dryRun ? 'Dry run only; ' : ''}Draft queue only; requires review before Gmail draft/send.`,
     });
@@ -136,6 +149,7 @@ function createBundleCampaign({ brandProfileId, selectedSongs, selectedOutlets, 
     excluded_target_ids: excludedOutlets.map(o => o.id),
     exclusion_summary: excludedOutlets.map(o => `${o.name || o.id}: ${o.reason}`).join('; '),
     dry_run: dryRun,
+    ...getLatestSavedTemplateForRelease(releaseMarketing.id),
     brand_context: buildBrandContext({ mode: 'bundle', preset, selectedSongs, selectedOutlets: filteredOutlets }),
     notes: `Bundle outreach run. ${dryRun ? 'Dry run only; ' : ''}Draft queue only; requires review before Gmail draft/send.`,
   });
@@ -232,6 +246,26 @@ function getSelectionExclusionReason(outlet) {
   if (outlet.cost_policy?.requires_payment === true) return 'paid-only';
   if (!['contactable', 'contactable_manual', 'owned_action'].includes(outlet.contactability?.status)) return 'no usable contact method';
   return null;
+}
+
+function getLatestSavedTemplateForRelease(releaseMarketingId) {
+  const release = getReleaseMarketingById(releaseMarketingId);
+  const releaseTemplate = release?.results?.sharedDraftTemplate || {};
+  if (releaseTemplate.subject_template || releaseTemplate.body_template) {
+    return {
+      subject_template: releaseTemplate.subject_template || null,
+      body_template: releaseTemplate.body_template || null,
+    };
+  }
+  const prior = getMarketingCampaigns(500)
+    .filter(c => c.release_marketing_id === releaseMarketingId)
+    .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
+    .find(c => c.subject_template || c.body_template);
+  if (!prior) return {};
+  return {
+    subject_template: prior.subject_template || null,
+    body_template: prior.body_template || null,
+  };
 }
 
 function createDefaultChannelTask({ campaignId, itemId, outlet, primarySong, safety }) {
@@ -352,6 +386,47 @@ function sortOutlets(a, b) {
   const pb = priorityOrder[b.priority] ?? 5;
   if (pa !== pb) return pa - pb;
   return (b.fit_score || 0) - (a.fit_score || 0);
+}
+
+function sortCanonicalEmailOutlets(a, b) {
+  const emailBias = Number(Boolean(getPreferredEmail(b))) - Number(Boolean(getPreferredEmail(a)));
+  if (emailBias !== 0) return emailBias;
+  return sortOutlets(a, b);
+}
+
+function buildCanonicalOutletSelectionKey(outlet = {}) {
+  const name = normalizeSelectionToken(outlet.name);
+  const host = normalizeSelectionToken(getSelectionHost(outlet));
+  return `${name || outlet.id || 'unknown'}::${host || outlet.id || 'unknown'}`;
+}
+
+function getSelectionHost(outlet = {}) {
+  const email = getPreferredEmail(outlet);
+  if (email && email.includes('@')) return email.split('@').pop();
+
+  for (const value of [outlet.official_website_url, outlet.source_url, outlet.contact_page_url, outlet.url]) {
+    try {
+      if (!value) continue;
+      return new URL(value).hostname;
+    } catch {
+      continue;
+    }
+  }
+
+  return outlet.id || '';
+}
+
+function getPreferredEmail(outlet = {}) {
+  return String(outlet.contact_email || outlet.public_email || outlet.contact?.email || '').trim().toLowerCase();
+}
+
+function normalizeSelectionToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }
 
 export function getReleaseReadySongs() {

@@ -13,6 +13,10 @@ import {
   postSelectReleaseAudience,
   postGenerateReleaseDrafts,
   postCreateReleaseGmailDrafts,
+  postUpdateReleaseDraftTemplate,
+  postUpdateReleaseDraftItem,
+  postResetReleaseDraftItem,
+  postMarkReleaseDraftSent,
   postScanReleaseInbox,
   postReleaseInboxAction,
   postUpdateReleaseResults,
@@ -61,6 +65,10 @@ export function registerMarketingRouter(app) {
   router.post('/marketing/releases/:releaseMarketingId/audience', postSelectReleaseAudience);
   router.post('/marketing/releases/:releaseMarketingId/outreach-drafts/generate', postGenerateReleaseDrafts);
   router.post('/marketing/releases/:releaseMarketingId/outreach-drafts/gmail', postCreateReleaseGmailDrafts);
+  router.post('/marketing/releases/:releaseMarketingId/drafts/template', postUpdateReleaseDraftTemplate);
+  router.post('/marketing/releases/:releaseMarketingId/drafts/:itemId', postUpdateReleaseDraftItem);
+  router.post('/marketing/releases/:releaseMarketingId/drafts/:itemId/reset', postResetReleaseDraftItem);
+  router.post('/marketing/releases/:releaseMarketingId/drafts/:itemId/mark-sent', postMarkReleaseDraftSent);
   router.post('/marketing/releases/:releaseMarketingId/gmail-inbox/scan', postScanReleaseInbox);
   router.post('/marketing/releases/:releaseMarketingId/gmail-inbox/:messageId/:action', postReleaseInboxAction);
   router.post('/marketing/releases/:releaseMarketingId/results', postUpdateReleaseResults);

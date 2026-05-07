@@ -43,6 +43,13 @@
           Generate Ideas
         </a>
 
+        <a href="/magic-song"
+           class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all mb-2
+             <%= currentPath === '/magic-song' ? 'bg-emerald-700 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white' %> shadow-sm">
+          <span class="text-base">🪄</span>
+          MAGIC SONG
+        </a>
+
         <% const navLinks = [['/', 'Dashboard', '◈'], ['/ideas', 'Idea Vault', '💡'], ['/songs', 'Song Catalog', '🎵'], ['/marketing', 'Marketing', '📣'], ['/brand', 'Brand', '🎨']]; %>
         <% for (const [href, label, icon] of navLinks) { %>
           <a href="<%= href %>"

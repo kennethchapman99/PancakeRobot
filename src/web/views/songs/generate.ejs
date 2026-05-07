@@ -10,10 +10,12 @@ window.pipelineData = function() {
     completeSongId: null,
     eventSource: null,
     renderMode: 'paid',
+    pipelineMode: 'magic',
 
     init() {
       const params = new URLSearchParams(window.location.search);
       this.renderMode = params.get('renderMode') === 'free' ? 'free' : 'paid';
+      this.pipelineMode = params.get('pipelineMode') === 'standard' ? 'standard' : 'magic';
       if (params.get('autoStart') === '1') this.startPipeline();
     },
 
@@ -22,6 +24,14 @@ window.pipelineData = function() {
       this.renderMode = mode === 'free' ? 'free' : 'paid';
       const url = new URL(window.location.href);
       url.searchParams.set('renderMode', this.renderMode);
+      window.history.replaceState({}, '', url.toString());
+    },
+
+    setPipelineMode(mode) {
+      if (this.state === 'running') return;
+      this.pipelineMode = mode === 'standard' ? 'standard' : 'magic';
+      const url = new URL(window.location.href);
+      url.searchParams.set('pipelineMode', this.pipelineMode);
       window.history.replaceState({}, '', url.toString());
     },
 
@@ -35,11 +45,12 @@ window.pipelineData = function() {
         const res = await fetch('/api/songs/<%= song.id %>/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ renderMode: this.renderMode })
+          body: JSON.stringify({ renderMode: this.renderMode, pipelineMode: this.pipelineMode })
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Failed to start pipeline');
         this.jobId = data.jobId;
+        this.logs.push(`🪄 Pipeline mode: ${this.pipelineMode === 'magic' ? 'MAGIC PIPELINE / auto-improve once + auto-marketing on publish score' : 'STANDARD PIPELINE / classic generate flow'}`);
         this.logs.push(`🎛 Render mode selected: ${this.renderMode === 'free' ? 'FREE audition / music-2.6-free' : 'PAID production / music-2.6'}`);
         this.listenToStream(data.jobId);
       } catch (err) {
@@ -99,6 +110,18 @@ window.pipelineData = function() {
         ? 'Use this to audition an idea cheaply/free. Re-render paid before final approval.'
         : 'Default mode. Uses the production MiniMax music-2.6 model.';
     },
+
+    get pipelineModeLabel() {
+      return this.pipelineMode === 'magic'
+        ? '🪄 Magic pipeline'
+        : '🧰 Standard pipeline';
+    },
+
+    get pipelineModeDescription() {
+      return this.pipelineMode === 'magic'
+        ? 'Create the song, run A&R scoring, spend at most one regeneration, and auto-build marketing assets only if it clears publish threshold.'
+        : 'Run the existing song pipeline and stop at the normal review/approval flow.';
+    },
   };
 };
 </script>
@@ -117,6 +140,26 @@ window.pipelineData = function() {
 
   <!-- Render model selector -->
   <div class="bg-white border border-zinc-200 rounded-2xl p-5 mb-8">
+    <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+      <div>
+        <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1">Pipeline Mode</div>
+        <div class="text-base font-bold text-zinc-900" x-text="pipelineModeLabel"></div>
+        <div class="text-sm text-zinc-500 mt-1" x-text="pipelineModeDescription"></div>
+      </div>
+      <div class="flex bg-zinc-100 rounded-xl p-1 shrink-0">
+        <button @click="setPipelineMode('magic')" :disabled="state === 'running'"
+          :class="pipelineMode === 'magic' ? 'bg-emerald-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-800'"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50">
+          🪄 Magic
+        </button>
+        <button @click="setPipelineMode('standard')" :disabled="state === 'running'"
+          :class="pipelineMode === 'standard' ? 'bg-zinc-900 text-white shadow' : 'text-zinc-500 hover:text-zinc-800'"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50">
+          Standard
+        </button>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between gap-4">
       <div>
         <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1">Music Render Model</div>
@@ -140,11 +183,13 @@ window.pipelineData = function() {
     <div class="mt-4 flex items-center gap-3">
       <button @click="startPipeline()" :disabled="state === 'running'"
         class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm shadow">
-        <span x-show="renderMode === 'paid'">Start Paid Render</span>
-        <span x-show="renderMode === 'free'">Start Free Audition</span>
+        <span x-show="pipelineMode === 'magic' && renderMode === 'paid'">Start Magic Pipeline</span>
+        <span x-show="pipelineMode === 'magic' && renderMode === 'free'">Start Magic Audition</span>
+        <span x-show="pipelineMode === 'standard' && renderMode === 'paid'">Start Paid Render</span>
+        <span x-show="pipelineMode === 'standard' && renderMode === 'free'">Start Free Audition</span>
       </button>
       <div class="text-xs text-zinc-400">
-        The selected mode is sent to the server and injected into the spawned pipeline env.
+        For existing songs, regeneration reuses the current revised lyrics and audio prompt instead of replacing them with a new topic-only draft.
       </div>
     </div>
   </div>
@@ -180,7 +225,8 @@ window.pipelineData = function() {
     <div id="pipeline-log"
          class="p-5 font-mono text-sm space-y-0.5 overflow-y-auto"
          style="min-height: 320px; max-height: 520px;">
-      <div class="text-zinc-600 mb-1">$ node src/orchestrator.js --new "<%= (song.topic || song.title || '').replace(/"/g, '\\"') %>"</div>
+      <div class="text-zinc-600 mb-1">$ node src/orchestrator.js <span x-text="pipelineMode === 'magic' ? '--magic' : '--new'"></span> "<%= (song.topic || song.title || '').replace(/"/g, '\\"') %>"</div>
+      <div class="text-zinc-600 mb-2">$ pipeline mode: <span x-text="pipelineMode"></span></div>
       <div class="text-zinc-600 mb-2">$ render mode: <span x-text="renderMode"></span></div>
       <div class="text-zinc-700 mb-3">────────────────────────────────────────</div>
       <div x-show="logs.length === 0 && state === 'idle'" class="text-zinc-600">Choose Paid or Free, then start generation.</div>
@@ -204,14 +250,14 @@ window.pipelineData = function() {
   </div>
 
   <div x-show="state === 'running'" class="text-xs text-zinc-400 text-center mb-6">
-    Full pipeline takes 2–5 minutes — lyrics → music → QA → packaging
+    Full pipeline takes 2–5 minutes — lyrics → music → A&R → optional regeneration → assets
   </div>
 
   <div x-show="state === 'done'" style="display:none"
        class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex items-center justify-between gap-4">
     <div>
       <div class="font-bold text-emerald-800 text-lg mb-1">🎉 Song Ready!</div>
-      <div class="text-sm text-emerald-700">Lyrics and audio are ready. Review the song, then use the marketing tab to build release assets from the base image.</div>
+      <div class="text-sm text-emerald-700">Review the song detail page for the final recommendation, regenerated draft if used, and any release/marketing assets produced by the pipeline.</div>
       <div class="text-xs text-zinc-400 mt-1 font-mono" x-show="completeSongId" x-text="'Song ID: ' + completeSongId"></div>
     </div>
     <a :href="songUrl"

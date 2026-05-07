@@ -30,12 +30,12 @@ if (!useMainDb) {
 }
 
 const { upsertSong, getSong, getDb } = await import('../shared/db.js');
-const { upsertMarketingTarget, getMarketingCampaigns } = await import('../shared/marketing-db.js');
+const { upsertMarketingTarget, getMarketingCampaigns, updateMarketingCampaign } = await import('../shared/marketing-db.js');
 const { getOrCreateReleaseMarketing, updateReleaseMarketing, getReleaseMarketingDashboard } = await import('../shared/marketing-releases.js');
 const { createOutreachRun } = await import('../agents/marketing-outreach-run-agent.js');
 const { generateDraftsForCampaign } = await import('../agents/marketing-outreach-draft-agent.js');
 const { createGmailDraftsForCampaign } = await import('../agents/marketing-gmail-draft-agent.js');
-const { getOutreachItems, getOutreachItem } = await import('../shared/marketing-outreach-db.js');
+const { getOutreachItems, getOutreachItem, updateOutreachItem } = await import('../shared/marketing-outreach-db.js');
 const { transitionOutreachItem } = await import('../shared/marketing-outreach-state.js');
 const { classifyMessage } = await import('../marketing/gmail-reader.js');
 const { processInboxMessages } = await import('../agents/marketing-inbox-agent.js');
@@ -90,6 +90,8 @@ const run = createOutreachRun({
 });
 const campaignId = run.campaigns[0].campaign_id;
 const campaign = getMarketingCampaigns(500).find(entry => entry.id === campaignId);
+const subjectTemplate = 'Custom subject for {{outletName}}';
+const bodyTemplate = 'Hi {{contactName}},\n\nCustom body for {{songTitle}}.\n';
 
 const excludedIds = new Set(campaign.excluded_target_ids || []);
 assert(excludedIds.has(paidTargetId), 'Expected paid-only target to be excluded');
@@ -102,15 +104,35 @@ assert(campaign.approved_target_ids[0] === validTargetId, `Expected valid target
 pushSummary('valid target selected', validTargetId);
 pushSummary('campaign created', campaignId);
 
+updateMarketingCampaign(campaignId, {
+  subject_template: subjectTemplate,
+  body_template: bodyTemplate,
+});
+updateReleaseMarketing(release.id, {
+  results: {
+    ...(release.results || {}),
+    sharedDraftTemplate: {
+      subject_template: subjectTemplate,
+      body_template: bodyTemplate,
+    },
+  },
+});
+pushSummary('shared draft template saved', subjectTemplate);
+
 await generateDraftsForCampaign(campaignId, { deterministic: true });
 await createGmailDraftsForCampaign(campaignId, { dryRun: true });
-pushSummary('outreach draft simulated', campaignId);
+pushSummary('outreach draft previews generated', campaignId);
 
 const validItem = getOutreachItems({ campaign_id: campaignId })[0];
+updateOutreachItem(validItem.id, {
+  status: 'gmail_draft_created',
+  gmail_draft_id: `dryrun-draft-${runToken}`,
+});
 transitionOutreachItem(validItem.id, 'mark_sent', {
   actor: 'test-release-marketing-flow',
-  message: 'Dry-run send simulated',
+  message: 'Dry-run sent state simulated',
 });
+pushSummary('manual sent state simulated', validItem.id);
 
 const refreshedItem = getOutreachItem(validItem.id);
 const replySeed = {
@@ -125,7 +147,24 @@ const replySeed = {
 };
 const classifiedReply = { ...replySeed, ...classifyMessage(replySeed) };
 processInboxMessages([classifiedReply]);
+transitionOutreachItem(validItem.id, 'mark_replied', {
+  actor: 'test-release-marketing-flow',
+  message: 'Dry-run reply simulated',
+});
 pushSummary('inbox reply simulated/classified', `${classifiedReply.classification}`);
+
+const secondRun = createOutreachRun({
+  song_ids: [songId],
+  outlet_ids: [validTargetId],
+  dry_run: true,
+  allow_same_release: true,
+  release_marketing_id: release.id,
+});
+const secondCampaignId = secondRun.campaigns[0].campaign_id;
+const secondCampaign = getMarketingCampaigns(500).find(entry => entry.id === secondCampaignId);
+assert(secondCampaign?.subject_template === subjectTemplate, 'Expected follow-on campaign to reuse saved subject template');
+assert(secondCampaign?.body_template === bodyTemplate, 'Expected follow-on campaign to reuse saved body template');
+pushSummary('shared draft template reused', secondCampaignId);
 
 const dashboard = getReleaseMarketingDashboard(release.id);
 const validTargetRow = getDb().prepare(`

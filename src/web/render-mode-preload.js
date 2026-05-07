@@ -66,7 +66,9 @@ const originalSpawn = childProcess.spawn;
 childProcess.spawn = function patchedSpawn(command, args = [], options = {}) {
   const isNode = command === 'node' || String(command).endsWith('/node');
   const argList = Array.isArray(args) ? args : [];
-  const isSongPipelineSpawn = isNode && argList.some(arg => String(arg).includes('orchestrator.js')) && argList.includes('--new');
+  const isSongPipelineSpawn = isNode
+    && argList.some(arg => String(arg).includes('orchestrator.js'))
+    && (argList.includes('--new') || argList.includes('--magic'));
 
   if (isSongPipelineSpawn) {
     const renderMode = normalizeRenderMode(

@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getActiveProfileId } from './brand-profile.js';
+import { DEFAULT_PROFILE_ID, getActiveProfileId } from './brand-profile.js';
 import { getDbPath } from './db.js';
-import { getMarketingTargets } from './marketing-db.js';
+import { getMarketingTargets, upsertMarketingTarget } from './marketing-db.js';
 import { hydrateOutletsWithHistory } from './marketing-outlets.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +33,7 @@ export function loadMarketingOutletsSource() {
 
 export function isTestOrDemoTarget(target = {}) {
   const raw = target.raw_json && typeof target.raw_json === 'object' ? target.raw_json : parseObject(target.raw_json);
+  if (raw?.isTestOutlet === true || raw?.allow_real_outreach === true) return false;
   if (raw?.internal_test === true || target.internal_test === true) return true;
 
   const values = [
@@ -65,8 +66,9 @@ export function isTestOrDemoTarget(target = {}) {
 }
 
 export function getActiveBrandOutlets({ brandProfileId = getActiveProfileId(), includeTestData = false, filters = {}, includeHistory = true } = {}) {
-  const rows = getMarketingTargets({ ...filters, brand_profile_id: brandProfileId });
-  const hydrated = includeHistory ? hydrateOutletsWithHistory(rows) : rows;
+  ensureKennethTestOutlet(brandProfileId);
+  const resolution = resolveOutletRowsForBrand({ brandProfileId, filters });
+  const hydrated = includeHistory ? hydrateOutletsWithHistory(resolution.rows) : resolution.rows;
   return includeTestData ? hydrated : hydrated.filter(row => !isTestOrDemoTarget(row));
 }
 
@@ -92,7 +94,10 @@ export function getMarketingOutletsDiagnostics({ brandProfileId = getActiveProfi
   const dbExists = fs.existsSync(dbPath);
   const { sourcePath, outletTargets } = loadMarketingOutletsSource();
   const allDbOutlets = hydrateOutletsWithHistory(getMarketingTargets({ brand_profile_id: null }));
-  const allBrandOutlets = getActiveBrandOutlets({ brandProfileId, includeTestData: true });
+  const directBrandRows = hydrateOutletsWithHistory(getMarketingTargets({ brand_profile_id: brandProfileId }));
+  const directRealBrandOutlets = directBrandRows.filter(outlet => !isTestOrDemoTarget(outlet));
+  const resolution = resolveOutletRowsForBrand({ brandProfileId });
+  const allBrandOutlets = hydrateOutletsWithHistory(resolution.rows);
   const realBrandOutlets = allBrandOutlets.filter(outlet => !isTestOrDemoTarget(outlet));
   const hiddenTestDemo = allDbOutlets.filter(isTestOrDemoTarget);
   const eligible = realBrandOutlets.filter(canUseForRealOutreach);
@@ -133,11 +138,15 @@ export function getMarketingOutletsDiagnostics({ brandProfileId = getActiveProfi
     ok: issues.length === 0,
     issues,
     activeBrandProfileId: brandProfileId,
+    outletSourceBrandProfileId: resolution.sourceBrandProfileId,
+    usingCanonicalFallback: resolution.sourceBrandProfileId !== brandProfileId,
     activeDbPath: dbPath,
     sourcePath,
     sourceOutletCount: outletTargets.length,
     activeBrandOutletCount: realBrandOutlets.length,
     activeBrandOutletCountIncludingTests: allBrandOutlets.length,
+    directActiveBrandOutletCount: directRealBrandOutlets.length,
+    directActiveBrandOutletCountIncludingTests: directBrandRows.length,
     totalDbOutletCount: allDbOutlets.length,
     approvedCount: approved.length,
     eligibleCount: eligible.length,
@@ -165,6 +174,124 @@ function canUseForPresetSelection(outlet = {}) {
     && ['contactable', 'contactable_manual', 'owned_action'].includes(outlet.contactability?.status)
     && !['do_not_contact', 'suppressed', 'paid_only', 'bounced', 'ai_banned', 'no_contact_method'].includes(outlet.suppression_status || '')
     && outlet.do_not_contact !== true;
+}
+
+function resolveOutletRowsForBrand({ brandProfileId = getActiveProfileId(), filters = {} } = {}) {
+  const brandRows = getMarketingTargets({ ...filters, brand_profile_id: brandProfileId });
+  const brandRealRows = brandRows.filter(countsTowardCanonicalCoverage);
+  if (brandRealRows.length > 0 || brandProfileId === DEFAULT_PROFILE_ID) {
+    return { rows: brandRows, sourceBrandProfileId: brandProfileId };
+  }
+
+  const fallbackCandidates = [
+    DEFAULT_PROFILE_ID,
+    null,
+  ].filter(candidate => candidate !== brandProfileId);
+
+  for (const candidate of fallbackCandidates) {
+    const candidateRows = getMarketingTargets({ ...filters, brand_profile_id: candidate });
+    const candidateRealRows = candidateRows.filter(countsTowardCanonicalCoverage);
+    if (!candidateRealRows.length) continue;
+    return {
+      rows: mergeOutletRows(brandRows, candidateRows),
+      sourceBrandProfileId: candidate ?? 'all-brands',
+    };
+  }
+
+  return { rows: brandRows, sourceBrandProfileId: brandProfileId };
+}
+
+function mergeOutletRows(primaryRows = [], fallbackRows = []) {
+  const rowsById = new Map();
+  for (const row of primaryRows) rowsById.set(row.id, row);
+  for (const row of fallbackRows) {
+    if (!rowsById.has(row.id)) rowsById.set(row.id, row);
+  }
+  return [...rowsById.values()];
+}
+
+function countsTowardCanonicalCoverage(row = {}) {
+  const raw = row.raw_json && typeof row.raw_json === 'object' ? row.raw_json : parseObject(row.raw_json);
+  const pitchPrefs = row.pitch_preferences && typeof row.pitch_preferences === 'object'
+    ? row.pitch_preferences
+    : parseObject(row.pitch_preferences);
+  const priority = String(raw.priority || pitchPrefs.priority || '').trim().toUpperCase();
+  return raw.isTestOutlet !== true
+    && raw.internal_test !== true
+    && row.internal_test !== true
+    && priority !== 'TEST'
+    && !isTestOrDemoTarget(row);
+}
+
+function ensureKennethTestOutlet(brandProfileId) {
+  upsertMarketingTarget({
+    id: 'test_kenneth_d2l',
+    brand_profile_id: brandProfileId,
+    name: 'Kenneth D2L Test Outlet',
+    type: 'community',
+    platform: 'email',
+    source_url: 'https://d2l.com/',
+    contact_method: 'email',
+    contact_email: 'kenneth@d2l.com',
+    public_email: 'kenneth@d2l.com',
+    official_website_url: 'https://d2l.com/',
+    contact_page_url: 'https://d2l.com/',
+    best_free_contact_method: 'kenneth@d2l.com',
+    contactability: {
+      status: 'contactable',
+      free_contact_method_found: true,
+      best_channel: 'email',
+      contact_methods: [{ type: 'email', value: 'kenneth@d2l.com', confidence: 'high' }],
+      evidence_url: 'https://d2l.com/',
+      notes: 'Internal QA outlet',
+    },
+    cost_policy: {
+      requires_payment: false,
+      cost_type: 'free',
+      cost_amount: null,
+      cost_currency: null,
+      evidence_url: null,
+      evidence_text: null,
+      confidence: 'high',
+    },
+    ai_policy_details: {
+      status: 'allowed',
+      evidence_url: null,
+      evidence_text: 'Internal QA outlet',
+      confidence: 'high',
+    },
+    outreach_eligibility: {
+      eligible: true,
+      reason_codes: [],
+      reason_summary: 'Eligible for outreach.',
+      last_checked_at: new Date().toISOString(),
+    },
+    fit_score: 100,
+    ai_policy: 'allowed',
+    ai_risk_score: 0,
+    recommendation: 'prioritize',
+    research_summary: 'Internal test outlet for validating outreach draft creation and Gmail delivery/link rendering.',
+    outreach_angle: 'Use this outlet to verify audience selection, draft generation, Gmail draft creation, and clickable link rendering.',
+    pitch_preferences: JSON.stringify({
+      category: 'internal_test',
+      priority: 'TEST',
+      recommended_pitch_type: 'email_test',
+    }),
+    freshness_status: 'verified',
+    status: 'approved',
+    suppression_status: 'none',
+    notes: 'Internal test outlet for validating outreach draft creation and Gmail delivery/link rendering.',
+    raw_json: {
+      id: 'test_kenneth_d2l',
+      isTestOutlet: true,
+      allow_real_outreach: true,
+      priority: 'TEST',
+      contactName: 'Kenneth Chapman',
+      contactEmail: 'kenneth@d2l.com',
+      fit: 100,
+      aiPolicy: 'Allowed',
+    },
+  });
 }
 
 export function assertMarketingOutletsReadyForOutreach({ brandProfileId = getActiveProfileId() } = {}) {

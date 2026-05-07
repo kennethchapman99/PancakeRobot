@@ -4,6 +4,7 @@
  * Commands:
  *   node src/orchestrator.js --setup                         First-time setup
  *   node src/orchestrator.js --new "topic: ..."              Full pipeline for new song
+ *   node src/orchestrator.js --magic "topic: ..."            One-click create → rank → improve once → market
  *   node src/orchestrator.js --research                      Research only
  *   node src/orchestrator.js --report                        Financial report
  *   node src/orchestrator.js --approve <song-id>             Approve a song
@@ -40,6 +41,9 @@ import { researchDistribution, generateMetadata } from './agents/product-manager
 import { researchServices, updateFinancialReport, generateFullReport } from './agents/financial-manager.js';
 import { runQAChecklist, generateHumanTasks, startScheduler } from './agents/ops-manager.js';
 import { generateMusic } from './agents/music-generator.js';
+import { analyzeSongForReleaseSelection } from './agents/release-selection-agent.js';
+import { buildReleaseSelectionRevisionBrief } from './lib/release-selection/regeneration-brief.js';
+import { buildSongReleaseAssets } from './shared/song-release-assets-service.js';
 
 const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
@@ -67,6 +71,7 @@ function printUsage() {
   console.log(chalk.bold('Usage:'));
   console.log('  node src/orchestrator.js --setup                       First-time setup');
   console.log('  node src/orchestrator.js --new "song topic here"       New song pipeline');
+  console.log('  node src/orchestrator.js --magic "song topic here"     Magic pipeline');
   console.log('  node src/orchestrator.js --research                    Run researcher only');
   console.log('  node src/orchestrator.js --report                      Generate financial report');
   console.log('  node src/orchestrator.js --approve <song-id>           Approve a song');
@@ -85,6 +90,277 @@ function validateEnv() {
   if (!process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
     console.error(chalk.red('ERROR: ANTHROPIC_API_KEY looks invalid (should start with sk-ant-)'));
     process.exit(1);
+  }
+}
+
+function loadExistingDraftPayload(songId, songDir) {
+  try {
+    const dataPath = join(songDir, 'lyrics-data.json');
+    const lyricsPath = join(songDir, 'lyrics.md');
+    const audioPromptPath = join(songDir, 'audio-prompt.md');
+    if (!fs.existsSync(dataPath) || !fs.existsSync(lyricsPath) || !fs.existsSync(audioPromptPath)) {
+      return null;
+    }
+
+    const songData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    const lyricsText = fs.readFileSync(lyricsPath, 'utf8');
+    const audioPromptText = fs.readFileSync(audioPromptPath, 'utf8');
+    return {
+      songData,
+      title: songData.title || `Regenerated ${songId}`,
+      lyricsText,
+      audioPromptText,
+      lyricsPath,
+      audioPromptPath,
+      wordCount: countApproxWords(lyricsText),
+      costUsd: 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function countApproxWords(text = '') {
+  return String(text)
+    .replace(/\[[^\]]+\]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length;
+}
+
+function parseTopicArgs(args) {
+  const idFlagIdx = args.indexOf('--id');
+  return {
+    existingSongId: idFlagIdx !== -1 ? args[idFlagIdx + 1] : null,
+    topic: args
+      .slice(1)
+      .filter((_, i) => (i + 1) !== idFlagIdx && (i + 1) !== idFlagIdx + 1)
+      .join(' '),
+  };
+}
+
+function persistSongState({
+  songId,
+  topic,
+  title,
+  lyricsPath,
+  audioPromptPath,
+  metadataPath = null,
+  brandScore = null,
+  totalCost = 0,
+  extra = {},
+}) {
+  upsertSong({
+    id: songId,
+    topic,
+    title,
+    status: SONG_STATUSES.DRAFT,
+    lyrics_path: lyricsPath,
+    audio_prompt_path: audioPromptPath,
+    metadata_path: metadataPath,
+    brand_score: brandScore,
+    total_cost_usd: totalCost,
+    ...extra,
+  });
+}
+
+function isReleaseCandidate(releaseSelectionResult) {
+  return releaseSelectionResult?.recommendation?.value === 'recommend_to_publish';
+}
+
+async function loadFreshResearchReport() {
+  let researchReport = loadResearchReport(30);
+  if (!researchReport) {
+    console.log(chalk.bold('\n📌 Step 1: Running researcher (research is >30 days old)...\n'));
+    researchReport = await runResearcher();
+  } else {
+    console.log(chalk.green('✓ Using cached research report\n'));
+  }
+  return researchReport;
+}
+
+async function runSongBuildPass({
+  songId,
+  topic,
+  researchReport,
+  totalCost = 0,
+  draftPayload = null,
+  revisionNotes = null,
+  existingLyrics = null,
+  passLabel = 'Pass',
+}) {
+  let lyricsResult;
+
+  if (draftPayload) {
+    console.log(chalk.bold(`\n📌 ${passLabel}: Reusing current lyrics and audio prompt...\n`));
+    lyricsResult = draftPayload;
+    console.log(chalk.green(`✓ Reusing current draft: ${lyricsResult.title}`));
+  } else {
+    console.log(chalk.bold(`\n📌 ${passLabel}: Writing lyrics...\n`));
+    lyricsResult = await writeLyrics({
+      songId,
+      topic,
+      researchReport,
+      revisionNotes,
+      existingLyrics,
+    });
+    totalCost += lyricsResult.costUsd || 0;
+  }
+
+  console.log(chalk.bold(`\n📌 ${passLabel}: Brand review...\n`));
+  const brandReview = await reviewSong({
+    songId,
+    title: lyricsResult.title,
+    topic,
+    lyricsText: lyricsResult.lyricsText,
+    audioPromptText: lyricsResult.audioPromptText,
+  });
+  totalCost += brandReview.costUsd || 0;
+  console.log(`\nBrand Score: ${chalk.bold(brandReview.scores?.overall || 0)}/100`);
+
+  persistSongState({
+    songId,
+    topic,
+    title: lyricsResult.title,
+    lyricsPath: lyricsResult.lyricsPath,
+    audioPromptPath: lyricsResult.audioPromptPath,
+    brandScore: brandReview.scores?.overall,
+    totalCost,
+  });
+
+  console.log(chalk.bold(`\n📌 ${passLabel}: Generating metadata...\n`));
+  const { metadata, metadataPath } = await generateMetadata({
+    songId,
+    title: lyricsResult.title,
+    topic,
+    lyrics: lyricsResult.lyricsText,
+    bpm: lyricsResult.songData?.audio_prompt?.tempo_bpm,
+    researchReport,
+  });
+
+  persistSongState({
+    songId,
+    topic,
+    title: lyricsResult.title,
+    lyricsPath: lyricsResult.lyricsPath,
+    audioPromptPath: lyricsResult.audioPromptPath,
+    metadataPath,
+    brandScore: brandReview.scores?.overall,
+    totalCost,
+  });
+
+  console.log(chalk.bold(`\n📌 ${passLabel}: Generating music...\n`));
+  const musicResult = await generateMusic({
+    songId,
+    title: lyricsResult.title,
+    lyricsText: lyricsResult.lyricsText,
+    audioPromptData: lyricsResult.songData?.audio_prompt,
+  });
+
+  if (musicResult.audioFiles?.length > 0) {
+    console.log(chalk.green(`✓ Music generated: ${musicResult.audioFiles.length} version(s)`));
+  } else if (musicResult.skipped || musicResult.apiError) {
+    console.log(chalk.yellow('⚠ Music generation skipped — manual instructions saved to audio/MUSIC_GENERATION_INSTRUCTIONS.md'));
+    if (musicResult.apiError) {
+      console.log(chalk.dim(`  API error: ${musicResult.apiError.substring(0, 120)}`));
+    }
+  }
+
+  persistSongState({
+    songId,
+    topic,
+    title: lyricsResult.title,
+    lyricsPath: lyricsResult.lyricsPath,
+    audioPromptPath: lyricsResult.audioPromptPath,
+    metadataPath,
+    brandScore: brandReview.scores?.overall,
+    totalCost,
+  });
+
+  console.log(chalk.bold(`\n📌 ${passLabel}: Running release selection analysis...\n`));
+  const releaseSelectionResult = await analyzeSongForReleaseSelection(songId);
+  console.log(chalk.green(`✓ Release recommendation: ${releaseSelectionResult.recommendation.value} (${releaseSelectionResult.recommendation.score}/100)`));
+
+  console.log(chalk.bold(`\n📌 ${passLabel}: Running QA checklist...\n`));
+  const songDir = join(__dirname, `../output/songs/${songId}`);
+  const qaReport = runQAChecklist({
+    songId,
+    songDir,
+    lyricsPath: lyricsResult.lyricsPath,
+    audioPromptPath: lyricsResult.audioPromptPath,
+    brandReview,
+    metadata,
+  });
+
+  if (qaReport.warnings.length > 0) {
+    console.log(chalk.yellow('\n⚠ QA Warnings:'));
+    qaReport.warnings.forEach(w => console.log(chalk.yellow(`  • ${w}`)));
+  }
+  if (qaReport.passed) {
+    console.log(chalk.green('\n✓ QA passed — all checks green\n'));
+  }
+
+  return {
+    lyricsResult,
+    brandReview,
+    metadata,
+    metadataPath,
+    musicResult,
+    releaseSelectionResult,
+    qaReport,
+    totalCost,
+  };
+}
+
+async function finalizeMagicPipelineSuccess({
+  songId,
+  topic,
+  lyricsResult,
+  metadata,
+  metadataPath,
+  brandReview,
+  totalCost,
+}) {
+  console.log(chalk.bold('\n📌 Magic Finalize: Building distribution package...\n'));
+  const songDir = join(__dirname, `../output/songs/${songId}`);
+  const { distDir } = await generateHumanTasks({
+    songId,
+    title: lyricsResult.title,
+    topic,
+    songDir,
+    metadata,
+    lyricsPath: lyricsResult.lyricsPath,
+    audioPromptPath: lyricsResult.audioPromptPath,
+    brandScore: brandReview.scores?.overall,
+    totalCost,
+  });
+
+  console.log(chalk.bold('\n📌 Magic Finalize: Building marketing assets...\n'));
+  const marketingResult = await buildSongReleaseAssets(songId, {
+    mode: 'render_from_existing_visuals',
+    renderVideos: false,
+  });
+
+  persistSongState({
+    songId,
+    topic,
+    title: lyricsResult.title,
+    lyricsPath: lyricsResult.lyricsPath,
+    audioPromptPath: lyricsResult.audioPromptPath,
+    metadataPath,
+    brandScore: brandReview.scores?.overall,
+    totalCost,
+  });
+
+  console.log(chalk.bgGreen.black('\n ✓ MAGIC PIPELINE READY \n'));
+  console.log(`  Distribution package: ${chalk.bold(distDir)}`);
+  if (marketingResult.dashboardUrl) {
+    console.log(`  Marketing dashboard: ${chalk.bold(marketingResult.dashboardUrl)}`);
+  }
+  if (marketingResult.qaWarnings?.length) {
+    console.log(chalk.yellow('\n  Marketing warnings:'));
+    marketingResult.qaWarnings.forEach(warning => console.log(chalk.yellow(`  • ${warning}`)));
   }
 }
 
@@ -174,6 +450,8 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   const songId = existingSongId || generateSongId();
   const songDir = join(__dirname, `../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
+  const reuseExistingDraft = existingSongId && process.env.REGENERATE_FROM_EXISTING === '1';
+  const existingDraftPayload = reuseExistingDraft ? loadExistingDraftPayload(songId, songDir) : null;
 
   let totalCost = 0;
 
@@ -198,33 +476,63 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   }
 
   // ─────────────────────────────
-  // 2. Write lyrics (with revision loop)
+  // 2. Write or reuse lyrics
   // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 2/8: Writing lyrics...\n'));
-
   let lyricsResult;
   let brandReview;
   let revisionNotes = null;
   const MAX_REVISIONS = 3;
 
-  for (let attempt = 1; attempt <= MAX_REVISIONS; attempt++) {
-    if (attempt > 1) {
-      console.log(chalk.yellow(`\n↺ Revision attempt ${attempt}/${MAX_REVISIONS}...\n`));
+  if (existingDraftPayload) {
+    console.log(chalk.bold('\n📌 Step 2/9: Reusing existing revised lyrics and audio prompt...\n'));
+    lyricsResult = existingDraftPayload;
+    console.log(chalk.green(`✓ Reusing current draft: ${lyricsResult.title}`));
+  } else {
+    console.log(chalk.bold('\n📌 Step 2/9: Writing lyrics...\n'));
+    for (let attempt = 1; attempt <= MAX_REVISIONS; attempt++) {
+      if (attempt > 1) {
+        console.log(chalk.yellow(`\n↺ Revision attempt ${attempt}/${MAX_REVISIONS}...\n`));
+      }
+
+      lyricsResult = await writeLyrics({
+        songId,
+        topic,
+        researchReport,
+        revisionNotes,
+      });
+      totalCost += lyricsResult.costUsd || 0;
+
+      console.log(chalk.bold(`\n📌 Step 3/9: Brand review (attempt ${attempt})...\n`));
+
+      brandReview = await reviewSong({
+        songId,
+        title: lyricsResult.title,
+        topic,
+        lyricsText: lyricsResult.lyricsText,
+        audioPromptText: lyricsResult.audioPromptText,
+      });
+      totalCost += brandReview.costUsd || 0;
+
+      const score = brandReview.scores?.overall || 0;
+      console.log(`\nBrand Score: ${chalk.bold(score)}/100`);
+
+      if (score >= 75) {
+        console.log(chalk.green('✓ Brand review passed'));
+        break;
+      } else if (attempt < MAX_REVISIONS) {
+        console.log(chalk.yellow(`✗ Score ${score} < 75 — sending revision notes to lyricist`));
+        revisionNotes = brandReview.revision_notes;
+      } else {
+        console.log(chalk.red(`✗ Score ${score} < 75 after ${MAX_REVISIONS} attempts — escalating to human`));
+        console.log(chalk.red('\nBrand review failed repeatedly. Review manually:'));
+        console.log(chalk.red(`  output/songs/${songId}/brand-review.json`));
+        console.log(chalk.red('  You can still proceed — the song needs your judgment.'));
+      }
     }
+  }
 
-    lyricsResult = await writeLyrics({
-      songId,
-      topic,
-      researchReport,
-      revisionNotes,
-    });
-    totalCost += lyricsResult.costUsd || 0;
-
-    // ─────────────────────────────
-    // 3. Brand review
-    // ─────────────────────────────
-    console.log(chalk.bold(`\n📌 Step 3/8: Brand review (attempt ${attempt})...\n`));
-
+  if (!brandReview) {
+    console.log(chalk.bold('\n📌 Step 3/9: Brand review on current draft...\n'));
     brandReview = await reviewSong({
       songId,
       title: lyricsResult.title,
@@ -233,22 +541,7 @@ async function runNewSongPipeline(topic, existingSongId = null) {
       audioPromptText: lyricsResult.audioPromptText,
     });
     totalCost += brandReview.costUsd || 0;
-
-    const score = brandReview.scores?.overall || 0;
-    console.log(`\nBrand Score: ${chalk.bold(score)}/100`);
-
-    if (score >= 75) {
-      console.log(chalk.green('✓ Brand review passed'));
-      break;
-    } else if (attempt < MAX_REVISIONS) {
-      console.log(chalk.yellow(`✗ Score ${score} < 75 — sending revision notes to lyricist`));
-      revisionNotes = brandReview.revision_notes;
-    } else {
-      console.log(chalk.red(`✗ Score ${score} < 75 after ${MAX_REVISIONS} attempts — escalating to human`));
-      console.log(chalk.red('\nBrand review failed repeatedly. Review manually:'));
-      console.log(chalk.red(`  output/songs/${songId}/brand-review.json`));
-      console.log(chalk.red('  You can still proceed — the song needs your judgment.'));
-    }
+    console.log(`\nBrand Score: ${chalk.bold(brandReview.scores?.overall || 0)}/100`);
   }
 
   // Update song record
@@ -266,7 +559,7 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   // ─────────────────────────────
   // 4. Generate metadata
   // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 4/8: Generating metadata...\n'));
+  console.log(chalk.bold('\n📌 Step 4/9: Generating metadata...\n'));
   const { metadata, metadataPath } = await generateMetadata({
     songId,
     title: lyricsResult.title,
@@ -291,7 +584,7 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   // ─────────────────────────────
   // 5. Generate music
   // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 5/8: Generating music...\n'));
+  console.log(chalk.bold('\n📌 Step 5/9: Generating music...\n'));
   const musicResult = await generateMusic({
     songId,
     title: lyricsResult.title,
@@ -322,9 +615,16 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   });
 
   // ─────────────────────────────
-  // 6. OPS QA
+  // 6. Release selection analysis
   // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 6/8: Running QA checklist...\n'));
+  console.log(chalk.bold('\n📌 Step 6/9: Running release selection analysis...\n'));
+  const releaseSelectionResult = await analyzeSongForReleaseSelection(songId);
+  console.log(chalk.green(`✓ Release recommendation: ${releaseSelectionResult.recommendation.value} (${releaseSelectionResult.recommendation.score}/100)`));
+
+  // ─────────────────────────────
+  // 7. OPS QA
+  // ─────────────────────────────
+  console.log(chalk.bold('\n📌 Step 7/9: Running QA checklist...\n'));
   const qaReport = runQAChecklist({
     songId,
     songDir,
@@ -344,9 +644,9 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   }
 
   // ─────────────────────────────
-  // 7. Human approval gate
+  // 8. Human approval gate
   // ─────────────────────────────
-  console.log(chalk.bold('\n📌 Step 7/8: Human approval gate...\n'));
+  console.log(chalk.bold('\n📌 Step 8/9: Human approval gate...\n'));
   const approval = await approveSong({
     songId,
     title: lyricsResult.title,
@@ -373,7 +673,7 @@ async function runNewSongPipeline(topic, existingSongId = null) {
     });
 
     // Build distribution package with active-profile metadata and upload instructions
-    console.log(chalk.bold('\n📌 Step 8/8: Building distribution package...\n'));
+    console.log(chalk.bold('\n📌 Step 9/9: Building distribution package...\n'));
     const { distDir } = await generateHumanTasks({
       songId,
       title: lyricsResult.title,
@@ -398,6 +698,18 @@ async function runNewSongPipeline(topic, existingSongId = null) {
     await runNewSongPipeline(`${topic} [REVISION: ${approval.notes}]`);
     return;
 
+  } else if (approval.decision === 'defer') {
+    upsertSong({
+      id: songId,
+      topic,
+      title: lyricsResult.title,
+      status: SONG_STATUSES.DRAFT,
+      lyrics_path: lyricsResult.lyricsPath,
+      audio_prompt_path: lyricsResult.audioPromptPath,
+      metadata_path: metadataPath,
+      total_cost_usd: totalCost,
+    });
+    console.log(chalk.cyan('\n↺ Operator approval deferred to the web UI after release-selection analysis'));
   } else {
     upsertSong({
       id: songId,
@@ -415,6 +727,113 @@ async function runNewSongPipeline(topic, existingSongId = null) {
   // 8. Update financial report
   // ─────────────────────────────
   await updateFinancialReport({ songId, title: lyricsResult.title, totalCost });
+
+  console.log(`\n${chalk.dim('Total pipeline cost:')} ${chalk.bold(formatCost(totalCost))}`);
+  console.log(`${chalk.dim('Song ID:')} ${songId}\n`);
+}
+
+async function runMagicPipeline(topic, existingSongId = null) {
+  if (!topic) {
+    console.error(chalk.red('ERROR: Please provide a topic: --magic "your topic here"'));
+    process.exit(1);
+  }
+
+  printBanner();
+  console.log(chalk.bold.magenta(`MAGIC PIPELINE — Topic: "${topic}"\n`));
+  console.log(chalk.dim('Flow: create → score → improve once if needed → build marketing assets only for release candidates\n'));
+
+  const songId = existingSongId || generateSongId();
+  const songDir = join(__dirname, `../output/songs/${songId}`);
+  fs.mkdirSync(songDir, { recursive: true });
+  const reuseExistingDraft = existingSongId && process.env.REGENERATE_FROM_EXISTING === '1';
+  const existingDraftPayload = reuseExistingDraft ? loadExistingDraftPayload(songId, songDir) : null;
+  let totalCost = 0;
+
+  upsertSong({
+    id: songId,
+    topic,
+    status: SONG_STATUSES.DRAFT,
+    distributor: DEFAULT_DISTRIBUTOR,
+    total_cost_usd: 0,
+  });
+
+  const researchReport = await loadFreshResearchReport();
+
+  const firstPass = await runSongBuildPass({
+    songId,
+    topic,
+    researchReport,
+    totalCost,
+    draftPayload: existingDraftPayload,
+    passLabel: 'Magic Pass 1/2',
+  });
+  totalCost = firstPass.totalCost;
+
+  if (isReleaseCandidate(firstPass.releaseSelectionResult)) {
+    console.log(chalk.green('\n✓ First pass is already a release candidate'));
+    await finalizeMagicPipelineSuccess({
+      songId,
+      topic,
+      lyricsResult: firstPass.lyricsResult,
+      metadata: firstPass.metadata,
+      metadataPath: firstPass.metadataPath,
+      brandReview: firstPass.brandReview,
+      totalCost,
+    });
+  } else {
+    const draftSong = getSong(songId) || {};
+    const combinedRevisionBrief = buildReleaseSelectionRevisionBrief(
+      draftSong,
+      firstPass.brandReview.revision_notes || 'Improve the weakest release-selection dimensions while preserving the strongest hook.'
+    );
+    fs.writeFileSync(join(songDir, 'latest-regeneration-brief.md'), combinedRevisionBrief + '\n');
+
+    console.log(chalk.yellow('\n↺ First pass did not clear the release threshold. Spending the single allowed regeneration.\n'));
+
+    const secondPass = await runSongBuildPass({
+      songId,
+      topic,
+      researchReport,
+      totalCost,
+      revisionNotes: combinedRevisionBrief,
+      existingLyrics: firstPass.lyricsResult.lyricsText,
+      passLabel: 'Magic Pass 2/2',
+    });
+    totalCost = secondPass.totalCost;
+
+    if (isReleaseCandidate(secondPass.releaseSelectionResult)) {
+      console.log(chalk.green('\n✓ Regenerated pass reached release-candidate status'));
+      await finalizeMagicPipelineSuccess({
+        songId,
+        topic,
+        lyricsResult: secondPass.lyricsResult,
+        metadata: secondPass.metadata,
+        metadataPath: secondPass.metadataPath,
+        brandReview: secondPass.brandReview,
+        totalCost,
+      });
+    } else {
+      console.log(chalk.yellow('\n⚠ Magic pipeline stopped after the single allowed regeneration.'));
+      console.log(chalk.yellow(`  Final recommendation: ${secondPass.releaseSelectionResult.recommendation.value} (${secondPass.releaseSelectionResult.recommendation.score}/100)`));
+      console.log(chalk.yellow('  Marketing assets were not generated because the song did not clear the publish threshold.'));
+      persistSongState({
+        songId,
+        topic,
+        title: secondPass.lyricsResult.title,
+        lyricsPath: secondPass.lyricsResult.lyricsPath,
+        audioPromptPath: secondPass.lyricsResult.audioPromptPath,
+        metadataPath: secondPass.metadataPath,
+        brandScore: secondPass.brandReview.scores?.overall,
+        totalCost,
+      });
+    }
+  }
+
+  await updateFinancialReport({
+    songId,
+    title: getSong(songId)?.title || topic,
+    totalCost,
+  });
 
   console.log(`\n${chalk.dim('Total pipeline cost:')} ${chalk.bold(formatCost(totalCost))}`);
   console.log(`${chalk.dim('Song ID:')} ${songId}\n`);
@@ -616,10 +1035,14 @@ async function main() {
     }
 
     case '--new': {
-      const idFlagIdx = args.indexOf('--id');
-      const existingSongId = idFlagIdx !== -1 ? args[idFlagIdx + 1] : null;
-      const topicArgs = args.slice(1).filter((_, i) => (i + 1) !== idFlagIdx && (i + 1) !== idFlagIdx + 1);
-      await runNewSongPipeline(topicArgs.join(' '), existingSongId);
+      const { topic, existingSongId } = parseTopicArgs(args);
+      await runNewSongPipeline(topic, existingSongId);
+      break;
+    }
+
+    case '--magic': {
+      const { topic, existingSongId } = parseTopicArgs(args);
+      await runMagicPipeline(topic, existingSongId);
       break;
     }
 

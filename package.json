@@ -9,10 +9,12 @@
     "web": "node --watch --import ./src/web/render-mode-preload.js src/web/server.js",
     "setup": "node src/orchestrator.js --setup",
     "new": "node src/orchestrator.js --new",
+    "magic": "node src/orchestrator.js --magic",
     "new:paid": "MINIMAX_USE_FREE_MODEL=false MINIMAX_MUSIC_MODEL=music-2.6 node src/orchestrator.js --new",
     "new:free": "MINIMAX_USE_FREE_MODEL=true node src/orchestrator.js --new",
     "marketing": "node src/scripts/build-marketing-pack.js",
     "marketing:agent": "node src/scripts/run-marketing-agent.js",
+    "release-selection": "node src/scripts/run-release-selection.js",
     "marketing:gmail:auth": "node src/scripts/marketing-gmail-auth.js",
     "marketing:gmail:reauth": "node src/scripts/marketing-gmail-reauth.js",
     "marketing:gmail:scan": "node src/scripts/scan-marketing-inbox.js",
@@ -51,6 +53,9 @@
     "ora": "^7.0.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22 <23"
+  },
+  "volta": {
+    "node": "22.22.2"
   }
 }

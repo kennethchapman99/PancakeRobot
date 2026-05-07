@@ -8,8 +8,25 @@
       <h1 class="text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight"><%= appTitle || brandName || 'Music Pipeline' %></h1>
       <p class="text-zinc-500 mt-1">Your AI-powered music studio — from idea to streaming.</p>
       <div class="flex gap-3 mt-3">
+        <a href="/magic-song" class="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg transition font-bold">🪄 MAGIC SONG</a>
         <a href="/ideas/generate" class="text-sm bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg transition font-semibold">✨ Generate Ideas</a>
         <a href="/songs" class="text-sm bg-zinc-900 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 transition font-medium">🎵 Song Catalog</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mb-10 rounded-[28px] border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-amber-50 p-6 shadow-sm">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div class="max-w-2xl">
+        <div class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">MAGIC SONG</div>
+        <h2 class="mt-2 text-2xl font-black tracking-tight text-zinc-900">One-click release candidate run.</h2>
+        <p class="mt-2 text-sm leading-6 text-zinc-600">
+          Start from a topic, let the pipeline write and rank the song, spend one regeneration max, and only generate marketing assets if the final pass clears the publish threshold.
+        </p>
+      </div>
+      <div class="flex shrink-0 flex-col gap-3 sm:flex-row">
+        <a href="/magic-song" class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-500">🪄 Start MAGIC SONG</a>
+        <a href="/songs?releaseRecommendation=recommend_to_publish" class="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">View Publish Candidates</a>
       </div>
     </div>
   </div>
@@ -105,10 +122,11 @@
   <div class="mt-10 p-5 bg-zinc-100 rounded-xl">
     <h3 class="font-medium text-zinc-700 mb-3 text-sm">Quick Actions</h3>
     <div class="flex flex-wrap gap-2">
+      <a href="/magic-song" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-2 rounded-lg transition font-bold">🪄 MAGIC SONG</a>
       <a href="/ideas/generate" class="bg-amber-500 hover:bg-amber-600 text-white text-sm px-4 py-2 rounded-lg transition font-semibold">✨ Generate Ideas</a>
       <a href="/ideas" class="bg-white border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-50 transition">💡 Idea Vault</a>
       <a href="/songs" class="bg-white border border-zinc-200 text-sm px-4 py-2 rounded-lg hover:bg-zinc-50 transition">🎵 Song Catalog</a>
     </div>
-    <p class="text-xs text-zinc-400 mt-3">To generate a full song, run: <code class="bg-white px-2 py-0.5 rounded border border-zinc-200 font-mono">npm run new "topic here"</code></p>
+    <p class="text-xs text-zinc-400 mt-3">CLI shortcut: <code class="bg-white px-2 py-0.5 rounded border border-zinc-200 font-mono">npm run magic -- "topic here"</code></p>
   </div>
 </div>

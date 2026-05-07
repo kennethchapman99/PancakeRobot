@@ -1,5 +1,6 @@
 import { getActiveProfileId } from '../../../shared/brand-profile.js';
 import { getActiveBrandOutlets, getMarketingOutletsDiagnostics, isTestOrDemoTarget } from '../../../shared/marketing-outlet-health.js';
+import { formatOutreachStatusLabel } from '../../../shared/marketing-outlets.js';
 import { renderMarketingLayout } from '../views/layout.js';
 import { esc, attr } from '../utils/http.js';
 
@@ -53,8 +54,9 @@ export function renderOutletsPage(req, res) {
       : o.cost_status === 'unclear'
         ? 'bg-amber-100 text-amber-800'
         : 'bg-emerald-100 text-emerald-800';
+    const lastContactStatus = formatOutreachStatusLabel(o.last_contact?.status || '');
     const lastContact = o.last_contact
-      ? `<div class="text-xs text-zinc-600">${esc(formatDateTime(o.last_contact.contacted_at))}</div><div class="text-[11px] text-zinc-500">${esc(o.last_contact.release_title || o.last_contact.release_id || '')}</div><div class="text-[11px] text-zinc-500">${esc(o.last_contact.status || '')}</div>`
+      ? `<div class="text-xs text-zinc-600">${esc(formatDateTime(o.last_contact.contacted_at))}</div><div class="text-[11px] text-zinc-500">${esc(o.last_contact.release_title || o.last_contact.release_id || '')}</div><div class="text-[11px] text-zinc-500">${esc(lastContactStatus || '')}</div>`
       : `<span class="text-xs text-zinc-400">—</span>`;
     const lastMessage = o.last_contact
       ? `<details class="text-xs"><summary class="cursor-pointer text-blue-600 hover:underline">View last message</summary><div class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 whitespace-pre-wrap text-zinc-700">${esc(o.outreach_history?.[0]?.message_body || o.last_contact.message_preview || '')}</div></details>`

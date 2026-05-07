@@ -2,6 +2,7 @@ import fs from 'fs';
 import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { getReleaseLinks } from './db.js';
+import { normalizeReleaseAssetManifest } from './release-asset-manifest.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '../..');
@@ -30,13 +31,16 @@ function listFiles(dir, matcher) {
     .filter(matcher)
     .map(name => {
       const path = join(dir, name);
+      const stats = fs.statSync(path);
       return {
         name,
         path,
+        mtimeMs: stats.mtimeMs,
         relative_path: relative(ROOT_DIR, path),
         url: toMediaUrl(path),
       };
-    });
+    })
+    .sort((a, b) => b.mtimeMs - a.mtimeMs || a.name.localeCompare(b.name));
 }
 
 function filterVisibleThumbnailFiles(files) {
@@ -61,9 +65,30 @@ function relativeOutputPathToUrl(relativePath) {
 }
 
 export function scanSongBaseImage(songId) {
-  const refDir = join(OUTPUT_DIR, 'songs', songId, 'reference');
-  const files = listFiles(refDir, name => name.startsWith('base-image'));
+  const refDir = getSongBaseImageDir(songId);
+  const files = listFiles(refDir, name => /^base-image\.(png|jpe?g|webp)$/i.test(name));
   return files[0] ? { ...files[0], songId } : null;
+}
+
+export function getSongBaseImageDir(songId) {
+  return join(OUTPUT_DIR, 'songs', songId, 'reference');
+}
+
+export function clearSongBaseImages(songId) {
+  const refDir = getSongBaseImageDir(songId);
+  if (!exists(refDir)) return 0;
+
+  let removed = 0;
+  for (const file of fs.readdirSync(refDir)) {
+    if (!/^base-image(\.[A-Za-z0-9]+)?$/i.test(file)) continue;
+    try {
+      fs.unlinkSync(join(refDir, file));
+      removed += 1;
+    } catch {
+      // Best-effort cleanup; callers can still rely on scanSongBaseImage afterwards.
+    }
+  }
+  return removed;
 }
 
 export function resolveDefaultBaseImage(songId) {
@@ -102,6 +127,8 @@ export function scanMarketingPack(songId) {
   const baseImage = scanSongBaseImage(songId);
   const hasLink = Boolean(releaseLinks.length || songMeta?.hyperfollow_url || songMeta?.streaming_link);
 
+  const manifest = normalizeReleaseAssetManifest(songId, meta);
+
   return {
     exists: exists(packDir),
     status: meta ? 'built' : 'not_built',
@@ -114,6 +141,10 @@ export function scanMarketingPack(songId) {
       linkPresent: hasLink,
     },
     meta,
+    manifest: {
+      ...manifest,
+      dashboardUrl: manifest.dashboardUrl || (exists(dashboardPath) ? `/media/marketing-ready/${songId}/index.html` : null),
+    },
   };
 }
 
@@ -122,26 +153,26 @@ export function getSongCatalogMarketingSummary(songId, options = {}) {
   const songDir = join(OUTPUT_DIR, 'songs', songId);
   const baseImage = scanSongBaseImage(songId);
   const marketingPack = scanMarketingPack(songId);
-  const generatedAssets = Array.isArray(marketingPack.meta?.generated_assets) ? marketingPack.meta.generated_assets : [];
+  const manifestAssets = Array.isArray(marketingPack.manifest?.assets) ? marketingPack.manifest.assets : [];
 
-  const socialImages = generatedAssets
-    .filter(asset => asset.type === 'image')
+  const socialImages = manifestAssets
+    .filter(asset => asset.kind === 'image')
     .map(asset => ({
-      label: asset.name || asset.path,
-      path: asset.path,
-      url: relativeOutputPathToUrl(asset.path),
-      platform: asset.platform || null,
+      label: asset.label || asset.filePath,
+      path: asset.filePath,
+      url: asset.publicUrl || relativeOutputPathToUrl(asset.filePath),
+      platform: asset.platformFit?.[0] || null,
       type: 'image',
     }))
     .filter(asset => asset.url);
 
-  const socialClips = generatedAssets
-    .filter(asset => asset.type === 'video')
+  const socialClips = manifestAssets
+    .filter(asset => asset.kind === 'video')
     .map(asset => ({
-      label: asset.name || asset.path,
-      path: asset.path,
-      url: relativeOutputPathToUrl(asset.path),
-      platform: asset.platform || null,
+      label: asset.label || asset.filePath,
+      path: asset.filePath,
+      url: asset.publicUrl || relativeOutputPathToUrl(asset.filePath),
+      platform: asset.platformFit?.[0] || null,
       type: 'video',
     }))
     .filter(asset => asset.url);

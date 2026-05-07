@@ -85,6 +85,10 @@ function initSchema(db) {
       total_cost_usd REAL DEFAULT 0,
       brand_profile_id TEXT,
       is_test INTEGER DEFAULT 0,
+      pipeline_stage TEXT,
+      release_recommendation_json TEXT,
+      release_recommendation_history_json TEXT,
+      marketing_inputs_from_ar_json TEXT,
       marketing_links_json TEXT,
       marketing_assets_json TEXT,
       marketing_readiness_json TEXT,
@@ -199,6 +203,10 @@ function initSchema(db) {
     ['published_at', 'TEXT'],
     ['brand_profile_id', 'TEXT'],
     ['is_test', 'INTEGER DEFAULT 0'],
+    ['pipeline_stage', 'TEXT'],
+    ['release_recommendation_json', 'TEXT'],
+    ['release_recommendation_history_json', 'TEXT'],
+    ['marketing_inputs_from_ar_json', 'TEXT'],
     ['marketing_links_json', 'TEXT'],
     ['marketing_assets_json', 'TEXT'],
     ['marketing_readiness_json', 'TEXT'],
@@ -330,8 +338,9 @@ export function upsertSong(song) {
       'release_date', 'distributor', 'distributor_submission_date', 'publishing_status',
       'published_at', 'lyrics_path', 'audio_prompt_path', 'thumbnail_path',
       'metadata_path', 'music_service', 'distribution_status', 'brand_score',
-      'total_cost_usd', 'brand_profile_id', 'marketing_links_json', 'marketing_assets_json',
-      'marketing_readiness_json', 'last_outreach_json', 'is_test',
+      'total_cost_usd', 'brand_profile_id', 'pipeline_stage', 'release_recommendation_json',
+      'release_recommendation_history_json', 'marketing_inputs_from_ar_json', 'marketing_links_json',
+      'marketing_assets_json', 'marketing_readiness_json', 'last_outreach_json', 'is_test',
     ];
     for (const key of patchable) {
       if (song[key] !== undefined && song[key] !== null) {
@@ -342,6 +351,9 @@ export function upsertSong(song) {
     if (song.marketing_assets !== undefined) updates.marketing_assets_json = stringifyOptionalJson(song.marketing_assets);
     if (song.marketing_readiness !== undefined) updates.marketing_readiness_json = stringifyOptionalJson(song.marketing_readiness);
     if (song.last_outreach !== undefined) updates.last_outreach_json = stringifyOptionalJson(song.last_outreach);
+    if (song.release_recommendation !== undefined) updates.release_recommendation_json = stringifyOptionalJson(song.release_recommendation);
+    if (song.release_recommendation_history !== undefined) updates.release_recommendation_history_json = stringifyOptionalJson(song.release_recommendation_history);
+    if (song.marketing_inputs_from_ar !== undefined) updates.marketing_inputs_from_ar_json = stringifyOptionalJson(song.marketing_inputs_from_ar);
     const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
     const vals = [...Object.values(updates), song.id];
     db.prepare(`UPDATE songs SET ${setClauses} WHERE id = ?`).run(...vals);
@@ -353,9 +365,10 @@ export function upsertSong(song) {
          release_date, distributor, distributor_submission_date, publishing_status,
          published_at, lyrics_path, audio_prompt_path, thumbnail_path, metadata_path,
          music_service, distribution_status, brand_score, total_cost_usd, brand_profile_id,
-         is_test, marketing_links_json, marketing_assets_json, marketing_readiness_json, last_outreach_json)
+         is_test, pipeline_stage, release_recommendation_json, release_recommendation_history_json,
+         marketing_inputs_from_ar_json, marketing_links_json, marketing_assets_json, marketing_readiness_json, last_outreach_json)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       song.id,
       song.created_at || now,
@@ -386,6 +399,10 @@ export function upsertSong(song) {
       song.total_cost_usd || 0,
       song.brand_profile_id || null,
       song.is_test ? 1 : 0,
+      song.pipeline_stage || null,
+      stringifyOptionalJson(song.release_recommendation),
+      stringifyOptionalJson(song.release_recommendation_history),
+      stringifyOptionalJson(song.marketing_inputs_from_ar),
       stringifyOptionalJson(song.marketing_links),
       stringifyOptionalJson(song.marketing_assets),
       stringifyOptionalJson(song.marketing_readiness),
@@ -430,6 +447,9 @@ function parseSong(s) {
     genre_tags: parseJsonArray(s.genre_tags),
     mood_tags: parseJsonArray(s.mood_tags),
     keywords: parseJsonArray(s.keywords),
+    release_recommendation: parseJsonObject(s.release_recommendation_json),
+    release_recommendation_history: parseJsonArray(s.release_recommendation_history_json),
+    marketing_inputs_from_ar: parseJsonObject(s.marketing_inputs_from_ar_json),
     marketing_links: parseJsonObject(s.marketing_links_json),
     marketing_assets: parseJsonObject(s.marketing_assets_json),
     marketing_readiness: parseJsonObject(s.marketing_readiness_json),

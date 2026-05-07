@@ -1,6 +1,7 @@
 node_modules/
 .env
 .DS_Store
+.playwright-cli/
 pancake-robot.db
 pancake-robot.db-shm
 pancake-robot.db-wal
@@ -11,3 +12,16 @@ music-pipeline.db-wal
 music-pipeline.db.backup-*
 output/
 secrets/
+pancake_robot.db
+pancake_robot.db-shm
+pancake_robot.db-wal
+music-pipeline-smoke-release-happy-path-*.db
+music-pipeline-smoke-release-happy-path-*.db-shm
+music-pipeline-smoke-release-happy-path-*.db-wal
+music-pipeline-test-release-flow-*.db
+release-selection-test-*.db
+Basement Cypher/
+RELEASED/
+TO BE RELEASED/
+base images/ChatGPT Image *.png
+config/brand-profiles/.DS_Store

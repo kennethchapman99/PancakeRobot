@@ -4,6 +4,7 @@ import { getReleaseLinks, getSong, upsertSong } from './db.js';
 import { resolveDefaultBaseImage, scanMarketingPack, scanSongBaseImage } from './song-catalog-marketing.js';
 import { getOutreachEvents } from './marketing-outreach-db.js';
 import { getSongNextAction } from './song-workflow.js';
+import { appendCacheBust, normalizeReleaseAssetManifest, resolveCanonicalSocialHandle } from './release-asset-manifest.js';
 
 const BRAND_PROFILE = loadBrandProfile();
 const DEFAULT_CONTACT_EMAIL = BRAND_PROFILE.marketing?.contact_email
@@ -131,19 +132,19 @@ export function syncSongMarketingKitFromPack(songId, options = {}) {
   if (!song) throw new Error(`Song not found: ${songId}`);
   const kit = getSongMarketingKit(songId);
   const marketingPack = options.marketingPack || scanMarketingPack(songId);
-  const generated = Array.isArray(marketingPack?.meta?.generated_assets) ? marketingPack.meta.generated_assets : [];
-  const byName = name => generated.find(asset => String(asset.name || '').toLowerCase() === name.toLowerCase());
+  const manifest = normalizeReleaseAssetManifest(songId, marketingPack?.manifest || marketingPack?.meta);
+  const byFormat = format => manifest.assets.find(asset => String(asset.format || asset.filePath || '').toLowerCase() === format.toLowerCase());
   const baseImage = options.baseImage || scanSongBaseImage(songId);
   const assets = {
     ...kit.marketing_assets,
     base_image_url: kit.marketing_assets.base_image_url || baseImage?.url || null,
-    square_post_url: pathToMediaUrl(byName('ig-square-post-1080x1080.png')?.path) || kit.marketing_assets.square_post_url || null,
-    vertical_post_url: pathToMediaUrl(byName('tiktok-cover.jpg')?.path) || pathToMediaUrl(byName('ig-reel-cover.jpg')?.path) || kit.marketing_assets.vertical_post_url || null,
-    portrait_post_url: pathToMediaUrl(byName('ig-feed-announcement-1080x1350.png')?.path) || kit.marketing_assets.portrait_post_url || null,
-    outreach_banner_url: pathToMediaUrl(byName('outreach-hero-1600x900.png')?.path) || kit.marketing_assets.outreach_banner_url || null,
-    cover_safe_promo_url: pathToMediaUrl(byName('ig-reel-cover.jpg')?.path) || kit.marketing_assets.cover_safe_promo_url || null,
-    no_text_variation_url: pathToMediaUrl(byName('no-text-variation.png')?.path) || kit.marketing_assets.no_text_variation_url || null,
-    generated_at: marketingPack?.meta?.generated_at || kit.marketing_assets.generated_at || null,
+    square_post_url: byFormat('ig-square-post-1080x1080.png')?.publicUrl || kit.marketing_assets.square_post_url || null,
+    vertical_post_url: byFormat('tiktok-cover.jpg')?.publicUrl || byFormat('ig-reel-cover.jpg')?.publicUrl || kit.marketing_assets.vertical_post_url || null,
+    portrait_post_url: byFormat('ig-feed-announcement-1080x1350.png')?.publicUrl || kit.marketing_assets.portrait_post_url || null,
+    outreach_banner_url: byFormat('outreach-hero-1600x900.png')?.publicUrl || kit.marketing_assets.outreach_banner_url || null,
+    cover_safe_promo_url: byFormat('ig-reel-cover.jpg')?.publicUrl || kit.marketing_assets.cover_safe_promo_url || null,
+    no_text_variation_url: byFormat('no-text-variation.png')?.publicUrl || kit.marketing_assets.no_text_variation_url || null,
+    generated_at: manifest.generatedAt || kit.marketing_assets.generated_at || null,
   };
   return saveSongMarketingKit(songId, {
     marketing_links: kit.marketing_links,
@@ -259,6 +260,10 @@ export function buildReleaseKitViewModel(songOrId) {
   if (!song) return null;
   const kit = getSongMarketingKit(song);
   const releaseLinks = getReleaseLinks(song.id);
+  const marketingPack = scanMarketingPack(song.id);
+  const manifest = normalizeReleaseAssetManifest(song.id, marketingPack.manifest || marketingPack.meta);
+  const generatedAt = manifest.generatedAt || kit.marketing_assets.generated_at || '';
+  const socialHandle = resolveCanonicalSocialHandle({ marketingLinks: kit.marketing_links || {}, socialHandle: manifest.socialHandle });
   return {
     song,
     title: song.title || song.topic || song.id,
@@ -275,6 +280,13 @@ export function buildReleaseKitViewModel(songOrId) {
       ...releaseLinks.map(link => ({ label: link.platform, url: link.url })),
     ].filter(link => link.url).filter(uniqueUrlFilter()),
     kit,
+    socialHandle,
+    generatedAt,
+    manifest,
+    heroImageUrl: appendCacheBust(
+      kit.image_source?.active_image_url || kit.marketing_links.cover_art_url || kit.marketing_assets.base_image_url || kit.marketing_assets.fallback_image_url,
+      generatedAt
+    ),
     usageNote: 'Approved images and copy for coverage, playlisting, and social sharing',
   };
 }
@@ -322,18 +334,18 @@ function deriveLinksFromSong(song, releaseLinks = []) {
 }
 
 function deriveAssetsFromSong(song, marketingPack, baseImage, links, defaults) {
-  const generated = Array.isArray(marketingPack?.meta?.generated_assets) ? marketingPack.meta.generated_assets : [];
-  const find = needle => generated.find(asset => String(asset.name || '').toLowerCase() === needle.toLowerCase());
+  const manifest = normalizeReleaseAssetManifest(song.id, marketingPack?.manifest || marketingPack?.meta);
+  const find = needle => manifest.assets.find(asset => String(asset.format || asset.filePath || '').toLowerCase() === needle.toLowerCase());
   return {
     base_image_url: baseImage?.url || null,
     fallback_image_url: resolveMarketingImageSelection({}, links, defaults, baseImage, song.id).fallback_image_url,
-    square_post_url: pathToMediaUrl(find('ig-square-post-1080x1080.png')?.path) || null,
-    vertical_post_url: pathToMediaUrl(find('tiktok-cover.jpg')?.path) || pathToMediaUrl(find('ig-reel-cover.jpg')?.path) || null,
-    portrait_post_url: pathToMediaUrl(find('ig-feed-announcement-1080x1350.png')?.path) || null,
-    outreach_banner_url: pathToMediaUrl(find('outreach-hero-1600x900.png')?.path) || null,
-    cover_safe_promo_url: pathToMediaUrl(find('ig-reel-cover.jpg')?.path) || null,
-    no_text_variation_url: pathToMediaUrl(find('no-text-variation.png')?.path) || null,
-    generated_at: marketingPack?.meta?.generated_at || null,
+    square_post_url: find('ig-square-post-1080x1080.png')?.publicUrl || null,
+    vertical_post_url: find('tiktok-cover.jpg')?.publicUrl || find('ig-reel-cover.jpg')?.publicUrl || null,
+    portrait_post_url: find('ig-feed-announcement-1080x1350.png')?.publicUrl || null,
+    outreach_banner_url: find('outreach-hero-1600x900.png')?.publicUrl || null,
+    cover_safe_promo_url: find('ig-reel-cover.jpg')?.publicUrl || null,
+    no_text_variation_url: find('no-text-variation.png')?.publicUrl || null,
+    generated_at: manifest.generatedAt || null,
     generation_source: resolveMarketingImageSelection({ base_image_url: baseImage?.url || null }, links, defaults, baseImage, song.id).generation_source,
     release_kit_published: false,
     release_kit_last_saved_at: null,

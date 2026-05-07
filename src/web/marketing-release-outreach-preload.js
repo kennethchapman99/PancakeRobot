@@ -2,11 +2,11 @@ import { createRequire } from 'module';
 import {
   createMarketingCampaign,
   getMarketingCampaigns,
-  getMarketingTargets,
   getReleaseMatches,
 } from '../shared/marketing-db.js';
 import { getActiveProfileId, loadBrandProfile } from '../shared/brand-profile.js';
 import { getAllSongs, getReleaseLinks } from '../shared/db.js';
+import { getActiveBrandOutlets } from '../shared/marketing-outlet-health.js';
 import { getMarketingReleaseEntries } from '../shared/marketing-releases.js';
 
 const require = createRequire(import.meta.url);
@@ -161,7 +161,7 @@ function createReleaseOutreachCampaign(body = {}) {
 }
 
 function getEligibleOutletsForRelease(_songId) {
-  return getMarketingTargets({})
+  return getActiveBrandOutlets({ brandProfileId: getActiveProfileId(), includeTestData: false })
     .map(normalizeOutletForDashboard)
     .filter(o => o.status !== 'do_not_contact')
     .filter(o => o.ai_policy !== 'banned')

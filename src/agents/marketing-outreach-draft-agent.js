@@ -165,6 +165,7 @@ function buildContext(item) {
       platform: outlet.platform,
       contact_method: outlet.contact_method,
       contact_email: outlet.contact_email,
+      public_email: outlet.public_email,
       ai_policy: outlet.ai_policy,
       ai_risk_score: outlet.ai_risk_score,
       research_summary: outlet.research_summary,
@@ -191,10 +192,6 @@ function deterministicDraft(context, generationMethod) {
     ? `${releases.length} new ${brandName} songs`
     : (releases[0]?.title || releases[0]?.topic || `new ${brandName} song`);
   const primaryLinks = releases.flatMap(song => song.links || []).filter(link => link?.url);
-  const linkLines = primaryLinks.length
-    ? primaryLinks.map(link => `${link.platform}: ${link.url}`).join('\n')
-    : '[Add public streaming / preview links before sending]';
-  const socialLines = (context.brand.social_links || []).map(link => `${link.label}: ${link.url}`).join('\n');
   const attachmentPlan = buildAttachmentPlanForOutreachItem(context.item || {});
   const linkBlock = attachmentPlan.outreachLinkBlock || '';
   const angle = context.outlet.outreach_angle || context.outlet.research_summary || '';
@@ -217,8 +214,7 @@ function deterministicDraft(context, generationMethod) {
     ...releases.map(song => `- ${song.title || song.topic || song.id}`),
     '',
     linkBlock ? 'Links:' : '',
-    linkBlock || linkLines,
-    socialLines ? `\nArtist links:\n${socialLines}` : '',
+    linkBlock || '[Add public streaming / preview links before sending]',
     '',
     'Happy to share anything else that helps.',
     '',
@@ -260,27 +256,29 @@ function firstSentence(text) {
 }
 
 function ensureDraftHasReleaseLinks(draft, context) {
-  const releaseLines = (context.releases || [])
-    .flatMap(release => (release.links || []).filter(link => link?.url).map(link => `${link.platform}: ${link.url}`));
   const body = String(draft.body || '');
   const attachmentPlan = buildAttachmentPlanForOutreachItem(context.item || {});
-  const socialLines = (context.brand.social_links || []).map(link => `${link.label}: ${link.url}`);
   const outreachLinkBlock = attachmentPlan.outreachLinkBlock || '';
-  const missingReleaseLines = releaseLines.filter(line => !body.includes(line.split(': ').slice(1).join(': ')));
-  const missingSocialLines = socialLines.filter(line => !body.includes(line.split(': ').slice(1).join(': ')));
-  const missingOutreachBlock = outreachLinkBlock && !body.includes(outreachLinkBlock.split('\n')[0]);
+  const missingOutreachBlock = outreachLinkBlock && !outreachBlockIncluded(body, outreachLinkBlock);
 
-  if (!missingReleaseLines.length && !missingSocialLines.length && !missingOutreachBlock) return draft;
+  if (!missingOutreachBlock) return draft;
 
   const addendum = [];
-  if (missingOutreachBlock) addendum.push(outreachLinkBlock, '');
-  if (missingReleaseLines.length) addendum.push('Links:', ...missingReleaseLines, '');
-  if (missingSocialLines.length) addendum.push('Artist links:', ...missingSocialLines, '');
+  if (missingOutreachBlock) addendum.push('Links:', outreachLinkBlock, '');
 
   return {
     ...draft,
     body: `${body.trim()}${addendum.length ? `\n\n${addendum.join('\n')}` : ''}`.trim(),
   };
+}
+
+function outreachBlockIncluded(body, outreachLinkBlock) {
+  const urls = String(outreachLinkBlock || '')
+    .split(/\r?\n/)
+    .map(line => line.split(': ').slice(1).join(': ').trim())
+    .filter(Boolean);
+  if (!urls.length) return false;
+  return urls.every(url => body.includes(url));
 }
 
 function safeParse(value) {

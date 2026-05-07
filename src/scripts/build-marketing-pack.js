@@ -20,7 +20,7 @@ const _require = createRequire(import.meta.url);
 const dotenv = _require('dotenv');
 dotenv.config({ path: join(__dirname, '../../.env'), override: true });
 
-import { buildMarketingReleasePack } from '../marketing/release-agent.js';
+import { buildSongReleaseAssets } from '../shared/song-release-assets-service.js';
 
 function getArg(name) {
   const idx = process.argv.indexOf(name);
@@ -37,6 +37,8 @@ const useBaseImage = hasFlag('--no-use-base-image') ? false : true;
 const regenerateBaseArt = hasFlag('--regenerate-base-art');
 const renderVideos = hasFlag('--no-render-videos') ? false : true;
 const requireApprovalBeforeVideo = hasFlag('--require-approval-before-video');
+const json = hasFlag('--json');
+const jsonSummary = hasFlag('--json-summary');
 
 const VALID_MODES = ['full_social_pack', 'generate_new_base_art', 'render_from_existing_visuals', 'captions_checklist_only'];
 
@@ -52,6 +54,8 @@ if (!songId) {
   console.error('  --regenerate-base-art');
   console.error('  --no-render-videos');
   console.error('  --require-approval-before-video');
+  console.error('  --json');
+  console.error('  --json-summary');
   process.exit(1);
 }
 
@@ -61,14 +65,24 @@ if (mode && !VALID_MODES.includes(mode)) {
 }
 
 try {
-  console.log(`[MARKETING] Building marketing pack for ${songId}...`);
-  if (mode) console.log(`[MARKETING] Mode: ${mode}`);
-  if (provider) console.log(`[MARKETING] Provider: ${provider}`);
-  if (formats) console.log(`[MARKETING] Formats: ${formats.join(', ')}`);
-  if (regenerateBaseArt) console.log(`[MARKETING] Regenerating base art`);
-  if (!renderVideos) console.log(`[MARKETING] Skipping video render`);
+  const log = (...args) => console.error(...args);
+  const restoreConsoleLog = (json || jsonSummary)
+    ? (() => {
+        const original = console.log;
+        console.log = (...args) => console.error(...args);
+        return () => { console.log = original; };
+      })()
+    : () => {};
+  if (!json && !jsonSummary) {
+    log(`[MARKETING] Building marketing pack for ${songId}...`);
+    if (mode) log(`[MARKETING] Mode: ${mode}`);
+    if (provider) log(`[MARKETING] Provider: ${provider}`);
+    if (formats) log(`[MARKETING] Formats: ${formats.join(', ')}`);
+    if (regenerateBaseArt) log(`[MARKETING] Regenerating base art`);
+    if (!renderVideos) log(`[MARKETING] Skipping video render`);
+  }
 
-  const result = await buildMarketingReleasePack(songId, {
+  const result = await buildSongReleaseAssets(songId, {
     mode,
     provider,
     imageProvider: provider,
@@ -78,24 +92,44 @@ try {
     renderVideos,
     requireApprovalBeforeVideo,
   });
+  restoreConsoleLog();
 
-  console.log(`\n[MARKETING] ${result.ok ? '✓' : '⚠'} Marketing pack generated`);
-  console.log(`[MARKETING] Output: ${result.outputDir}`);
-  console.log(`[MARKETING] Dashboard: ${result.dashboardUrl}`);
-  console.log(`[MARKETING] QA: ${result.metadata.qa_status}`);
+  const payload = {
+    ok: result.ok,
+    songId: result.songId,
+    dashboardUrl: result.dashboardUrl,
+    generatedAssets: result.generatedAssets,
+    marketingAssets: result.marketingAssets,
+    imageSource: result.imageSource,
+    qaWarnings: result.qaWarnings || [],
+    qaFailures: result.qaFailures || [],
+  };
 
-  if (result.qaReport.warnings?.length) {
-    console.log('\n[MARKETING] Warnings:');
-    for (const warning of result.qaReport.warnings) console.log(`  - ${warning}`);
+  if (json || jsonSummary) {
+    process.stdout.write(`${JSON.stringify({
+      ok: result.ok,
+      songId: result.songId,
+      dashboardUrl: result.dashboardUrl,
+      generatedAssets: result.generatedAssets,
+      marketingAssets: result.marketingAssets,
+      imageSource: result.imageSource,
+      warnings: result.qaWarnings || [],
+      failures: result.qaFailures || [],
+    })}\n`);
+  } else {
+    log(`\n[MARKETING] ${result.ok ? '✓' : '⚠'} Marketing pack generated`);
+    log(`[MARKETING] Dashboard: ${result.dashboardUrl}`);
+    if (payload.qaWarnings.length) {
+      log('\n[MARKETING] Warnings:');
+      for (const warning of payload.qaWarnings) log(`  - ${warning}`);
+    }
+    if (payload.qaFailures.length) {
+      log('\n[MARKETING] Failures:');
+      for (const failure of payload.qaFailures) log(`  - ${failure}`);
+    }
   }
 
-  if (result.qaReport.failures?.length) {
-    console.log('\n[MARKETING] Failures:');
-    for (const failure of result.qaReport.failures) console.log(`  - ${failure}`);
-    process.exit(2);
-  }
-
-  process.exit(0);
+  process.exit(payload.qaFailures.length ? 2 : 0);
 } catch (err) {
   console.error(`[MARKETING] Failed: ${err.message}`);
   process.exit(1);

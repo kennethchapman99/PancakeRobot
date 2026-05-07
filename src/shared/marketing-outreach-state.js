@@ -99,7 +99,7 @@ export function transitionOutreachItem(itemId, action, payload = {}) {
 }
 
 function maybeCreateOutreachHistoryEvent(item, action, payload) {
-  if (!['mark_manual_submitted', 'mark_sent', 'mark_replied'].includes(action)) return;
+  if (!['create_gmail_draft', 'mark_manual_submitted', 'mark_sent', 'mark_replied'].includes(action)) return;
 
   const release = Array.isArray(item.release_context) && item.release_context.length ? item.release_context[0] : {};
   const outlet = item.outlet_context || {};
@@ -107,7 +107,12 @@ function maybeCreateOutreachHistoryEvent(item, action, payload) {
   const recipientHandle = outlet.contact?.handle || outlet.handle || null;
   const channel = outlet.contactability?.best_channel
     || (recipientEmail ? 'email' : outlet.submission_form_url || outlet.contact?.method ? 'contact_form' : 'unknown');
-  const eventStatus = action === 'mark_replied' ? 'replied' : 'sent';
+  const eventStatus = action === 'create_gmail_draft'
+    ? 'gmail_draft_created'
+    : action === 'mark_replied'
+      ? 'replied'
+      : 'sent';
+  const contactTimestamp = item.sent_at || payload.fields?.sent_at || item.updated_at || new Date().toISOString();
 
   createOutreachEvent({
     outreach_item_id: item.id,
@@ -125,7 +130,7 @@ function maybeCreateOutreachHistoryEvent(item, action, payload) {
     status: eventStatus,
     gmail_message_id: item.gmail_message_id || null,
     gmail_thread_id: item.gmail_thread_id || null,
-    contacted_at: item.sent_at || payload.fields?.sent_at || new Date().toISOString(),
+    contacted_at: contactTimestamp,
     replied_at: eventStatus === 'replied' ? (item.replied_at || new Date().toISOString()) : null,
     notes: payload.message || null,
     raw_json: {
@@ -136,7 +141,7 @@ function maybeCreateOutreachHistoryEvent(item, action, payload) {
   });
 
   updateMarketingTarget(item.target_id, {
-    last_contact_at: item.sent_at || payload.fields?.sent_at || new Date().toISOString(),
+    last_contact_at: contactTimestamp,
     last_contact_release_marketing_id: item.release_marketing_id || release.id || item.song_id,
     last_contact_release_title: release.title || item.song_id,
     last_contact_subject: item.subject || null,
@@ -144,7 +149,7 @@ function maybeCreateOutreachHistoryEvent(item, action, payload) {
     last_outcome: eventStatus,
   });
   updateSongLastOutreach(item.song_id, {
-    datetime: item.sent_at || payload.fields?.sent_at || new Date().toISOString(),
+    datetime: contactTimestamp,
     release_id: item.release_marketing_id || release.id || item.song_id,
     release_title: release.title || item.song_id,
     message_summary: item.subject || null,

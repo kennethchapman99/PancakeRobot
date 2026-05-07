@@ -16,6 +16,7 @@ dotenv.config({ path: join(__dirname, '../../.env'), override: true });
 
 import { writeLyrics } from '../agents/lyricist.js';
 import { getSong } from '../shared/db.js';
+import { buildReleaseSelectionRevisionBrief } from '../lib/release-selection/regeneration-brief.js';
 
 const [,, songId, feedbackB64] = process.argv;
 if (!songId || !feedbackB64) {
@@ -26,9 +27,13 @@ if (!songId || !feedbackB64) {
 const feedback = Buffer.from(feedbackB64, 'base64').toString('utf8');
 const song = getSong(songId);
 if (!song) { console.error(`Song not found: ${songId}`); process.exit(1); }
+const combinedRevisionBrief = buildReleaseSelectionRevisionBrief(song, feedback);
 
 console.log(`\n✍️  Revising: ${song.title || song.topic}`);
 console.log(`📝 Feedback: ${feedback}\n`);
+if (combinedRevisionBrief && combinedRevisionBrief !== feedback) {
+  console.log('🧠 A&R guidance merged into revision brief\n');
+}
 
 // Load existing lyrics
 const songDir = join(__dirname, '../../output/songs', songId);
@@ -37,6 +42,9 @@ let existingLyrics = null;
 if (fs.existsSync(lyricsPath)) {
   existingLyrics = fs.readFileSync(lyricsPath, 'utf8');
   console.log(`📄 Loaded existing lyrics (${existingLyrics.split('\n').length} lines)`);
+}
+if (combinedRevisionBrief) {
+  fs.writeFileSync(join(songDir, 'latest-regeneration-brief.md'), combinedRevisionBrief + '\n');
 }
 
 // Load research if available
@@ -52,7 +60,7 @@ try {
     songId,
     topic: song.topic || song.title,
     researchReport,
-    revisionNotes: feedback,
+    revisionNotes: combinedRevisionBrief || feedback,
     existingLyrics,
   });
 

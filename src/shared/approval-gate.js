@@ -2,8 +2,9 @@
  * Human approval gate — shows full QA results before asking for human decision.
  * QA is advisory-only: it may report issues, but it must not block approval.
  *
- * When WEB_PIPELINE=1 env var is set (web-triggered runs), the gate is bypassed
- * and auto-approves so the web UI can handle the real approval on the song detail page.
+ * When WEB_PIPELINE=1 env var is set (web-triggered runs), the gate defers to
+ * the web UI so release-selection can finish and the operator can choose the
+ * next step from the song detail page.
  */
 
 import inquirer from 'inquirer';
@@ -35,8 +36,8 @@ export async function approveSong({
 }) {
   // Web pipeline mode: auto-approve so all assets are generated, UI handles real approval
   if (process.env.WEB_PIPELINE === '1') {
-    console.log('\n[WEB] Auto-approving — review the song in the web UI at /songs/' + songId);
-    return { decision: 'yes' };
+    console.log('\n[WEB] Approval deferred — review the release recommendation in the web UI at /songs/' + songId);
+    return { decision: 'defer' };
   }
 
   const resolvedSongDir = songDir || join(__dirname, `../../output/songs/${songId}`);

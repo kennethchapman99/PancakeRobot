@@ -8,31 +8,16 @@ import { basename, dirname, extname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { getSong } from '../shared/db.js';
 import { loadBrandProfile } from '../shared/brand-profile.js';
-import { resolveDefaultBaseImage } from '../shared/song-catalog-marketing.js';
+import { getReleaseMarketingBySongId } from '../shared/marketing-releases.js';
+import { resolveDefaultBaseImage, scanSongBaseImage } from '../shared/song-catalog-marketing.js';
+import { getSongMarketingKit } from '../shared/song-marketing-kit.js';
+import { resolveCanonicalSocialHandle } from '../shared/release-asset-manifest.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '../..');
 const BRAND_PROFILE = loadBrandProfile();
 const BRAND_NAME = BRAND_PROFILE.brand_name;
 const DEFAULT_ARTIST = BRAND_PROFILE.distribution.default_artist || BRAND_NAME;
-
-function extractHandleFromUrl(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return null;
-  const match = raw.match(/(?:instagram\.com|tiktok\.com|youtube\.com)\/@?([A-Za-z0-9._]+)/i);
-  if (!match?.[1]) return null;
-  return `@${match[1]}`;
-}
-
-function defaultHandle() {
-  const social = BRAND_PROFILE.social || {};
-  const configuredHandle = extractHandleFromUrl(social.instagram_url)
-    || extractHandleFromUrl(social.tiktok_url)
-    || extractHandleFromUrl(social.youtube_channel_url)
-    || extractHandleFromUrl(social.website_url);
-  if (configuredHandle) return configuredHandle;
-  return `@${DEFAULT_ARTIST.toLowerCase().replace(/[^a-z0-9]+/g, '')}`;
-}
 
 function logoAssetPath() {
   const logoPath = BRAND_PROFILE.ui.logo_path || '/logo.png';
@@ -153,6 +138,9 @@ export function collectMarketingAssets(songId, options = {}) {
     join(songDir, 'metadata.json'),
   ]);
   const metadata = readJson(metadataPath) || {};
+  const marketingKit = getSongMarketingKit(songId);
+  const releaseMarketing = getReleaseMarketingBySongId(songId);
+  const uploadedBaseImage = scanSongBaseImage(songId);
   const defaultBaseImage = resolveDefaultBaseImage(songId);
 
   const audioCandidates = [
@@ -168,7 +156,8 @@ export function collectMarketingAssets(songId, options = {}) {
   const requestedSourceArtworkPath = options.sourceArtworkPath && exists(options.sourceArtworkPath)
     ? options.sourceArtworkPath
     : null;
-  const coverPath = requestedSourceArtworkPath || preferredImage(distributionImages) || defaultBaseImage?.path || null;
+  const baseImagePath = requestedSourceArtworkPath || uploadedBaseImage?.path || null;
+  const coverPath = requestedSourceArtworkPath || preferredImage(distributionImages) || uploadedBaseImage?.path || defaultBaseImage?.path || null;
 
   const characterPath = firstExisting([
     process.env.MARKETING_CHARACTER_ASSET,
@@ -194,7 +183,11 @@ export function collectMarketingAssets(songId, options = {}) {
 
   const title = song?.title || metadata.title || metadata.youtube_title || song?.topic || songId;
   const artist = metadata.artist || metadata.primary_artist || process.env.MARKETING_DEFAULT_ARTIST || DEFAULT_ARTIST;
-  const handle = process.env.MARKETING_DEFAULT_HANDLE || defaultHandle();
+  const handle = resolveCanonicalSocialHandle({
+    brandProfile: BRAND_PROFILE,
+    marketingLinks: marketingKit.marketing_links || {},
+    release: releaseMarketing || {},
+  });
   const cta = process.env.MARKETING_DEFAULT_CTA || 'Listen everywhere - link in bio';
   const hyperfollowUrl = metadata.hyperfollow_url || metadata.hyperfollow || metadata.streaming_link || metadata.link_in_bio_url || '';
 
@@ -224,6 +217,8 @@ export function collectMarketingAssets(songId, options = {}) {
     distributionDir,
     outputDir,
     dirs: { instagramDir, tiktokDir, sourceDir, workingDir },
+    baseImagePath,
+    hasBaseImage: Boolean(baseImagePath),
     sourceArtworkPath: requestedSourceArtworkPath || coverPath,
     source: {
       audioPath,

@@ -1,4 +1,4 @@
-import { getOutreachEvents } from './marketing-outreach-db.js';
+import { getOutreachEvents, getOutreachItems } from './marketing-outreach-db.js';
 
 export const OUTREACH_REASON_CODES = [
   'requires_payment',
@@ -106,7 +106,7 @@ export function normalizeOutletForApp(row, options = {}) {
   };
 }
 
-export function hydrateOutletsWithHistory(rows, { onlyStatuses = ['manual_submitted', 'sent', 'replied'] } = {}) {
+export function hydrateOutletsWithHistory(rows, { onlyStatuses = ['gmail_draft_created', 'manual_submitted', 'sent', 'replied'] } = {}) {
   const ids = [...new Set(rows.map(row => row?.id).filter(Boolean))];
   const historyByTargetId = getOutreachHistoryByTargetIds(ids, { statuses: onlyStatuses });
   return rows.map(row => normalizeOutletForApp(row, { outreachHistory: historyByTargetId.get(row.id) || [] }));
@@ -128,6 +128,22 @@ export function getOutreachHistoryByTargetIds(targetIds = [], filters = {}) {
     map.set(event.target_id, list);
   }
 
+  const statuses = Array.isArray(filters.statuses) ? filters.statuses.map(v => String(v || '').trim()) : [];
+  if (!statuses.length || statuses.includes('gmail_draft_created')) {
+    const draftItems = getOutreachItems({ target_ids: ids })
+      .filter(item => item.status === 'gmail_draft_created' && item.gmail_draft_id);
+    for (const item of draftItems) {
+      const list = map.get(item.target_id) || [];
+      const hasPersistedEvent = list.some(event =>
+        event.outreach_item_id === item.id
+        || (event.status === 'gmail_draft_created' && event.gmail_thread_id && event.gmail_thread_id === item.gmail_thread_id)
+      );
+      if (hasPersistedEvent) continue;
+      list.push(normalizeOutreachEvent(synthesizeDraftEvent(item)));
+      map.set(item.target_id, list);
+    }
+  }
+
   for (const [id, items] of map.entries()) {
     items.sort((a, b) => compareIsoDatesDesc(a.contacted_at, b.contacted_at));
     map.set(id, items);
@@ -142,6 +158,33 @@ export function normalizeOutreachEvent(event) {
     ...event,
     message_body: messageBody,
     message_preview: event.message_preview || truncateMessage(messageBody),
+  };
+}
+
+function synthesizeDraftEvent(item) {
+  const outlet = item.outlet_context || {};
+  const release = Array.isArray(item.release_context) && item.release_context.length ? item.release_context[0] : {};
+  return {
+    id: `synthetic_draft_${item.id}`,
+    outreach_item_id: item.id,
+    campaign_id: item.campaign_id,
+    target_id: item.target_id,
+    song_id: item.song_id,
+    release_id: item.release_marketing_id || release.id || item.song_id,
+    release_title: release.title || item.song_id,
+    channel: outlet.contactability?.best_channel || 'email',
+    recipient_name: outlet.contact?.name || outlet.name || item.outlet_name || null,
+    recipient_email: outlet.public_email || outlet.contact_email || outlet.contact?.email || null,
+    recipient_handle: outlet.contact?.handle || outlet.handle || null,
+    subject: item.subject || item.generated_subject || null,
+    message_body: item.body || item.generated_body || null,
+    status: 'gmail_draft_created',
+    gmail_message_id: item.gmail_message_id || null,
+    gmail_thread_id: item.gmail_thread_id || null,
+    contacted_at: item.updated_at || item.created_at || new Date().toISOString(),
+    replied_at: item.replied_at || null,
+    notes: 'Synthesized from outreach item draft state',
+    raw_json: { synthesized: true, source: 'marketing_outreach_items' },
   };
 }
 
@@ -160,6 +203,14 @@ export function buildLastContact(outreachHistory = []) {
     status: latest.status,
     channel: latest.channel,
   };
+}
+
+export function formatOutreachStatusLabel(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'gmail_draft_created') return 'draft created';
+  if (normalized === 'manual_submitted') return 'submitted manually';
+  return normalized.replace(/_/g, ' ');
 }
 
 export function outletContactedForRelease(outlet, releaseId) {
@@ -273,6 +324,7 @@ function normalizeOutreachEligibility(row, { costPolicy, aiPolicyDetails, contac
 }
 
 function looksLikeTestDemo(row, raw) {
+  if (raw?.isTestOutlet === true || raw?.allow_real_outreach === true) return false;
   if (raw?.internal_test === true) return true;
   const values = [
     row?.id,

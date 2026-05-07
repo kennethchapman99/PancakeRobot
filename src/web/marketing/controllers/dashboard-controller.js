@@ -6,12 +6,13 @@ import { getMarketingCampaigns } from '../../../shared/marketing-db.js';
 import { getOutreachEvents, getOutreachItems, getOutreachSummary } from '../../../shared/marketing-outreach-db.js';
 import { getInboxMessages, getInboxSummary } from '../../../shared/marketing-inbox-db.js';
 import { getEligibleOutlets } from '../../../agents/marketing-outreach-run-agent.js';
-import { outletContactedForRelease } from '../../../shared/marketing-outlets.js';
+import { formatOutreachStatusLabel, outletContactedForRelease } from '../../../shared/marketing-outlets.js';
 import { getMarketingReleaseEntries } from '../../../shared/marketing-releases.js';
 import { getSong } from '../../../shared/db.js';
 import { loadBrandProfile } from '../../../shared/brand-profile.js';
-import { buildMarketingReleasePack } from '../../../marketing/release-agent.js';
 import { getSongMarketingKit } from '../../../shared/song-marketing-kit.js';
+import { clearSongBaseImages } from '../../../shared/song-catalog-marketing.js';
+import { buildSongReleaseAssets } from '../../../shared/song-release-assets-service.js';
 import { formatMarketingMissingFieldLabel, getSongNextAction } from '../../../shared/song-workflow.js';
 import { renderMarketingLayout } from '../views/layout.js';
 import { banner, emptyBox, pill } from '../views/helpers.js';
@@ -25,6 +26,7 @@ const ALLOWED_IMG_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 const ACTIVE_BRAND_NAME = loadBrandProfile().brand_name || 'Active brand';
 
 export function renderMarketingDashboard(req, res) {
+  const readinessSongs = activeBrandSongs();
   const releases = releaseReadySongs();
   const outlets = getEligibleOutlets();
   const campaigns = getMarketingCampaigns(50).filter(c => c.focus_song_id);
@@ -39,7 +41,7 @@ export function renderMarketingDashboard(req, res) {
       </div>
     </section>
     ${banner(req.query.message)}${banner(req.query.error, 'error')}
-    ${renderMarketingReadinessBoard(releases)}
+    ${renderMarketingReadinessBoard(readinessSongs)}
     ${renderReleaseOutreach(releases, outlets, outreachSummary)}
     ${renderCampaignList(campaigns)}
     ${renderInboxTriage(inbox)}
@@ -86,6 +88,7 @@ function buildBaseImageUpload(songId) {
       destination: (_req, _file, cb) => {
         const refDir = join(__dirname, '../../../../../output/songs', songId, 'reference');
         fs.mkdirSync(refDir, { recursive: true });
+        clearSongBaseImages(songId);
         cb(null, refDir);
       },
       filename: (_req, file, cb) => {
@@ -117,8 +120,8 @@ export async function postBuildReleaseMarketingPack(req, res) {
   if (!song) return redirect(res, releaseDashboardUrl(req.params.songId, 'Song not found.', 'error'));
 
   try {
-    const result = await buildMarketingReleasePack(song.id, {});
-    const qaLabel = result.metadata?.qa_status ? `; QA ${result.metadata.qa_status}` : '';
+    const result = await buildSongReleaseAssets(song.id, { mode: 'render_from_existing_visuals' });
+    const qaLabel = result.qaFailures?.length ? '; QA needs_review' : '';
     redirect(res, releaseDashboardUrl(song.id, `Marketing pack built${qaLabel}.`));
   } catch (error) {
     redirect(res, releaseDashboardUrl(song.id, error.message, 'error'));
@@ -195,7 +198,7 @@ function renderMarketingReadinessBoard(releases) {
     <div class="flex items-start justify-between gap-4 mb-4">
       <div>
         <h2 class="font-bold text-lg">Release Marketing Readiness</h2>
-        <p class="text-sm text-zinc-500 mt-1">Warnings only: missing fields never block the release pipeline, but they do reduce outreach readiness.</p>
+        <p class="text-sm text-zinc-500 mt-1">All songs for the active brand appear here so you can build art before release. Warnings never block the pipeline, but they do reduce outreach readiness.</p>
       </div>
     </div>
     <div class="overflow-x-auto">
@@ -238,8 +241,9 @@ function renderReleaseCard(song, links, outlets, hasMarketingImage = false, mark
       pill(outlet.type || 'outlet', 'blue'),
       pill(outlet.contactability.best_channel || 'unknown', 'green'),
     ].join(' ');
+    const lastActivityLabel = outlet.last_contact?.status === 'gmail_draft_created' ? 'Last draft created' : 'Last contacted';
     const lastContact = outlet.last_contact
-      ? `<div class="text-[11px] text-zinc-500 mt-1">Last contacted ${esc(formatDateTime(outlet.last_contact.contacted_at))} about ${esc(outlet.last_contact.release_title || outlet.last_contact.release_id || '')}</div>`
+      ? `<div class="text-[11px] text-zinc-500 mt-1">${esc(lastActivityLabel)} ${esc(formatDateTime(outlet.last_contact.contacted_at))} about ${esc(outlet.last_contact.release_title || outlet.last_contact.release_id || '')}${outlet.last_contact?.status ? ` · ${esc(formatOutreachStatusLabel(outlet.last_contact.status))}` : ''}</div>`
       : '';
     return `<label class="flex items-start gap-3 border border-zinc-200 rounded-lg p-3 hover:bg-zinc-50">
       <input type="checkbox" name="outlet_ids" value="${attr(outlet.id)}" ${outlet.priority === 'P0' ? 'checked' : ''} class="mt-1">
@@ -255,7 +259,7 @@ function renderReleaseCard(song, links, outlets, hasMarketingImage = false, mark
       <input type="checkbox" name="outlet_ids" value="${attr(outlet.id)}" class="mt-1">
       <span class="flex-1 min-w-0">
         <span class="block font-semibold text-sm text-amber-900">${esc(outlet.name)}</span>
-        <span class="block text-xs text-amber-700 mt-1">Previously contacted for this release on ${esc(formatDateTime(outlet.last_contact?.contacted_at))}</span>
+        <span class="block text-xs text-amber-700 mt-1">${esc(outlet.last_contact?.status === 'gmail_draft_created' ? 'Draft created for this release on' : 'Previously contacted for this release on')} ${esc(formatDateTime(outlet.last_contact?.contacted_at))}</span>
         <span class="block text-xs text-amber-700 mt-1">${esc(outlet.last_contact?.message_preview || '')}</span>
       </span>
     </label>`).join('');
@@ -555,8 +559,12 @@ function renderInboxTriage({ summary, messages }) {
   return `<section class="bg-white border border-zinc-200 rounded-2xl p-6"><h2 class="font-bold text-lg">Gmail Triage / Non-Campaign Replies</h2><p class="text-sm text-zinc-500 mt-1 mb-4">${esc(summaryLine)}</p>${rows ? `<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-left text-xs uppercase text-zinc-400 border-b"><tr><th class="py-2 pr-4">Message</th><th class="py-2 pr-4">Class</th><th class="py-2 pr-4">Snippet</th><th class="py-2">Suggested Reply</th></tr></thead><tbody>${rows}</tbody></table></div>` : emptyBox('No Gmail triage items found.')}</section>`;
 }
 
+function activeBrandSongs() {
+  return getMarketingReleaseEntries({ limit: 50, releaseOnly: false });
+}
+
 function releaseReadySongs() {
-  return getMarketingReleaseEntries(50);
+  return getMarketingReleaseEntries({ limit: 50, releaseOnly: true });
 }
 
 function formatDateTime(value) {

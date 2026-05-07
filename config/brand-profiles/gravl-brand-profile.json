@@ -1,0 +1,530 @@
+{
+  "brand_id": "gravel-velvet-cypher",
+  "brand_name": "Gravel Velvet Cypher",
+  "app_title": "Gravel Velvet Cypher",
+  "brand_type": "explicit_optional_duo_group_hip_hop",
+  "brand_description": "a duo-led group hip-hop profile built around tight rhyme density, structured cypher songs, occasional explicit emphasis, varied instrumentation, turntable moments, a distinct female rapper/lyric-assist voice, and a separate gruff rapid-fire MC who can build pace and accelerate through a verse without imitating any real artist",
+  "audience": {
+    "age_range": "16+",
+    "description": "listeners who like lyrical group hip-hop, dense rhyme patterns, charismatic vocal tradeoffs, clever braggadocio, occasional profanity for emphasis, smooth hooks, unusual instrumental accents, scratching breaks, and beat-forward tracks that still feel structured and replayable",
+    "guardrail": "adult/teen hip-hop; not directed to children; occasional profanity is allowed when it strengthens the bar, but avoid explicit sexual content, graphic violence, hate, slurs, drug glorification, or direct imitation of real artists"
+  },
+  "character": {
+    "name": "Gravel Velvet Cypher",
+    "core_concept": "a tight underground duo-with-crew-energy trading verses in a basement-session world where every song feels like a controlled cypher with real structure, instrumental surprises, turntable attitude, and strong vocal contrast",
+    "fallback_summary": "structured lyrical group hip-hop led by a true duo: one female rapper/lyric-assist voice and one separate gruff rapid-fire pace-shifter, with smooth rhyme pockets, occasional profanity, hooks when useful, unusual instruments, and scratching moments",
+    "clap_name": "Gravel Clap",
+    "crew_identity": {
+      "group_dynamic": "two core rappers with optional crew doubles: the female rapper is a distinct voice, and the hard-hitting rapid-fire MC is a separate performer. They should trade, interrupt, finish, and challenge each other instead of blending into one generic rapper.",
+      "core_duo": {
+        "rapper_1_female_lyric_assist": "female rapper with cool confidence, sharp timing, lyric-assist instincts, smooth pocket control, and the ability to flip or finish another rapper's bar. She can lead hooks, counter-verses, bridge sections, or surgical punchline assists. She is not the same person as the rapid-fire MC.",
+        "rapper_2_gruff_speed_mc": "separate gruff, hard-hitting MC with animated delivery, explosive breath control, fast rhyme bursts, and pace-change ability. This rapper can start in a normal pocket, tighten the syllables, accelerate into double-time or triplet flow, and then land cleanly back on beat."
+      },
+      "pace_change_specialist": "At least one core rapper, usually the gruff speed MC, should have elite pacing range: half-time setup, normal-time pocket, fast internal-rhyme run, brief double-time burst, and controlled landing. Use this in some songs, not every song.",
+      "lyric_assist_role": "The female rapper often acts as a lyric-assist engine: she finishes another MC's rhyme, flips the last bar, drops internal-rhyme bursts, answers a setup line, or turns a simple phrase into a sharper punchline.",
+      "supporting_voices": [
+        "low hype voice for callouts and doubles",
+        "group chant for final hook lifts",
+        "occasional spoken tag from the room",
+        "scratch-DJ presence through cuts, stops, rewinds, and beat punctuation"
+      ],
+      "chemistry_rule": "voices should interact; avoid isolated verses that feel pasted together"
+    },
+    "personality_traits": [
+      "Lyrical but controlled — rhyme density matters, but the listener should still feel the structure",
+      "Duo-first — the female rapper and the gruff rapid-fire MC are distinct performers with different jobs",
+      "Gruff and kinetic — the speed MC has bite, swing, theatrical breath control, and pace-change ability without becoming parody",
+      "Cool and surgical — the female rapper can lead, counter, clean up a rhyme, or land the smartest bar in the room",
+      "Smooth under pressure — even aggressive passages should land in the pocket",
+      "Rhythmically surprising — bars can accelerate, pause, double back, ride double-time, or land early/late for impact",
+      "Instrumentally curious — some songs should use a memorable spice instrument or DJ break without turning gimmicky",
+      "Hook-aware — hooks and choruses are allowed but never forced; a chant, tag, repeated rhyme, scratch break, or beat switch can carry replay value",
+      "Occasionally explicit — profanity is allowed when it adds force, humor, realism, or emphasis, but never as lazy filler",
+      "Basement-session energy — intimate, raw, close-mic, smoky, warm, and live-in-the-room"
+    ],
+    "catchphrases": [
+      "Run it from the basement.",
+      "Pocket locked.",
+      "Gravel on the velvet.",
+      "Flip that line.",
+      "Cut it back.",
+      "Crew in the cut.",
+      "One more pass.",
+      "Tighten the rhyme.",
+      "Back to the pocket.",
+      "Speed it up, land it clean."
+    ],
+    "visual_identity": "warm underground hip-hop session imagery: basement booth, soft tungsten lights, old speakers, tangled cables, mic stands, notebooks, turntables, vinyl crates, sampler pads, concrete walls, velvet shadows, a confident female rapper and a separate gruff speed MC framed as the core duo",
+    "visual_reference": [
+      "Basement studio or rehearsal-room setting",
+      "Core duo clearly visible: female rapper plus separate gruff rapid-fire MC",
+      "Turntables, vinyl crates, mixer, sampler pads, notebooks, cables, and old speakers",
+      "Optional unusual instrument visual accent: wood flute on the table, electric guitar leaning on an amp, horn case, or percussion toy",
+      "Crew visible as collaborators, not background extras",
+      "Warm amber, muted red, deep navy, charcoal, and worn gold palette",
+      "Analog textures: tape labels, notebooks, speakers, cables, concrete, vinyl sleeves",
+      "No luxury flex cliches unless used ironically and subtly",
+      "No guns, drugs, cash piles, sexualized imagery, or violent posing",
+      "Album art should feel credible, lyrical, underground, and adult but not grimy-for-shock"
+    ]
+  },
+  "voice": {
+    "tone": "confident, sharp, animated, gruff, witty, rhythm-first, duo-led, occasionally explicit, and group-oriented",
+    "vocabulary_level": "adult/teen accessible; strong verbs, concrete imagery, musical language, rhyme-forward phrasing; occasional F-bomb/S-word/bitch allowed only when it makes a point or lands a punchline; avoid academic abstraction unless flipped into a punchline",
+    "sentence_structure": "short-to-medium bar units with internal rhymes, chain rhymes, breath breaks, call-and-response fragments, speed ramps, double-time bursts, scratch-punctuated pauses, and occasional abrupt landing lines",
+    "recurring_themes": [
+      "creative hunger",
+      "basement-to-bigger-room ambition",
+      "duo chemistry",
+      "crew loyalty",
+      "discipline and craft",
+      "late-night writing sessions",
+      "finding the pocket",
+      "speeding up without losing control",
+      "turning pressure into rhythm",
+      "the beat as a room everyone steps into",
+      "wordplay as sport",
+      "scratch cuts as punctuation",
+      "rough edges turned into style"
+    ],
+    "what_the_brand_never_says": [
+      "direct references to real artists as style instructions inside generated lyrics",
+      "claims of being a clone, copy, or imitation of any real performer",
+      "graphic threats or violent domination",
+      "explicit sexual flexing",
+      "drug-selling stories or drug glorification",
+      "slurs or identity-based insults",
+      "lazy filler bars about generic fame, money, cars, or jewelry",
+      "profanity used every other line for no reason",
+      "long unstructured lyric dumps with no hook, section shift, instrument feature, scratch break, or beat movement"
+    ]
+  },
+  "music": {
+    "default_style": "explicit-optional underground duo/group hip-hop with boom-bap drums, modern low-end, structured cypher energy, a distinct female rapper/lyric-assist voice, a separate gruff rapid-fire pace-shifting MC, tight rhyme pockets, call-and-response doubles, optional smooth hook, occasional unusual instrument accents, and turntable scratching",
+    "default_bpm": 96,
+    "alternate_bpm_range": "82-108 BPM or double-time feel at 164-196 BPM",
+    "default_key": "F Minor",
+    "default_prompt": "Underground duo/group hip-hop, 96 BPM, F Minor, warm basement studio atmosphere, dusty boom-bap drums with modern sub bass, close-mic vocals, distinct female rapper with lyric-assist role, separate gruff rapid-fire MC with controlled pace changes, tight internal rhymes, smooth pockets, call-and-response ad-libs, optional short hook or chant, occasional profanity for emphasis only, varied song sections, subtle turntable scratching, optional spice instrument such as wood flute, electric guitar, horn stab, or kalimba, no real artist imitation, no spoken production directions in lyrics",
+    "target_length": "1:50-2:55",
+    "min_words": 150,
+    "normal_word_range": "190-460",
+    "first_vocal_by_seconds": 4,
+    "max_instrumental_intro_seconds": 8,
+    "production_palette": [
+      "dusty kick and snare",
+      "warm sample chop or piano loop",
+      "modern sub bass under classic drums",
+      "subtle vinyl texture",
+      "turntable scratches, cuts, rewinds, stops, or 1-2 bar scratch fills",
+      "muted horn stab or bass motif",
+      "electric guitar stab, riff, muted pluck, or short solo used selectively",
+      "wood flute phrase, breathy flute hook, or brief flute counter-melody used selectively",
+      "kalimba, glockenspiel, melodica, organ stab, upright bass, or hand percussion as occasional texture",
+      "roomy crowd doubles used sparingly",
+      "beat switch or drum dropout for structure variety",
+      "short hook pad or vocal stack when needed",
+      "close-mic dry vocals with tasteful saturation"
+    ],
+    "instrument_spice_rules": {
+      "purpose": "avoid every song sounding like the same loop while keeping the basement hip-hop identity intact",
+      "frequency": "roughly 40-60% of songs should feature one memorable spice element; not every song needs one",
+      "allowed_spice_elements": [
+        "wood flute",
+        "electric guitar",
+        "turntable scratching",
+        "scratch solo",
+        "horn stab",
+        "upright bass",
+        "kalimba",
+        "melodica",
+        "organ stab",
+        "hand percussion",
+        "vocal chop",
+        "MPC-style sample flip",
+        "weird one-bar found-sound accent"
+      ],
+      "scratch_solo_rule": "Some songs can include a dedicated scratch solo or scratch break, ideally 4-12 bars, where the DJ cuts vocal fragments, drum hits, or title phrases. This should feel like a feature moment, not random noise.",
+      "guitar_rule": "Electric guitar can appear as a riff, stab, muted groove, distorted accent, or short solo, but should not turn the track into generic rap-rock unless requested.",
+      "flute_rule": "Wood flute should feel eerie, smoky, playful, or hypnotic; use it as a hook, intro phrase, or counter-melody, not as constant wallpaper.",
+      "constraint": "Use one main spice element per track unless the song explicitly calls for a larger arrangement."
+    },
+    "pace_change_rules": {
+      "frequency": "roughly 30-50% of songs should include a noticeable pace-change moment; not every song needs a speed showcase",
+      "preferred_execution": "start in a clear pocket, tighten internal rhymes, accelerate for 2-8 bars, optionally hit double-time or triplet bursts, then land on a simple quotable line",
+      "clarity_rule": "speed is only valuable if the words remain intelligible and the landing bar is memorable",
+      "duo_interplay_rule": "the female rapper can set up the speed MC's acceleration, interrupt it, echo the landing line, or flip the final rhyme"
+    },
+    "avoid_production_patterns": [
+      "one long verse over a static loop with no section changes",
+      "huge delayed beat drop after too many bars",
+      "overcrowded ad-libs that hide the lyric",
+      "turntable scratches that fight the vocal",
+      "spice instruments added constantly until the track loses focus",
+      "trap-only generic hi-hat programming unless paired with strong lyrical pocket",
+      "overly melodic pop chorus that weakens the cypher identity",
+      "aggressive distortion that makes words hard to understand"
+    ]
+  },
+  "lyrics": {
+    "title_examples": [
+      "Gravel on the Velvet",
+      "Pocket Locked",
+      "Cut It Back",
+      "Wood Flute Basement",
+      "Scratch Solo at Midnight",
+      "Electric Thread",
+      "Basement Light Flicker",
+      "One More Pass",
+      "Cypher With the Door Closed",
+      "Rhyme in the Rafters",
+      "Notebook Smoke",
+      "Flip That Line",
+      "Crew in the Cut",
+      "Late Night Meter",
+      "Velvet Static",
+      "Kick Snare Witness",
+      "Speed It Up, Land It Clean"
+    ],
+    "topic_variety": "lyrical flexing, creative process, duo chemistry, basement recording sessions, wordplay battles without cruelty, momentum, writing under pressure, late-night craft, rhythm discipline, confidence, playful internal competition, beat-pocket mastery, scratch-DJ moments, unusual instruments entering the room, turning rough edges into art",
+    "profanity_policy": {
+      "allowed": true,
+      "allowed_words": [
+        "fuck",
+        "fucking",
+        "shit",
+        "bullshit",
+        "bitch"
+      ],
+      "usage_rule": "Profanity is allowed sparingly when it adds force, humor, realism, anger, punchline impact, or emotional emphasis. It should not appear in every verse by default.",
+      "recommended_frequency": "0-4 explicit words per song unless the user asks for a harder explicit track",
+      "avoid": [
+        "misogynistic use of bitch toward women",
+        "sexualized profanity",
+        "slurs",
+        "profanity as filler",
+        "explicit content that forces an adult-only sexual or violent direction"
+      ],
+      "clean_version_note": "If a clean version is requested later, substitute or mute the explicit words while preserving rhythm."
+    },
+    "required_closing": "End with either a final crew tag, repeated hook fragment, scratch-cut callback, beat-drop callback, unfinished rhyme handoff, or short chant that makes the track feel loopable — never a long sentimental goodbye",
+    "lyric_density_goal": "high internal rhyme density with clean intelligibility; technical enough to feel impressive, smooth enough to replay",
+    "hook_rule": "Hooks and choruses are allowed but not mandatory. When used, they should be short, smooth, rhyme-tight, and chantable. A repeated crew tag, rhythm phrase, scratch-cut title phrase, or call-and-response can replace a traditional chorus.",
+    "female_rapper_usage": "Include the female rapper in most tracks as lead verse, counter-verse, hook lead, lyric assist, bridge voice, or final bar-flip. She is a core duo member, not a decorative hype voice.",
+    "speed_mc_usage": "Include the separate gruff rapid-fire MC as the main pace-change specialist in many tracks. He/they can build tempo and accelerate through a verse, but the song should still breathe and remain structured."
+  },
+  "songwriting": {
+    "song_type": "explicit_optional_duo_group_hip_hop_cypher_plus_structure",
+    "primary_emotional_goal": "make the listener feel like they are hearing a skilled duo and crew lock into a room together: tight, cool, controlled, technically impressive, a little dangerous, and replayable",
+    "voice_perspective": "alternating first-person MC voices and first-person plural crew identity; make the female rapper and gruff speed MC distinct voices with recognizable roles",
+    "character_voice": {
+      "person": "alternating first person and group voice",
+      "tone": "confident, gruff, smooth, witty, percussive, animated, occasionally explicit, not cruel",
+      "vocabulary": "concrete hip-hop craft language, sensory basement imagery, sound words, rhythm words, scratch/DJ words, clever metaphors, short quotable tags, occasional profanity for emphasis",
+      "signature_sounds": [
+        "uh",
+        "yeah",
+        "hah",
+        "run it",
+        "check",
+        "look",
+        "one more",
+        "locked",
+        "cut it",
+        "bring it back"
+      ],
+      "comedy_mode": "dry confidence, clever flips, playful crew interruptions, unexpected rhyme completions, occasional sharp profanity that lands like a punchline",
+      "listener_relationship": "listener is invited into the room as a witness to craft, not shouted at as an outsider",
+      "kid_relationship": ""
+    },
+    "earworm_stack": [
+      "1. Start with a vocal tag, hook fragment, scratch cut, instrument lick, or immediate rhythmic phrase within the first few seconds",
+      "2. Establish the song's structural identity early: chant, hook, question, scratch motif, instrument motif, or beat pattern",
+      "3. Make the two core rappers distinct: female rapper and gruff speed MC should not sound like the same performer",
+      "4. Give the female rapper a distinctive lyric-assist, counter-verse, hook lead, or bar-flip moment before the midpoint",
+      "5. Give the speed MC a pace-change moment in some songs: normal pocket -> tighter syllables -> fast burst -> clean landing",
+      "6. Use internal rhyme chains, but break them with simple landing lines so the hook/tag remains memorable",
+      "7. Let voices overlap intelligently: one MC starts a phrase, another finishes or flips it",
+      "8. Add section contrast every 20-35 seconds through hook, dropout, bridge, beat switch, chant, scratch break, instrument feature, or vocal texture change",
+      "9. Keep hooks smooth and short when present; do not over-pop the song",
+      "10. Final section should feel like the crew tightened the screws: stronger doubles, sharper rhyme, scratch callback, speed landing, or cleaner chant"
+    ],
+    "hook_design_rules": [
+      "Hook can be a chorus, chant, repeated title phrase, rhythmic tag, scratch-cut vocal phrase, or call-and-response",
+      "Hook phrase should be 3-9 words if used",
+      "Title should appear in the first verse, hook, or scratch-cut motif, ideally within the first 20 seconds",
+      "Hook should sound natural for a group to repeat in a room",
+      "Avoid nursery-rhyme simplicity; keep it smooth and credible",
+      "A hook must not interrupt momentum; it should tighten the song's identity"
+    ],
+    "energy_arc": {
+      "pattern": "",
+      "rules": [
+        "Avoid the Basement Cypher failure mode of long lyrics followed by a late beat drop",
+        "Beat should arrive early or be clearly teased with a short cold open",
+        "Every song needs at least three distinguishable sections",
+        "Use beat movement, dropout, hook, chant, scratch break, instrument feature, or voice swap to create architecture",
+        "Female rapper and gruff rapid-fire MC must be treated as separate performers",
+        "At least one rapper should have pace-change capability, but only use a major speed ramp in some songs",
+        "When used, the speed ramp should build tension and land cleanly, not become unintelligible syllable spray",
+        "Some songs should feature a memorable spice instrument or scratch break; not every song needs one",
+        "Final third should escalate through delivery, arrangement, scratch callback, instrument return, or group response",
+        "End with a replayable tag, chant, scratch cut, or unresolved handoff"
+      ]
+    },
+    "structure_preferences": [
+      "[COLD SCRATCH CUT] -> [VERSE 1: FEMALE SETUP] -> [HOOK/CHANT] -> [VERSE 2: SPEED MC PACE BUILD] -> [SCRATCH BREAK] -> [FINAL CREW TAG]",
+      "[BEAT IN IMMEDIATELY] -> [GROUP CALL/RESPONSE] -> [VERSE SWAP] -> [SHORT HOOK] -> [WOOD FLUTE COUNTER-MELODY] -> [DOUBLE-TIME BURST] -> [OUTRO TAG]",
+      "[SPOKEN ROOM TAG] -> [DRUM DROP] -> [MC 1 VERSE] -> [FEMALE COUNTER-VERSE] -> [CHANT BREAK] -> [8-BAR TRADEOFF] -> [SCRATCH SOLO]",
+      "[HOOK FRAGMENT] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [ELECTRIC GUITAR RIFF / BEAT SWITCH] -> [FINAL HOOK WITH DOUBLES]",
+      "[INTRO CHANT] -> [LYRIC ASSIST VERSE] -> [MICRO HOOK] -> [CREW TRADEOFF] -> [DRUM DROPOUT] -> [SPEED RAMP LANDING LINE] -> [LAST TAG]",
+      "[FLUTE OR GUITAR MOTIF] -> [FEMALE VERSE] -> [SPEED MC VERSE] -> [SCRATCH SOLO] -> [HOOK RETURN] -> [DUO TRADEOFF OUTRO]"
+    ],
+    "participation_patterns": [
+      "female rapper finishes the speed MC's rhyme",
+      "speed MC accelerates after the female rapper sets up the phrase",
+      "group repeats the title phrase",
+      "DJ scratches the title or last word of a bar",
+      "crew answers a one-line callout",
+      "last word of a bar gets doubled by the room",
+      "hook phrase returns after a dropout",
+      "8-bar tradeoff where each core rapper gets quick punches",
+      "scratch solo becomes the bridge instead of a sung chorus",
+      "instrument motif returns in the final hook",
+      "final chant loops cleanly"
+    ],
+    "allowed_elements": [
+      "controlled profanity for emphasis",
+      "clean or explicit-optional braggadocio",
+      "battle energy without real threats",
+      "rhyme chains",
+      "pace builds",
+      "double-time bursts",
+      "animated gruff rapid-fire delivery from the speed MC",
+      "distinct female rapper with lyric-assist authority",
+      "group vocals",
+      "ad-libs that support rhythm",
+      "turntable scratching",
+      "scratch solos",
+      "beat switches",
+      "short choruses",
+      "chant hooks",
+      "drum dropouts",
+      "wood flute accents",
+      "electric guitar riffs or short solos",
+      "other occasional spice instruments",
+      "basement studio imagery",
+      "notebook and microphone imagery",
+      "clever internal competition within the crew",
+      "smooth chorus lines when they serve replayability",
+      "lyric assist handoffs",
+      "sharp punchlines"
+    ],
+    "forbidden_elements": [
+      "direct reference to any real artist name inside lyrics or render prompts",
+      "copying a living artist's exact voice, cadence, lyrics, melodies, slogans, or signature arrangement",
+      "explicit sexual content",
+      "graphic violence or threats",
+      "drug dealing or drug glorification",
+      "hate, slurs, or identity-based insults",
+      "gun flexing",
+      "cash-stack luxury cliches as the main topic",
+      "misogyny or degrading language",
+      "calling women bitch as an insult or using profanity to degrade identity groups",
+      "profanity as constant filler",
+      "long unstructured lyric dump before a beat drop",
+      "lyrics that read like metadata or production notes",
+      "markdown in final lyrics",
+      "emoji in final lyrics"
+    ],
+    "render_safety": [
+      "lyrics field must contain only words intended to be sung or rapped",
+      "no markdown formatting in the lyrics field",
+      "no stage directions in the lyrics field",
+      "no metadata labels in the lyrics field",
+      "no emoji in the lyrics field",
+      "section labels are allowed only during drafting and must be stripped before audio render",
+      "sound effects are allowed only when written as performable vocal words",
+      "do not include real artist names in audio prompts sent to generation models",
+      "if explicit mode is off, replace profanity before render; if explicit mode is on, keep profanity sparse and purposeful"
+    ],
+    "required_elements": [
+      "duo-led group hip-hop identity",
+      "female rapper and gruff rapid-fire MC treated as separate performers",
+      "at least three clear song sections",
+      "one female rapper lyric-assist, counter, hook, or bar-flip moment",
+      "one structural contrast point: hook, chant, dropout, beat switch, bridge, scratch break, instrument feature, or voice tradeoff",
+      "tight internal rhymes or chain rhymes",
+      "adult/teen-safe lyrical content with optional restrained profanity",
+      "ending that feels loopable or taggable"
+    ],
+    "output_schema": {
+      "include_audio_prompt": true,
+      "include_chorus_lines": true,
+      "include_female_rapper_moment": true,
+      "include_separate_speed_mc_moment": true,
+      "include_structure_notes": true,
+      "include_hook_optional": true,
+      "include_instrument_spice_notes": true,
+      "include_scratch_break_notes": true,
+      "include_explicit_optional": true
+    },
+    "qa_rules": [
+      "Must feel like a duo/crew, not a solo rapper with pasted ad-libs",
+      "Must make the female rapper and gruff speed MC sound like two different people",
+      "Must not imitate or name a real artist",
+      "Must include a female rapper/counter/assist moment unless the user explicitly asks otherwise",
+      "Must include at least three clear sections",
+      "Must avoid the pattern of long lyric block followed by late beat drop",
+      "Must have a memorable repeated element: hook, chant, tag, scratch phrase, or rhyme phrase",
+      "Must include occasional instrumentation variety across the catalog, but not force a spice instrument into every song",
+      "Must allow scratch solos or scratch breaks as valid featured sections",
+      "Must use pace-change skill in some songs, especially through the gruff speed MC, while keeping lyrics intelligible",
+      "Must keep profanity sparse and purposeful when explicit mode is used",
+      "Must maintain intelligibility despite high rhyme density",
+      "Must not include production notes in final lyrics",
+      "Must end with a replayable hook, tag, chant, scratch cut, or handoff"
+    ],
+    "optional_elements_to_rotate": [
+      "wood flute motif",
+      "electric guitar riff or solo",
+      "scratch solo",
+      "horn stab",
+      "kalimba or melodica texture",
+      "pace-change verse",
+      "double-time landing line",
+      "female-led hook",
+      "call-and-response chant",
+      "beat switch after second verse"
+    ]
+  },
+  "visuals": {
+    "style": "stylized underground hip-hop album art with warm basement-session realism, graphic poster composition, strong duo silhouettes, a confident female rapper, a separate gruff speed MC, turntables, unusual instrument accents, analog music textures, and high-contrast but non-violent mood",
+    "palette": {
+      "charcoal_black": "#171717",
+      "basement_amber": "#C9822B",
+      "velvet_maroon": "#5C1F2E",
+      "dusty_gold": "#B99855",
+      "deep_navy": "#182133",
+      "concrete_gray": "#6F6A61",
+      "mic_silver": "#C8C8C8",
+      "warm_paper": "#E8D8B8"
+    },
+    "negative_prompt": "guns, weapons, drug imagery, smoke clouds as drug reference, cash piles, explicit sexuality, gang signs, real celebrity likeness, photorealistic celebrity face, text, words, letters, blurry, gore, horror, hateful symbols",
+    "text_overlay_style": "minimal typography only when requested; worn-label or stamped type treatment; no subtitle unless explicitly requested",
+    "thumbnail_prompt_base": "Stylized underground hip-hop basement cypher album art, warm amber light, charcoal and maroon shadows, core duo at vintage microphones: one confident female rapper and one separate gruff rapid-fire MC, turntables and mixer nearby, vinyl crates, notebooks, old speakers, cables, optional wood flute on table or electric guitar leaning against amp, concrete wall, velvet texture, cinematic poster composition, adult lyrical hip-hop energy, no weapons, no drugs, no celebrity likeness, no text"
+  },
+  "distribution": {
+    "default_distributor": "DistroKid",
+    "research_default_service": "DistroKid",
+    "research_default_url": "https://distrokid.com",
+    "default_artist": "Gravel Velvet Cypher",
+    "default_album": "Basement Takes Vol. 1",
+    "primary_genre": "Hip-Hop/Rap",
+    "secondary_genres": [
+      "Alternative Hip-Hop",
+      "Underground Hip-Hop",
+      "Boom Bap",
+      "Explicit Rap",
+      "Turntablism"
+    ],
+    "spotify_genres": [
+      "hip-hop",
+      "alternative hip-hop",
+      "boom bap",
+      "underground hip-hop",
+      "turntablism",
+      "lyrical rap"
+    ],
+    "youtube_tags_seed": [
+      "underground hip hop",
+      "female rapper",
+      "boom bap",
+      "group rap",
+      "cypher rap",
+      "lyrical hip hop",
+      "scratch solo",
+      "turntablism",
+      "fast rap",
+      "explicit hip hop"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "Alternative Rap"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "explicit optional; occasional profanity allowed; no explicit sexual content, graphic violence, hate, slurs, or drug glorification"
+  },
+  "release_strategy": {
+    "positioning": "release as a credible lyrical hip-hop duo/crew: more structured than pure cypher content, more instrumentally varied than loop-only boom-bap, and more personality-driven through the contrast between the female rapper and the gruff speed MC",
+    "single_strategy": "lead with tracks that have the clearest repeated tag, strongest duo contrast, strongest female lyric-assist moment, a clean speed-ramp landing, and one memorable production feature such as a scratch break, wood flute, or electric guitar motif",
+    "album_strategy": "sequence albums like a basement session that evolves: opener establishes the duo, middle tracks rotate instruments and structures, one or two tracks showcase scratch solos, one or two showcase speed-ramp ability, and final tracks tighten crew chemistry",
+    "recommended_release_cadence": "batch-generate internally, use listening/release-selection scoring, then release only the top structured tracks on a controlled cadence",
+    "marketing_angles": [
+      "structured cypher hip-hop with real duo chemistry",
+      "female rapper as lyric-assist co-lead, not background color",
+      "gruff rapid-fire MC with controlled pace-change ability",
+      "turntable scratching and occasional scratch solos",
+      "wood flute, electric guitar, and unusual instrument accents",
+      "smooth hooks without losing bars",
+      "underground feel with adult lyrical edge"
+    ],
+    "outreach_fit": [
+      "underground hip-hop playlists",
+      "lyrical rap communities",
+      "female rap discovery playlists",
+      "turntablism/DJ-curated hip-hop channels",
+      "alternative hip-hop blogs open to AI-assisted music",
+      "YouTube shorts built around best 8-bar tradeoffs, scratch solos, speed ramps, or hook tags"
+    ]
+  },
+  "scoring_preferences": {
+    "primary_success_metrics": [
+      "duo role distinction",
+      "female rapper lyric-assist memorability",
+      "speed MC pace-change impact",
+      "section variety",
+      "instrument spice tastefulness",
+      "scratch break or DJ punctuation quality",
+      "rhyme density with clarity",
+      "crew chemistry",
+      "hook/tag replayability",
+      "purposeful profanity discipline",
+      "production pocket",
+      "clipability for short-form social"
+    ],
+    "release_selection_weights": {
+      "duo_role_distinction": 14,
+      "hook_or_tag_replayability": 14,
+      "female_rapper_impact": 14,
+      "speed_mc_pace_change": 12,
+      "structure_variety": 12,
+      "rhyme_density_and_clarity": 10,
+      "instrument_spice_or_scratch_feature": 9,
+      "crew_chemistry": 7,
+      "production_quality": 5,
+      "brand_safety": 3
+    },
+    "archive_triggers": [
+      "sounds like one long verse with no architecture",
+      "female rapper absent or decorative only",
+      "speed MC and female rapper sound indistinguishable",
+      "pace-change section is fast but unintelligible",
+      "instrument spice feels random or gimmicky",
+      "scratching fights the vocal instead of supporting the song",
+      "lyrics are dense but hard to understand",
+      "hook feels forced or too poppy",
+      "too close to a recognizable real artist style",
+      "profanity becomes lazy filler",
+      "unsafe sexual, violent, hateful, or drug-glorifying content",
+      "generic flex lyrics with no basement/craft identity"
+    ],
+    "recommend_to_publish_threshold": 82,
+    "recommend_to_archive_threshold": 60
+  },
+  "ui": {
+    "sidebar_subtitle": "Hip-Hop Studio",
+    "logo_path": "/logo.png",
+    "profile_badge": "Explicit-Optional Duo Hip-Hop",
+    "default_dashboard_tab": "songs"
+  }
+}

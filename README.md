@@ -5,7 +5,13 @@ An autonomous multi-agent system that researches trends, writes lyrics, generate
 ## How It Works
 
 ```
-Research → Lyricist → Brand Review → Revise? → Metadata → Thumbnails → QA → YOU APPROVE → Human Tasks
+Research → Lyricist → Brand Review → Revise? → Metadata → Audio → Release Selection → QA → YOU APPROVE NEXT STEP
+```
+
+Magic mode is now available for the narrower autonomous release-candidate flow:
+
+```
+Magic Pipeline → Create → A&R Score → Improve Once Max → Auto-build Marketing If Publish Candidate
 ```
 
 Seven specialized agents handle the pipeline:
@@ -19,6 +25,33 @@ Seven specialized agents handle the pipeline:
 | Creative Manager | AI thumbnail prompts + Cloudflare image generation |
 | Financial Manager | Cost tracking, service research, visual reports |
 | Ops Manager | QA checklist, human task instructions |
+
+---
+
+## Release Selection
+
+Finished songs now receive an automatic deterministic A&R pass before any release packaging step moves forward.
+
+- The song stays in public `draft` status after analysis
+- `ReleaseSelectionAgent` writes a `release_recommendation` object into the canonical song record
+- It also writes `marketing_inputs_from_ar` for future asset generation
+- The song detail page shows the recommendation, score, rationale, issues, blockers, best hook, and best clip window
+- Operator actions decide whether the song moves to editing, release packaging, hold, or archive
+
+Manual commands:
+
+```bash
+# Analyze one song
+npm run release-selection -- --song SONG_1234567890_abc123
+
+# Analyze recent draft songs
+npm run release-selection -- --recent
+
+# Analyze a specific set of songs
+npm run release-selection -- --song SONG_1 --song SONG_2
+```
+
+The automatic hook runs inside the main generation pipeline immediately after audio generation completes in `src/orchestrator.js`.
 
 ---
 
@@ -98,6 +131,10 @@ node src/orchestrator.js --new "dinosaurs"
 node src/orchestrator.js --new "brushing teeth"
 node src/orchestrator.js --new "sharing with friends"
 
+# Run the one-click magic pipeline
+node src/orchestrator.js --magic "dinosaurs"
+npm run magic -- "sharing with friends"
+
 # Refresh market research
 node src/orchestrator.js --research
 
@@ -106,6 +143,10 @@ node src/orchestrator.js --report
 
 # List all songs with status
 node src/orchestrator.js --list
+
+# Run release-selection analysis manually
+npm run release-selection -- --song SONG_1234567890_abc123
+npm run release-selection -- --recent
 
 # Approve a song for distribution
 node src/orchestrator.js --approve SONG_1234567890_abc123
@@ -141,7 +182,7 @@ Costs are tracked per-agent in SQLite and visualized in the financial report. Ru
 
 ## The Approval Gate
 
-After the pipeline completes, you get an interactive prompt:
+After the pipeline completes, the song is analyzed and stays in `draft`. In the CLI flow, you still get an interactive prompt:
 
 ```
 ================================================================================
@@ -161,7 +202,7 @@ Decision:
     Revise — send back for another revision pass
 ```
 
-- **Yes**: Song is marked `approved`. Human task file is generated at `output/human-tasks/{songId}-human-tasks.md` with step-by-step instructions for audio generation, thumbnail text overlay, and distribution upload.
+- **Yes**: Song moves toward release packaging. In the web flow, the song detail page exposes the release-selection recommendation and the operator chooses the next action there.
 - **No**: Song is marked `rejected`. Pipeline stops. You can provide a rejection reason.
 - **Revise**: Sends the song back through the lyricist with your notes, then reruns brand review. Up to 3 total revision attempts.
 

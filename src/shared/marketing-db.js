@@ -136,6 +136,8 @@ export function initMarketingSchema() {
       excluded_target_ids_json TEXT,
       exclusion_summary TEXT,
       dry_run INTEGER DEFAULT 0,
+      subject_template TEXT,
+      body_template TEXT,
       brand_context_json TEXT,
       notes TEXT
     );
@@ -252,6 +254,8 @@ function migrateMarketingCampaignColumns(db) {
     ['excluded_target_ids_json', 'TEXT'],
     ['exclusion_summary', 'TEXT'],
     ['dry_run', 'INTEGER DEFAULT 0'],
+    ['subject_template', 'TEXT'],
+    ['body_template', 'TEXT'],
   ];
   for (const [col, type] of newCols) {
     try { db.exec(`ALTER TABLE marketing_campaigns ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
@@ -344,9 +348,9 @@ export function getMarketingTargets(filters = {}) {
     params.push(filters.type);
   }
   if (filters.q) {
-    clauses.push('(LOWER(name) LIKE ? OR LOWER(platform) LIKE ? OR LOWER(audience) LIKE ? OR LOWER(research_summary) LIKE ?)');
+    clauses.push('(LOWER(name) LIKE ? OR LOWER(platform) LIKE ? OR LOWER(audience) LIKE ? OR LOWER(research_summary) LIKE ? OR LOWER(COALESCE(contact_email, \'\')) LIKE ? OR LOWER(COALESCE(public_email, \'\')) LIKE ? OR LOWER(id) LIKE ?)');
     const q = `%${filters.q.toLowerCase()}%`;
-    params.push(q, q, q, q);
+    params.push(q, q, q, q, q, q, q);
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
@@ -538,9 +542,9 @@ export function createMarketingCampaign(campaign) {
   const id = campaign.id || `MKT_CAMPAIGN_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   getDb().prepare(`
     INSERT INTO marketing_campaigns
-      (id, created_at, updated_at, name, status, release_marketing_id, focus_song_id, objective, audience, channel_mix_json, approved_target_ids_json, excluded_target_ids_json, exclusion_summary, dry_run, brand_context_json, notes)
+      (id, created_at, updated_at, name, status, release_marketing_id, focus_song_id, objective, audience, channel_mix_json, approved_target_ids_json, excluded_target_ids_json, exclusion_summary, dry_run, subject_template, body_template, brand_context_json, notes)
     VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     now,
@@ -556,6 +560,8 @@ export function createMarketingCampaign(campaign) {
     JSON.stringify(campaign.excluded_target_ids || []),
     campaign.exclusion_summary || null,
     campaign.dry_run ? 1 : 0,
+    campaign.subject_template || null,
+    campaign.body_template || null,
     JSON.stringify(campaign.brand_context || {}),
     campaign.notes || null,
   );
@@ -587,6 +593,8 @@ export function updateMarketingCampaign(id, fields = {}) {
     excluded_target_ids: value => JSON.stringify(value || []),
     exclusion_summary: value => value,
     dry_run: value => value ? 1 : 0,
+    subject_template: value => value,
+    body_template: value => value,
     brand_context: value => JSON.stringify(value || {}),
     notes: value => value,
   };

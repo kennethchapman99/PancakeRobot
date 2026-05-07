@@ -18,6 +18,13 @@ test('isTestOrDemoTarget flags obvious test/demo rows', () => {
   }), true);
 
   assert.equal(isTestOrDemoTarget({
+    name: 'Kenneth D2L Test Outlet',
+    contact_email: 'kenneth@d2l.com',
+    source_url: 'https://d2l.com/',
+    raw_json: { isTestOutlet: true, internal_test: true },
+  }), false);
+
+  assert.equal(isTestOrDemoTarget({
     name: 'Spare the Rock, Spoil the Child',
     contact_email: 'show@sparetherock.com',
     source_url: 'https://sparetherock.com/wordpress/',
@@ -30,7 +37,7 @@ test('seed imports the outlet source into a temp DB and doctor passes', () => {
   const env = { ...process.env, PIPELINE_APP_SLUG: slug };
 
   try {
-    execFileSync(nodeBin, ['src/scripts/seed-marketing-outlets-to-targets.js'], {
+    execFileSync(nodeBin, ['src/scripts/seed-marketing-outlets-to-targets.js', '--brand', 'default'], {
       cwd: repoRoot,
       env,
       stdio: 'pipe',
@@ -42,17 +49,57 @@ test('seed imports the outlet source into a temp DB and doctor passes', () => {
     }).trim());
     assert.ok(count >= 30, `expected at least 30 active-brand outlets, got ${count}`);
 
-    const testRows = Number(execFileSync('sqlite3', [dbPath, "select count(*) from marketing_targets where lower(name) like '%test%' or lower(contact_email) like '%.example%' or lower(source_url) like '%example%';"], {
+    const testRows = Number(execFileSync('sqlite3', [dbPath, "select count(*) from marketing_targets where ((lower(name) like '%test%' and id != 'test_kenneth_d2l') or lower(contact_email) like '%.example%' or lower(source_url) like '%example%');"], {
       cwd: repoRoot,
       encoding: 'utf8',
     }).trim());
     assert.equal(testRows, 0);
 
-    execFileSync(nodeBin, ['src/scripts/doctor-marketing-outlets.js'], {
+    const kennethRow = Number(execFileSync('sqlite3', [dbPath, "select count(*) from marketing_targets where id = 'test_kenneth_d2l' and contact_email = 'kenneth@d2l.com';"], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    }).trim());
+    assert.equal(kennethRow, 1);
+
+    execFileSync(nodeBin, [
+      '--input-type=module',
+      '-e',
+      "import { getMarketingOutletsDiagnostics } from './src/shared/marketing-outlet-health.js'; const diagnostics = getMarketingOutletsDiagnostics({ brandProfileId: 'default' }); if (!diagnostics.ok) { console.error(JSON.stringify(diagnostics, null, 2)); process.exit(1); }",
+    ], {
       cwd: repoRoot,
       env,
       stdio: 'pipe',
     });
+  } finally {
+    try { fs.unlinkSync(dbPath); } catch {}
+    try { fs.unlinkSync(`${dbPath}-shm`); } catch {}
+    try { fs.unlinkSync(`${dbPath}-wal`); } catch {}
+  }
+});
+
+test('active brand falls back to canonical outlet rows when only QA data exists', () => {
+  const slug = `marketing-outlets-fallback-${Date.now()}`;
+  const dbPath = path.join(repoRoot, `${slug}.db`);
+  const env = { ...process.env, PIPELINE_APP_SLUG: slug };
+
+  try {
+    execFileSync(nodeBin, ['src/scripts/seed-marketing-outlets-to-targets.js'], {
+      cwd: repoRoot,
+      env,
+      stdio: 'pipe',
+    });
+
+    const count = Number(execFileSync(nodeBin, [
+      '--input-type=module',
+      '-e',
+      "import { getActiveBrandOutlets } from './src/shared/marketing-outlet-health.js'; console.log(getActiveBrandOutlets({ brandProfileId: 'gravl-brand-profile' }).length);",
+    ], {
+      cwd: repoRoot,
+      env,
+      encoding: 'utf8',
+    }).trim());
+
+    assert.ok(count >= 30, `expected canonical fallback outlets for gravl-brand-profile, got ${count}`);
   } finally {
     try { fs.unlinkSync(dbPath); } catch {}
     try { fs.unlinkSync(`${dbPath}-shm`); } catch {}

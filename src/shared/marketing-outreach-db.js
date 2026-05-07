@@ -25,6 +25,12 @@ export function initMarketingOutreachSchema() {
       subject TEXT,
       body TEXT,
       generation_method TEXT,
+      generated_subject TEXT,
+      generated_body TEXT,
+      subject_override TEXT,
+      body_override TEXT,
+      is_customized INTEGER DEFAULT 0,
+      last_error TEXT,
       gmail_draft_id TEXT,
       gmail_draft_url TEXT,
       gmail_message_id TEXT,
@@ -72,6 +78,12 @@ export function initMarketingOutreachSchema() {
   `);
   try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN release_marketing_id TEXT'); } catch {}
   try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN gmail_draft_url TEXT'); } catch {}
+  try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN generated_subject TEXT'); } catch {}
+  try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN generated_body TEXT'); } catch {}
+  try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN subject_override TEXT'); } catch {}
+  try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN body_override TEXT'); } catch {}
+  try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN is_customized INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE marketing_outreach_items ADD COLUMN last_error TEXT'); } catch {}
 }
 
 export function createOutreachItem(item) {
@@ -85,12 +97,14 @@ export function createOutreachItem(item) {
        release_marketing_id,
        target_id, outlet_name, status, outreach_mode, requires_ken, safety_status, safety_notes,
        selected_assets_json, release_context_json, outlet_context_json, subject, body,
-       generation_method, gmail_draft_id, gmail_draft_url, gmail_message_id, gmail_thread_id, sent_at, replied_at, raw_json)
+       generation_method, generated_subject, generated_body, subject_override, body_override, is_customized, last_error,
+       gmail_draft_id, gmail_draft_url, gmail_message_id, gmail_thread_id, sent_at, replied_at, raw_json)
     VALUES
       (@id, @created_at, @updated_at, @campaign_id, @brand_profile_id, @song_id, @bundle_song_ids_json, @release_marketing_id,
        @target_id, @outlet_name, @status, @outreach_mode, @requires_ken, @safety_status, @safety_notes,
        @selected_assets_json, @release_context_json, @outlet_context_json, @subject, @body,
-       @generation_method, @gmail_draft_id, @gmail_draft_url, @gmail_message_id, @gmail_thread_id, @sent_at, @replied_at, @raw_json)
+       @generation_method, @generated_subject, @generated_body, @subject_override, @body_override, @is_customized, @last_error,
+       @gmail_draft_id, @gmail_draft_url, @gmail_message_id, @gmail_thread_id, @sent_at, @replied_at, @raw_json)
     ON CONFLICT(campaign_id, target_id, song_id) DO UPDATE SET
       updated_at = excluded.updated_at,
       outlet_name = excluded.outlet_name,
@@ -106,6 +120,8 @@ export function createOutreachItem(item) {
       selected_assets_json = excluded.selected_assets_json,
       release_context_json = excluded.release_context_json,
       outlet_context_json = excluded.outlet_context_json,
+      generated_subject = COALESCE(marketing_outreach_items.generated_subject, excluded.generated_subject),
+      generated_body = COALESCE(marketing_outreach_items.generated_body, excluded.generated_body),
       raw_json = excluded.raw_json
   `).run({
     id,
@@ -129,6 +145,12 @@ export function createOutreachItem(item) {
     subject: item.subject || null,
     body: item.body || null,
     generation_method: item.generation_method || null,
+    generated_subject: item.generated_subject || null,
+    generated_body: item.generated_body || null,
+    subject_override: item.subject_override || null,
+    body_override: item.body_override || null,
+    is_customized: item.is_customized ? 1 : 0,
+    last_error: item.last_error || null,
     gmail_draft_id: item.gmail_draft_id || null,
     gmail_draft_url: item.gmail_draft_url || null,
     gmail_message_id: item.gmail_message_id || null,
@@ -145,14 +167,17 @@ export function updateOutreachItem(id, fields = {}) {
   initMarketingOutreachSchema();
   const allowed = [
     'status', 'requires_ken', 'safety_status', 'safety_notes', 'subject', 'body',
-    'generation_method', 'gmail_draft_id', 'gmail_draft_url', 'gmail_message_id', 'gmail_thread_id',
+    'generation_method', 'generated_subject', 'generated_body', 'subject_override', 'body_override', 'is_customized', 'last_error',
+    'gmail_draft_id', 'gmail_draft_url', 'gmail_message_id', 'gmail_thread_id',
     'sent_at', 'replied_at', 'release_marketing_id',
   ];
   const updates = { updated_at: new Date().toISOString() };
 
   for (const field of allowed) {
     if (fields[field] !== undefined) {
-      updates[field] = field === 'requires_ken' ? (fields[field] ? 1 : 0) : fields[field];
+      updates[field] = (field === 'requires_ken' || field === 'is_customized')
+        ? (fields[field] ? 1 : 0)
+        : fields[field];
     }
   }
 
@@ -235,6 +260,10 @@ export function getOutreachItems(filters = {}) {
   if (filters.song_id) { clauses.push('song_id = ?'); params.push(filters.song_id); }
   if (filters.release_marketing_id) { clauses.push('release_marketing_id = ?'); params.push(filters.release_marketing_id); }
   if (filters.target_id) { clauses.push('target_id = ?'); params.push(filters.target_id); }
+  if (Array.isArray(filters.target_ids) && filters.target_ids.length) {
+    clauses.push(`target_id IN (${filters.target_ids.map(() => '?').join(',')})`);
+    params.push(...filters.target_ids);
+  }
   if (filters.status) { clauses.push('status = ?'); params.push(filters.status); }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
@@ -266,6 +295,7 @@ function parseOutreachItem(row) {
   return {
     ...row,
     requires_ken: Boolean(row.requires_ken),
+    is_customized: Boolean(row.is_customized),
     release_marketing_id: row.release_marketing_id || null,
     bundle_song_ids: parseJsonArray(row.bundle_song_ids_json),
     selected_assets: parseJsonArray(row.selected_assets_json),

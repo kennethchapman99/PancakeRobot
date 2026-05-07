@@ -34,6 +34,7 @@ const DEFAULT_DISTRIBUTION = {
 const DEFAULT_ASSET_PACK = {
   sourceArtworkPath: null,
   sourceArtworkLocked: true,
+  socialHandle: null,
   generatedAt: null,
   assets: [],
 };
@@ -45,6 +46,10 @@ const DEFAULT_RESULTS = {
   suppressed: 0,
   noResponse: 0,
   lessons: '',
+  sharedDraftTemplate: {
+    subject_template: null,
+    body_template: null,
+  },
 };
 
 export function isMarketingReleaseSong(song) {
@@ -59,9 +64,15 @@ export function songHasMarketingImage(songId) {
 }
 
 export function getMarketingReleaseEntries(limit = 50) {
+  const options = typeof limit === 'object' && limit !== null ? limit : { limit };
+  const max = Number.isFinite(Number(options.limit)) ? Number(options.limit) : 50;
+  const brandProfileId = options.brand_profile_id === undefined ? getActiveProfileId() : options.brand_profile_id;
+  const releaseOnly = options.releaseOnly !== false;
+
   return getAllSongs()
-    .filter(isMarketingReleaseSong)
-    .slice(0, limit)
+    .filter(song => brandProfileId ? song.brand_profile_id === brandProfileId : true)
+    .filter(song => releaseOnly ? isMarketingReleaseSong(song) : true)
+    .slice(0, max)
     .map(song => {
       const links = getReleaseLinks(song.id);
       const marketingSummary = getSongCatalogMarketingSummary(song.id, { releaseLinks: links });
@@ -188,11 +199,14 @@ export function getReleaseMarketingDashboard(id) {
 
   const song = getSong(release.song_id);
   const marketingSummary = getSongCatalogMarketingSummary(release.song_id, { releaseLinks: getReleaseLinks(release.song_id) });
-  const campaigns = getMarketingCampaigns(500).filter(c => c.release_marketing_id === release.id);
+  const campaigns = getMarketingCampaigns(500)
+    .filter(c => c.release_marketing_id === release.id)
+    .sort(compareCampaignsByRecency);
   const outreachItems = campaigns.flatMap(c => getOutreachItems({ campaign_id: c.id }));
   const outreachEvents = getOutreachEvents({ release_id: release.id });
   const inboxMessages = getInboxMessages(200).filter(msg => msg.release_marketing_id === release.id);
   const latestCampaign = campaigns[0] || null;
+  const latestCampaignItems = latestCampaign ? getOutreachItems({ campaign_id: latestCampaign.id }) : [];
   const selectedTargets = latestCampaign?.approved_target_ids || [];
   const readinessPct = computeReadinessPercent(release.readiness);
   const assetWarnings = (release.asset_pack?.assets || []).filter(asset => asset.sourceArtworkUsed === false);
@@ -211,16 +225,21 @@ export function getReleaseMarketingDashboard(id) {
     marketingSummary,
     campaigns,
     latestCampaign,
+    latestCampaignItems,
     outreachItems,
     outreachEvents,
     inboxMessages,
     readinessPct,
     selectedTargetsCount: selectedTargets.length,
-    draftsReadyCount: outreachItems.filter(item => ['draft_generated', 'ready_for_gmail_draft', 'gmail_draft_created'].includes(item.status)).length,
+    draftsReadyCount: latestCampaignItems.filter(item => ['draft_generated', 'ready_for_gmail_draft', 'gmail_draft_created'].includes(item.status)).length,
     assetCount: (release.asset_pack?.assets || []).length,
     assetWarnings,
     results,
   };
+}
+
+function compareCampaignsByRecency(a, b) {
+  return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
 }
 
 export function resolveSourceArtworkPath(songId) {

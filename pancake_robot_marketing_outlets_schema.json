@@ -4034,6 +4034,71 @@
       "source_urls": [
         "https://pitchfork.com/news/bandcamp-announces-ban-on-ai-music"
       ]
+    },
+    {
+      "id": "test_kenneth_d2l",
+      "name": "Kenneth D2L Test Outlet",
+      "category": "owned_channel",
+      "priority": "TEST",
+      "brand_fit_score_0_100": 100,
+      "status": "approved",
+      "platforms": [
+        "email"
+      ],
+      "url": "https://d2l.com/",
+      "social_handles": {},
+      "contact": {
+        "email": "kenneth@d2l.com",
+        "submission_path": "email"
+      },
+      "audience": {
+        "primary": "Internal release marketing QA",
+        "age_fit": "adult reviewer",
+        "geo": "Canada"
+      },
+      "why_it_fits_pancake_robot": [
+        "Internal test outlet for validating outreach draft creation and Gmail draft rendering.",
+        "Safe end-to-end QA target for release outreach flow changes."
+      ],
+      "best_pancake_robot_angles": [
+        "Use this outlet to verify template editing, Gmail draft creation, and clickable link rendering."
+      ],
+      "recommended_pitch_type": "email_test",
+      "sample_pitch_hook": "Internal QA outlet for release outreach draft validation.",
+      "assets_to_send": [
+        "Hyperfollow / release link",
+        "Spotify / Apple / YouTube links",
+        "Press kit link",
+        "Draft HTML link rendering"
+      ],
+      "ai_music_stance": {
+        "status": "allowed",
+        "risk_level": "low",
+        "notes": "Internal test outlet for validating outreach behavior.",
+        "evidence_urls": [],
+        "recommended_action": "Allowed"
+      },
+      "outreach_sequence": [
+        {
+          "step": 1,
+          "channel": "email",
+          "timing": "on demand",
+          "goal": "Validate draft generation, Gmail draft persistence, and clickable link rendering."
+        }
+      ],
+      "notes_for_marketing_agent": [
+        "Internal test outlet for validating outreach draft creation and Gmail delivery/link rendering."
+      ],
+      "source_urls": [
+        "https://d2l.com/"
+      ],
+      "contactName": "Kenneth Chapman",
+      "contactEmail": "kenneth@d2l.com",
+      "fit": 100,
+      "aiPolicy": "Allowed",
+      "notes": "Internal test outlet for validating outreach draft creation and Gmail delivery/link rendering.",
+      "isTestOutlet": true,
+      "internal_test": true
     }
   ],
   "starter_pitch_templates": {

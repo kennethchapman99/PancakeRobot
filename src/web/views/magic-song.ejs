@@ -1,0 +1,83 @@
+<% title = 'MAGIC SONG' %>
+
+<div class="p-8 max-w-4xl">
+  <a href="/" class="text-sm text-zinc-500 hover:text-zinc-700 mb-6 inline-flex items-center gap-1">← Dashboard</a>
+
+  <div class="rounded-[32px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-8 shadow-sm">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <div class="max-w-2xl">
+        <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-emerald-700">
+          <span>🪄</span>
+          MAGIC SONG
+        </div>
+        <h1 class="mt-4 text-4xl font-black tracking-tight text-zinc-900">One topic in, best release candidate out.</h1>
+        <p class="mt-3 max-w-xl text-sm leading-6 text-zinc-600">
+          This launches the magic pipeline: create the song, run A&amp;R, allow one regeneration max, and auto-build marketing assets only if the final score clears publish threshold.
+        </p>
+        <div class="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
+          <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600">Create</span>
+          <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600">A&amp;R Rank</span>
+          <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600">Improve Once</span>
+          <span class="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600">Auto Marketing If Pass</span>
+        </div>
+      </div>
+      <div class="rounded-3xl border border-emerald-200 bg-white p-5 text-sm text-zinc-600 shadow-sm lg:w-[320px]">
+        <div class="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Decision Rule</div>
+        <div class="mt-3 space-y-2 leading-6">
+          <p>1. Write and render the first version.</p>
+          <p>2. Run release-selection scoring.</p>
+          <p>3. If it misses publish threshold, spend one regeneration.</p>
+          <p>4. If the final recommendation is `recommend_to_publish`, build marketing assets automatically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="POST" action="/magic-song" class="mt-8 rounded-[28px] border border-zinc-200 bg-white p-8 shadow-sm">
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div>
+        <label for="topic" class="block text-sm font-bold text-zinc-900">Song Topic</label>
+        <input
+          id="topic"
+          name="topic"
+          type="text"
+          required
+          autofocus
+          value="<%= typeof topic === 'string' ? topic : '' %>"
+          placeholder='e.g. dinosaurs, brushing teeth, sharing with friends'
+          class="mt-2 w-full rounded-2xl border border-zinc-200 px-4 py-4 text-base text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        >
+
+        <label for="notes" class="mt-5 block text-sm font-bold text-zinc-900">Optional Notes</label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows="5"
+          placeholder="Optional extra direction for the song record. The magic pipeline still uses the topic as the main input."
+          class="mt-2 w-full rounded-2xl border border-zinc-200 px-4 py-4 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-y"
+        ><%= typeof notes === 'string' ? notes : '' %></textarea>
+
+        <% if (error) { %>
+          <div class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"><%= error %></div>
+        <% } %>
+      </div>
+
+      <div class="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+        <div class="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Launch</div>
+        <p class="mt-3 text-sm leading-6 text-zinc-600">
+          Submitting creates a new draft song record and opens the live terminal with `pipelineMode=magic` and `autoStart=1`.
+        </p>
+        <button
+          type="submit"
+          class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-bold text-white transition hover:bg-emerald-500"
+        >
+          <span>🪄</span>
+          Start MAGIC SONG
+        </button>
+        <a href="/songs" class="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100">
+          Browse Song Catalog
+        </a>
+      </div>
+    </div>
+  </form>
+</div>

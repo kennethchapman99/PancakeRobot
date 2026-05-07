@@ -4,23 +4,61 @@ import { dirname, join, extname } from 'path';
 import fs from 'fs';
 import { getAllSongs, getSong, upsertSong, upsertReleaseLink, getReleaseLinks } from '../../../shared/db.js';
 import { SONG_STATUSES, getSongStatusLabel } from '../../../shared/song-status.js';
-import { getMarketingTargets, getMarketingCampaigns, getMarketingCampaignById, updateMarketingTarget } from '../../../shared/marketing-db.js';
+import { getMarketingCampaigns, getMarketingCampaignById, updateMarketingCampaign, updateMarketingTarget } from '../../../shared/marketing-db.js';
 import { getOrCreateReleaseMarketing, getReleaseMarketingById, getReleaseMarketingDashboard, updateReleaseMarketing, resolveSourceArtworkPath } from '../../../shared/marketing-releases.js';
-import { hydrateOutletsWithHistory } from '../../../shared/marketing-outlets.js';
-import { createOutreachRun, getAllOutletsForSelection } from '../../../agents/marketing-outreach-run-agent.js';
-import { generateDraftsForCampaign } from '../../../agents/marketing-outreach-draft-agent.js';
-import { createGmailDraftsForCampaign } from '../../../agents/marketing-gmail-draft-agent.js';
+import { createOutreachRun, getCanonicalEmailOutletsForSelection } from '../../../agents/marketing-outreach-run-agent.js';
+import { createGmailDraftForOutreachItem } from '../../../agents/marketing-gmail-draft-agent.js';
 import { runInboxScan } from '../../../agents/marketing-inbox-agent.js';
-import { buildMarketingReleasePack } from '../../../marketing/release-agent.js';
+import { buildSongReleaseAssets } from '../../../shared/song-release-assets-service.js';
 import { getInboxMessages } from '../../../shared/marketing-inbox-db.js';
-import { getOutreachItem, updateOutreachItem } from '../../../shared/marketing-outreach-db.js';
-import { transitionOutreachItem } from '../../../shared/marketing-outreach-state.js';
+import { getOutreachItem, getOutreachItems, updateOutreachItem } from '../../../shared/marketing-outreach-db.js';
+import { canTransitionOutreachItem, transitionOutreachItem } from '../../../shared/marketing-outreach-state.js';
+import { getSongMarketingKit } from '../../../shared/song-marketing-kit.js';
 import { renderMarketingLayout } from '../views/layout.js';
 import { esc, attr, redirect } from '../utils/http.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const _require = createRequire(import.meta.url);
 const multer = _require('multer');
+const RELEASE_TABS = [
+  ['audience', 'Audience'],
+  ['drafts', 'Drafts'],
+  ['results', 'Results'],
+];
+const LEGACY_TAB_MAP = {
+  readiness: 'audience',
+  distribution: 'audience',
+  assets: 'audience',
+  'gmail-inbox': 'audience',
+  'outreach-drafts': 'drafts',
+};
+const DEFAULT_SUBJECT_TEMPLATE = '{{artistName}} - {{songTitle}} for {{outletName}}';
+const DEFAULT_BODY_TEMPLATE = `Hi {{contactName}},
+
+I’m reaching out with {{songTitle}} from {{artistName}} because it feels like a strong fit for {{outletName}}.
+
+Why I thought of you: {{whyThisOutletFits}}
+
+Quick release notes:
+- Brand: {{brandName}}
+- Release blurb: {{releaseBlurb}}
+- Short description: {{shortDescription}}
+
+Key links:
+- Listen / release page: {{releaseLink}}
+- Hyperfollow: {{hyperfollowLink}}
+- Spotify: {{spotifyLink}}
+- Apple Music: {{appleMusicLink}}
+- YouTube: {{youtubeLink}}
+- Instagram: {{instagramLink}}
+- TikTok: {{tiktokLink}}
+- Press kit: {{pressKitLink}}
+
+Happy to send anything else that helps.
+
+Best,
+Kenneth
+{{brandName}}`;
 
 const ALLOWED_AUDIO_EXTS = new Set(['.mp3', '.wav', '.flac', '.aiff', '.m4a']);
 
@@ -204,7 +242,7 @@ export function postPromoteRelease(req, res) {
     const song = getSong(req.params.songId);
     if (!song) throw new Error('Song not found');
     const release = getOrCreateReleaseMarketing(song.id);
-    redirect(res, `/marketing/releases/${release.id}`);
+    redirect(res, `/marketing/releases/${release.id}?tab=audience`);
   } catch (error) {
     redirect(res, `/songs/${encodeURIComponent(req.params.songId)}?error=${encodeURIComponent(error.message)}`);
   }
@@ -218,9 +256,14 @@ export function renderReleaseMarketing(req, res) {
     return;
   }
 
-  const tab = String(req.query.tab || 'readiness').toLowerCase();
+  const requestedTab = String(req.query.tab || '').toLowerCase();
+  const tab = normalizeReleaseTab(requestedTab);
+  if (requestedTab !== tab) {
+    return redirect(res, buildReleasePageUrl(dashboard.release.id, tab, req.query));
+  }
   const campaign = dashboard.latestCampaign;
-  const outletRows = hydrateOutletsWithHistory(getMarketingTargets({}));
+  dashboard.queryItemId = String(req.query.item || '');
+  const outletRows = getCanonicalEmailOutletsForSelection();
   const notices = [
     req.query.message ? `<div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">${esc(req.query.message)}</div>` : '',
     req.query.error ? `<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">${esc(req.query.error)}</div>` : '',
@@ -234,8 +277,8 @@ export function renderReleaseMarketing(req, res) {
           <div class="text-sm text-zinc-500 mt-2">${esc(dashboard.release.artistName || 'Pancake Robot')} · ${esc(dashboard.release.releaseStatus)} · ${esc(dashboard.release.releaseDate || 'No date set')}</div>
         </div>
         <div class="text-right text-sm text-zinc-500">
-          <div>Readiness ${dashboard.readinessPct}%</div>
-          <div>${dashboard.assetCount} assets · ${dashboard.selectedTargetsCount} targets · ${dashboard.draftsReadyCount} drafts</div>
+          <div>${dashboard.selectedTargetsCount} selected · ${dashboard.draftsReadyCount} previews ready</div>
+          <div>${dashboard.latestCampaignItems.filter(item => item.gmail_draft_id).length} Gmail drafts · ${dashboard.latestCampaignItems.filter(item => item.last_error).length} need attention</div>
           <div>${dashboard.results.replies} replies · ${dashboard.results.opportunities} opportunities</div>
         </div>
       </div>
@@ -302,45 +345,202 @@ export async function postBuildReleaseAssets(req, res) {
     },
   });
   try {
-    await buildMarketingReleasePack(release.songId, { sourceArtworkPath });
+    await buildSongReleaseAssets(release.songId, { sourceArtworkPath, mode: 'render_from_existing_visuals' });
     redirect(res, `/marketing/releases/${release.id}?tab=assets`);
   } catch (error) {
     redirect(res, `/marketing/releases/${release.id}?tab=assets&error=${encodeURIComponent(error.message)}`);
   }
 }
 
-export function postSelectReleaseAudience(req, res) {
+export async function postSelectReleaseAudience(req, res) {
   const release = getReleaseMarketingById(req.params.releaseMarketingId);
   if (!release) return redirect(res, '/marketing?error=Release%20not%20found');
   try {
-    createOutreachRun({
+    const dryRun = false;
+    const result = createOutreachRun({
       song_ids: [release.songId],
       outlet_ids: toArray(req.body.outlet_ids),
       mode: 'single_release',
-      allow_same_release: req.body.allow_same_release === 'on',
-      dry_run: req.body.dry_run !== 'off',
+      allow_same_release: booleanFromForm(req.body.allow_same_release, false),
+      dry_run: dryRun,
       release_marketing_id: release.id,
     });
-    redirect(res, `/marketing/releases/${release.id}?tab=audience`);
+    const campaignId = result.campaigns?.[0]?.campaign_id;
+    if (!campaignId) throw new Error('Outreach run did not create a campaign.');
+    ensureCampaignTemplates(campaignId);
+    const previewResult = generateReleaseDraftPreviews(campaignId);
+    const summary = `Outreach run created for ${previewResult.previewed} target(s). Review drafts before creating Gmail drafts.`;
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { message: summary }));
   } catch (error) {
-    redirect(res, `/marketing/releases/${release.id}?tab=audience&error=${encodeURIComponent(error.message)}`);
+    redirect(res, buildReleasePageUrl(release.id, 'audience', { error: error.message }));
   }
 }
 
-export async function postGenerateReleaseDrafts(req, res) {
+export function postGenerateReleaseDrafts(req, res) {
   const release = getReleaseMarketingById(req.params.releaseMarketingId);
   const campaign = findLatestCampaign(release?.id);
-  if (!release || !campaign) return redirect(res, `/marketing/releases/${req.params.releaseMarketingId}?tab=outreach-drafts&error=${encodeURIComponent('Create an audience selection first.')}`);
-  await generateDraftsForCampaign(campaign.id, { deterministic: req.body.deterministic === 'on' });
-  redirect(res, `/marketing/releases/${release.id}?tab=outreach-drafts`);
+  if (!release || !campaign) return redirect(res, buildReleasePageUrl(req.params.releaseMarketingId, 'drafts', { error: 'Create an audience selection first.' }));
+  try {
+    const dryRun = false;
+    updateMarketingCampaign(campaign.id, { dry_run: dryRun });
+    const result = generateReleaseDraftPreviews(campaign.id);
+    const message = `Refreshed ${result.previewed} draft preview(s).`;
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { message, item: req.body.item || '' }));
+  } catch (error) {
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { error: error.message, item: req.body.item || '' }));
+  }
 }
 
 export async function postCreateReleaseGmailDrafts(req, res) {
   const release = getReleaseMarketingById(req.params.releaseMarketingId);
   const campaign = findLatestCampaign(release?.id);
-  if (!release || !campaign) return redirect(res, `/marketing/releases/${req.params.releaseMarketingId}?tab=outreach-drafts&error=${encodeURIComponent('Create an audience selection first.')}`);
-  await createGmailDraftsForCampaign(campaign.id, { dryRun: campaign.dry_run || req.body.dry_run === 'on' });
-  redirect(res, `/marketing/releases/${release.id}?tab=outreach-drafts`);
+  if (!release || !campaign) return redirect(res, buildReleasePageUrl(req.params.releaseMarketingId, 'drafts', { error: 'Create an audience selection first.' }));
+  try {
+    const dryRun = false;
+    const forceRecreate = true;
+    updateMarketingCampaign(campaign.id, { dry_run: dryRun });
+    const previewResult = generateReleaseDraftPreviews(campaign.id);
+
+    const items = getOutreachItems({ campaign_id: campaign.id });
+    let created = 0;
+    let recreated = 0;
+    let failures = 0;
+    let missingEmail = 0;
+
+    for (const item of items) {
+      const email = getPreferredOutletEmail(item);
+      if (!email) {
+        missingEmail += 1;
+        updateOutreachItem(item.id, {
+          last_error: 'Missing email address',
+          safety_status: 'missing_email',
+          requires_ken: true,
+        });
+        continue;
+      }
+      try {
+        const hadExistingDraft = Boolean(item.gmail_draft_id);
+        const result = await createGmailDraftForOutreachItem(item.id, { dryRun: false, forceRecreate });
+        if (result.ok && result.gmail_draft_id) {
+          if (hadExistingDraft) recreated += 1;
+          else created += 1;
+        }
+      } catch (error) {
+        failures += 1;
+        updateOutreachItem(item.id, {
+          last_error: error.message,
+          safety_status: 'gmail_draft_error',
+          requires_ken: true,
+        });
+      }
+    }
+
+    const messageParts = [`${items.length} selected targets`, `${created} Gmail drafts created`];
+    if (recreated) messageParts.push(`${recreated} Gmail drafts re-created`);
+    if (missingEmail) messageParts.push(`${missingEmail} missing email`);
+    if (failures) messageParts.push(`${failures} failed`);
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { message: messageParts.join(' · '), item: req.body.item || '' }));
+  } catch (error) {
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { error: error.message, item: req.body.item || '' }));
+  }
+}
+
+export function postUpdateReleaseDraftTemplate(req, res) {
+  const release = getReleaseMarketingById(req.params.releaseMarketingId);
+  const campaign = findLatestCampaign(release?.id);
+  if (!release || !campaign) return redirect(res, buildReleasePageUrl(req.params.releaseMarketingId, 'drafts', { error: 'Create an audience selection first.' }));
+  try {
+    const dryRun = false;
+    const subjectTemplate = String(req.body.subject_template || '').trim() || DEFAULT_SUBJECT_TEMPLATE;
+    const bodyTemplate = String(req.body.body_template || '').trim() || DEFAULT_BODY_TEMPLATE;
+
+    updateMarketingCampaign(campaign.id, {
+      dry_run: dryRun,
+      subject_template: subjectTemplate,
+      body_template: bodyTemplate,
+    });
+    updateReleaseMarketing(release.id, {
+      results: {
+        ...(release.results || {}),
+        sharedDraftTemplate: {
+          subject_template: subjectTemplate,
+          body_template: bodyTemplate,
+        },
+      },
+    });
+    const result = generateReleaseDraftPreviews(campaign.id);
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', {
+      message: `Template saved. ${result.previewed} non-customized draft(s) refreshed.`,
+      item: req.body.item || '',
+    }));
+  } catch (error) {
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { error: error.message, item: req.body.item || '' }));
+  }
+}
+
+export function postUpdateReleaseDraftItem(req, res) {
+  const release = getReleaseMarketingById(req.params.releaseMarketingId);
+  const item = getOutreachItem(req.params.itemId);
+  if (!release || !item) return redirect(res, buildReleasePageUrl(req.params.releaseMarketingId, 'drafts', { error: 'Draft item not found.' }));
+  try {
+    const subject = String(req.body.subject || '').trim();
+    const body = String(req.body.body || '').trim();
+    const isCustomized = subject !== String(item.generated_subject || '').trim() || body !== String(item.generated_body || '').trim();
+    updateOutreachItem(item.id, {
+      subject,
+      body,
+      subject_override: isCustomized ? subject : null,
+      body_override: isCustomized ? body : null,
+      is_customized: isCustomized,
+      last_error: null,
+      safety_status: isCustomized ? 'customized' : 'ready_for_review',
+      requires_ken: true,
+    });
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { message: isCustomized ? 'Draft changes saved and marked customized.' : 'Draft saved.', item: item.id }));
+  } catch (error) {
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { error: error.message, item: item.id }));
+  }
+}
+
+export function postResetReleaseDraftItem(req, res) {
+  const release = getReleaseMarketingById(req.params.releaseMarketingId);
+  const item = getOutreachItem(req.params.itemId);
+  if (!release || !item) return redirect(res, buildReleasePageUrl(req.params.releaseMarketingId, 'drafts', { error: 'Draft item not found.' }));
+  try {
+    updateOutreachItem(item.id, {
+      subject: item.generated_subject || '',
+      body: item.generated_body || '',
+      subject_override: null,
+      body_override: null,
+      is_customized: false,
+      last_error: null,
+      safety_status: 'reset_to_template',
+      requires_ken: true,
+    });
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { message: 'Draft reset to shared template.', item: item.id }));
+  } catch (error) {
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { error: error.message, item: item.id }));
+  }
+}
+
+export function postMarkReleaseDraftSent(req, res) {
+  const release = getReleaseMarketingById(req.params.releaseMarketingId);
+  const item = getOutreachItem(req.params.itemId);
+  if (!release || !item) return redirect(res, buildReleasePageUrl(req.params.releaseMarketingId, 'drafts', { error: 'Draft item not found.' }));
+  try {
+    transitionOutreachItem(item.id, 'mark_sent', {
+      actor: 'ken',
+      fields: {
+        last_error: null,
+        safety_status: 'sent',
+        requires_ken: false,
+      },
+      message: 'Marked email as sent manually from the release drafts view',
+    });
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { message: 'Email marked sent.', item: item.id }));
+  } catch (error) {
+    redirect(res, buildReleasePageUrl(release.id, 'drafts', { error: error.message, item: item.id }));
+  }
 }
 
 export async function postScanReleaseInbox(req, res) {
@@ -383,26 +583,14 @@ export function postUpdateReleaseResults(req, res) {
 }
 
 function renderReleaseTabs(releaseId, activeTab) {
-  const tabs = [
-    ['readiness', 'Readiness'],
-    ['distribution', 'Distribution'],
-    ['assets', 'Assets'],
-    ['audience', 'Audience'],
-    ['outreach-drafts', 'Outreach Drafts'],
-    ['gmail-inbox', 'Gmail Inbox'],
-    ['results', 'Results'],
-  ];
-  return `<nav class="flex flex-wrap gap-2">${tabs.map(([key, label]) => `<a href="/marketing/releases/${attr(releaseId)}?tab=${attr(key)}" class="rounded-lg px-3 py-2 text-sm ${activeTab === key ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'}">${esc(label)}</a>`).join('')}</nav>`;
+  return `<nav class="flex flex-wrap gap-2">${RELEASE_TABS.map(([key, label]) => `<a href="/marketing/releases/${attr(releaseId)}?tab=${attr(key)}" class="rounded-lg px-3 py-2 text-sm ${activeTab === key ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'}">${esc(label)}</a>`).join('')}</nav>`;
 }
 
 function renderTabBody(tab, dashboard, campaign, outlets) {
-  if (tab === 'distribution') return renderDistributionTab(dashboard.release);
-  if (tab === 'assets') return renderAssetsTab(dashboard);
   if (tab === 'audience') return renderAudienceTab(dashboard, campaign, outlets);
-  if (tab === 'outreach-drafts') return renderDraftsTab(dashboard, campaign);
-  if (tab === 'gmail-inbox') return renderInboxTab(dashboard);
+  if (tab === 'drafts') return renderDraftsTab(dashboard, campaign);
   if (tab === 'results') return renderResultsTab(dashboard);
-  return renderReadinessTab(dashboard.release);
+  return renderAudienceTab(dashboard, campaign, outlets);
 }
 
 function renderReadinessTab(release) {
@@ -471,6 +659,10 @@ function renderAssetsTab(dashboard) {
 
 function renderAudienceTab(dashboard, campaign, outlets) {
   const selectedIds = new Set(campaign?.approved_target_ids || []);
+  const selectedDefaultCount = selectedIds.size || outlets.length;
+  const statusCopy = campaign
+    ? renderDraftStatusCopy(campaign, dashboard.latestCampaignItems)
+    : `${selectedDefaultCount} selected targets · Ready to create Gmail drafts`;
   const rows = outlets.map(outlet => {
     const hardExcludeReason = outlet.ai_policy === 'banned'
       ? 'AI banned'
@@ -487,34 +679,124 @@ function renderAudienceTab(dashboard, campaign, outlets) {
       (outlet.fit_score || 0) < 50 ? 'low fit' : '',
       !outlet.instagram_url && !outlet.tiktok_url && !outlet.youtube_url ? 'missing social links' : '',
     ].filter(Boolean).join(' · ');
+    const checked = selectedIds.size ? selectedIds.has(outlet.id) : true;
+    const testBadge = isTestOutlet(outlet) ? `<span class="ml-2 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">TEST</span>` : '';
     return `<tr class="border-t border-zinc-100 align-top">
-      <td class="py-2 pr-3">${hardExcludeReason ? '' : `<input type="checkbox" name="outlet_ids" value="${attr(outlet.id)}" ${selectedIds.has(outlet.id) ? 'checked' : ''}>`}</td>
-      <td class="py-2 pr-3 text-sm font-medium">${esc(outlet.name)}</td>
+      <td class="py-2 pr-3">${hardExcludeReason ? '' : `<input type="checkbox" name="outlet_ids" value="${attr(outlet.id)}" ${checked ? 'checked' : ''}>`}</td>
+      <td class="py-2 pr-3 text-sm font-medium">${esc(outlet.name)}${testBadge}</td>
       <td class="py-2 pr-3 text-xs">${esc(outlet.priority || outlet.type || '')}</td>
       <td class="py-2 pr-3 text-xs">${esc(outlet.contact?.email || outlet.public_email || outlet.best_free_contact_method || '')}</td>
       <td class="py-2 pr-3 text-xs ${hardExcludeReason ? 'text-red-600' : 'text-zinc-500'}">${esc(hardExcludeReason || warning || 'OK')}</td>
       <td class="py-2 text-xs text-zinc-500">${esc(outlet.last_contact_release_title || '—')}</td>
     </tr>`;
   }).join('');
-  return `<section class="bg-white border border-zinc-200 rounded-2xl p-6">
-    <form method="POST" action="/marketing/releases/${attr(dashboard.release.id)}/audience" class="space-y-4">
-      ${renderCheckbox('dry_run', 'Dry-run mode', campaign ? campaign.dry_run : true)}
+  return `<section class="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
+    <div class="grid gap-3 md:grid-cols-4">
+      <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Selected targets</div><div id="audience-selected-count" class="mt-1 text-xl font-bold text-zinc-900">${selectedDefaultCount}</div></div>
+      <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Valid emails</div><div id="audience-email-count" class="mt-1 text-xl font-bold text-zinc-900">${outlets.filter(outlet => checkedByDefault(selectedIds, outlet.id) && getPreferredOutletEmail(outlet)).length}</div></div>
+      <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Previews ready</div><div class="mt-1 text-xl font-bold text-zinc-900">${dashboard.latestCampaignItems.filter(item => item.generated_subject && item.generated_body).length}</div></div>
+      <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Gmail drafts</div><div class="mt-1 text-xl font-bold text-zinc-900">${dashboard.latestCampaignItems.filter(item => item.gmail_draft_id).length}</div></div>
+    </div>
+    <form method="POST" action="/marketing/releases/${attr(dashboard.release.id)}/audience" class="space-y-4" data-release-audience-form>
+      <input type="hidden" name="allow_same_release" value="off">
       ${renderCheckbox('allow_same_release', 'Allow re-contacting recent targets', false)}
+      <div id="audience-status-copy" class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">${esc(statusCopy)}</div>
+      <div class="text-sm text-zinc-500">Audience is sourced from the canonical outlet database. All eligible outlets are selected by default, including the Kenneth D2L test outlet.</div>
       <div class="overflow-x-auto"><table class="w-full text-left"><thead><tr class="text-xs uppercase text-zinc-400"><th class="pb-2">Select</th><th class="pb-2">Target</th><th class="pb-2">Priority</th><th class="pb-2">Contact</th><th class="pb-2">Exclusion / warning</th><th class="pb-2">Last release</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Save audience and create campaign</button>
+      <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold" type="submit" data-submit-button data-default-label="Create outreach run">Create outreach run</button>
     </form>
+    <script>
+      (() => {
+        const form = document.querySelector('[data-release-audience-form]');
+        if (!form) return;
+        const checkboxes = [...form.querySelectorAll('input[name="outlet_ids"]')];
+        const selectedEl = document.getElementById('audience-selected-count');
+        const emailEl = document.getElementById('audience-email-count');
+        const statusEl = document.getElementById('audience-status-copy');
+        const submit = form.querySelector('[data-submit-button]');
+        const emailById = new Map(${JSON.stringify(outlets.map(outlet => [outlet.id, getPreferredOutletEmail(outlet)]))});
+        const update = () => {
+          const selected = checkboxes.filter(box => box.checked);
+          const selectedCount = selected.length;
+          const emailCount = selected.filter(box => emailById.get(box.value)).length;
+          selectedEl.textContent = String(selectedCount);
+          emailEl.textContent = String(emailCount);
+          statusEl.textContent = selectedCount + ' selected targets · Ready to create Gmail drafts';
+        };
+        update();
+        checkboxes.forEach(box => box.addEventListener('change', update));
+        form.addEventListener('submit', () => {
+          const selectedCount = checkboxes.filter(box => box.checked).length;
+          submit.disabled = true;
+          submit.textContent = 'Creating outreach run for ' + selectedCount + ' targets...';
+        });
+      })();
+    </script>
   </section>`;
 }
 
 function renderDraftsTab(dashboard, campaign) {
-  const items = dashboard.outreachItems.map(item => `<article class="border border-zinc-200 rounded-xl p-4"><div class="flex items-center justify-between gap-3"><div><div class="font-semibold text-sm">${esc(item.outlet_name || item.target_id)}</div><div class="text-xs text-zinc-500">${esc(item.status)}</div></div></div><div class="mt-3 text-xs text-zinc-500">Subject</div><div class="text-sm font-medium">${esc(item.subject || 'Not generated')}</div><pre class="mt-2 whitespace-pre-wrap text-xs text-zinc-700 bg-zinc-50 rounded-lg p-3">${esc(item.body || '')}</pre></article>`).join('');
+  if (!campaign) {
+    return '<section class="bg-white border border-zinc-200 rounded-2xl p-6 text-sm text-zinc-500">Create an audience selection first.</section>';
+  }
+  const items = dashboard.latestCampaignItems;
+  const activeItem = items.find(item => item.id === (dashboard.queryItemId || '')) || items[0] || null;
+  const counts = summarizeDraftCounts(campaign, items);
+  const listHtml = items.map(item => renderDraftListItem(dashboard.release.id, campaign, item, activeItem?.id)).join('');
+  const editorHtml = activeItem ? renderDraftEditor(dashboard.release.id, campaign, activeItem) : '<div class="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">No selected targets yet.</div>';
   return `<section class="space-y-4">
-    <div class="bg-white border border-zinc-200 rounded-2xl p-6 flex flex-wrap gap-3">
-      <form method="POST" action="/marketing/releases/${attr(dashboard.release.id)}/outreach-drafts/generate"><button class="bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm font-semibold" ${campaign ? '' : 'disabled'}>Generate drafts</button></form>
-      <form method="POST" action="/marketing/releases/${attr(dashboard.release.id)}/outreach-drafts/gmail"><button class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold" ${campaign ? '' : 'disabled'}>Create Gmail drafts</button></form>
-      <div class="text-sm text-zinc-500 self-center">${campaign ? `${campaign.approved_target_ids.length} selected targets` : 'Create an audience selection first.'}</div>
+    <div class="grid gap-3 md:grid-cols-5">
+      <div class="rounded-xl border border-zinc-200 bg-white px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Selected targets</div><div class="mt-1 text-xl font-bold text-zinc-900">${counts.selected}</div></div>
+      <div class="rounded-xl border border-zinc-200 bg-white px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Valid emails</div><div class="mt-1 text-xl font-bold text-zinc-900">${counts.validEmails}</div></div>
+      <div class="rounded-xl border border-zinc-200 bg-white px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Local previews ready</div><div class="mt-1 text-xl font-bold text-zinc-900">${counts.previewsReady}</div></div>
+      <div class="rounded-xl border border-zinc-200 bg-white px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Gmail drafts created</div><div class="mt-1 text-xl font-bold text-zinc-900">${counts.gmailCreated}</div></div>
+      <div class="rounded-xl border border-zinc-200 bg-white px-4 py-3"><div class="text-[11px] uppercase tracking-wide text-zinc-400">Need attention</div><div class="mt-1 text-xl font-bold text-zinc-900">${counts.failures}</div></div>
     </div>
-    <div class="space-y-3">${items || '<div class="bg-white border border-zinc-200 rounded-2xl p-6 text-sm text-zinc-400">No outreach items yet.</div>'}</div>
+    <div class="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4">
+      <form method="POST" action="/marketing/releases/${attr(dashboard.release.id)}/drafts/template" class="space-y-4" data-drafts-actions-form>
+        <input type="hidden" name="item" value="${attr(activeItem?.id || '')}">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="text-sm font-semibold text-zinc-900">Shared template</div>
+            <div class="text-xs text-zinc-500">Updating the shared template refreshes all non-customized drafts. Customized drafts stay locked until you reset them.</div>
+          </div>
+          <div class="text-sm text-zinc-500">Previews are local until you click Create Gmail Drafts.</div>
+        </div>
+        <div class="grid gap-4 lg:grid-cols-2">
+          <label class="block text-sm">Subject template<textarea name="subject_template" rows="4" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 font-mono text-sm">${esc(campaign.subject_template || DEFAULT_SUBJECT_TEMPLATE)}</textarea></label>
+          <label class="block text-sm">Body template<textarea name="body_template" rows="10" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 font-mono text-sm">${esc(campaign.body_template || DEFAULT_BODY_TEMPLATE)}</textarea></label>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button formaction="/marketing/releases/${attr(dashboard.release.id)}/drafts/template" class="bg-zinc-900 text-white rounded-lg px-4 py-2 text-sm font-semibold" data-submit-label="Saving template...">Save template</button>
+          <button formaction="/marketing/releases/${attr(dashboard.release.id)}/outreach-drafts/generate" class="border border-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-zinc-50" data-submit-label="Generating previews...">Generate / Refresh Previews</button>
+          <button formaction="/marketing/releases/${attr(dashboard.release.id)}/outreach-drafts/gmail" class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold" data-submit-label="Creating Gmail drafts...">Create Gmail Drafts</button>
+          <div class="self-center text-sm text-zinc-500" data-drafts-status>${esc(renderDraftStatusCopy(campaign, items))}</div>
+        </div>
+      </form>
+    </div>
+    <div class="grid gap-4 xl:grid-cols-[320px,minmax(0,1fr)]">
+      <div class="rounded-2xl border border-zinc-200 bg-white p-4">
+        <div class="mb-3 text-sm font-semibold text-zinc-900">Selected targets</div>
+        <div class="space-y-2">${listHtml || '<div class="text-sm text-zinc-400">No outreach items yet.</div>'}</div>
+      </div>
+      ${editorHtml}
+    </div>
+    <script>
+      (() => {
+        const form = document.querySelector('[data-drafts-actions-form]');
+        if (!form) return;
+        form.addEventListener('submit', (event) => {
+          const submitter = event.submitter;
+          if (!submitter) return;
+          const label = submitter.getAttribute('data-submit-label') || 'Working...';
+          const buttons = [...form.querySelectorAll('button')];
+          buttons.forEach(button => { button.disabled = true; });
+          submitter.textContent = label;
+          const status = form.querySelector('[data-drafts-status]');
+          if (status) status.textContent = label;
+        });
+      })();
+    </script>
   </section>`;
 }
 
@@ -567,7 +849,32 @@ function renderInboxAction(releaseId, messageId, action, label) {
 }
 
 function findLatestCampaign(releaseMarketingId) {
-  return getMarketingCampaigns(500).find(c => c.release_marketing_id === releaseMarketingId) || null;
+  return getMarketingCampaigns(500)
+    .filter(c => c.release_marketing_id === releaseMarketingId)
+    .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())[0] || null;
+}
+
+function normalizeReleaseTab(tab) {
+  if (!tab) return 'audience';
+  const normalized = LEGACY_TAB_MAP[String(tab).toLowerCase()] || String(tab).toLowerCase();
+  return RELEASE_TABS.some(([key]) => key === normalized) ? normalized : 'audience';
+}
+
+function buildReleasePageUrl(releaseId, tab, params = {}) {
+  const search = new URLSearchParams();
+  search.set('tab', normalizeReleaseTab(tab));
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value === undefined || value === null || value === '') continue;
+    search.set(key, String(value));
+  }
+  return `/marketing/releases/${encodeURIComponent(releaseId)}?${search.toString()}`;
+}
+
+function booleanFromForm(value, defaultValue = false) {
+  const values = Array.isArray(value) ? value : [value];
+  const normalized = values.map(entry => String(entry || '').toLowerCase());
+  if (!normalized.some(Boolean)) return defaultValue;
+  return normalized.some(entry => ['on', 'true', '1', 'yes'].includes(entry));
 }
 
 function toArray(value) {
@@ -578,4 +885,234 @@ function toArray(value) {
 
 function splitLines(value) {
   return String(value || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+}
+
+function ensureCampaignTemplates(campaignId) {
+  const campaign = getMarketingCampaignById(campaignId);
+  if (!campaign) throw new Error('Campaign not found');
+  if (campaign.subject_template && campaign.body_template) return campaign;
+  return updateMarketingCampaign(campaign.id, {
+    subject_template: campaign.subject_template || DEFAULT_SUBJECT_TEMPLATE,
+    body_template: campaign.body_template || DEFAULT_BODY_TEMPLATE,
+  });
+}
+
+function generateReleaseDraftPreviews(campaignId) {
+  const campaign = ensureCampaignTemplates(campaignId);
+  const release = getReleaseMarketingById(campaign.release_marketing_id);
+  if (!release) throw new Error('Release not found');
+  const song = getSong(release.song_id || release.songId);
+  if (!song) throw new Error('Song not found');
+  const marketingKit = getSongMarketingKit(song);
+  const items = getOutreachItems({ campaign_id: campaign.id });
+  let previewed = 0;
+
+  for (const item of items) {
+    const rendered = renderDraftFromTemplate({ campaign, item, release, song, marketingKit });
+    updateOutreachItem(item.id, {
+      generated_subject: rendered.generatedSubject,
+      generated_body: rendered.generatedBody,
+      subject: rendered.subject,
+      body: rendered.body,
+      is_customized: rendered.isCustomized,
+      subject_override: rendered.subjectOverride,
+      body_override: rendered.bodyOverride,
+      last_error: rendered.lastError,
+      safety_status: rendered.lastError ? 'needs_attention' : (campaign.dry_run ? 'preview_generated' : 'ready_for_gmail'),
+      requires_ken: true,
+      status: item.gmail_draft_id
+        ? 'gmail_draft_created'
+        : rendered.lastError
+          ? 'needs_ken'
+          : campaign.dry_run
+            ? 'draft_generated'
+            : 'ready_for_gmail_draft',
+    });
+    previewed += 1;
+  }
+
+  return { previewed };
+}
+
+function renderDraftFromTemplate({ campaign, item, release, song, marketingKit }) {
+  const templateVars = buildTemplateVariables({ item, release, song, marketingKit });
+  const generatedSubject = renderTemplateString(campaign.subject_template || DEFAULT_SUBJECT_TEMPLATE, templateVars);
+  const generatedBody = renderTemplateString(campaign.body_template || DEFAULT_BODY_TEMPLATE, templateVars);
+  const subjectOverride = item.subject_override || null;
+  const bodyOverride = item.body_override || null;
+  const isCustomized = Boolean(item.is_customized || subjectOverride || bodyOverride);
+  const subject = isCustomized && subjectOverride !== null ? subjectOverride : generatedSubject;
+  const body = isCustomized && bodyOverride !== null ? bodyOverride : generatedBody;
+  const missing = collectDraftWarnings({
+    subjectTemplate: campaign.subject_template || DEFAULT_SUBJECT_TEMPLATE,
+    bodyTemplate: campaign.body_template || DEFAULT_BODY_TEMPLATE,
+    vars: templateVars,
+    email: getPreferredOutletEmail(item),
+    subject,
+    body,
+  });
+  return {
+    generatedSubject,
+    generatedBody,
+    subject,
+    body,
+    isCustomized,
+    subjectOverride,
+    bodyOverride,
+    lastError: missing.length ? missing.join(' | ') : null,
+  };
+}
+
+function buildTemplateVariables({ item, release, song, marketingKit }) {
+  const links = marketingKit.marketing_links || {};
+  const outlet = item.outlet_context || {};
+  return {
+    outletName: outlet.name || item.outlet_name || '',
+    contactName: outlet.contact?.name || outlet.contact_name || 'there',
+    songTitle: song.title || song.topic || song.id,
+    artistName: release.artistName || 'Pancake Robot',
+    brandName: 'Pancake Robot',
+    releaseLink: links.smart_link || release.distribution?.hyperfollowUrl || '',
+    hyperfollowLink: release.distribution?.hyperfollowUrl || links.smart_link || '',
+    spotifyLink: links.spotify_url || release.distribution?.spotifyUrl || '',
+    appleMusicLink: links.apple_music_url || release.distribution?.appleMusicUrl || '',
+    youtubeLink: links.youtube_video_url || links.youtube_music_url || release.distribution?.youtubeMusicUrl || '',
+    instagramLink: links.instagram_url || '',
+    tiktokLink: links.tiktok_url || '',
+    pressKitLink: links.release_kit_url || links.promo_assets_folder_url || '',
+    shortDescription: song.topic || song.concept || '',
+    releaseBlurb: song.notes || song.description || song.concept || '',
+    whyThisOutletFits: outlet.outreach_angle || outlet.research_summary || `Your audience looks aligned with ${song.title || song.topic || 'this release'}.`,
+  };
+}
+
+function renderTemplateString(template, vars) {
+  return String(template || '')
+    .replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => String(vars[key] || '').trim())
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function collectDraftWarnings({ subjectTemplate, bodyTemplate, vars, email, subject, body }) {
+  const warnings = [];
+  if (!email) warnings.push('Missing email');
+  if (!subject) warnings.push('Missing subject');
+  if (!body) warnings.push('Missing body');
+  const usedTokens = new Set([
+    ...extractTemplateTokens(subjectTemplate),
+    ...extractTemplateTokens(bodyTemplate),
+  ]);
+  for (const token of usedTokens) {
+    if (!String(vars[token] || '').trim()) warnings.push(`Missing ${token}`);
+  }
+  return [...new Set(warnings)];
+}
+
+function extractTemplateTokens(template) {
+  return [...String(template || '').matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map(match => match[1]);
+}
+
+function renderDraftStatusCopy(campaign, items) {
+  const counts = summarizeDraftCounts(campaign, items);
+  if (counts.gmailCreated > 0 && counts.failures > 0) return `${counts.selected} selected targets · ${counts.gmailCreated} Gmail drafts created · ${counts.failures} need attention`;
+  if (counts.gmailCreated > 0) return `${counts.selected} selected targets · ${counts.gmailCreated} Gmail drafts created`;
+  return `${counts.selected} selected targets · Ready to create Gmail drafts`;
+}
+
+function summarizeDraftCounts(campaign, items) {
+  return {
+    selected: campaign?.approved_target_ids?.length || items.length,
+    validEmails: items.filter(item => getPreferredOutletEmail(item)).length,
+    previewsReady: items.filter(item => item.generated_subject && item.generated_body).length,
+    gmailCreated: items.filter(item => item.gmail_draft_id).length,
+    failures: items.filter(item => item.last_error).length,
+  };
+}
+
+function renderDraftListItem(releaseId, campaign, item, activeItemId) {
+  const email = getPreferredOutletEmail(item);
+  const status = deriveDraftStatusLabel(campaign, item);
+  const isActive = activeItemId === item.id;
+  return `<a href="${attr(buildReleasePageUrl(releaseId, 'drafts', { item: item.id }))}" class="block rounded-xl border px-3 py-3 ${isActive ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200 hover:bg-zinc-50'}">
+    <div class="flex items-center justify-between gap-2">
+      <div class="text-sm font-semibold text-zinc-900">${esc(item.outlet_name || item.target_id)}</div>
+      ${renderStatusPill(status.label, status.tone)}
+    </div>
+    <div class="mt-1 text-xs text-zinc-500">${esc(email || 'No email')}</div>
+    ${isTestOutlet(item.outlet_context || {}) ? '<div class="mt-2 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">TEST</div>' : ''}
+  </a>`;
+}
+
+function renderDraftEditor(releaseId, campaign, item) {
+  const status = deriveDraftStatusLabel(campaign, item);
+  const canMarkSent = canTransitionOutreachItem(item, 'mark_sent');
+  const gmailLink = item.gmail_draft_url
+    ? `<a href="${attr(item.gmail_draft_url)}" target="_blank" rel="noopener noreferrer" class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Open Gmail Draft</a>`
+    : '';
+  const markSentButton = canMarkSent
+    ? `<form method="POST" action="/marketing/releases/${attr(releaseId)}/drafts/${attr(item.id)}/mark-sent">
+        <button class="border border-emerald-300 bg-emerald-50 text-emerald-700 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-emerald-100">Mark email sent</button>
+      </form>`
+    : '';
+  return `<div class="space-y-4">
+    <div class="rounded-2xl border border-zinc-200 bg-white p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2"><h2 class="text-lg font-bold text-zinc-900">${esc(item.outlet_name || item.target_id)}</h2>${renderStatusPill(status.label, status.tone)}</div>
+          <div class="mt-1 text-sm text-zinc-500">${esc(getPreferredOutletEmail(item) || 'No email')}</div>
+          ${item.sent_at ? `<div class="mt-2 text-xs text-zinc-500">Marked sent ${esc(new Date(item.sent_at).toLocaleString('en-US'))}</div>` : ''}
+          ${item.last_error ? `<div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">${esc(item.last_error)}</div>` : ''}
+        </div>
+        <div class="flex flex-wrap gap-2">${gmailLink}${markSentButton}</div>
+      </div>
+      <form method="POST" action="/marketing/releases/${attr(releaseId)}/drafts/${attr(item.id)}" class="mt-5 space-y-4">
+        <label class="block text-sm">Subject<input name="subject" value="${attr(item.subject || item.generated_subject || '')}" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm"></label>
+        <label class="block text-sm">Body<textarea name="body" rows="18" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm font-mono">${esc(item.body || item.generated_body || '')}</textarea></label>
+        <div class="flex flex-wrap gap-3">
+          <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Save Changes</button>
+          <button formaction="/marketing/releases/${attr(releaseId)}/drafts/${attr(item.id)}/reset" class="border border-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-zinc-50">Reset selected draft to template</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+
+function deriveDraftStatusLabel(campaign, item) {
+  if (item.status === 'sent') return { label: 'Sent', tone: 'green' };
+  if (item.status === 'replied') return { label: 'Replied', tone: 'green' };
+  if (item.status === 'manual_submitted') return { label: 'Manually submitted', tone: 'green' };
+  if (item.gmail_draft_id) return { label: 'Gmail draft created', tone: 'green' };
+  if (!getPreferredOutletEmail(item)) return { label: 'Missing email', tone: 'amber' };
+  if (item.last_error) return { label: 'Failed', tone: 'red' };
+  if (!item.generated_subject || !item.generated_body) return { label: 'Not generated', tone: 'zinc' };
+  if (item.is_customized) return { label: 'Customized', tone: 'blue' };
+  return { label: 'Ready for Gmail', tone: 'blue' };
+}
+
+function renderStatusPill(label, tone = 'zinc') {
+  const classes = {
+    green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    blue: 'border-blue-200 bg-blue-50 text-blue-700',
+    amber: 'border-amber-200 bg-amber-50 text-amber-800',
+    red: 'border-red-200 bg-red-50 text-red-700',
+    zinc: 'border-zinc-200 bg-zinc-50 text-zinc-700',
+  };
+  return `<span class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${classes[tone] || classes.zinc}">${esc(label)}</span>`;
+}
+
+function getPreferredOutletEmail(item) {
+  return item?.outlet_context?.contact_email
+    || item?.outlet_context?.public_email
+    || item?.outlet_context?.contact?.email
+    || item?.public_email
+    || item?.contact_email
+    || '';
+}
+
+function isTestOutlet(outlet) {
+  return outlet?.internal_test === true || outlet?.raw_json?.isTestOutlet === true || outlet?.raw_json?.internal_test === true || outlet?.isTestOutlet === true;
+}
+
+function checkedByDefault(selectedIds, outletId) {
+  return selectedIds.size ? selectedIds.has(outletId) : true;
 }

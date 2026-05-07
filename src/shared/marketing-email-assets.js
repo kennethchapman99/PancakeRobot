@@ -15,12 +15,11 @@ export function buildBrandSocialLinks({ releaseLinks = [] } = {}) {
   const social = BRAND_PROFILE.social || {};
   const links = [];
 
-  pushLink(links, 'Facebook', social.facebook_url || inferFacebookUrl(social));
+  pushLink(links, 'Instagram', social.instagram_url);
+  pushLink(links, 'TikTok', social.tiktok_url);
   pushLink(links, 'YouTube', social.youtube_channel_url || social.youtube_url || findReleaseLink(releaseLinks, ['youtube']) || getCatalogPlatformLink(['youtube']));
   pushLink(links, 'Spotify', social.spotify_artist_url || findReleaseLink(releaseLinks, ['spotify']) || getCatalogPlatformLink(['spotify']));
   pushLink(links, 'Apple Music', social.apple_music_artist_url || social.apple_music_url || findReleaseLink(releaseLinks, ['apple music']) || getCatalogPlatformLink(['apple music']));
-  pushLink(links, 'Instagram', social.instagram_url);
-  pushLink(links, 'TikTok', social.tiktok_url);
 
   return dedupeLinks(links);
 }
@@ -279,11 +278,6 @@ function findReleaseLink(links = [], names = []) {
   const wanted = new Set(names.map(name => String(name).toLowerCase()));
   const match = links.find(link => wanted.has(String(link.platform || '').toLowerCase()));
   return match?.url || null;
-}
-
-function inferFacebookUrl(social = {}) {
-  const url = social.website_url || social.url || null;
-  return /facebook\.com/i.test(String(url || '')) ? url : null;
 }
 
 function getCatalogPlatformLink(platforms = []) {
