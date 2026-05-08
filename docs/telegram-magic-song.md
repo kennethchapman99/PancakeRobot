@@ -2,6 +2,8 @@
 
 This branch adds a reusable Magic Song workflow surface that can be triggered from Telegram, CLI, UI, API, or a future autonomous agent.
 
+The prior Telegram/OpenClaw implementation should be treated as reference code only. Pancake Robot should not depend on that app's domain code, naming, data model, or runtime behavior.
+
 ## What it does
 
 - Accepts a free-text song theme from Telegram.
@@ -53,14 +55,35 @@ npm run magic:workflow -- "a dinosaur who cannot reach the syrup"
 - It does not publish social posts.
 - It does not contact reviewers, bloggers, or radio outlets.
 
+## No-regression strategy
+
+The existing Magic pipeline is the production behavior. This branch protects that behavior by adding a wrapper around the current CLI path first instead of changing generation, scoring, metadata, audio, or release-kit internals in the same PR.
+
+This is intentional sequencing:
+
+1. Add a stable workflow contract.
+2. Add Telegram as an adapter to that contract.
+3. Prove the existing Magic pipeline still runs the same way.
+4. Refactor orchestrator internals into direct function calls only after the workflow boundary is stable.
+
+No-regression acceptance criteria:
+
+```bash
+npm run magic -- "theme"
+npm run magic:workflow -- "theme"
+npm run telegram
+```
+
+The original Magic command must continue to work. The workflow path should add Telegram/API-friendly progress and result handling without changing song generation behavior.
+
 ## Implementation notes
 
-This first slice intentionally wraps the existing Magic pipeline rather than rewriting it. The wrapper gives Telegram, API, UI, and future agents one stable workflow contract while leaving the existing orchestrator behavior intact.
+This first slice wraps the existing Magic pipeline to avoid behavior drift. The wrapper gives Telegram, API, UI, and future agents one stable workflow contract while leaving the existing orchestrator behavior intact.
 
 Next hardening steps:
 
-- Pull Magic pipeline internals out of `src/orchestrator.js` so workflow execution calls functions directly instead of spawning the CLI.
+- Move Magic pipeline internals from `src/orchestrator.js` into importable services while preserving the current CLI contract.
 - Persist Telegram sessions instead of using in-memory state.
 - Add a workflow-runs database table and admin/debug UI.
 - Add idempotency keys per Telegram request.
-- Split `human_review` and `autonomous` behavior more explicitly after the current pipeline boundaries are clean.
+- Split `human_review` and `autonomous` behavior more explicitly after the workflow boundary is stable.
