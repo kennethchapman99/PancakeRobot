@@ -80,14 +80,24 @@ export async function runWorkflow({
     await emitter.emit({ type: 'workflow_completed', runId, workflow: name, result: state.result || state.stepResults });
     return { ...state, events: emitter.events };
   } catch (error) {
+    const enrichedError = enrichWorkflowError(error, { runId, workflow: name });
     state.status = 'failed';
     state.failedAt = new Date().toISOString();
     state.error = {
-      name: error.name,
-      message: error.message,
-      context: error.context || {},
+      name: enrichedError.name,
+      message: enrichedError.message,
+      context: enrichedError.context || {},
     };
     await emitter.emit({ type: 'workflow_failed', runId, workflow: name, error: state.error });
-    throw error;
+    throw enrichedError;
   }
+}
+
+function enrichWorkflowError(error, context) {
+  if (!error.context || typeof error.context !== 'object') error.context = {};
+  error.context = {
+    ...context,
+    ...error.context,
+  };
+  return error;
 }
