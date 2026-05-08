@@ -235,20 +235,66 @@ function resolvePublishThreshold(brandProfile = {}) {
   return 85;
 }
 
-function resolvePrimaryAudioPath(songDir) {
-  const candidates = [
+export function resolvePrimaryAudioPath(songDir) {
+  const directCandidates = [
     join(songDir, 'audio.mp3'),
     join(songDir, 'audio.wav'),
+    join(songDir, 'media/source/original.mp3'),
+    join(songDir, 'media/source/original.wav'),
+    join(songDir, 'masters/local_fast_master/mastered_320.mp3'),
+    join(songDir, 'masters/local_fast_master/mastered.wav'),
   ];
-  for (const candidate of candidates) {
+  for (const candidate of directCandidates) {
     if (fs.existsSync(candidate)) return candidate;
   }
-  const audioDir = join(songDir, 'audio');
-  if (!fs.existsSync(audioDir)) return null;
-  const names = fs.readdirSync(audioDir)
-    .filter(name => name.endsWith('.mp3') || name.endsWith('.wav'))
-    .sort((a, b) => a.localeCompare(b));
-  return names.length ? join(audioDir, names[0]) : null;
+
+  const recursiveCandidates = findAudioFilesInDirs([
+    join(songDir, 'audio'),
+    join(songDir, 'media/source'),
+    join(songDir, 'media'),
+    join(songDir, 'masters'),
+  ]);
+
+  const preferred = recursiveCandidates.find(filePath => /mastered/i.test(filePath)) || recursiveCandidates[0];
+  return preferred || null;
+}
+
+function findAudioFilesInDirs(dirs) {
+  const files = [];
+  const seen = new Set();
+
+  for (const dir of dirs) {
+    collectAudioFiles(dir, files, seen);
+  }
+
+  return files.sort((a, b) => {
+    const aMaster = /mastered/i.test(a) ? 0 : 1;
+    const bMaster = /mastered/i.test(b) ? 0 : 1;
+    if (aMaster !== bMaster) return aMaster - bMaster;
+    return a.localeCompare(b);
+  });
+}
+
+function collectAudioFiles(dir, files, seen) {
+  if (!dir || !fs.existsSync(dir)) return;
+
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const entryPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      collectAudioFiles(entryPath, files, seen);
+      continue;
+    }
+    if (!entry.isFile() || !/\.(mp3|wav)$/i.test(entry.name) || seen.has(entryPath)) continue;
+    seen.add(entryPath);
+    files.push(entryPath);
+  }
 }
 
 function readFirstExisting(paths) {
