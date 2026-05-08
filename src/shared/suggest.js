@@ -158,6 +158,24 @@ export function getThemeValidationFailures(suggestions, themePrompt) {
   return failures;
 }
 
+export function pickSuggestedTopicFromSuggestions(suggestions = {}) {
+  const explicit = normalizeThemePrompt(suggestions.recommended_next);
+  if (explicit) return explicit;
+
+  const recommendations = Array.isArray(suggestions.recommendations)
+    ? suggestions.recommendations
+    : [];
+  const sorted = [...recommendations].sort((a, b) => Number(a?.rank || 999) - Number(b?.rank || 999));
+  for (const rec of sorted) {
+    const topic = normalizeThemePrompt(rec?.topic);
+    if (topic) return topic;
+    const title = normalizeThemePrompt(rec?.title);
+    if (title) return title;
+  }
+
+  return '';
+}
+
 async function auditThemedSuggestions({ suggestions, themePrompt, suggesterDef, log }) {
   log('🧭 Auditing recommendations against the theme...');
 
