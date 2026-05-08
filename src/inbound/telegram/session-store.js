@@ -1,25 +1,21 @@
-const sessions = new Map();
+import {
+  clearTelegramPendingMagicSong,
+  getTelegramSessionRecord,
+  updateTelegramSessionRecord,
+} from '../../shared/telegram-session-db.js';
 
 export function getTelegramSession(chatId) {
-  const key = String(chatId);
-  if (!sessions.has(key)) {
-    sessions.set(key, {
-      chatId: key,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      pendingMagicSong: null,
-    });
-  }
-  return sessions.get(key);
+  return getTelegramSessionRecord(chatId);
 }
 
 export function updateTelegramSession(chatId, patch) {
-  const session = getTelegramSession(chatId);
-  Object.assign(session, patch, { updatedAt: new Date().toISOString() });
-  sessions.set(String(chatId), session);
-  return session;
+  return updateTelegramSessionRecord(chatId, {
+    userId: patch.userId,
+    lastMessageId: patch.lastMessageId,
+    pendingMagicSong: patch.pendingMagicSong,
+  });
 }
 
 export function clearPendingMagicSong(chatId) {
-  return updateTelegramSession(chatId, { pendingMagicSong: null });
+  return clearTelegramPendingMagicSong(chatId);
 }
