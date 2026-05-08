@@ -10,6 +10,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
 const nodeBin = process.execPath;
 
+function parseLastNumberFromOutput(output) {
+  const matches = String(output || '').match(/\b\d+\b/g) || [];
+  return matches.length ? Number(matches.at(-1)) : NaN;
+}
+
 test('isTestOrDemoTarget flags obvious test/demo rows', () => {
   assert.equal(isTestOrDemoTarget({
     name: 'Family Playlist Test',
@@ -89,7 +94,7 @@ test('active brand falls back to canonical outlet rows when only QA data exists'
       stdio: 'pipe',
     });
 
-    const count = Number(execFileSync(nodeBin, [
+    const output = execFileSync(nodeBin, [
       '--input-type=module',
       '-e',
       "import { getActiveBrandOutlets } from './src/shared/marketing-outlet-health.js'; console.log(getActiveBrandOutlets({ brandProfileId: 'gravl-brand-profile' }).length);",
@@ -97,8 +102,10 @@ test('active brand falls back to canonical outlet rows when only QA data exists'
       cwd: repoRoot,
       env,
       encoding: 'utf8',
-    }).trim());
+    });
+    const count = parseLastNumberFromOutput(output);
 
+    assert.ok(Number.isFinite(count), `expected numeric outlet count, got output: ${output}`);
     assert.ok(count >= 30, `expected canonical fallback outlets for gravl-brand-profile, got ${count}`);
   } finally {
     try { fs.unlinkSync(dbPath); } catch {}
