@@ -49,6 +49,8 @@ import {
   postPublishDailySocialCampaign,
   postRegenerateSocialCopy,
   postSkipSocialPost,
+  startYoutubeAuth,
+  handleYoutubeAuthCallback,
 } from './controllers/social-controller.js';
 
 export function registerMarketingRouter(app) {
@@ -63,6 +65,8 @@ export function registerMarketingRouter(app) {
 
   router.get('/marketing/outlets', renderOutletsPage);
   router.get('/marketing/social', renderDailySocialPage);
+  router.get('/api/auth/youtube/start', startYoutubeAuth);
+  router.get('/api/auth/youtube/callback', handleYoutubeAuthCallback);
 
   router.get('/marketing/releases/new', renderNewRelease);
   router.post('/marketing/releases', handleNewReleaseUpload, postNewRelease);

@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { Readable } from 'node:stream';
 
 const require = createRequire(import.meta.url);
 let sqliteSkipReason = false;
@@ -31,6 +35,7 @@ function resetSocialEnv() {
   delete process.env.YOUTUBE_REDIRECT_URI;
   delete process.env.YOUTUBE_REFRESH_TOKEN;
   delete process.env.YOUTUBE_CHANNEL_ID;
+  delete process.env.YOUTUBE_TOKEN_PATH;
   delete process.env.META_APP_ID;
   delete process.env.META_APP_SECRET;
   delete process.env.META_PAGE_ID;
@@ -258,4 +263,80 @@ test('social DB helpers work with isolated PIPELINE_APP_SLUG test databases', { 
   assert.ok(getDailySocialCampaigns({ limit: 20 }).some(item => item.id === campaign.id));
   assert.equal(getSocialPostsBySongId('SONG_SOCIAL_HELPERS').length, 1);
   assert.ok(getSocialPublishingSummary().totals.total_posts >= 1);
+});
+
+test('YouTube env falls back to saved token file and live validation allows local media paths', { skip: sqliteSkipReason }, async (t) => {
+  resetSocialEnv();
+  process.env.SOCIAL_PUBLISH_MODE = 'live';
+  process.env.YOUTUBE_CLIENT_ID = 'client-id';
+  process.env.YOUTUBE_CLIENT_SECRET = 'client-secret';
+  process.env.YOUTUBE_REDIRECT_URI = 'http://localhost:3737/api/auth/youtube/callback';
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'youtube-auth-'));
+  const tokenPath = path.join(tempDir, 'youtube_token.json');
+  const mediaPath = path.join(tempDir, 'clip.mp4');
+  fs.writeFileSync(tokenPath, JSON.stringify({ refresh_token: 'refresh-token', channel_id: 'UC123', channel_title: 'Pancake Robot' }, null, 2));
+  fs.writeFileSync(mediaPath, 'fake-video');
+  process.env.YOUTUBE_TOKEN_PATH = tokenPath;
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+
+  const { getSocialEnv } = await import(`../src/shared/social/social-env.js?sp=${Date.now()}_${Math.random()}`);
+  const { youtubeConnector } = await import(`../src/shared/social/connectors/youtube-connector.js?sp=${Date.now()}_${Math.random()}`);
+  const env = getSocialEnv();
+  assert.equal(env.youtube.refreshToken, 'refresh-token');
+  assert.equal(env.youtube.channelId, 'UC123');
+
+  const result = youtubeConnector.dryRun({
+    platform: 'youtube',
+    assetType: 'video',
+    title: 'Clip',
+    description: 'Desc',
+    assetUrl: mediaPath,
+    publicAssetUrl: 'http://localhost:3737/media/private.mp4',
+    madeForKids: false,
+  });
+  assert.equal(result.ok, true);
+});
+
+test('YouTube live publish uses injected uploader and returns a watch URL', { skip: sqliteSkipReason }, async (t) => {
+  resetSocialEnv();
+  process.env.SOCIAL_PUBLISH_MODE = 'live';
+  process.env.YOUTUBE_CLIENT_ID = 'client-id';
+  process.env.YOUTUBE_CLIENT_SECRET = 'client-secret';
+  process.env.YOUTUBE_REDIRECT_URI = 'http://localhost:3737/api/auth/youtube/callback';
+  process.env.YOUTUBE_REFRESH_TOKEN = 'refresh-token';
+  process.env.YOUTUBE_CHANNEL_ID = 'UC123';
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'youtube-publish-'));
+  const mediaPath = path.join(tempDir, 'clip.mp4');
+  fs.writeFileSync(mediaPath, 'fake-video');
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+
+  const { youtubeConnector } = await import(`../src/shared/social/connectors/youtube-connector.js?sp=${Date.now()}_${Math.random()}`);
+  const result = await youtubeConnector.publish({
+    platform: 'youtube',
+    assetType: 'video',
+    title: 'Clip',
+    description: 'Desc',
+    assetUrl: mediaPath,
+    madeForKids: false,
+    containsSyntheticMedia: true,
+    tags: ['PancakeRobot'],
+  }, {
+    authClient: {},
+    media: {
+      mediaPath: mediaPath,
+      body: Readable.from(['fake-video']),
+      cleanup: async () => {},
+    },
+    uploadFn: async () => ({
+      data: {
+        id: 'abc123',
+        snippet: { channelId: 'UC123' },
+        status: { privacyStatus: 'private' },
+      },
+    }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.platformPostId, 'abc123');
+  assert.equal(result.platformPostUrl, 'https://www.youtube.com/watch?v=abc123');
 });

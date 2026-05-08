@@ -18,8 +18,8 @@ Human approval mode
 `live`
 - Controlled by `SOCIAL_PUBLISH_MODE=live`.
 - Still respects approval when enabled.
-- Phase 1 only validates and preserves the live connector boundary.
-- Actual API publishing remains a guarded TODO for Instagram, Facebook, and YouTube.
+- YouTube live upload is implemented.
+- Instagram and Facebook still stop at validated dry-run boundaries.
 
 ## Required Environment Variables
 
@@ -41,6 +41,7 @@ YouTube
 - `YOUTUBE_REDIRECT_URI`
 - `YOUTUBE_REFRESH_TOKEN`
 - `YOUTUBE_CHANNEL_ID`
+- `YOUTUBE_TOKEN_PATH` optional local token cache used by the built-in auth flow
 
 Meta / Instagram / Facebook
 - `META_GRAPH_VERSION`
@@ -55,10 +56,12 @@ Meta / Instagram / Facebook
 ## YouTube Setup
 
 1. Create a Google Cloud project and enable the YouTube Data API.
-2. Create OAuth client credentials for the web app callback.
-3. Capture and store a refresh token for the publishing account.
-4. Set `YOUTUBE_CHANNEL_ID`.
-5. Keep `madeForKids` explicit on every post. The worker rejects ambiguous values.
+2. Create OAuth client credentials for a web application.
+3. Add `http://localhost:3737/api/auth/youtube/callback` as an authorized redirect URI.
+4. Set `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REDIRECT_URI`.
+5. Run `npm run web`, open `/marketing/social`, and click `Connect YouTube`.
+6. The callback flow stores a refresh token at `YOUTUBE_TOKEN_PATH` and records the connected channel ID and title there.
+7. Keep `madeForKids` explicit on every post. The worker rejects ambiguous values.
 
 ## Meta / Facebook / Instagram Setup
 
@@ -79,7 +82,6 @@ Meta / Instagram / Facebook
 
 ## Not Implemented Yet
 
-- Live YouTube upload via `googleapis` `videos.insert`.
 - Live Instagram container creation, status polling, and `media_publish`.
 - Live Facebook `/feed`, `/photos`, and `/videos` posting.
 - Retry/backoff beyond the current bounded failure handling.

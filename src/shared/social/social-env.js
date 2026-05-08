@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { SOCIAL_PLATFORMS, normalizeSocialPlatform } from './social-types.js';
 
 function parseBool(value, fallback = false) {
@@ -17,7 +19,26 @@ function parsePlatforms(value) {
   return raw.length ? [...new Set(raw)] : [...SOCIAL_PLATFORMS];
 }
 
+function expandHome(value) {
+  if (!value) return '';
+  return value.startsWith('~')
+    ? path.join(process.env.HOME || process.env.USERPROFILE || '.', value.slice(2))
+    : value;
+}
+
+function readJsonFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export function getSocialEnv() {
+  const youtubeTokenPath = expandHome(process.env.YOUTUBE_TOKEN_PATH || '~/.pancake-robot/youtube_token.json');
+  const youtubeToken = readJsonFile(youtubeTokenPath);
   return {
     socialPublishMode: String(process.env.SOCIAL_PUBLISH_MODE || 'dry_run').trim().toLowerCase() === 'live' ? 'live' : 'dry_run',
     socialRequireApproval: parseBool(process.env.SOCIAL_REQUIRE_APPROVAL, true),
@@ -35,8 +56,11 @@ export function getSocialEnv() {
       clientId: String(process.env.YOUTUBE_CLIENT_ID || '').trim(),
       clientSecret: String(process.env.YOUTUBE_CLIENT_SECRET || '').trim(),
       redirectUri: String(process.env.YOUTUBE_REDIRECT_URI || '').trim(),
-      refreshToken: String(process.env.YOUTUBE_REFRESH_TOKEN || '').trim(),
-      channelId: String(process.env.YOUTUBE_CHANNEL_ID || '').trim(),
+      refreshToken: String(process.env.YOUTUBE_REFRESH_TOKEN || youtubeToken.refresh_token || '').trim(),
+      channelId: String(process.env.YOUTUBE_CHANNEL_ID || youtubeToken.channel_id || '').trim(),
+      channelTitle: String(youtubeToken.channel_title || '').trim(),
+      tokenPath: youtubeTokenPath,
+      hasSavedToken: Boolean(youtubeToken.refresh_token),
     },
     meta: {
       graphVersion: String(process.env.META_GRAPH_VERSION || 'v25.0').trim() || 'v25.0',

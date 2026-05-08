@@ -15,6 +15,7 @@ import { runSocialPublishWorker } from '../../../agents/social-publish-worker.js
 import { generateSocialCopy } from '../../../agents/social-copy-agent.js';
 import { getSocialEnv } from '../../../shared/social/social-env.js';
 import { listSocialConnectorStatuses } from '../../../shared/social/social-publisher.js';
+import { exchangeYoutubeAuthCode, getYoutubeAuthSummary, getYoutubeAuthUrl } from '../../../shared/social/youtube-auth.js';
 import { renderMarketingLayout } from '../views/layout.js';
 import { attr, esc, sendJson } from '../utils/http.js';
 
@@ -120,6 +121,7 @@ function renderPostCard(post) {
 
 function renderConfigCard() {
   const connectorStatuses = listSocialConnectorStatuses();
+  const youtubeAuth = getYoutubeAuthSummary();
   return `<section class="rounded-2xl border border-zinc-200 bg-white p-6">
     <div class="flex items-start justify-between gap-4">
       <div>
@@ -135,6 +137,13 @@ function renderConfigCard() {
             ${statusChip(item.config.ok ? 'ready' : 'needs_auth')}
           </div>
           <div class="mt-3 text-xs text-zinc-500">${item.config.ok ? 'Config present.' : `Missing: ${esc(item.config.missing.join(', '))}`}</div>
+          ${item.platform === 'youtube' ? `
+            <div class="mt-3 text-xs text-zinc-500">Token path: ${esc(youtubeAuth.tokenPath || '—')}</div>
+            <div class="mt-1 text-xs text-zinc-500">Channel: ${esc(youtubeAuth.channelTitle || youtubeAuth.channelId || 'not connected')}</div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <a href="/api/auth/youtube/start" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50">${youtubeAuth.hasSavedToken || youtubeAuth.hasEnvRefreshToken ? 'Reconnect YouTube' : 'Connect YouTube'}</a>
+            </div>
+          ` : ''}
         </div>
       `).join('')}
     </div>
@@ -351,5 +360,42 @@ export function postSkipSocialPost(req, res) {
     sendJson(res, { ok: true, post: updated });
   } catch (error) {
     sendJson(res, { ok: false, error: error.message }, 500);
+  }
+}
+
+export function startYoutubeAuth(req, res) {
+  try {
+    const state = Buffer.from(JSON.stringify({
+      returnTo: '/marketing/social',
+      startedAt: Date.now(),
+    }), 'utf8').toString('base64url');
+    res.redirect(303, getYoutubeAuthUrl({ state }));
+  } catch (error) {
+    res.statusCode = 500;
+    res.end(renderMarketingLayout('YouTube Auth Error', `<main class="p-8"><section class="rounded-2xl border border-red-200 bg-red-50 p-6"><h1 class="text-xl font-semibold text-red-800">YouTube auth could not start</h1><p class="mt-3 text-sm text-red-700">${esc(error.message)}</p><div class="mt-4"><a href="/marketing/social" class="text-blue-600 hover:underline">Back to Daily Social</a></div></section></main>`));
+  }
+}
+
+export async function handleYoutubeAuthCallback(req, res) {
+  const callbackError = String(req.query.error || '').trim();
+  if (callbackError) {
+    res.statusCode = 400;
+    res.end(renderMarketingLayout('YouTube Auth Failed', `<main class="p-8"><section class="rounded-2xl border border-red-200 bg-red-50 p-6"><h1 class="text-xl font-semibold text-red-800">YouTube authorization failed</h1><p class="mt-3 text-sm text-red-700">${esc(callbackError)}</p><div class="mt-4"><a href="/marketing/social" class="text-blue-600 hover:underline">Back to Daily Social</a></div></section></main>`));
+    return;
+  }
+
+  const code = String(req.query.code || '').trim();
+  if (!code) {
+    res.statusCode = 400;
+    res.end(renderMarketingLayout('YouTube Auth Failed', '<main class="p-8"><section class="rounded-2xl border border-red-200 bg-red-50 p-6"><h1 class="text-xl font-semibold text-red-800">Missing YouTube authorization code</h1><div class="mt-4"><a href="/marketing/social" class="text-blue-600 hover:underline">Back to Daily Social</a></div></section></main>'));
+    return;
+  }
+
+  try {
+    const result = await exchangeYoutubeAuthCode(code);
+    res.end(renderMarketingLayout('YouTube Connected', `<main class="p-8"><section class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6"><h1 class="text-xl font-semibold text-emerald-800">YouTube connected</h1><p class="mt-3 text-sm text-emerald-700">Channel: ${esc(result.channelTitle || result.channelId)}</p><p class="mt-1 text-xs text-emerald-700">Saved token path: ${esc(result.tokenPath)}</p><p class="mt-4 text-sm text-emerald-700">Return to Daily Social when you are ready to test uploads.</p><div class="mt-4"><a href="/marketing/social" class="text-blue-600 hover:underline">Back to Daily Social</a></div></section></main>`));
+  } catch (authError) {
+    res.statusCode = 500;
+    res.end(renderMarketingLayout('YouTube Auth Failed', `<main class="p-8"><section class="rounded-2xl border border-red-200 bg-red-50 p-6"><h1 class="text-xl font-semibold text-red-800">YouTube authorization failed</h1><p class="mt-3 text-sm text-red-700">${esc(authError.message)}</p><div class="mt-4"><a href="/marketing/social" class="text-blue-600 hover:underline">Back to Daily Social</a></div></section></main>`));
   }
 }

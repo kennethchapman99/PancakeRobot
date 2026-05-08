@@ -36,6 +36,7 @@ export function buildPublishRequestFromPost(post, overrides = {}) {
     madeForKids: post.made_for_kids,
     containsSyntheticMedia: post.contains_synthetic_media !== false,
     scheduledAt: post.scheduled_at,
+    privacyStatus: overrides.privacyStatus || 'private',
     ...overrides,
   };
 }
