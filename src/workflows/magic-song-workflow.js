@@ -59,13 +59,14 @@ export async function runMagicSongWorkflow(input, options = {}) {
     ? getWorkflowRunByIdempotencyKey(normalizedInput.idempotencyKey)
     : null;
 
-  if (existingRun && ['running', 'completed'].includes(existingRun.status)) {
+  if (existingRun) {
     return {
       runId: existingRun.id,
       name: MAGIC_SONG_WORKFLOW_NAME,
       input: normalizedInput,
       status: existingRun.status,
       result: existingRun.result,
+      error: existingRun.error,
       stepResults: { hydrate_result: existingRun.result },
       reusedExistingRun: true,
     };
