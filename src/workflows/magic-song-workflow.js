@@ -6,6 +6,12 @@ import { fileURLToPath } from 'url';
 import { createWorkflowRunId, runWorkflow, WorkflowError } from '../../packages/openclaw-core/index.js';
 import { getSong } from '../shared/db.js';
 import { loadBrandProfileById, resolveBrandProfilePath, DEFAULT_PROFILE_ID } from '../shared/brand-profile.js';
+import {
+  createWorkflowRunRecord,
+  getWorkflowRunByIdempotencyKey,
+  recordWorkflowEvent,
+  updateWorkflowRunRecord,
+} from '../shared/workflow-runs-db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '../..');
@@ -43,13 +49,42 @@ export function normalizeMagicSongInput(input = {}) {
     mode,
     songId: input.songId || createSongId(),
     runId: input.runId || createWorkflowRunId('MAGIC'),
+    idempotencyKey: input.idempotencyKey || null,
   };
 }
 
 export async function runMagicSongWorkflow(input, options = {}) {
   const normalizedInput = normalizeMagicSongInput(input);
+  const existingRun = normalizedInput.idempotencyKey
+    ? getWorkflowRunByIdempotencyKey(normalizedInput.idempotencyKey)
+    : null;
+
+  if (existingRun && ['running', 'completed'].includes(existingRun.status)) {
+    return {
+      runId: existingRun.id,
+      name: MAGIC_SONG_WORKFLOW_NAME,
+      input: normalizedInput,
+      status: existingRun.status,
+      result: existingRun.result,
+      stepResults: { hydrate_result: existingRun.result },
+      reusedExistingRun: true,
+    };
+  }
+
   const runPath = getWorkflowRunPath(normalizedInput.runId);
   fs.mkdirSync(WORKFLOW_RUNS_DIR, { recursive: true });
+  createWorkflowRunRecord({
+    runId: normalizedInput.runId,
+    workflowName: MAGIC_SONG_WORKFLOW_NAME,
+    status: 'created',
+    source: normalizedInput.source,
+    requestedBy: normalizedInput.requestedBy,
+    theme: normalizedInput.theme,
+    brandId: normalizedInput.brandId,
+    mode: normalizedInput.mode,
+    songId: normalizedInput.songId,
+    idempotencyKey: normalizedInput.idempotencyKey,
+  });
 
   return runWorkflow({
     name: MAGIC_SONG_WORKFLOW_NAME,
@@ -57,6 +92,7 @@ export async function runMagicSongWorkflow(input, options = {}) {
     runId: normalizedInput.runId,
     onEvent: async event => {
       appendWorkflowEvent(runPath, event);
+      recordWorkflowEvent(normalizedInput.runId, event);
       if (options.onEvent) await options.onEvent(event);
     },
     steps: [
@@ -114,6 +150,12 @@ export async function runMagicSongWorkflow(input, options = {}) {
           };
 
           state.result = result;
+          updateWorkflowRunRecord(state.runId, {
+            status: 'completed',
+            current_step: 'hydrate_result',
+            song_id: state.input.songId,
+            result,
+          });
           writeWorkflowRunSnapshot(state.runId, {
             runId: state.runId,
             input: state.input,
