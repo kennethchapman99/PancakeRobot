@@ -11,8 +11,10 @@ The prior Telegram/OpenClaw implementation should be treated as reference code o
 - Runs the existing `src/orchestrator.js --magic` pipeline with a pre-generated song ID.
 - Sends progress updates back to Telegram.
 - Returns links to the song detail and release-kit preview.
-- Stores workflow events in `output/workflow-runs/<RUN_ID>.jsonl`.
-- Stores the final workflow snapshot in `output/workflow-runs/<RUN_ID>.json`.
+- Stores workflow events in SQLite and `output/workflow-runs/<RUN_ID>.jsonl`.
+- Stores the final workflow snapshot in SQLite and `output/workflow-runs/<RUN_ID>.json`.
+- Persists pending Telegram theme/brand sessions in SQLite.
+- Prevents duplicate Telegram callback taps from creating duplicate song runs.
 
 ## Required env vars
 
@@ -46,6 +48,29 @@ The bot will ask which brand profile to use before starting generation.
 npm run magic:workflow -- "a dinosaur who cannot reach the syrup"
 ```
 
+## Inspect workflow runs
+
+CLI:
+
+```bash
+npm run workflow:runs
+npm run workflow:show -- MAGIC_RUN_ID
+```
+
+Standalone local debug UI:
+
+```bash
+npm run workflow:admin
+```
+
+Open:
+
+```text
+http://localhost:3747/workflow-runs
+```
+
+This debug UI intentionally runs separately from the main Pancake Robot web server for now so the persistence layer can be validated without risky broad route edits.
+
 ## Current behavior
 
 - Default mode is `human_review`.
@@ -57,14 +82,15 @@ npm run magic:workflow -- "a dinosaur who cannot reach the syrup"
 
 ## No-regression strategy
 
-The existing Magic pipeline is the production behavior. This branch protects that behavior by adding a wrapper around the current CLI path first instead of changing generation, scoring, metadata, audio, or release-kit internals in the same PR.
+The existing Magic pipeline is the production behavior. This branch protects that behavior by wrapping the current CLI path first instead of changing generation, scoring, metadata, audio, or release-kit internals in the same PR.
 
 This is intentional sequencing:
 
 1. Add a stable workflow contract.
 2. Add Telegram as an adapter to that contract.
-3. Prove the existing Magic pipeline still runs the same way.
-4. Refactor orchestrator internals into direct function calls only after the workflow boundary is stable.
+3. Persist workflow runs, Telegram sessions, and idempotency locks.
+4. Prove the existing Magic pipeline still runs the same way.
+5. Refactor orchestrator internals into direct function calls only after the workflow boundary is stable.
 
 No-regression acceptance criteria:
 
@@ -72,18 +98,18 @@ No-regression acceptance criteria:
 npm run magic -- "theme"
 npm run magic:workflow -- "theme"
 npm run telegram
+npm test
 ```
 
-The original Magic command must continue to work. The workflow path should add Telegram/API-friendly progress and result handling without changing song generation behavior.
+The original Magic command must continue to work. The workflow path should add Telegram/API-friendly progress, persistence, debugability, and result handling without changing song generation behavior.
 
 ## Implementation notes
 
-This first slice wraps the existing Magic pipeline to avoid behavior drift. The wrapper gives Telegram, API, UI, and future agents one stable workflow contract while leaving the existing orchestrator behavior intact.
+This slice still wraps the existing Magic pipeline to avoid behavior drift. The wrapper gives Telegram, API, UI, and future agents one stable workflow contract while leaving the existing orchestrator behavior intact.
 
 Next hardening steps:
 
 - Move Magic pipeline internals from `src/orchestrator.js` into importable services while preserving the current CLI contract.
-- Persist Telegram sessions instead of using in-memory state.
-- Add a workflow-runs database table and admin/debug UI.
-- Add idempotency keys per Telegram request.
+- Fold the standalone workflow debug UI into the main Pancake Robot web app once route placement is safe.
+- Add queue/worker semantics if Telegram generation needs to survive process restarts mid-run.
 - Split `human_review` and `autonomous` behavior more explicitly after the workflow boundary is stable.
