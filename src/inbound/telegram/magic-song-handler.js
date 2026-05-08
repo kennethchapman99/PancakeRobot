@@ -1,7 +1,13 @@
+import { createWorkflowRunId } from '../../../packages/openclaw-core/index.js';
 import { runMagicSongWorkflow } from '../../workflows/magic-song-workflow.js';
 import { buildBrandKeyboard, findBrandChoice, parseBrandCallback } from './brand-selector.js';
 import { clearPendingMagicSong, getTelegramSession, updateTelegramSession } from './session-store.js';
 import { getHelpText, parseTelegramCommand } from './commands.js';
+import {
+  buildTelegramMagicSongIdempotencyKey,
+  createTelegramRequestLock,
+  updateTelegramRequestLock,
+} from '../../shared/telegram-session-db.js';
 
 const NOT_AUTHORIZED_MESSAGE = 'This bot is not authorized for this Telegram account.';
 
@@ -35,6 +41,8 @@ export async function handleTelegramMessage({ telegram, message, allowedUserIds 
 
   if (command.type === 'magic_song_request') {
     updateTelegramSession(chatId, {
+      userId: fromId,
+      lastMessageId: message.message_id,
       pendingMagicSong: {
         theme: command.theme,
         requestedBy: fromId,
@@ -86,29 +94,62 @@ export async function handleTelegramCallback({ telegram, callbackQuery, allowedU
     return;
   }
 
+  const idempotencyKey = buildTelegramMagicSongIdempotencyKey({
+    chatId,
+    messageId: pending.sourceMessageId,
+    callbackQueryId: callbackQuery.id,
+    brandId,
+  });
+  const runId = createWorkflowRunId('MAGIC');
+  const lock = createTelegramRequestLock({
+    idempotencyKey,
+    chatId,
+    userId: fromId,
+    sourceMessageId: pending.sourceMessageId,
+    callbackQueryId: callbackQuery.id,
+    runId,
+  });
+
+  if (!lock.inserted) {
+    await telegram.answerCallbackQuery(callbackQuery.id, 'Already started.');
+    const existingRunId = lock.lock?.run_id;
+    await telegram.sendMessage(
+      chatId,
+      existingRunId
+        ? `This Magic Song request is already running or complete.\nRun: ${existingRunId}`
+        : 'This Magic Song request is already running or complete.'
+    );
+    return;
+  }
+
   await telegram.answerCallbackQuery(callbackQuery.id, `Starting ${brand.name}.`);
   await telegram.sendMessage(chatId, `Confirmed: ${brand.name}\nStarting Magic Song pipeline.`);
 
   clearPendingMagicSong(chatId);
 
   try {
+    updateTelegramRequestLock(idempotencyKey, { status: 'running', runId });
     const workflowState = await runMagicSongWorkflow({
       theme: pending.theme,
       brandId,
       requestedBy: fromId,
       source: 'telegram',
       mode: process.env.TELEGRAM_MAGIC_MODE || 'human_review',
+      runId,
+      idempotencyKey,
     }, {
       onEvent: event => sendProgressEvent({ telegram, chatId, event }),
     });
 
     const result = workflowState.result || workflowState.stepResults?.hydrate_result;
+    updateTelegramRequestLock(idempotencyKey, { status: 'completed', runId: result?.runId || runId });
     await telegram.sendMessage(chatId, formatFinalResult(result));
   } catch (error) {
-    const runId = error?.context?.runId || 'saved in workflow logs if the run started';
+    updateTelegramRequestLock(idempotencyKey, { status: 'failed', runId });
+    const errorRunId = error?.context?.runId || runId || 'saved in workflow logs if the run started';
     await telegram.sendMessage(
       chatId,
-      `Song generation failed.\n\nStage/error: ${error.message}\nRun: ${runId}`
+      `Song generation failed.\n\nStage/error: ${error.message}\nRun: ${errorRunId}`
     );
   }
 }
