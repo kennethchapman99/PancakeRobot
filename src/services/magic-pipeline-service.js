@@ -69,7 +69,7 @@ async function runMagicPipelineServiceInner({
 
     printBanner(logger, appTitle);
     logger.log(chalk.bold.magenta(`MAGIC PIPELINE — Topic: "${cleanTopic}"\n`));
-    logger.log(chalk.dim('Flow: create → score → improve once if needed → build marketing assets only for release candidates\n'));
+    logger.log(chalk.dim('Flow: create → score → improve once if needed → build release or social assets for usable songs\n'));
 
     const songId = existingSongId || createMagicSongId();
     const songDir = join(ROOT_DIR, `output/songs/${songId}`);
@@ -107,8 +107,8 @@ async function runMagicPipelineServiceInner({
     });
     totalCost = firstPass.totalCost;
 
-    if (isReleaseCandidate(firstPass.releaseSelectionResult)) {
-      logger.log(chalk.green('\n✓ First pass is already a release candidate'));
+    if (isAssetCandidate(firstPass.releaseSelectionResult)) {
+      logger.log(chalk.green(assetCandidateMessage(firstPass.releaseSelectionResult, 'First pass')));
       finalPass = firstPass;
       finalized = await finalizeMagicPipelineSuccess({
         songId,
@@ -117,6 +117,7 @@ async function runMagicPipelineServiceInner({
         metadata: firstPass.metadata,
         metadataPath: firstPass.metadataPath,
         brandReview: firstPass.brandReview,
+        releaseSelectionResult: firstPass.releaseSelectionResult,
         totalCost,
         logger,
         emit,
@@ -131,8 +132,8 @@ async function runMagicPipelineServiceInner({
       );
       fs.writeFileSync(join(songDir, 'latest-regeneration-brief.md'), combinedRevisionBrief + '\n');
 
-      logger.log(chalk.yellow('\n↺ First pass did not clear the release threshold. Spending the single allowed regeneration.\n'));
-      await emit({ type: 'pipeline_progress', stage: 'regenerating_song', line: 'First pass missed release threshold; running one regeneration' });
+      logger.log(chalk.yellow('\n↺ First pass did not clear the release or social asset threshold. Spending the single allowed regeneration.\n'));
+      await emit({ type: 'pipeline_progress', stage: 'regenerating_song', line: 'First pass missed release/social threshold; running one regeneration' });
 
       const secondPass = await runSongBuildPass({
         songId,
@@ -150,8 +151,8 @@ async function runMagicPipelineServiceInner({
       totalCost = secondPass.totalCost;
       finalPass = secondPass;
 
-      if (isReleaseCandidate(secondPass.releaseSelectionResult)) {
-        logger.log(chalk.green('\n✓ Second pass cleared the release threshold'));
+      if (isAssetCandidate(secondPass.releaseSelectionResult)) {
+        logger.log(chalk.green(assetCandidateMessage(secondPass.releaseSelectionResult, 'Second pass')));
         finalized = await finalizeMagicPipelineSuccess({
           songId,
           topic: cleanTopic,
@@ -159,6 +160,7 @@ async function runMagicPipelineServiceInner({
           metadata: secondPass.metadata,
           metadataPath: secondPass.metadataPath,
           brandReview: secondPass.brandReview,
+          releaseSelectionResult: secondPass.releaseSelectionResult,
           totalCost,
           logger,
           emit,
@@ -166,8 +168,8 @@ async function runMagicPipelineServiceInner({
           brandId: cleanBrandId,
         });
       } else {
-        logger.log(chalk.yellow('\n⚠ Second pass still did not clear the release threshold. Keeping draft for human review.\n'));
-        await emit({ type: 'pipeline_progress', stage: 'needs_human_review', line: 'Second pass did not clear release threshold; draft kept for review' });
+        logger.log(chalk.yellow('\n⚠ Second pass still did not clear the release or social asset threshold. Keeping draft for human review.\n'));
+        await emit({ type: 'pipeline_progress', stage: 'needs_human_review', line: 'Second pass did not clear release/social threshold; draft kept for review' });
         persistSongState({
           songId,
           topic: cleanTopic,
@@ -201,6 +203,7 @@ async function runMagicPipelineServiceInner({
       recommendation,
       status: mapRecommendationToStatus(recommendation.value),
       releaseCandidate: recommendation.value === 'recommend_to_publish',
+      assetCandidate: isAssetCandidate(finalPass?.releaseSelectionResult),
       finalized: Boolean(finalized),
       distDir: finalized?.distDir || null,
       marketingDashboardUrl: finalized?.marketingResult?.dashboardUrl || null,
@@ -428,26 +431,36 @@ async function finalizeMagicPipelineSuccess({
   metadata,
   metadataPath,
   brandReview,
+  releaseSelectionResult,
   totalCost,
   logger,
   emit,
   modules,
   brandId,
 }) {
-  await emit({ type: 'pipeline_progress', stage: 'building_distribution_package', line: 'Building distribution package' });
-  logger.log(chalk.bold('\n📌 Magic Finalize: Building distribution package...\n'));
+  const buildDistributionPackage = isReleaseCandidate(releaseSelectionResult);
   const songDir = join(ROOT_DIR, `output/songs/${songId}`);
-  const { distDir } = await modules.generateHumanTasks({
-    songId,
-    title: lyricsResult.title,
-    topic,
-    songDir,
-    metadata,
-    lyricsPath: lyricsResult.lyricsPath,
-    audioPromptPath: lyricsResult.audioPromptPath,
-    brandScore: brandReview.scores?.overall,
-    totalCost,
-  });
+  let distDir = null;
+
+  if (buildDistributionPackage) {
+    await emit({ type: 'pipeline_progress', stage: 'building_distribution_package', line: 'Building distribution package' });
+    logger.log(chalk.bold('\n📌 Magic Finalize: Building distribution package...\n'));
+    const distributionPackage = await modules.generateHumanTasks({
+      songId,
+      title: lyricsResult.title,
+      topic,
+      songDir,
+      metadata,
+      lyricsPath: lyricsResult.lyricsPath,
+      audioPromptPath: lyricsResult.audioPromptPath,
+      brandScore: brandReview.scores?.overall,
+      totalCost,
+    });
+    distDir = distributionPackage.distDir;
+  } else {
+    await emit({ type: 'pipeline_progress', stage: 'skipping_distribution_package', line: 'Skipping distribution package for social-only asset candidate' });
+    logger.log(chalk.yellow('\n📌 Magic Finalize: Skipping distribution package — social-only asset candidate, not publish-ready.\n'));
+  }
 
   await emit({ type: 'pipeline_progress', stage: 'creating_release_assets', line: 'Building marketing assets' });
   logger.log(chalk.bold('\n📌 Magic Finalize: Building marketing assets...\n'));
@@ -467,12 +480,16 @@ async function finalizeMagicPipelineSuccess({
     totalCost,
     extra: {
       brand_profile_id: brandId,
-      pipeline_stage: 'magic_ready',
+      pipeline_stage: buildDistributionPackage ? 'magic_ready' : 'magic_social_assets_ready',
     },
   });
 
   logger.log(chalk.bgGreen.black('\n ✓ MAGIC PIPELINE READY \n'));
-  logger.log(`  Distribution package: ${chalk.bold(distDir)}`);
+  if (distDir) {
+    logger.log(`  Distribution package: ${chalk.bold(distDir)}`);
+  } else {
+    logger.log(chalk.dim('  Distribution package: skipped for social-only treatment'));
+  }
   if (marketingResult.dashboardUrl) {
     logger.log(`  Marketing dashboard: ${chalk.bold(marketingResult.dashboardUrl)}`);
   }
@@ -547,6 +564,19 @@ function persistSongState({
 
 function isReleaseCandidate(releaseSelectionResult) {
   return releaseSelectionResult?.recommendation?.value === 'recommend_to_publish';
+}
+
+function isAssetCandidate(releaseSelectionResult) {
+  const recommendation = releaseSelectionResult?.recommendation || {};
+  return isReleaseCandidate(releaseSelectionResult)
+    || recommendation.recommended_release_treatment === 'social_only'
+    || recommendation.recommended_asset_strategy === 'social_clip_pack';
+}
+
+function assetCandidateMessage(releaseSelectionResult, passLabel) {
+  return isReleaseCandidate(releaseSelectionResult)
+    ? `\n✓ ${passLabel} cleared the release threshold`
+    : `\n✓ ${passLabel} qualified for social-only marketing assets`;
 }
 
 function mapRecommendationToStatus(value) {
