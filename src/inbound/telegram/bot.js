@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const dotenv = require('dotenv');
-dotenv.config({ path: join(__dirname, '../../../../.env'), override: true });
+dotenv.config({ path: join(__dirname, '../../../.env'), override: true });
 
 import { handleTelegramCallback, handleTelegramMessage } from './magic-song-handler.js';
 
