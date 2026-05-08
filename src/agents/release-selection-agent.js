@@ -237,22 +237,22 @@ function resolvePublishThreshold(brandProfile = {}) {
 
 export function resolvePrimaryAudioPath(songDir) {
   const directCandidates = [
+    join(songDir, 'masters/local_fast_master/mastered_320.mp3'),
+    join(songDir, 'masters/local_fast_master/mastered.wav'),
     join(songDir, 'audio.mp3'),
     join(songDir, 'audio.wav'),
     join(songDir, 'media/source/original.mp3'),
     join(songDir, 'media/source/original.wav'),
-    join(songDir, 'masters/local_fast_master/mastered_320.mp3'),
-    join(songDir, 'masters/local_fast_master/mastered.wav'),
   ];
   for (const candidate of directCandidates) {
     if (fs.existsSync(candidate)) return candidate;
   }
 
   const recursiveCandidates = findAudioFilesInDirs([
+    join(songDir, 'masters'),
     join(songDir, 'audio'),
     join(songDir, 'media/source'),
     join(songDir, 'media'),
-    join(songDir, 'masters'),
   ]);
 
   const preferred = recursiveCandidates.find(filePath => /mastered/i.test(filePath)) || recursiveCandidates[0];
