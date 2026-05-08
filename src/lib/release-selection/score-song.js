@@ -1,5 +1,7 @@
 import { SCORE_LIMITS } from './constants.js';
 
+const DEFAULT_PUBLISH_THRESHOLD = 85;
+
 export function scoreSongForRelease({ song, lyricsText, metadata = {}, brandProfile, metrics, catalog = [] }) {
   const issues = [];
   const releaseBlockers = [];
@@ -127,13 +129,14 @@ function scoreReleaseDifferentiation({ song, lyricsText, catalog, issues }) {
   return clampScore(score, SCORE_LIMITS.release_differentiation);
 }
 
-export function determineRecommendationValue({ totalScore, releaseBlockers, scoreBreakdown, issues }) {
+export function determineRecommendationValue({ totalScore, releaseBlockers, scoreBreakdown, issues, publishThreshold = DEFAULT_PUBLISH_THRESHOLD }) {
+  const effectivePublishThreshold = normalizePublishThreshold(publishThreshold);
   if (releaseBlockers.length > 0) return 'needs_manual_review';
   if (scoreBreakdown.production_quality <= 5 && scoreBreakdown.hook_replayability >= 16) return 'recommend_to_edit';
   if (scoreBreakdown.hook_replayability <= 10 && scoreBreakdown.production_quality >= 9) return 'recommend_to_hold';
   if (scoreBreakdown.hook_replayability <= 10 && scoreBreakdown.brand_fit <= 7) return 'recommend_to_archive';
   if (issues.includes('critical_clipping') || issues.includes('long_accidental_silence')) return 'recommend_to_edit';
-  if (totalScore >= 85) return 'recommend_to_publish';
+  if (totalScore >= effectivePublishThreshold) return 'recommend_to_publish';
   if (totalScore >= 70) return scoreBreakdown.production_quality < 9 ? 'recommend_to_edit' : 'recommend_to_hold';
   if (totalScore >= 55) return 'recommend_to_hold';
   return 'recommend_to_archive';
@@ -224,6 +227,12 @@ function overlapScore(a, b) {
   return shared / Math.max(aset.size, bset.size);
 }
 
+function normalizePublishThreshold(value) {
+  const threshold = Number(value);
+  if (!Number.isFinite(threshold)) return DEFAULT_PUBLISH_THRESHOLD;
+  return Math.max(0, Math.min(100, threshold));
+}
+
 function clampScore(value, max) {
   return Math.max(0, Math.min(max, Math.round(value)));
 }
@@ -237,4 +246,3 @@ function capitalizeList(items) {
   const text = items.join(', ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
-
