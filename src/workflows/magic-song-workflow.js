@@ -1,4 +1,3 @@
-import { spawn } from 'child_process';
 import fs from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -12,10 +11,10 @@ import {
   recordWorkflowEvent,
   updateWorkflowRunRecord,
 } from '../shared/workflow-runs-db.js';
+import { runMagicPipelineService } from '../services/magic-pipeline-service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '../..');
-const ORCHESTRATOR_PATH = join(ROOT_DIR, 'src/orchestrator.js');
 const WORKFLOW_RUNS_DIR = join(ROOT_DIR, 'output/workflow-runs');
 
 export const MAGIC_SONG_WORKFLOW_NAME = 'magic_song';
@@ -113,17 +112,17 @@ export async function runMagicSongWorkflow(input, options = {}) {
         },
       },
       {
-        id: 'run_existing_magic_pipeline',
-        label: 'Run existing Magic pipeline',
+        id: 'run_magic_pipeline_service',
+        label: 'Run Magic pipeline service',
         run: async ({ state, emit }) => {
-          const cliResult = await runMagicCli({
-            songId: state.input.songId,
-            theme: state.input.theme,
-            brandProfilePath: state.context.brandProfilePath,
-            onLine: line => emit(classifyCliLine(line)),
+          const serviceResult = await runMagicPipelineService({
+            topic: state.input.theme,
+            existingSongId: state.input.songId,
+            mode: state.input.mode,
+            onEvent: event => emit(event),
           });
-          state.context.cliResult = cliResult;
-          return cliResult;
+          state.context.serviceResult = serviceResult;
+          return serviceResult;
         },
       },
       {
@@ -131,15 +130,16 @@ export async function runMagicSongWorkflow(input, options = {}) {
         label: 'Hydrate song result',
         run: async ({ state }) => {
           const song = getSong(state.input.songId);
+          const serviceResult = state.context.serviceResult || {};
           const releaseRecommendation = song?.release_recommendation || {};
-          const recommendation = releaseRecommendation?.recommendation || {};
+          const recommendation = serviceResult.recommendation || releaseRecommendation?.recommendation || {};
           const publicBaseUrl = String(process.env.PUBLIC_APP_BASE_URL || '').replace(/\/$/, '');
 
           const result = {
             runId: state.runId,
             songId: state.input.songId,
-            title: song?.title || state.input.theme,
-            status: mapRecommendationToStatus(recommendation.value),
+            title: serviceResult.title || song?.title || state.input.theme,
+            status: serviceResult.status || mapRecommendationToStatus(recommendation.value),
             score: recommendation.score ?? releaseRecommendation.score ?? null,
             rationale: extractRationale(releaseRecommendation),
             previewUrl: publicBaseUrl ? `${publicBaseUrl}/songs/${state.input.songId}` : `/songs/${state.input.songId}`,
@@ -148,6 +148,9 @@ export async function runMagicSongWorkflow(input, options = {}) {
             brandId: state.input.brandId,
             brandName: state.context.brandName,
             mode: state.input.mode,
+            totalCost: serviceResult.totalCost ?? null,
+            releaseCandidate: Boolean(serviceResult.releaseCandidate),
+            marketingDashboardUrl: serviceResult.marketingDashboardUrl || null,
           };
 
           state.result = result;
@@ -161,7 +164,7 @@ export async function runMagicSongWorkflow(input, options = {}) {
             runId: state.runId,
             input: state.input,
             result,
-            cli: state.context.cliResult,
+            service: state.context.serviceResult,
             completedAt: new Date().toISOString(),
           });
           return result;
@@ -169,83 +172,6 @@ export async function runMagicSongWorkflow(input, options = {}) {
       },
     ],
   });
-}
-
-function runMagicCli({ songId, theme, brandProfilePath, onLine }) {
-  return new Promise((resolve, reject) => {
-    const startedAt = Date.now();
-    const args = [ORCHESTRATOR_PATH, '--magic', theme, '--id', songId];
-    const child = spawn(process.execPath, args, {
-      cwd: ROOT_DIR,
-      env: {
-        ...process.env,
-        BRAND_PROFILE_PATH: brandProfilePath,
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    const stdout = [];
-    const stderr = [];
-
-    child.stdout.on('data', chunk => {
-      const text = chunk.toString();
-      stdout.push(text);
-      for (const line of splitLines(text)) onLine?.(line);
-    });
-
-    child.stderr.on('data', chunk => {
-      const text = chunk.toString();
-      stderr.push(text);
-      for (const line of splitLines(text)) onLine?.(line);
-    });
-
-    child.on('error', error => {
-      reject(new WorkflowError('Failed to start Magic pipeline process', { message: error.message }));
-    });
-
-    child.on('close', code => {
-      const runtimeSeconds = Math.round((Date.now() - startedAt) / 100) / 10;
-      const result = {
-        code,
-        songId,
-        runtimeSeconds,
-        stdout: stdout.join(''),
-        stderr: stderr.join(''),
-      };
-
-      if (code === 0) {
-        resolve(result);
-      } else {
-        reject(new WorkflowError(`Magic pipeline failed with exit code ${code}`, {
-          songId,
-          runtimeSeconds,
-          stderrTail: result.stderr.slice(-2000),
-          stdoutTail: result.stdout.slice(-2000),
-        }));
-      }
-    });
-  });
-}
-
-function classifyCliLine(line) {
-  const clean = String(line || '').trim();
-  if (!clean) return { type: 'pipeline_log', line: clean };
-
-  const lower = clean.toLowerCase();
-  if (lower.includes('writing lyrics')) return { type: 'pipeline_progress', stage: 'writing_song_brief', line: clean };
-  if (lower.includes('generating music')) return { type: 'pipeline_progress', stage: 'generating_audio', line: clean };
-  if (lower.includes('release selection')) return { type: 'pipeline_progress', stage: 'scoring_song', line: clean };
-  if (lower.includes('marketing assets')) return { type: 'pipeline_progress', stage: 'creating_release_assets', line: clean };
-  if (lower.includes('magic pipeline ready')) return { type: 'pipeline_progress', stage: 'done', line: clean };
-  if (lower.includes('qa warning') || lower.includes('⚠')) return { type: 'pipeline_warning', line: clean };
-  return { type: 'pipeline_log', line: clean };
-}
-
-function splitLines(text) {
-  return String(text || '')
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
 }
 
 function mapRecommendationToStatus(value) {
