@@ -1,0 +1,8 @@
+{
+  "name": "@pancake-robot/openclaw-core",
+  "version": "0.1.0",
+  "description": "Reusable workflow orchestration primitives for Pancake Robot and future apps.",
+  "type": "module",
+  "main": "index.js",
+  "private": true
+}
