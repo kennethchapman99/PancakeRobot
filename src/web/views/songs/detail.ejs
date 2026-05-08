@@ -486,6 +486,43 @@
               <div class="mt-3 text-[11px] text-zinc-500">HyperFollow is the primary CTA. Phase 1 outreach only needs this link plus generated release assets.</div>
             </section>
 
+            <section class="border border-zinc-200 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-sm text-zinc-700">Daily Social Push</h3>
+                <a href="/marketing/social" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Open Daily Social</a>
+              </div>
+              <div class="space-y-3">
+                <label class="flex items-start gap-3 text-sm">
+                  <input type="checkbox" name="use_in_daily_social_push" <%= song.marketing_inputs_from_ar?.use_in_daily_social_push ? 'checked' : '' %> class="mt-1">
+                  <span>
+                    <span class="block font-medium text-zinc-700">Use in Daily Social Push</span>
+                    <span class="block text-xs text-zinc-500">Allows the owned-social planner to treat this release as an eligible daily broadcast candidate.</span>
+                  </span>
+                </label>
+                <label class="flex items-start gap-3 text-sm">
+                  <input type="checkbox" name="prioritize_next_daily_campaign" <%= song.marketing_inputs_from_ar?.prioritize_next_daily_campaign ? 'checked' : '' %> class="mt-1">
+                  <span>
+                    <span class="block font-medium text-zinc-700">Prioritize this release for next daily campaign</span>
+                    <span class="block text-xs text-zinc-500">Bumps this song above normal rotation without mixing it into reviewer, blog, radio, or playlist outreach.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div class="rounded-lg border border-zinc-200 p-3">
+                  <div class="text-[10px] uppercase tracking-wide text-zinc-400">Latest Instagram URL</div>
+                  <% if (marketingKit?.latestSocial?.latestInstagramUrl) { %><a href="<%= marketingKit.latestSocial.latestInstagramUrl %>" target="_blank" rel="noopener" class="mt-1 block break-all text-blue-600"><%= marketingKit.latestSocial.latestInstagramUrl %></a><% } else { %><div class="mt-1 text-zinc-400">—</div><% } %>
+                </div>
+                <div class="rounded-lg border border-zinc-200 p-3">
+                  <div class="text-[10px] uppercase tracking-wide text-zinc-400">Latest Facebook URL</div>
+                  <% if (marketingKit?.latestSocial?.latestFacebookUrl) { %><a href="<%= marketingKit.latestSocial.latestFacebookUrl %>" target="_blank" rel="noopener" class="mt-1 block break-all text-blue-600"><%= marketingKit.latestSocial.latestFacebookUrl %></a><% } else { %><div class="mt-1 text-zinc-400">—</div><% } %>
+                </div>
+                <div class="rounded-lg border border-zinc-200 p-3">
+                  <div class="text-[10px] uppercase tracking-wide text-zinc-400">Latest YouTube URL</div>
+                  <% if (marketingKit?.latestSocial?.latestYouTubeUrl) { %><a href="<%= marketingKit.latestSocial.latestYouTubeUrl %>" target="_blank" rel="noopener" class="mt-1 block break-all text-blue-600"><%= marketingKit.latestSocial.latestYouTubeUrl %></a><% } else { %><div class="mt-1 text-zinc-400">—</div><% } %>
+                </div>
+              </div>
+            </section>
+
             <section id="release-kit-actions" class="border border-zinc-200 rounded-xl p-4" data-reload-url="/songs/<%= encodeURIComponent(song.id) %>?tab=marketing#release-kit-actions" x-data="marketingPack('<%= song.id %>')" x-init="register()">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="font-semibold text-sm text-zinc-700">Base Image / Release Assets</h3>

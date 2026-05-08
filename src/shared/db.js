@@ -182,6 +182,56 @@ function initSchema(db) {
       error_message TEXT,
       context TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS daily_social_campaigns (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      timezone TEXT NOT NULL,
+      brand TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      selected_song_id TEXT NOT NULL,
+      selected_release_id TEXT,
+      campaign_type TEXT NOT NULL,
+      rationale TEXT,
+      created_by TEXT DEFAULT 'agent',
+      requires_approval INTEGER DEFAULT 1,
+      approved_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT,
+      UNIQUE(date, selected_song_id, campaign_type),
+      FOREIGN KEY (selected_song_id) REFERENCES songs(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS social_posts (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      release_id TEXT,
+      song_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      asset_type TEXT NOT NULL,
+      asset_url TEXT,
+      public_asset_url TEXT,
+      title TEXT,
+      caption TEXT,
+      description TEXT,
+      hashtags_json TEXT,
+      scheduled_at TEXT,
+      published_at TEXT,
+      platform_post_id TEXT,
+      platform_post_url TEXT,
+      ai_generated INTEGER DEFAULT 1,
+      made_for_kids INTEGER,
+      contains_synthetic_media INTEGER DEFAULT 1,
+      validation_warnings_json TEXT,
+      error_code TEXT,
+      error_message TEXT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      updated_at TEXT,
+      FOREIGN KEY (campaign_id) REFERENCES daily_social_campaigns(id),
+      FOREIGN KEY (song_id) REFERENCES songs(id)
+    );
   `);
 
   // Migrate existing songs table — add new columns if they don't exist yet
@@ -430,6 +480,8 @@ export function updateSongStatus(id, status) {
 
 export function deleteSong(id) {
   const db = getDb();
+  db.prepare('DELETE FROM social_posts WHERE song_id = ?').run(id);
+  db.prepare('DELETE FROM daily_social_campaigns WHERE selected_song_id = ?').run(id);
   db.prepare('DELETE FROM publishing_checklist WHERE song_id = ?').run(id);
   db.prepare('DELETE FROM assets WHERE song_id = ?').run(id);
   db.prepare('DELETE FROM release_links WHERE song_id = ?').run(id);

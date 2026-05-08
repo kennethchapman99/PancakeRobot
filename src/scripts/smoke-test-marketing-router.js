@@ -6,6 +6,32 @@
 
 import express from 'express';
 import { registerMarketingRouter } from '../web/marketing/router-consolidated.js';
+import { upsertSong } from '../shared/db.js';
+
+upsertSong({
+  id: 'SONG_SOCIAL_SMOKE',
+  title: 'Smoke Test Social Song',
+  topic: 'robot pancakes',
+  status: 'submitted to DistroKid',
+  marketing_links: {
+    smart_link: 'https://example.com/listen/smoke-test-social-song',
+    release_kit_url: 'https://example.com/release-kit/smoke-test-social-song',
+    instagram_url: 'https://instagram.com/pancakerobotmusic',
+  },
+  marketing_assets: {
+    square_post_url: 'https://example.com/assets/smoke-square.png',
+    vertical_post_url: 'https://example.com/assets/smoke-vertical.png',
+    portrait_post_url: 'https://example.com/assets/smoke-portrait.png',
+    cover_safe_promo_url: 'https://example.com/assets/smoke-cover-safe.png',
+    no_text_variation_url: 'https://example.com/assets/smoke-no-text.png',
+    generated_at: new Date().toISOString(),
+  },
+  marketing_inputs_from_ar: {
+    use_in_daily_social_push: true,
+    prioritize_next_daily_campaign: true,
+  },
+  release_recommendation: { score: 90, updated_at: new Date().toISOString() },
+});
 
 const app = express();
 app.use(express.json());
@@ -20,6 +46,7 @@ const server = app.listen(0, async () => {
   const tests = [
     // HTML pages
     ['GET /marketing returns 200 HTML',                         'GET',  '/marketing',                          200, null, true],
+    ['GET /marketing/social returns 200 HTML',                  'GET',  '/marketing/social',                   200, null, true],
     ['GET /marketing/campaigns/fake returns 404 HTML',          'GET',  '/marketing/campaigns/fake',           404, null, true],
 
     // API routes — outlets
@@ -30,6 +57,7 @@ const server = app.listen(0, async () => {
     ['GET /api/marketing/outreach-items returns 200',           'GET',  '/api/marketing/outreach-items',       200, b => b.ok === true],
     ['GET /api/marketing/outreach-events returns 200',          'GET',  '/api/marketing/outreach-events',      200, b => b.ok === true],
     ['GET /api/marketing/outreach-summary returns 200',         'GET',  '/api/marketing/outreach-summary',     200, b => b.ok === true],
+    ['POST /api/social/daily/run-dry-run returns 200',          'POST', '/api/social/daily/run-dry-run',       200, b => b.ok === true],
 
     // 404 for unknown routes
     ['GET unknown /api/marketing/x returns 404',                'GET',  '/api/marketing/nonexistent-route',    404, null],
@@ -40,7 +68,7 @@ const server = app.listen(0, async () => {
 
   for (const [desc, method, path, expectedStatus, check, expectHtml] of tests) {
     try {
-      const res = await fetch(`${base}${path}`, { method });
+      const res = await fetch(`${base}${path}`, { method, headers: { 'content-type': 'application/json' } });
       const contentType = res.headers.get('content-type') || '';
       const isJson = contentType.includes('json');
       const body = isJson ? await res.json() : await res.text();

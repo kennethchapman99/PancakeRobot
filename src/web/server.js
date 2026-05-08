@@ -34,7 +34,7 @@ import {
 } from '../shared/db.js';
 import { getMarketingTargets } from '../shared/marketing-db.js';
 import { getOutreachHistoryByTargetIds, normalizeOutletForApp } from '../shared/marketing-outlets.js';
-import { runSuggestPipeline } from '../shared/suggest.js';
+import { pickSuggestedTopicFromSuggestions, runSuggestPipeline } from '../shared/suggest.js';
 import {
   DEFAULT_PROFILE_ID,
   listBrandProfiles,
@@ -47,6 +47,7 @@ import {
 } from '../shared/brand-profile.js';
 import { generateThumbnails } from '../agents/creative-manager.js';
 import { registerMarketingRouter } from './marketing/router-consolidated.js';
+import { startDailySocialScheduler } from '../shared/social/daily-social-scheduler.js';
 import { clearSongBaseImages, getSongCatalogMarketingSummary, scanMarketingPack, scanSongBaseImage } from '../shared/song-catalog-marketing.js';
 import {
   getSongMarketingKit,
@@ -207,15 +208,28 @@ app.get('/magic-song', (req, res) => {
   });
 });
 
-app.post('/magic-song', (req, res) => {
-  const topic = String(req.body?.topic || '').trim();
+app.post('/magic-song', async (req, res) => {
+  let topic = String(req.body?.topic || '').trim();
   const notes = String(req.body?.notes || '').trim();
 
   if (!topic) {
-    return res.status(400).render('magic-song', {
+    try {
+      const suggestions = await runSuggestPipeline(() => {}, { brandProfileId: getActiveProfileId() });
+      topic = pickSuggestedTopicFromSuggestions(suggestions);
+    } catch (error) {
+      return res.status(500).render('magic-song', {
+        topic,
+        notes,
+        error: `Could not generate a Magic Song topic automatically: ${error.message}`,
+      });
+    }
+  }
+
+  if (!topic) {
+    return res.status(500).render('magic-song', {
       topic,
       notes,
-      error: 'Topic is required.',
+      error: 'Could not generate a Magic Song topic automatically.',
     });
   }
 
@@ -593,14 +607,32 @@ app.get('/api/songs/pipeline/stream/:jobId', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
   let lastIndex = 0;
+  let closed = false;
   const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const heartbeat = setInterval(() => {
+    if (closed) return;
+    res.write(': heartbeat\n\n');
+  }, 15000);
+
+  const closeStream = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    res.end();
+  };
 
   const tick = () => {
+    if (closed) return;
     const job = pipelineJobs.get(jobId);
-    if (!job) { send('error', { message: 'Job not found' }); res.end(); return; }
+    if (!job) {
+      send('error', { message: 'Job not found' });
+      closeStream();
+      return;
+    }
 
     const newLogs = job.logs.slice(lastIndex);
     for (const line of newLogs) send('log', { message: line });
@@ -608,16 +640,19 @@ app.get('/api/songs/pipeline/stream/:jobId', (req, res) => {
 
     if (job.status === 'done') {
       send('complete', { songId: job.songId, originalSongId: job.originalSongId });
-      res.end();
+      closeStream();
     } else if (job.status === 'error') {
       send('error', { message: job.error });
-      res.end();
+      closeStream();
     } else {
       setTimeout(tick, 600);
     }
   };
 
-  req.on('close', () => {});
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    closed = true;
+  });
   tick();
 });
 
@@ -813,7 +848,14 @@ app.post('/songs/:id/marketing-kit', (req, res) => {
     marketing_assets.release_kit_published = req.body.release_kit_published === 'on';
   }
 
+  const marketing_inputs_from_ar = {
+    ...(song.marketing_inputs_from_ar || {}),
+    use_in_daily_social_push: req.body.use_in_daily_social_push === 'on',
+    prioritize_next_daily_campaign: req.body.prioritize_next_daily_campaign === 'on',
+  };
+
   const saved = saveSongMarketingKit(song.id, { marketing_links, marketing_assets });
+  upsertSong({ id: song.id, marketing_inputs_from_ar });
   syncReleaseLinksFromMarketingKit(song.id, saved.marketing_links);
   res.redirect(`/songs/${song.id}?message=${encodeURIComponent('Marketing kit saved.')}`);
 });
@@ -1640,6 +1682,7 @@ function hasGeneratedReleaseAssetPreviews(marketingAssets = {}) {
 export { app };
 
 if (process.argv[1] === __filename) {
+  startDailySocialScheduler();
   app.listen(PORT, () => {
     console.log(`\n${APP_TITLE} UI running at http://localhost:${PORT}\n`);
   });

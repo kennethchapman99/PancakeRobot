@@ -36,8 +36,11 @@ export function renderMarketingDashboard(req, res) {
   const body = `<main class="p-8 space-y-8">
     <section class="bg-white border border-zinc-200 rounded-2xl p-6">
       <div class="flex items-start justify-between gap-4">
-        <div><h1 class="text-3xl font-extrabold">Marketing Mission Control</h1><p class="text-sm text-zinc-500 mt-2">Release outreach, Gmail draft queue, and inbound triage.</p></div>
-        <form method="POST" action="/marketing/agents/inbox-scan"><button class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Scan Gmail inbox</button></form>
+        <div><h1 class="text-3xl font-extrabold">Marketing Mission Control</h1><p class="text-sm text-zinc-500 mt-2">Release outreach, Gmail draft queue, inbound triage, and owned daily social planning.</p></div>
+        <div class="flex flex-wrap gap-2">
+          <a href="/marketing/social" class="border border-zinc-200 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-zinc-50">Open Daily Social</a>
+          <form method="POST" action="/marketing/agents/inbox-scan"><button class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Scan Gmail inbox</button></form>
+        </div>
       </div>
     </section>
     ${banner(req.query.message)}${banner(req.query.error, 'error')}

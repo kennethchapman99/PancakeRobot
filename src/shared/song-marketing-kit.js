@@ -5,6 +5,7 @@ import { resolveDefaultBaseImage, scanMarketingPack, scanSongBaseImage } from '.
 import { getOutreachEvents } from './marketing-outreach-db.js';
 import { getSongNextAction } from './song-workflow.js';
 import { appendCacheBust, normalizeReleaseAssetManifest, resolveCanonicalSocialHandle } from './release-asset-manifest.js';
+import { getLatestPublishedSocialUrlsBySongId } from './social-publishing-db.js';
 
 const BRAND_PROFILE = loadBrandProfile();
 const DEFAULT_CONTACT_EMAIL = BRAND_PROFILE.marketing?.contact_email
@@ -81,6 +82,7 @@ export function getSongMarketingKit(songOrId, options = {}) {
     marketing_assets,
     marketing_readiness,
   });
+  const latestSocial = getLatestPublishedSocialUrlsBySongId(song.id);
 
   return {
     marketing_links,
@@ -92,6 +94,7 @@ export function getSongMarketingKit(songOrId, options = {}) {
     image_source: imageSelection,
     validation: validateMarketingKit({ links: marketing_links, assets: marketing_assets }),
     outreach_link_block: buildOutreachLinkBlock({ links: marketing_links }),
+    latestSocial,
   };
 }
 
@@ -264,6 +267,7 @@ export function buildReleaseKitViewModel(songOrId) {
   const manifest = normalizeReleaseAssetManifest(song.id, marketingPack.manifest || marketingPack.meta);
   const generatedAt = manifest.generatedAt || kit.marketing_assets.generated_at || '';
   const socialHandle = resolveCanonicalSocialHandle({ marketingLinks: kit.marketing_links || {}, socialHandle: manifest.socialHandle });
+  const latestSocial = getLatestPublishedSocialUrlsBySongId(song.id);
   return {
     song,
     title: song.title || song.topic || song.id,
@@ -283,6 +287,11 @@ export function buildReleaseKitViewModel(songOrId) {
     socialHandle,
     generatedAt,
     manifest,
+    latestSocial,
+    dailySocial: {
+      use_in_daily_social_push: Boolean(song.marketing_inputs_from_ar?.use_in_daily_social_push),
+      prioritize_next_daily_campaign: Boolean(song.marketing_inputs_from_ar?.prioritize_next_daily_campaign),
+    },
     heroImageUrl: appendCacheBust(
       kit.image_source?.active_image_url || kit.marketing_links.cover_art_url || kit.marketing_assets.base_image_url || kit.marketing_assets.fallback_image_url,
       generatedAt
@@ -317,6 +326,7 @@ function buildEmptyMarketingKit() {
     defaults,
     validation: { warnings: [], errors: [] },
     outreach_link_block: buildOutreachLinkBlock({ links }),
+    latestSocial: getLatestPublishedSocialUrlsBySongId(''),
   };
 }
 

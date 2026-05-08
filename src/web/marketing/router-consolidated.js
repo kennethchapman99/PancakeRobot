@@ -42,6 +42,14 @@ import {
   postCreateItemGmailDraftApi,
   postInboxScanApi,
 } from './controllers/api-controller.js';
+import {
+  renderDailySocialPage,
+  postRunDailySocialDryRun,
+  postApproveDailySocialCampaign,
+  postPublishDailySocialCampaign,
+  postRegenerateSocialCopy,
+  postSkipSocialPost,
+} from './controllers/social-controller.js';
 
 export function registerMarketingRouter(app) {
   const router = express.Router();
@@ -54,6 +62,7 @@ export function registerMarketingRouter(app) {
   router.post('/marketing/releases/:songId/build-pack', postBuildReleaseMarketingPack);
 
   router.get('/marketing/outlets', renderOutletsPage);
+  router.get('/marketing/social', renderDailySocialPage);
 
   router.get('/marketing/releases/new', renderNewRelease);
   router.post('/marketing/releases', handleNewReleaseUpload, postNewRelease);
@@ -92,6 +101,11 @@ export function registerMarketingRouter(app) {
   router.post('/api/marketing/gmail-drafts/item/:itemId', postCreateItemGmailDraftApi);
   router.post('/api/marketing/agents/inbox-scan', postInboxScanApi);
   router.post('/api/marketing/inbox-scan', postInboxScanApi);
+  router.post('/api/social/daily/run-dry-run', postRunDailySocialDryRun);
+  router.post('/api/social/daily/:campaignId/approve', postApproveDailySocialCampaign);
+  router.post('/api/social/daily/:campaignId/publish', postPublishDailySocialCampaign);
+  router.post('/api/social/posts/:postId/regenerate-copy', postRegenerateSocialCopy);
+  router.post('/api/social/posts/:postId/skip', postSkipSocialPost);
 
   app.use(router);
 }
