@@ -36,6 +36,7 @@ export async function analyzeSongForReleaseSelection(songId, options = {}) {
   ]);
   const metadata = readJson(join(songDir, 'metadata.json'));
   const brandProfile = buildReleaseSelectionBrandProfile(song);
+  const publishThreshold = resolvePublishThreshold(brandProfile);
   const audioAnalysis = analyzeAudioFile(audioPath);
   const catalog = getAllSongs().map(item => ({
     ...item,
@@ -56,6 +57,7 @@ export async function analyzeSongForReleaseSelection(songId, options = {}) {
     releaseBlockers: [...baseScoring.releaseBlockers, ...(audioAnalysis.ok ? [] : ['audio_analysis_failed'])],
     scoreBreakdown: baseScoring.scoreBreakdown,
     issues: baseScoring.issues,
+    publishThreshold,
   });
 
   const releaseBlockers = [...new Set([
@@ -90,6 +92,7 @@ export async function analyzeSongForReleaseSelection(songId, options = {}) {
     value: recommendationValue,
     recommended_release_treatment: treatment,
     score: baseScoring.totalScore,
+    publish_threshold: publishThreshold,
     confidence: baseScoring.confidence,
     threshold_version: RELEASE_SELECTION_THRESHOLD_VERSION,
     agent: RELEASE_SELECTION_AGENT,
@@ -214,6 +217,24 @@ function clipStrength(metrics = {}) {
   return value;
 }
 
+function resolvePublishThreshold(brandProfile = {}) {
+  const candidates = [
+    brandProfile.scoring_preferences?.recommend_to_publish_threshold,
+    brandProfile.scoring_preferences?.publish_threshold,
+    brandProfile.raw_profile?.scoring_preferences?.recommend_to_publish_threshold,
+    brandProfile.raw_profile?.scoring_preferences?.publish_threshold,
+    brandProfile.raw_profile?.release_selection?.recommend_to_publish_threshold,
+    brandProfile.raw_profile?.recommend_to_publish_threshold,
+  ];
+
+  for (const value of candidates) {
+    const threshold = Number(value);
+    if (Number.isFinite(threshold)) return Math.max(0, Math.min(100, threshold));
+  }
+
+  return 85;
+}
+
 function resolvePrimaryAudioPath(songDir) {
   const candidates = [
     join(songDir, 'audio.mp3'),
@@ -262,4 +283,3 @@ function persistAnalysisArtifacts(songDir, payload) {
     metadata: payload.metadata,
   }, null, 2));
 }
-
