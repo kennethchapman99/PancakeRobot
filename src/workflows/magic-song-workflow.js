@@ -118,6 +118,7 @@ export async function runMagicSongWorkflow(input, options = {}) {
           const serviceResult = await runMagicPipelineService({
             topic: state.input.theme,
             existingSongId: state.input.songId,
+            brandId: state.input.brandId,
             mode: state.input.mode,
             onEvent: event => emit(event),
           });
@@ -146,7 +147,7 @@ export async function runMagicSongWorkflow(input, options = {}) {
             releaseKitUrl: publicBaseUrl ? `${publicBaseUrl}/release-kit/${state.input.songId}?preview=1` : `/release-kit/${state.input.songId}?preview=1`,
             audioUrl: null,
             brandId: state.input.brandId,
-            brandName: state.context.brandName,
+            brandName: serviceResult.brandName || state.context.brandName,
             mode: state.input.mode,
             totalCost: serviceResult.totalCost ?? null,
             releaseCandidate: Boolean(serviceResult.releaseCandidate),
