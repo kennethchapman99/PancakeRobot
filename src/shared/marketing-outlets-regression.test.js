@@ -11,18 +11,23 @@ const repoRoot = path.resolve(__dirname, '../..');
 const nodeBin = process.execPath;
 
 function parseLastNumberFromOutput(output) {
-  const lines = String(output ?? '')
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
+  const cleaned = String(output ?? '')
+    .replace(/\u001b\[[0-9;]*m/g, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
-  for (const line of lines.reverse()) {
-    const num = Number(line);
-    if (Number.isFinite(num)) return num;
-  }
+  const matches = cleaned.match(/(?:^|[^0-9])([0-9]+)(?=[^0-9]*$)/m);
+  if (matches?.[1]) return Number(matches[1]);
 
-  return NaN;
+  const fallbackMatches = cleaned.match(/[0-9]+/g) || [];
+  return fallbackMatches.length ? Number(fallbackMatches.at(-1)) : NaN;
 }
+
+test('parseLastNumberFromOutput handles invisible terminal characters', () => {
+  assert.equal(parseLastNumberFromOutput('\u001b[32m50\u001b[0m\n'), 50);
+  assert.equal(parseLastNumberFromOutput('\uFEFF50\n'), 50);
+  assert.equal(parseLastNumberFromOutput('setup log\n50\u200B\n'), 50);
+});
 
 test('isTestOrDemoTarget flags obvious test/demo rows', () => {
   assert.equal(isTestOrDemoTarget({
@@ -114,7 +119,7 @@ test('active brand falls back to canonical outlet rows when only QA data exists'
     });
     const count = parseLastNumberFromOutput(output);
 
-    assert.ok(Number.isFinite(count), `expected numeric outlet count, got output: ${output}`);
+    assert.ok(Number.isFinite(count), `expected numeric outlet count, got output: ${JSON.stringify(output)}`);
     assert.ok(count >= 30, `expected canonical fallback outlets for gravl-brand-profile, got ${count}`);
   } finally {
     try { fs.unlinkSync(dbPath); } catch {}
