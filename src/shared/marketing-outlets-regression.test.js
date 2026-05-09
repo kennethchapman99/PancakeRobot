@@ -11,8 +11,17 @@ const repoRoot = path.resolve(__dirname, '../..');
 const nodeBin = process.execPath;
 
 function parseLastNumberFromOutput(output) {
-  const matches = String(output || '').match(/\b\d+\b/g) || [];
-  return matches.length ? Number(matches.at(-1)) : NaN;
+  const lines = String(output ?? '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  for (const line of lines.reverse()) {
+    const num = Number(line);
+    if (Number.isFinite(num)) return num;
+  }
+
+  return NaN;
 }
 
 test('isTestOrDemoTarget flags obvious test/demo rows', () => {
