@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { SOCIAL_PLATFORMS, normalizeSocialPlatform } from './social-types.js';
+import { getPublicBaseUrl } from '../public-url.js';
 
 function parseBool(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -42,7 +43,7 @@ export function getSocialEnv() {
   return {
     socialPublishMode: String(process.env.SOCIAL_PUBLISH_MODE || 'dry_run').trim().toLowerCase() === 'live' ? 'live' : 'dry_run',
     socialRequireApproval: parseBool(process.env.SOCIAL_REQUIRE_APPROVAL, true),
-    publicBaseUrl: String(process.env.PUBLIC_BASE_URL || 'http://localhost:3737').trim(),
+    publicBaseUrl: getPublicBaseUrl(),
     dailySocialEnabled: parseBool(process.env.DAILY_SOCIAL_ENABLED, false),
     dailySocialTimezone: String(process.env.DAILY_SOCIAL_TIMEZONE || 'America/Toronto').trim() || 'America/Toronto',
     dailySocialRequireApproval: parseBool(process.env.DAILY_SOCIAL_REQUIRE_APPROVAL, true),
