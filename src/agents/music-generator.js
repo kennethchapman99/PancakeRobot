@@ -27,6 +27,8 @@ const PAID_MODEL = 'music-2.6';
 const FREE_MODEL = 'music-2.6-free';
 const POLL_INTERVAL_MS = 8000;
 const MAX_POLL_ATTEMPTS = 45;
+export const MINIMAX_PROVIDER_LYRICS_MAX_CHARS = Number(process.env.MINIMAX_PROVIDER_LYRICS_MAX_CHARS || 3200);
+export const MINIMAX_PROVIDER_LYRICS_RETRY_CHARS = Number(process.env.MINIMAX_PROVIDER_LYRICS_RETRY_CHARS || 2800);
 
 export async function generateMusic({ songId, title, lyricsText, audioPromptData }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
@@ -58,7 +60,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
   }
 
   const providerLyricsReport = buildProviderLyricsPayload({ songDir, title, lyricsText });
-  const renderLyrics = providerLyricsReport.lyrics;
+  let renderLyrics = providerLyricsReport.lyrics;
   const apiKey = process.env.MINIMAX_API_KEY;
 
   if (!apiKey) {
@@ -79,8 +81,12 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
 
   let audioHex;
   try {
-    const result = await submitToMiniMax({ prompt, lyrics: renderLyrics, apiKey, model: modelConfig.model });
+    const submission = await submitToMiniMaxWithLengthRetry({ prompt, lyrics: renderLyrics, apiKey, model: modelConfig.model });
+    renderLyrics = submission.lyrics;
+    if (submission.retry) providerLyricsReport.length_retry = submission.retry;
+    persistProviderLyricsReport({ songDir, title, report: providerLyricsReport, finalLyrics: renderLyrics });
 
+    const result = submission.result;
     if (result.done) {
       console.log('[MUSIC-GEN] ✓ Synchronous completion');
       audioHex = result.audioHex;
@@ -143,6 +149,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     style_prompt: prompt,
     provider_lyrics_chars: renderLyrics.length,
     provider_lyrics_removed_count: providerLyricsReport.removed.length,
+    provider_lyrics_truncated: Boolean(providerLyricsReport.length_constraint?.truncated || providerLyricsReport.length_retry?.truncated),
     pre_render_qa_passed: preRenderQA.passed,
     pre_render_qa_blocking: false,
     post_render_qa_passed: postRenderQA.passed,
@@ -200,26 +207,25 @@ export function buildProviderLyricsPayload({ songDir, title, lyricsText }) {
     blockBrandContamination: true,
   });
 
-  const persistedReport = {
-    checked_at: new Date().toISOString(),
-    title,
-    blocked: report.blocked,
-    block_reason: report.blockReason,
-    blocking: Boolean(report.blockReason || report.residualIssues?.length),
-    provider_lyrics_chars: report.lyrics.length,
-    removed: report.removed,
-    residual_issues: report.residualIssues,
-    forbidden_hits: report.forbiddenHits,
-  };
+  const lengthConstraint = constrainProviderLyricsLength(report.lyrics, MINIMAX_PROVIDER_LYRICS_MAX_CHARS);
+  report.lyrics = lengthConstraint.lyrics;
+  report.length_constraint = lengthConstraint;
 
-  if (songDir) {
-    fs.writeFileSync(join(songDir, 'provider-lyrics-sanitization.json'), JSON.stringify(persistedReport, null, 2));
+  if (lengthConstraint.truncated) {
+    console.log(`[MUSIC-GEN] ⚠ Provider lyrics trimmed from ${lengthConstraint.originalChars} to ${lengthConstraint.finalChars} chars for MiniMax limit`);
+    report.removed.push({
+      line: null,
+      reason: 'provider lyric length cap',
+      content: `trimmed from ${lengthConstraint.originalChars} to ${lengthConstraint.finalChars} chars`,
+    });
   }
+
+  persistProviderLyricsReport({ songDir, title, report, finalLyrics: report.lyrics });
 
   if (report.removed.length > 0) {
     console.log('[MUSIC-GEN] Provider lyrics sanitizer removed:');
     report.removed.forEach(item => {
-      console.log(`  • line ${item.line}: ${item.reason}: ${item.content}`);
+      console.log(`  • ${item.line ? `line ${item.line}` : 'payload'}: ${item.reason}: ${item.content}`);
     });
   }
 
@@ -231,8 +237,77 @@ export function buildProviderLyricsPayload({ songDir, title, lyricsText }) {
     throw new Error(`Provider lyric payload blocked: ${report.residualIssues.join('; ')}`);
   }
 
+  if (!report.lyrics.trim()) {
+    throw new Error('Provider lyric payload blocked: no singable lyrics remain after sanitization/length cap');
+  }
+
   console.log('[MUSIC-GEN] ✓ Provider lyrics sanitized for singable-only payload');
   return report;
+}
+
+export function constrainProviderLyricsLength(lyrics, maxChars = MINIMAX_PROVIDER_LYRICS_MAX_CHARS) {
+  const original = String(lyrics || '').trim();
+  const safeMax = Math.max(500, Number(maxChars) || MINIMAX_PROVIDER_LYRICS_MAX_CHARS);
+
+  if (original.length <= safeMax) {
+    return {
+      lyrics: original,
+      truncated: false,
+      originalChars: original.length,
+      finalChars: original.length,
+      maxChars: safeMax,
+    };
+  }
+
+  const lines = original
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const selected = [];
+  let chars = 0;
+
+  for (const line of lines) {
+    const nextChars = chars + (selected.length ? 1 : 0) + line.length;
+    if (nextChars > safeMax) break;
+    selected.push(line);
+    chars = nextChars;
+  }
+
+  let output = selected.join('\n').trim();
+  if (!output || output.length < Math.min(500, safeMax)) {
+    output = original.slice(0, safeMax).replace(/\s+\S*$/, '').trim();
+  }
+
+  return {
+    lyrics: output,
+    truncated: true,
+    originalChars: original.length,
+    finalChars: output.length,
+    maxChars: safeMax,
+  };
+}
+
+function persistProviderLyricsReport({ songDir, title, report, finalLyrics }) {
+  if (!songDir) return;
+
+  const persistedReport = {
+    checked_at: new Date().toISOString(),
+    title,
+    blocked: report.blocked,
+    block_reason: report.blockReason,
+    blocking: Boolean(report.blockReason || report.residualIssues?.length),
+    original_provider_lyrics_chars: report.length_constraint?.originalChars ?? report.lyrics.length,
+    provider_lyrics_chars: finalLyrics.length,
+    provider_lyrics_max_chars: report.length_constraint?.maxChars ?? MINIMAX_PROVIDER_LYRICS_MAX_CHARS,
+    provider_lyrics_truncated: Boolean(report.length_constraint?.truncated || report.length_retry?.truncated),
+    length_constraint: report.length_constraint,
+    length_retry: report.length_retry || null,
+    removed: report.removed,
+    residual_issues: report.residualIssues,
+    forbidden_hits: report.forbiddenHits,
+  };
+
+  fs.writeFileSync(join(songDir, 'provider-lyrics-sanitization.json'), JSON.stringify(persistedReport, null, 2));
 }
 
 function resolveMiniMaxModelConfig() {
@@ -258,6 +333,30 @@ export function buildMiniMaxRequestBody({ prompt, lyrics, model }) {
       sample_rate: 44100,
     },
   };
+}
+
+async function submitToMiniMaxWithLengthRetry({ prompt, lyrics, apiKey, model }) {
+  try {
+    return { result: await submitToMiniMax({ prompt, lyrics, apiKey, model }), lyrics, retry: null };
+  } catch (err) {
+    if (!isMiniMaxLyricsTooLongError(err)) throw err;
+
+    const retryMax = Math.min(MINIMAX_PROVIDER_LYRICS_RETRY_CHARS, Math.max(500, lyrics.length - 500));
+    const retry = constrainProviderLyricsLength(lyrics, retryMax);
+    if (!retry.truncated || retry.lyrics.length >= lyrics.length) throw err;
+
+    console.log(`[MUSIC-GEN] MiniMax rejected lyrics as too long; retrying with ${retry.finalChars} chars`);
+    try {
+      return { result: await submitToMiniMax({ prompt, lyrics: retry.lyrics, apiKey, model }), lyrics: retry.lyrics, retry };
+    } catch (retryErr) {
+      retryErr.message = `${retryErr.message} (after MiniMax length retry from ${lyrics.length} to ${retry.finalChars} chars)`;
+      throw retryErr;
+    }
+  }
+}
+
+function isMiniMaxLyricsTooLongError(err) {
+  return /lyrics\s+is\s+too\s+long|lyrics too long/i.test(String(err?.message || ''));
 }
 
 async function submitToMiniMax({ prompt, lyrics, apiKey, model }) {
@@ -421,7 +520,7 @@ MINIMAX_MUSIC_MODEL=music-2.6
 ${stylePrompt.substring(0, 2000)}
 \`\`\`
 
-**Lyrics** (paste into "lyrics" field — final provider-safe singable lines only, ≤3500 chars):
+**Lyrics** (paste into "lyrics" field — final provider-safe singable lines only, ≤${MINIMAX_PROVIDER_LYRICS_MAX_CHARS} chars):
 \`\`\`
 ${lyricsText}
 \`\`\`
