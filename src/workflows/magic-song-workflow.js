@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { createWorkflowRunId, runWorkflow, WorkflowError } from '../../packages/openclaw-core/index.js';
 import { getSong } from '../shared/db.js';
 import { loadBrandProfileById, resolveBrandProfilePath, DEFAULT_PROFILE_ID } from '../shared/brand-profile.js';
+import { buildPublicUrl } from '../shared/public-url.js';
 import {
   createWorkflowRunRecord,
   getWorkflowRunByIdempotencyKey,
@@ -134,7 +135,8 @@ export async function runMagicSongWorkflow(input, options = {}) {
           const serviceResult = state.context.serviceResult || {};
           const releaseRecommendation = song?.release_recommendation || {};
           const recommendation = serviceResult.recommendation || releaseRecommendation?.recommendation || {};
-          const publicBaseUrl = String(process.env.PUBLIC_APP_BASE_URL || '').replace(/\/$/, '');
+          const songPath = `/songs/${encodeURIComponent(state.input.songId)}`;
+          const releaseKitPath = `/release-kit/${encodeURIComponent(state.input.songId)}?preview=1`;
 
           const result = {
             runId: state.runId,
@@ -143,8 +145,10 @@ export async function runMagicSongWorkflow(input, options = {}) {
             status: serviceResult.status || mapRecommendationToStatus(recommendation.value),
             score: recommendation.score ?? releaseRecommendation.score ?? null,
             rationale: extractRationale(releaseRecommendation),
-            previewUrl: publicBaseUrl ? `${publicBaseUrl}/songs/${state.input.songId}` : `/songs/${state.input.songId}`,
-            releaseKitUrl: publicBaseUrl ? `${publicBaseUrl}/release-kit/${state.input.songId}?preview=1` : `/release-kit/${state.input.songId}?preview=1`,
+            previewPath: songPath,
+            releaseKitPath,
+            previewUrl: buildPublicUrl(songPath),
+            releaseKitUrl: buildPublicUrl(releaseKitPath),
             audioUrl: null,
             brandId: state.input.brandId,
             brandName: serviceResult.brandName || state.context.brandName,
