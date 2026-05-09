@@ -13,6 +13,8 @@ import {
 } from '../src/shared/lyrics-sanitizer.js';
 import {
   buildMiniMaxRequestBody,
+  constrainProviderLyricsLength,
+  MINIMAX_PROVIDER_LYRICS_MAX_CHARS,
   normalizeAdvisoryQaReport,
 } from '../src/agents/music-generator.js';
 import { qaBlocksApproval } from '../src/shared/approval-gate.js';
@@ -159,19 +161,36 @@ test('clean adult ballad lyrics pass provider sanitizer', () => {
   assert.doesNotMatch(result.lyrics, /\[[^\]]+\]/);
 });
 
+test('MiniMax provider lyric payload is capped before API submission', () => {
+  const longLyrics = Array.from({ length: 500 }, (_, i) => `line ${i} blood sweat and bars we put it in the work`).join('\n');
+  const constrained = constrainProviderLyricsLength(longLyrics, 1200);
+
+  assert.equal(constrained.truncated, true);
+  assert.ok(constrained.originalChars > 1200);
+  assert.ok(constrained.finalChars <= 1200);
+  assert.ok(constrained.lyrics.length <= 1200);
+  assert.match(constrained.lyrics, /blood sweat and bars/);
+});
+
+test('default MiniMax provider lyric cap stays below documented manual limit', () => {
+  assert.ok(MINIMAX_PROVIDER_LYRICS_MAX_CHARS <= 3500);
+});
+
 test('final provider payload contains no section labels, markdown, emoji, or directions', () => {
   const sanitized = sanitizeLyricsForProvider(adultDirtyLyrics, {
     forbiddenElements: [],
     blockBrandContamination: false,
   });
+  const constrained = constrainProviderLyricsLength(sanitized.lyrics);
   const body = buildMiniMaxRequestBody({
     model: 'music-2.6',
     prompt: 'slow heartfelt adult dedication ballad, 72-82 BPM, piano-led, gentle strings',
-    lyrics: sanitized.lyrics,
+    lyrics: constrained.lyrics,
   });
 
   assert.equal(body.lyrics_optimizer, false);
   assert.equal(body.is_instrumental, false);
+  assert.ok(body.lyrics.length <= MINIMAX_PROVIDER_LYRICS_MAX_CHARS);
   assert.doesNotMatch(body.lyrics, /\[[^\]]+\]/);
   assert.doesNotMatch(body.lyrics, /\*/);
   assert.doesNotMatch(body.lyrics, /🤖/);
@@ -209,13 +228,15 @@ test('pre-render QA failures can be reported while provider payload stays clean'
     forbiddenElements: [],
     blockBrandContamination: false,
   });
+  const constrained = constrainProviderLyricsLength(sanitized.lyrics);
   const body = buildMiniMaxRequestBody({
     model: 'music-2.6',
     prompt: 'vocals begin immediately',
-    lyrics: sanitized.lyrics,
+    lyrics: constrained.lyrics,
   });
 
   assert.match(body.lyrics, /Something Went Wrong Again/);
+  assert.ok(body.lyrics.length <= MINIMAX_PROVIDER_LYRICS_MAX_CHARS);
   assert.doesNotMatch(body.lyrics, /\[[^\]]+\]/);
   assert.doesNotMatch(body.lyrics, /music slows|vocals start|sfx|spoken|sound effect/i);
 });
