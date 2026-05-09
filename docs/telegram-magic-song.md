@@ -29,7 +29,38 @@ TELEGRAM_MAGIC_MODE=human_review
 
 `TELEGRAM_ALLOWED_USER_IDS` is a comma-separated allowlist of Telegram user IDs.
 
-## Run the Telegram bot
+## Mobile / out-of-house dev mode
+
+Use the all-in-one mobile dev runner instead of manually starting web, admin, Telegram, and ngrok:
+
+```bash
+npm run dev:mobile
+```
+
+It starts:
+
+- web app on `http://localhost:3737`
+- workflow debug UI on `http://localhost:3747/workflow-runs`
+- Telegram bot
+- ngrok tunnel to the web app
+- macOS `caffeinate` so the laptop does not sleep while the stack is running
+
+For a stable URL that does not change after restart, set a static ngrok domain in `.env`:
+
+```bash
+NGROK_DOMAIN=your-static-domain.ngrok-free.app
+PUBLIC_APP_BASE_URL=https://your-static-domain.ngrok-free.app
+```
+
+Then run:
+
+```bash
+npm run dev:mobile
+```
+
+The runner passes the discovered/static public URL into web, admin, and Telegram as both `PUBLIC_APP_BASE_URL` and `PUBLIC_BASE_URL`.
+
+## Run the Telegram bot only
 
 ```bash
 npm run telegram
@@ -123,7 +154,7 @@ No-regression acceptance criteria:
 npm run magic -- "theme"
 npm run magic:workflow -- "theme"
 npm run magic:legacy -- "theme"
-npm run telegram
+npm run dev:mobile
 npm test
 ```
 
