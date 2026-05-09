@@ -95,6 +95,12 @@ export async function analyzeSongForReleaseSelection(songId, options = {}) {
     publish_threshold: publishThreshold,
     confidence: baseScoring.confidence,
     threshold_version: RELEASE_SELECTION_THRESHOLD_VERSION,
+    threshold_is_blocking: false,
+    scorer_mode: 'advisory_only',
+    advisory_only: true,
+    blocking: false,
+    can_continue_pipeline: true,
+    operator_override_allowed: true,
     agent: RELEASE_SELECTION_AGENT,
     agent_version: RELEASE_SELECTION_VERSION,
     created_at: song.release_recommendation?.created_at || now,
@@ -104,6 +110,7 @@ export async function analyzeSongForReleaseSelection(songId, options = {}) {
     badges,
     detected_issues: baseScoring.issues,
     release_blockers: releaseBlockers,
+    advisory_findings: releaseBlockers,
     brand_profile_id: brandProfile.brand_id || song.brand_profile_id || null,
     brand_profile_version: brandProfile.raw_profile?.version || null,
     used_llm_summary: false,
@@ -127,6 +134,8 @@ export async function analyzeSongForReleaseSelection(songId, options = {}) {
     recommended_release_treatment: recommendation.recommended_release_treatment,
     confidence: recommendation.confidence,
     threshold_version: recommendation.threshold_version,
+    scorer_mode: recommendation.scorer_mode,
+    can_continue_pipeline: recommendation.can_continue_pipeline,
     agent_version: recommendation.agent_version,
   };
   const priorHistory = Array.isArray(song.release_recommendation_history) ? song.release_recommendation_history : [];
@@ -137,7 +146,8 @@ export async function analyzeSongForReleaseSelection(songId, options = {}) {
   const updatedSong = {
     id: song.id,
     status: SONG_STATUSES.DRAFT,
-    pipeline_stage: releaseBlockers.length ? PIPELINE_STAGES.MANUAL_REVIEW_REQUIRED : PIPELINE_STAGES.RELEASE_SELECTION_COMPLETE,
+    pipeline_stage: PIPELINE_STAGES.RELEASE_SELECTION_COMPLETE,
+    scorer_review_suggested: releaseBlockers.length > 0 || recommendationValue === 'needs_manual_review',
     release_recommendation: recommendation,
     release_recommendation_history: releaseRecommendationHistory,
     marketing_inputs_from_ar: marketingInputs,
@@ -170,7 +180,14 @@ export async function analyzeRecentDraftSongsForReleaseSelection({ songIds = nul
           recommended_release_treatment: 'manual_review_required',
           score: 0,
           confidence: 'low',
+          scorer_mode: 'advisory_only',
+          advisory_only: true,
+          blocking: false,
+          can_continue_pipeline: true,
+          operator_override_allowed: true,
+          threshold_is_blocking: false,
           release_blockers: [error.message],
+          advisory_findings: [error.message],
         },
       });
     }
@@ -188,6 +205,7 @@ export async function analyzeRecentDraftSongsForReleaseSelection({ songIds = nul
     batch_id: batchId,
     agent: RELEASE_SELECTION_AGENT,
     agent_version: RELEASE_SELECTION_VERSION,
+    scorer_mode: 'advisory_only',
     songs_reviewed: results.length,
     recommended_for_publish: bucket('recommend_to_publish'),
     recommended_for_edit: bucket('recommend_to_edit'),
@@ -196,17 +214,17 @@ export async function analyzeRecentDraftSongsForReleaseSelection({ songIds = nul
     needs_manual_review: bucket('needs_manual_review'),
     top_release_candidate: topRelease?.song_id || null,
     top_social_only_candidate: topSocial?.song_id || null,
-    batch_summary: `${bucket('recommend_to_publish').length} release candidates, ${bucket('recommend_to_edit').length} edit candidates, ${bucket('recommend_to_hold').length} holds, ${bucket('recommend_to_archive').length} archive candidates, and ${bucket('needs_manual_review').length} manual reviews.`,
+    batch_summary: `${bucket('recommend_to_publish').length} release candidates, ${bucket('recommend_to_edit').length} edit candidates, ${bucket('recommend_to_hold').length} holds, ${bucket('recommend_to_archive').length} archive candidates, and ${bucket('needs_manual_review').length} manual reviews. These are recommendations only and do not block pipeline continuation.`,
     results,
   };
 }
 
 function buildRecommendedNextAction(recommendationValue, treatment) {
-  if (recommendationValue === 'recommend_to_publish') return 'Approve for DistroKid packaging.';
-  if (recommendationValue === 'recommend_to_edit') return 'Send to editing, then re-run analysis.';
-  if (recommendationValue === 'recommend_to_hold') return treatment === 'social_only' ? 'Use for social-first content or hold as draft.' : 'Hold as draft and reassess later.';
-  if (recommendationValue === 'recommend_to_archive') return 'Archive only after operator confirmation.';
-  return 'Review issues and re-run analysis after fixing blockers.';
+  if (recommendationValue === 'recommend_to_publish') return 'Strong release candidate; continue packaging or human review.';
+  if (recommendationValue === 'recommend_to_edit') return 'Consider editing or another generation pass, but continue/release if the operator chooses.';
+  if (recommendationValue === 'recommend_to_hold') return treatment === 'social_only' ? 'Good social-first candidate; continue assets or hold as draft.' : 'Consider holding as draft, but operator can continue.';
+  if (recommendationValue === 'recommend_to_archive') return 'Archive only after operator confirmation; downloads, assets, and release prep remain allowed.';
+  return 'Review advisory findings and continue, regenerate, or override manually.';
 }
 
 function clipStrength(metrics = {}) {
