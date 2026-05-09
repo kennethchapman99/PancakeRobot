@@ -1,0 +1,40 @@
+{
+  "version": "2026-05-09",
+  "currency": "USD",
+  "providers": {
+    "anthropic": {
+      "models": {
+        "claude-sonnet-4-6": {
+          "input_usd_per_1m": 3,
+          "cached_input_usd_per_1m": 0.3,
+          "output_usd_per_1m": 15
+        },
+        "claude-haiku-4-5": {
+          "input_usd_per_1m": null,
+          "cached_input_usd_per_1m": null,
+          "output_usd_per_1m": null
+        }
+      }
+    },
+    "openai": {
+      "models": {}
+    },
+    "minimax": {
+      "models": {
+        "music-2.6": {
+          "flat_usd_per_generation": null
+        },
+        "music-2.6-free": {
+          "flat_usd_per_generation": 0
+        }
+      }
+    },
+    "local": {
+      "models": {
+        "local_fast_master": {
+          "flat_usd_per_call": 0
+        }
+      }
+    }
+  }
+}
