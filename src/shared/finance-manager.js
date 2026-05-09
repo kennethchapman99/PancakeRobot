@@ -117,7 +117,8 @@ export function buildCostEvent(input = {}) {
       pricing,
     });
 
-  const pricingMissing = computed.pricingMissing || [];
+  const hasPrecomputedCost = input.computed_cost_usd !== undefined || input.computedCostUsd !== undefined;
+  const pricingMissing = hasPrecomputedCost ? [] : (computed.pricingMissing || []);
   const computedStatus = pricingMissing.length > 0 && status === 'success' ? 'estimated' : status;
 
   return compactObject({
@@ -144,12 +145,12 @@ export function buildCostEvent(input = {}) {
     video_seconds: input.video_seconds ?? input.videoSeconds ?? undefined,
     generation_count: input.generation_count ?? input.generationCount ?? undefined,
     unit_type: unitType,
-    pricing_source: computed.pricingSource,
+    pricing_source: input.pricing_source || input.pricingSource || (hasPrecomputedCost ? 'precomputed' : computed.pricingSource),
     input_rate_usd_per_1m: computed.inputRateUsdPer1m,
     cached_input_rate_usd_per_1m: computed.cachedInputRateUsdPer1m,
     output_rate_usd_per_1m: computed.outputRateUsdPer1m,
     flat_rate_usd: computed.flatRateUsd,
-    computed_cost_usd: computed.costUsd,
+    computed_cost_usd: roundUsd(hasPrecomputedCost ? (input.computed_cost_usd ?? input.computedCostUsd) : computed.costUsd),
     currency: pricing.currency || 'USD',
     status: computedStatus,
     retry_of_event_id: input.retry_of_event_id || input.retryOfEventId || null,
@@ -167,7 +168,11 @@ export function recordCostEvent(input = {}) {
 
   for (const dir of [...new Set(targets)]) {
     fs.mkdirSync(dir, { recursive: true });
-    fs.appendFileSync(path.join(dir, 'cost-events.jsonl'), `${JSON.stringify(event)}\n`);
+    const eventsPath = path.join(dir, 'cost-events.jsonl');
+    const existingEvents = readJsonl(eventsPath);
+    if (!existingEvents.some(existing => existing.id === event.id)) {
+      fs.appendFileSync(eventsPath, `${JSON.stringify(event)}\n`);
+    }
   }
 
   if (event.song_id) writeSongFinanceSummary(event.song_id);
@@ -199,6 +204,77 @@ export async function callWithCostTracking(options = {}) {
     });
     throw error;
   }
+}
+
+export async function syncSongFinanceFromRuns({ songId, sinceIso, provider = 'anthropic', model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6' }) {
+  if (!songId || !sinceIso) return { synced: 0, events: [] };
+  const { getDb } = await import('./db.js');
+  const rows = getDb().prepare(`
+    SELECT * FROM runs
+    WHERE timestamp >= ?
+    ORDER BY timestamp ASC
+  `).all(sinceIso);
+
+  const events = [];
+  for (const row of rows) {
+    const event = recordCostEvent({
+      id: `cost_${songId}_${row.id}`,
+      timestamp: row.timestamp,
+      runId: row.id,
+      songId,
+      pipelineStep: inferPipelineStep(row.agent_name, 'anthropic_agent_run'),
+      agentName: row.agent_name,
+      operation: 'anthropic_agent_run',
+      provider,
+      model,
+      inputTokens: row.input_tokens || 0,
+      outputTokens: row.output_tokens || 0,
+      cachedInputTokens: row.cache_read_tokens || 0,
+      totalTokens: (row.input_tokens || 0) + (row.output_tokens || 0) + (row.cache_read_tokens || 0),
+      unitType: 'tokens',
+      computedCostUsd: row.cost_usd || 0,
+      pricingSource: 'runs_table_precomputed',
+      status: row.status === 'success' ? 'success' : 'failed_billable',
+      notes: `synced_from_runs_table; session_id=${row.session_id || 'none'}`,
+    });
+    events.push(event);
+  }
+
+  writeSongFinanceSummary(songId);
+  return { synced: events.length, events };
+}
+
+export function syncSongFinanceArtifacts(songId) {
+  if (!songId) return { synced: 0, events: [] };
+  const events = [];
+  const audioMetaPath = path.join(SONGS_DIR, songId, 'audio', 'generation-meta.json');
+
+  if (fs.existsSync(audioMetaPath)) {
+    try {
+      const meta = JSON.parse(fs.readFileSync(audioMetaPath, 'utf8'));
+      const versions = Array.isArray(meta.versions) && meta.versions.length > 0 ? meta.versions : [{ model: meta.model, tier: meta.render_tier }];
+      const event = recordCostEvent({
+        id: `cost_${songId}_minimax_${stableIdPart(meta.generated_at || meta.model || 'audio')}`,
+        timestamp: meta.generated_at || new Date().toISOString(),
+        songId,
+        pipelineStep: 'music_generation',
+        agentName: 'music-generator',
+        operation: 'minimax_music_generation',
+        provider: 'minimax',
+        model: meta.model || versions[0]?.model || 'unknown',
+        unitType: 'audio_generation',
+        generationCount: versions.length,
+        status: 'success',
+        notes: `synced_from_audio_generation_meta; render_tier=${meta.render_tier || 'unknown'}`,
+      });
+      events.push(event);
+    } catch {
+      // Corrupt optional metadata should never block the pipeline.
+    }
+  }
+
+  writeSongFinanceSummary(songId);
+  return { synced: events.length, events };
 }
 
 export function readCostEventsForSong(songId) {
@@ -251,7 +327,7 @@ export function summarizeCostEvents(events = []) {
   summary.total_failed_retry_cost_usd = roundUsd(summary.total_failed_retry_cost_usd);
 
   if (summary.estimated_event_count > 0) summary.warnings.push('Some costs are estimated because provider pricing is missing.');
-  if (summary.total_failed_retry_cost_usd > 0) summary.warnings.push('Retries or failed billable calls contributed to total incurred cost.');
+  if (summary.total_failed_retry_cost_usd > 0) summary.warnings.push('Retries, failed billable calls, or unknown-priced events contributed to total incurred cost.');
 
   return summary;
 }
@@ -303,6 +379,22 @@ export function getRecentFinanceOverview({ limit = 25 } = {}) {
   };
 }
 
+export function getMissingPricingEntries(events = []) {
+  const missing = new Map();
+  for (const event of events) {
+    for (const key of event.pricing_missing || []) {
+      const id = `${event.provider}:${event.model}:${key}`;
+      missing.set(id, {
+        provider: event.provider,
+        model: event.model,
+        missing_field: key,
+        count: (missing.get(id)?.count || 0) + 1,
+      });
+    }
+  }
+  return [...missing.values()];
+}
+
 function addBucket(map, key, cost, event) {
   if (!map[key]) map[key] = { cost_usd: 0, count: 0 };
   map[key].cost_usd = roundUsd(map[key].cost_usd + cost);
@@ -348,4 +440,8 @@ function numberOrNull(value) {
 
 function roundUsd(value) {
   return Math.round((Number(value || 0) + Number.EPSILON) * 1_000_000) / 1_000_000;
+}
+
+function stableIdPart(value) {
+  return String(value || 'unknown').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'unknown';
 }
