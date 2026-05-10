@@ -5,6 +5,7 @@
  * - Creates agents/environments if they don't exist, persists IDs
  * - runAgent(agentName, task) → streams session, returns full response
  * - Logs all token usage to SQLite
+ * - When PIPELINE_SONG_ID is set, writes verified per-song finance events
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -15,6 +16,7 @@ import fs from 'fs';
 import { createHash } from 'crypto';
 import { calculateCost, generateRunId } from './costs.js';
 import { logRun, logError } from './db.js';
+import { recordCostEvent, inferPipelineStep } from './finance-manager.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_SLUG = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
@@ -48,6 +50,36 @@ function getClient() {
     _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   }
   return _client;
+}
+
+function recordSongFinanceIfScoped({ runId, agentName, model, inputTokens, outputTokens, cacheReadTokens, runtimeSeconds, costUsd, sessionId, status = 'success' }) {
+  const songId = String(process.env.PIPELINE_SONG_ID || '').trim();
+  if (!songId) return;
+
+  try {
+    recordCostEvent({
+      id: `cost_${songId}_${runId}`,
+      timestamp: new Date().toISOString(),
+      runId,
+      songId,
+      pipelineStep: inferPipelineStep(agentName, 'anthropic_agent_run'),
+      agentName,
+      operation: 'anthropic_agent_run',
+      provider: 'anthropic',
+      model,
+      inputTokens,
+      outputTokens,
+      cachedInputTokens: cacheReadTokens,
+      totalTokens: inputTokens + outputTokens + cacheReadTokens,
+      unitType: 'tokens',
+      computedCostUsd: costUsd,
+      pricingSource: 'managed_agent_verified',
+      status,
+      notes: `runtime_seconds=${runtimeSeconds}; session_id=${sessionId || 'none'}`,
+    });
+  } catch (err) {
+    console.log(chalk.yellow(`[FINANCE] Warning: could not record song finance event — ${err.message}`));
+  }
 }
 
 export function loadConfig() {
@@ -255,6 +287,7 @@ async function runAgentDirect(agentName, agentDef, task, options = {}) {
       } catch (dbErr) {
         console.log(chalk.yellow(`${label} Warning: could not log run to DB — ${dbErr.message}`));
       }
+      recordSongFinanceIfScoped({ runId, agentName, model, inputTokens, outputTokens, cacheReadTokens: 0, runtimeSeconds, costUsd, sessionId: 'direct' });
 
       console.log(
         `${label} ${chalk.dim(`Done in ${runtimeSeconds.toFixed(1)}s | ${inputTokens}in/${outputTokens}out tokens | $${costUsd.toFixed(5)}`)}`
@@ -451,6 +484,7 @@ export async function runAgent(agentName, agentDef, task, options = {}) {
       } catch (dbErr) {
         console.log(chalk.yellow(`${label} Warning: could not log run to DB — ${dbErr.message}`));
       }
+      recordSongFinanceIfScoped({ runId, agentName, model: agentDef.model || 'claude-sonnet-4-6', inputTokens, outputTokens, cacheReadTokens, runtimeSeconds, costUsd, sessionId });
 
       console.log(
         `${label} ${chalk.dim(`Done in ${runtimeSeconds.toFixed(1)}s | ${inputTokens}in/${outputTokens}out tokens | $${costUsd.toFixed(5)}`)}`

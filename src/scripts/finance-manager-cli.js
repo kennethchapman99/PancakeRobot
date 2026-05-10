@@ -11,7 +11,6 @@ import {
   getSongFinanceSummary,
   readCostEventsForSong,
   syncSongFinanceArtifacts,
-  syncSongFinanceFromRuns,
   writeSongFinanceSummary,
 } from '../shared/finance-manager.js';
 import { getSong } from '../shared/db.js';
@@ -47,8 +46,8 @@ function printSummary(summary) {
   console.log(`Final asset cost:     $${Number(summary.total_final_asset_cost_usd || 0).toFixed(4)}`);
   console.log(`Retry/waste/unknown:  $${Number(summary.total_failed_retry_cost_usd || 0).toFixed(4)}`);
   console.log(`Events:               ${summary.event_count || 0}`);
-  if (summary.backfilled_from_runs_since) {
-    console.log(`Backfilled runs since: ${summary.backfilled_from_runs_since}`);
+  if (summary.ignored_legacy_event_count) {
+    console.log(`Ignored legacy events: ${summary.ignored_legacy_event_count}`);
   }
   if (summary.warnings?.length) {
     console.log('\nWarnings:');
@@ -96,20 +95,22 @@ function findSongFolder(input) {
     || null;
 }
 
-async function syncForSong(inputSongId, { since } = {}) {
+function syncForSong(inputSongId) {
   const resolved = resolveSongId(inputSongId);
-  const sinceIso = since || resolved.song?.created_at || null;
-
   syncSongFinanceArtifacts(resolved.songId);
-  if (sinceIso) await syncSongFinanceFromRuns({ songId: resolved.songId, sinceIso });
 
   const summary = getSongFinanceSummary(resolved.songId);
   summary.requested_song_id = inputSongId;
-  if (sinceIso) summary.backfilled_from_runs_since = sinceIso;
+  if ((summary.event_count || 0) === 0) {
+    summary.warnings = [
+      ...(summary.warnings || []),
+      'No verified finance events were found for this song. Old global run-table backfills are intentionally ignored because they cannot be reliably attributed to a specific song.',
+    ];
+  }
   if (!resolved.song) {
     summary.warnings = [
       ...(summary.warnings || []),
-      `Song was not found in the DB. Resolved to ${resolved.songId}; only filesystem artifact costs can be synced unless you pass --since.`,
+      `Song was not found in the DB. Resolved to ${resolved.songId}; only filesystem artifact costs can be synced.`,
     ];
   }
   return summary;
@@ -121,14 +122,14 @@ async function main() {
 
   if (command === 'summary') {
     if (args.song) {
-      const summary = await syncForSong(args.song, { since: args.since });
+      const summary = syncForSong(args.song);
       return args.json ? printJson(summary) : printSummary(summary);
     }
     if (args.run) {
       const summary = getRunFinanceSummary(args.run);
       return args.json ? printJson(summary) : printSummary(summary);
     }
-    console.error('Usage: npm run finance:summary -- --song SONG_ID [--since ISO] [--json]');
+    console.error('Usage: npm run finance:summary -- --song SONG_ID [--json]');
     console.error('   or: npm run finance:summary -- --run RUN_ID [--json]');
     process.exitCode = 1;
     return;
@@ -141,7 +142,7 @@ async function main() {
 
   if (command === 'missing-prices') {
     if (args.song) {
-      const summary = await syncForSong(args.song, { since: args.since });
+      const summary = syncForSong(args.song);
       return printJson(getMissingPricingEntries(summary.events || readCostEventsForSong(summary.song_id)));
     }
     const overview = getRecentFinanceOverview({ limit: Number(args.limit) || 500 });
