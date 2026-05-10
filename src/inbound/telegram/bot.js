@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const dotenv = require('dotenv');
-dotenv.config({ path: join(__dirname, '../../../.env'), override: true });
+dotenv.config({ path: join(__dirname, '../../../.env'), override: false });
 
 import { handleTelegramCallback, handleTelegramMessage } from './magic-song-handler.js';
 
@@ -80,6 +80,9 @@ async function main() {
 
   console.log('Telegram Magic Song bot started.');
   console.log(`Authorized Telegram users: ${allowedUserIds.size}`);
+  if (process.env.PUBLIC_APP_BASE_URL || process.env.PUBLIC_BASE_URL) {
+    console.log(`Public app base URL: ${process.env.PUBLIC_APP_BASE_URL || process.env.PUBLIC_BASE_URL}`);
+  }
 
   while (true) {
     try {
