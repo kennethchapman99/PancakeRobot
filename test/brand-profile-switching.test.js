@@ -29,7 +29,14 @@ test('profile list includes default profile first', () => {
 
 test('custom Sue profile remains selectable but isolated', () => {
   const profiles = listBrandProfiles();
-  const sue = profiles.find(profile => profile.name.includes('Sue') || profile.id === 'my-new-brand');
+  const sue = profiles.find((profileSummary) => {
+    try {
+      const profile = loadBrandProfileById(profileSummary.id);
+      return profile.character?.name === 'Sue Wong';
+    } catch {
+      return false;
+    }
+  });
 
   assert.ok(sue);
 
