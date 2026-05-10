@@ -3,6 +3,7 @@ import { runMagicSongWorkflow } from '../../workflows/magic-song-workflow.js';
 import { buildBrandKeyboard, findBrandChoice, parseBrandCallback } from './brand-selector.js';
 import { clearPendingMagicSong, getTelegramSession, updateTelegramSession } from './session-store.js';
 import { getHelpText, parseTelegramCommand } from './commands.js';
+import { buildSongPublicLinks } from '../../shared/song-public-links.js';
 import {
   buildTelegramMagicSongIdempotencyKey,
   createTelegramRequestLock,
@@ -186,11 +187,31 @@ function formatPipelineStage(stage) {
   }
 }
 
-function formatFinalResult(result = {}) {
+export function formatFinalResult(result = {}) {
+  const links = result.songId ? buildSongPublicLinks(result.songId) : {};
+  const title = result.title || result.songId || 'Magic Song';
+  const audioUrl = result.audioUrl || links.audioUrl;
+  const detailUrl = result.detailUrl || result.previewUrl || links.detailUrl;
+  const releaseKitUrl = result.releaseKitUrl || links.releaseKitUrl;
+  const publicBaseConfigured = result.publicBaseConfigured ?? links.publicBaseConfigured;
+  const isLocalBaseUrl = result.isLocalBaseUrl ?? links.isLocalBaseUrl;
+
   const lines = [
-    `Done — ${result.title || result.songId || 'Magic Song'}`,
+    `🎵 Song ready: ${title}`,
     '',
   ];
+
+  if (audioUrl) {
+    lines.push('▶️ Listen / download MP3:', audioUrl, '');
+  }
+
+  if (detailUrl) {
+    lines.push('📄 Song details:', detailUrl, '');
+  }
+
+  if (releaseKitUrl) {
+    lines.push('📦 Release kit:', releaseKitUrl, '');
+  }
 
   if (result.score !== null && result.score !== undefined) lines.push(`Score: ${result.score}`);
   if (result.status) lines.push(`Recommendation: ${result.status}`);
@@ -200,11 +221,13 @@ function formatFinalResult(result = {}) {
     for (const item of result.rationale.slice(0, 4)) lines.push(`- ${item}`);
   }
 
-  if (result.previewUrl) lines.push('', `Song: ${result.previewUrl}`);
-  if (result.releaseKitUrl) lines.push(`Release kit: ${result.releaseKitUrl}`);
+  if (!publicBaseConfigured || isLocalBaseUrl) {
+    lines.push('', '⚠️ Public URL not configured. Set PUBLIC_BASE_URL or NGROK_URL so these links work outside your home network.');
+  }
+
   if (result.runId) lines.push('', `Run: ${result.runId}`);
 
-  return lines.join('\n');
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function isAuthorized(fromId, allowedUserIds) {
