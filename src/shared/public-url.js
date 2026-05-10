@@ -8,7 +8,13 @@ export function normalizeBaseUrl(value) {
 
 export function getPublicBaseUrl(options = {}) {
   const allowLocalFallback = options.allowLocalFallback !== false;
-  const configured = normalizeBaseUrl(process.env.PUBLIC_APP_BASE_URL || process.env.PUBLIC_BASE_URL);
+  const configured = normalizeBaseUrl(
+    process.env.PUBLIC_APP_BASE_URL ||
+    process.env.PUBLIC_BASE_URL ||
+    process.env.TELEGRAM_PUBLIC_BASE_URL ||
+    process.env.NGROK_URL ||
+    process.env.NGROK_PUBLIC_URL
+  );
   if (configured) return configured;
   return allowLocalFallback ? LOCAL_DEFAULT_PUBLIC_BASE_URL : '';
 }
