@@ -25,7 +25,7 @@ async function main() {
   const caffeinate = startCaffeinate();
   if (caffeinate) children.push(caffeinate);
 
-  let publicBaseUrl = resolveConfiguredPublicBaseUrl();
+  let publicBaseUrl = resolveStaticNgrokUrl();
   let ngrokProcess = null;
 
   if (!DISABLE_NGROK) {
@@ -58,22 +58,33 @@ async function main() {
   process.once('SIGTERM', () => shutdown(0));
 }
 
-function resolveConfiguredPublicBaseUrl() {
-  const explicit = normalizeBaseUrl(process.env.PUBLIC_APP_BASE_URL);
-  if (explicit && !isLocalUrl(explicit)) return explicit;
-
-  const domain = String(process.env.NGROK_DOMAIN || process.env.NGROK_STATIC_DOMAIN || '')
-    .trim()
-    .replace(/^https?:\/\//i, '')
-    .replace(/\/+$/, '');
+function resolveStaticNgrokUrl() {
+  const domain = normalizeNgrokDomain(process.env.NGROK_DOMAIN || process.env.NGROK_STATIC_DOMAIN);
   if (domain) return `https://${domain}`;
+
+  // Safety: PUBLIC_APP_BASE_URL may be stale, random, local, or a placeholder. Do not pass it
+  // to ngrok as --url unless the operator explicitly opts in.
+  if (isTruthy(process.env.PANCAKE_USE_PUBLIC_APP_BASE_URL_FOR_NGROK)) {
+    const explicit = normalizeBaseUrl(process.env.PUBLIC_APP_BASE_URL);
+    if (explicit && !isLocalUrl(explicit) && !isInvalidStaticNgrokUrl(explicit)) return explicit;
+  }
 
   return '';
 }
 
-function startNgrok(publicBaseUrl) {
+function normalizeNgrokDomain(value) {
+  const domain = String(value || '')
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/+$/, '');
+
+  if (!domain || domain === 'ngrok-free.app' || domain === 'your-static-domain.ngrok-free.app') return '';
+  return domain;
+}
+
+function startNgrok(staticUrl) {
   const args = ['http'];
-  if (publicBaseUrl) args.push(`--url=${publicBaseUrl}`);
+  if (staticUrl) args.push(`--url=${staticUrl}`);
   args.push(WEB_PORT);
 
   const child = spawn('ngrok', args, {
@@ -157,6 +168,11 @@ function normalizeBaseUrl(value) {
 function isLocalUrl(value) {
   const normalized = normalizeBaseUrl(value).toLowerCase();
   return normalized.startsWith('http://localhost') || normalized.startsWith('https://localhost') || normalized.startsWith('http://127.0.0.1') || normalized.startsWith('https://127.0.0.1');
+}
+
+function isInvalidStaticNgrokUrl(value) {
+  const normalized = normalizeBaseUrl(value).toLowerCase();
+  return normalized === 'https://ngrok-free.app' || normalized === 'https://your-static-domain.ngrok-free.app';
 }
 
 function isTruthy(value) {
