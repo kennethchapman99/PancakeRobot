@@ -1,14 +1,15 @@
 /**
  * Web render-mode + finance bridge.
  *
- * The existing web server owns the /api/songs/:id/generate route and spawns
- * src/orchestrator.js. This preload keeps that server stable while adding:
+ * Keeps the existing web server stable while adding:
  *
  * 1. UI paid/free selector authority for MiniMax renders.
  * 2. Finance Manager API routes and a small song detail widget.
- * 3. Post-pipeline finance sync from existing run/token telemetry.
+ * 3. Verified per-song finance scoping via PIPELINE_SONG_ID.
  *
- * Paid remains the default.
+ * Important: do not reconstruct song costs from the global runs table. That
+ * data is not reliably attributable to one song. Agent calls write verified
+ * song cost events directly when PIPELINE_SONG_ID is present.
  */
 
 import { createRequire, syncBuiltinESMExports } from 'module';
@@ -61,19 +62,20 @@ const FINANCE_WIDGET_JS = String.raw`
     card.innerHTML = '<div class="flex items-start justify-between gap-4">'
       + '<div><div class="text-xs uppercase tracking-wide text-zinc-500 font-semibold">Finance Manager</div>'
       + '<div class="mt-1 text-3xl font-bold text-zinc-950">' + money(summary.total_cost_usd) + '</div>'
-      + '<div class="mt-1 text-sm text-zinc-500">Total incurred cost across LLM/provider calls, retries, and generated assets.</div></div>'
+      + '<div class="mt-1 text-sm text-zinc-500">Verified incurred cost from scoped provider calls and generated assets.</div></div>'
       + '<button type="button" data-finance-open class="px-3 py-2 rounded-lg bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-700">View Cost Breakdown</button>'
       + '</div>'
-      + '<div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">'
+      + '<div class="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">'
       + '<div class="rounded-lg bg-zinc-50 p-3"><div class="text-zinc-500">Events</div><div class="font-semibold text-zinc-950">' + (summary.event_count || 0) + '</div></div>'
       + '<div class="rounded-lg bg-zinc-50 p-3"><div class="text-zinc-500">Final Asset Cost</div><div class="font-semibold text-zinc-950">' + money(summary.total_final_asset_cost_usd) + '</div></div>'
       + '<div class="rounded-lg bg-zinc-50 p-3"><div class="text-zinc-500">Retry/Waste/Unknown</div><div class="font-semibold text-zinc-950">' + money(summary.total_failed_retry_cost_usd) + '</div></div>'
       + '<div class="rounded-lg bg-zinc-50 p-3"><div class="text-zinc-500">Estimated</div><div class="font-semibold text-zinc-950">' + (summary.estimated_event_count || 0) + '</div></div>'
+      + '<div class="rounded-lg bg-zinc-50 p-3"><div class="text-zinc-500">Ignored Legacy</div><div class="font-semibold text-zinc-950">' + (summary.ignored_legacy_event_count || 0) + '</div></div>'
       + '</div>'
       + '<div class="mt-4 space-y-2">' + (steps.length ? steps.map(([step, value]) => {
           const width = Math.max(2, Math.round((Number(value.cost_usd || 0) / max) * 100));
           return '<div><div class="flex justify-between text-xs text-zinc-600 mb-1"><span>' + titleize(step) + '</span><span>' + money(value.cost_usd) + '</span></div><div class="h-2 rounded-full bg-zinc-100 overflow-hidden"><div class="h-full bg-zinc-900" style="width:' + width + '%"></div></div></div>';
-        }).join('') : '<div class="text-sm text-zinc-500 rounded-lg bg-zinc-50 p-3">No finance events yet. This will populate after the next pipeline run or finance sync.</div>') + '</div>'
+        }).join('') : '<div class="text-sm text-zinc-500 rounded-lg bg-zinc-50 p-3">No verified finance events yet. New pipeline runs will write scoped events automatically.</div>') + '</div>'
       + (warnings.length ? '<div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 p-3 text-sm">' + warnings.map(w => '<div>• ' + w + '</div>').join('') + '</div>' : '');
 
     const header = root.querySelector('h1')?.closest('div') || null;
@@ -93,9 +95,9 @@ const FINANCE_WIDGET_JS = String.raw`
       + '<td class="py-2 pr-3">' + (e.status || '—') + '</td>'
       + '</tr>').join('');
     modal.innerHTML = '<div class="bg-white rounded-2xl shadow-xl max-w-6xl w-full max-h-[85vh] overflow-hidden">'
-      + '<div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4"><div><div class="text-lg font-bold">Cost Breakdown</div><div class="text-sm text-zinc-500">Total incurred: ' + money(summary.total_cost_usd) + '</div></div><button type="button" data-finance-close class="text-zinc-500 hover:text-zinc-900 text-2xl leading-none">×</button></div>'
+      + '<div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4"><div><div class="text-lg font-bold">Cost Breakdown</div><div class="text-sm text-zinc-500">Verified total: ' + money(summary.total_cost_usd) + '</div></div><button type="button" data-finance-close class="text-zinc-500 hover:text-zinc-900 text-2xl leading-none">×</button></div>'
       + '<div class="p-5 overflow-auto max-h-[70vh]"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase tracking-wide text-zinc-500"><th class="pb-2 pr-3">Step</th><th class="pb-2 pr-3">Agent</th><th class="pb-2 pr-3">Provider</th><th class="pb-2 pr-3 text-right">In</th><th class="pb-2 pr-3 text-right">Out</th><th class="pb-2 pr-3 text-right">Cost</th><th class="pb-2 pr-3">Status</th></tr></thead><tbody>'
-      + (rows || '<tr><td colspan="7" class="py-6 text-zinc-500">No cost events yet.</td></tr>')
+      + (rows || '<tr><td colspan="7" class="py-6 text-zinc-500">No verified cost events yet.</td></tr>')
       + '</tbody></table></div></div>';
     document.body.appendChild(modal);
 
@@ -145,9 +147,7 @@ function registerFinanceRoutes(app) {
     try {
       const finance = await import('../shared/finance-manager.js');
       const artifactSync = finance.syncSongFinanceArtifacts(req.params.id);
-      const sinceIso = req.body?.sinceIso || req.query?.sinceIso;
-      const runSync = sinceIso ? await finance.syncSongFinanceFromRuns({ songId: req.params.id, sinceIso }) : { synced: 0, events: [] };
-      res.json({ ok: true, artifactSync, runSync, finance: finance.getSongFinanceSummary(req.params.id) });
+      res.json({ ok: true, artifactSync, runSync: { synced: 0, skipped: true, reason: 'run-table backfill disabled' }, finance: finance.getSongFinanceSummary(req.params.id) });
     } catch (error) {
       res.status(500).json({ ok: false, error: error.message });
     }
@@ -175,8 +175,8 @@ function registerFinanceRoutes(app) {
     try {
       const finance = await import('../shared/finance-manager.js');
       const overview = finance.getRecentFinanceOverview({ limit: 50 });
-      const rows = overview.rows.map(row => '<tr><td><a href="/songs/' + encodeURIComponent(row.song_id) + '">' + row.song_id + '</a></td><td>$' + Number(row.total_cost_usd || 0).toFixed(4) + '</td><td>' + row.event_count + '</td><td>' + row.estimated_event_count + '</td></tr>').join('');
-      res.send('<!doctype html><html><head><title>Finance Manager</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-zinc-50 text-zinc-950"><main class="max-w-6xl mx-auto p-8"><div class="flex items-end justify-between"><div><h1 class="text-3xl font-bold">Finance Manager</h1><p class="text-zinc-500 mt-1">Total tracked spend: $' + Number(overview.total_cost_usd || 0).toFixed(4) + '</p></div><a href="/songs" class="text-sm underline">Back to songs</a></div><section class="bg-white border border-zinc-200 rounded-xl mt-6 overflow-hidden"><table class="w-full text-sm"><thead class="bg-zinc-50 text-left"><tr><th class="p-3">Song</th><th class="p-3">Total Cost</th><th class="p-3">Events</th><th class="p-3">Estimated</th></tr></thead><tbody>' + (rows || '<tr><td colspan="4" class="p-6 text-zinc-500">No finance events found yet.</td></tr>') + '</tbody></table></section></main></body></html>');
+      const rows = overview.rows.map(row => '<tr><td><a href="/songs/' + encodeURIComponent(row.song_id) + '">' + row.song_id + '</a></td><td>$' + Number(row.total_cost_usd || 0).toFixed(4) + '</td><td>' + row.event_count + '</td><td>' + row.ignored_legacy_event_count + '</td><td>' + row.estimated_event_count + '</td></tr>').join('');
+      res.send('<!doctype html><html><head><title>Finance Manager</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-zinc-50 text-zinc-950"><main class="max-w-6xl mx-auto p-8"><div class="flex items-end justify-between"><div><h1 class="text-3xl font-bold">Finance Manager</h1><p class="text-zinc-500 mt-1">Verified tracked spend: $' + Number(overview.total_cost_usd || 0).toFixed(4) + '</p></div><a href="/songs" class="text-sm underline">Back to songs</a></div><section class="bg-white border border-zinc-200 rounded-xl mt-6 overflow-hidden"><table class="w-full text-sm"><thead class="bg-zinc-50 text-left"><tr><th class="p-3">Song</th><th class="p-3">Verified Cost</th><th class="p-3">Events</th><th class="p-3">Ignored Legacy</th><th class="p-3">Estimated</th></tr></thead><tbody>' + (rows || '<tr><td colspan="5" class="p-6 text-zinc-500">No verified finance events found yet.</td></tr>') + '</tbody></table></section></main></body></html>');
     } catch (error) {
       res.status(500).send(error.message);
     }
@@ -204,7 +204,6 @@ express.application.post = function patchedPost(path, ...handlers) {
         try {
           return handler.call(this, req, res, next);
         } finally {
-          // child_process.spawn is called synchronously inside the route handler.
           activeRenderMode = previousMode;
         }
       };
@@ -224,7 +223,6 @@ childProcess.spawn = function patchedSpawn(command, args = [], options = {}) {
 
   const idIndex = argList.indexOf('--id');
   const spawnedSongId = idIndex >= 0 ? String(argList[idIndex + 1] || '').trim() : '';
-  const financeStartedAtIso = isSongPipelineSpawn ? new Date().toISOString() : null;
 
   if (isSongPipelineSpawn) {
     const renderMode = normalizeRenderMode(
@@ -241,6 +239,7 @@ childProcess.spawn = function patchedSpawn(command, args = [], options = {}) {
         ...process.env,
         ...(options.env || {}),
         ...renderEnv,
+        ...(spawnedSongId ? { PIPELINE_SONG_ID: spawnedSongId } : {}),
       },
     };
   }
@@ -252,10 +251,9 @@ childProcess.spawn = function patchedSpawn(command, args = [], options = {}) {
       setTimeout(async () => {
         try {
           const finance = await import('../shared/finance-manager.js');
-          await finance.syncSongFinanceFromRuns({ songId: spawnedSongId, sinceIso: financeStartedAtIso });
           finance.syncSongFinanceArtifacts(spawnedSongId);
         } catch (error) {
-          console.warn(`[FINANCE] Could not sync finance ledger for ${spawnedSongId}: ${error.message}`);
+          console.warn(`[FINANCE] Could not sync artifact finance ledger for ${spawnedSongId}: ${error.message}`);
         }
       }, 0);
     });
