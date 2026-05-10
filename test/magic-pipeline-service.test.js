@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { prepareTestDbSlug } from '../src/shared/test-db-artifacts.js';
 
-process.env.PIPELINE_APP_SLUG = `test-magic-service-${Date.now()}`;
+process.env.PIPELINE_APP_SLUG = prepareTestDbSlug('test-magic-service').slug;
 
 const service = await import('../src/services/magic-pipeline-service.js');
 
