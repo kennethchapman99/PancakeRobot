@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { createWorkflowRunId, runWorkflow, WorkflowError } from '../../packages/openclaw-core/index.js';
 import { getSong } from '../shared/db.js';
 import { loadBrandProfileById, resolveBrandProfilePath, DEFAULT_PROFILE_ID } from '../shared/brand-profile.js';
-import { buildPublicUrl } from '../shared/public-url.js';
+import { buildSongPublicLinks } from '../shared/song-public-links.js';
 import {
   createWorkflowRunRecord,
   getWorkflowRunByIdempotencyKey,
@@ -135,8 +135,7 @@ export async function runMagicSongWorkflow(input, options = {}) {
           const serviceResult = state.context.serviceResult || {};
           const releaseRecommendation = song?.release_recommendation || {};
           const recommendation = serviceResult.recommendation || releaseRecommendation?.recommendation || {};
-          const songPath = `/songs/${encodeURIComponent(state.input.songId)}`;
-          const releaseKitPath = `/release-kit/${encodeURIComponent(state.input.songId)}?preview=1`;
+          const links = buildSongPublicLinks(state.input.songId);
 
           const result = {
             runId: state.runId,
@@ -145,11 +144,18 @@ export async function runMagicSongWorkflow(input, options = {}) {
             status: serviceResult.status || mapRecommendationToStatus(recommendation.value),
             score: recommendation.score ?? releaseRecommendation.score ?? null,
             rationale: extractRationale(releaseRecommendation),
-            previewPath: songPath,
-            releaseKitPath,
-            previewUrl: buildPublicUrl(songPath),
-            releaseKitUrl: buildPublicUrl(releaseKitPath),
-            audioUrl: null,
+            previewPath: links.detailPath,
+            releaseKitPath: links.releaseKitPath,
+            previewUrl: links.detailUrl,
+            detailPath: links.detailPath,
+            detailUrl: links.detailUrl,
+            releaseKitUrl: links.releaseKitUrl,
+            audioPath: links.audioPath,
+            audioUrl: links.audioUrl,
+            audioKind: links.audioKind,
+            hasAudio: links.hasAudio,
+            publicBaseConfigured: links.publicBaseConfigured,
+            isLocalBaseUrl: links.isLocalBaseUrl,
             brandId: state.input.brandId,
             brandName: serviceResult.brandName || state.context.brandName,
             mode: state.input.mode,
