@@ -9,6 +9,7 @@ const SONGS_DIR = path.join(OUTPUT_DIR, 'songs');
 const RUNS_DIR = path.join(OUTPUT_DIR, 'runs');
 const PRICING_PATH = process.env.PROVIDER_PRICING_PATH || path.join(ROOT_DIR, 'config/provider-pricing.json');
 const COST_EVENT_VERSION = '1.0.0';
+const LEGACY_UNTRUSTED_PRICING_SOURCES = new Set(['runs_table_precomputed']);
 
 export function loadProviderPricing(pricingPath = PRICING_PATH) {
   try {
@@ -46,7 +47,6 @@ export function computeTokenCost({ provider, model, inputTokens = 0, outputToken
   const cachedInputRate = numberOrNull(modelCfg.cached_input_usd_per_1m);
   const outputRate = numberOrNull(modelCfg.output_usd_per_1m);
   const flatCallRate = numberOrNull(modelCfg.flat_usd_per_call);
-
   const unknown = [];
   let cost = 0;
 
@@ -60,9 +60,7 @@ export function computeTokenCost({ provider, model, inputTokens = 0, outputToken
   if (billedOutputTokens && outputRate === null) unknown.push('output_usd_per_1m');
   else cost += (billedOutputTokens / 1_000_000) * (outputRate || 0);
 
-  if (!inputTokens && !cachedInputTokens && !billedOutputTokens && flatCallRate !== null) {
-    cost += flatCallRate;
-  }
+  if (!inputTokens && !cachedInputTokens && !billedOutputTokens && flatCallRate !== null) cost += flatCallRate;
 
   return {
     costUsd: roundUsd(cost),
@@ -81,13 +79,11 @@ export function computeFlatGenerationCost({ provider, model, operation = 'genera
   const flatGenerationRate = numberOrNull(modelCfg.flat_usd_per_generation);
   const flatCallRate = numberOrNull(modelCfg.flat_usd_per_call);
   const rate = flatGenerationRate ?? flatCallRate;
-  const pricingMissing = rate === null ? [`flat_usd_per_${operation}`] : [];
-
   return {
     costUsd: rate === null ? 0 : roundUsd(rate * Math.max(1, Number(generationCount) || 1)),
     pricingSource: pricing.version || 'unknown',
     flatRateUsd: rate,
-    pricingMissing,
+    pricingMissing: rate === null ? [`flat_usd_per_${operation}`] : [],
   };
 }
 
@@ -98,7 +94,6 @@ export function buildCostEvent(input = {}) {
   const unitType = input.unit_type || input.unitType || 'tokens';
   const status = input.status || 'success';
   const pipelineStep = input.pipeline_step || input.pipelineStep || inferPipelineStep(input.agent_name || input.agentName, input.operation);
-
   const computed = unitType === 'tokens'
     ? computeTokenCost({
       provider,
@@ -162,19 +157,14 @@ export function buildCostEvent(input = {}) {
 export function recordCostEvent(input = {}) {
   const event = buildCostEvent(input);
   const targets = [];
-
   if (event.song_id) targets.push(getFinanceDirForSong(event.song_id));
   if (event.run_id) targets.push(getFinanceDirForRun(event.run_id));
-
   for (const dir of [...new Set(targets)]) {
     fs.mkdirSync(dir, { recursive: true });
     const eventsPath = path.join(dir, 'cost-events.jsonl');
     const existingEvents = readJsonl(eventsPath);
-    if (!existingEvents.some(existing => existing.id === event.id)) {
-      fs.appendFileSync(eventsPath, `${JSON.stringify(event)}\n`);
-    }
+    if (!existingEvents.some(existing => existing.id === event.id)) fs.appendFileSync(eventsPath, `${JSON.stringify(event)}\n`);
   }
-
   if (event.song_id) writeSongFinanceSummary(event.song_id);
   if (event.run_id) writeRunFinanceSummary(event.run_id);
   return event;
@@ -206,54 +196,24 @@ export async function callWithCostTracking(options = {}) {
   }
 }
 
-export async function syncSongFinanceFromRuns({ songId, sinceIso, provider = 'anthropic', model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6' }) {
-  if (!songId || !sinceIso) return { synced: 0, events: [] };
-  const { getDb } = await import('./db.js');
-  const rows = getDb().prepare(`
-    SELECT * FROM runs
-    WHERE timestamp >= ?
-    ORDER BY timestamp ASC
-  `).all(sinceIso);
-
-  const events = [];
-  for (const row of rows) {
-    const event = recordCostEvent({
-      id: `cost_${songId}_${row.id}`,
-      timestamp: row.timestamp,
-      runId: row.id,
-      songId,
-      pipelineStep: inferPipelineStep(row.agent_name, 'anthropic_agent_run'),
-      agentName: row.agent_name,
-      operation: 'anthropic_agent_run',
-      provider,
-      model,
-      inputTokens: row.input_tokens || 0,
-      outputTokens: row.output_tokens || 0,
-      cachedInputTokens: row.cache_read_tokens || 0,
-      totalTokens: (row.input_tokens || 0) + (row.output_tokens || 0) + (row.cache_read_tokens || 0),
-      unitType: 'tokens',
-      computedCostUsd: row.cost_usd || 0,
-      pricingSource: 'runs_table_precomputed',
-      status: row.status === 'success' ? 'success' : 'failed_billable',
-      notes: `synced_from_runs_table; session_id=${row.session_id || 'none'}`,
-    });
-    events.push(event);
-  }
-
-  writeSongFinanceSummary(songId);
-  return { synced: events.length, events };
+export async function syncSongFinanceFromRuns() {
+  return {
+    synced: 0,
+    events: [],
+    skipped: true,
+    reason: 'Disabled: global runs table entries are not reliably attributable to individual songs. Use direct cost events written with PIPELINE_SONG_ID.',
+  };
 }
 
 export function syncSongFinanceArtifacts(songId) {
   if (!songId) return { synced: 0, events: [] };
   const events = [];
   const audioMetaPath = path.join(SONGS_DIR, songId, 'audio', 'generation-meta.json');
-
   if (fs.existsSync(audioMetaPath)) {
     try {
       const meta = JSON.parse(fs.readFileSync(audioMetaPath, 'utf8'));
       const versions = Array.isArray(meta.versions) && meta.versions.length > 0 ? meta.versions : [{ model: meta.model, tier: meta.render_tier }];
-      const event = recordCostEvent({
+      events.push(recordCostEvent({
         id: `cost_${songId}_minimax_${stableIdPart(meta.generated_at || meta.model || 'audio')}`,
         timestamp: meta.generated_at || new Date().toISOString(),
         songId,
@@ -265,14 +225,10 @@ export function syncSongFinanceArtifacts(songId) {
         unitType: 'audio_generation',
         generationCount: versions.length,
         status: 'success',
-        notes: `synced_from_audio_generation_meta; render_tier=${meta.render_tier || 'unknown'}`,
-      });
-      events.push(event);
-    } catch {
-      // Corrupt optional metadata should never block the pipeline.
-    }
+        notes: `verified_from_audio_generation_meta; render_tier=${meta.render_tier || 'unknown'}`,
+      }));
+    } catch {}
   }
-
   writeSongFinanceSummary(songId);
   return { synced: events.length, events };
 }
@@ -285,12 +241,22 @@ export function readCostEventsForRun(runId) {
   return readJsonl(path.join(getFinanceDirForRun(runId), 'cost-events.jsonl'));
 }
 
+export function isTrustedCostEvent(event = {}) {
+  if (LEGACY_UNTRUSTED_PRICING_SOURCES.has(event.pricing_source)) return false;
+  if (String(event.notes || '').includes('synced_from_runs_table')) return false;
+  return true;
+}
+
 export function summarizeCostEvents(events = []) {
+  const trustedEvents = events.filter(isTrustedCostEvent);
+  const ignoredLegacyEventCount = events.length - trustedEvents.length;
   const summary = {
     total_cost_usd: 0,
     total_final_asset_cost_usd: 0,
     total_failed_retry_cost_usd: 0,
-    event_count: events.length,
+    event_count: trustedEvents.length,
+    raw_event_count: events.length,
+    ignored_legacy_event_count: ignoredLegacyEventCount,
     estimated_event_count: 0,
     unknown_pricing_event_count: 0,
     by_pipeline_step: {},
@@ -299,22 +265,16 @@ export function summarizeCostEvents(events = []) {
     by_model: {},
     by_status: {},
     warnings: [],
-    events,
+    events: trustedEvents,
   };
 
-  for (const event of events) {
+  for (const event of trustedEvents) {
     const cost = Number(event.computed_cost_usd || 0);
     summary.total_cost_usd += cost;
-
-    if (['failed_billable', 'estimated'].includes(event.status) || event.retry_of_event_id) {
-      summary.total_failed_retry_cost_usd += cost;
-    } else {
-      summary.total_final_asset_cost_usd += cost;
-    }
-
+    if (['failed_billable', 'estimated'].includes(event.status) || event.retry_of_event_id) summary.total_failed_retry_cost_usd += cost;
+    else summary.total_final_asset_cost_usd += cost;
     if (event.status === 'estimated') summary.estimated_event_count += 1;
     if (event.pricing_missing?.length) summary.unknown_pricing_event_count += 1;
-
     addBucket(summary.by_pipeline_step, event.pipeline_step || 'unknown', cost, event);
     addBucket(summary.by_agent, event.agent_name || 'unknown', cost, event);
     addBucket(summary.by_provider, event.provider || 'unknown', cost, event);
@@ -325,24 +285,21 @@ export function summarizeCostEvents(events = []) {
   summary.total_cost_usd = roundUsd(summary.total_cost_usd);
   summary.total_final_asset_cost_usd = roundUsd(summary.total_final_asset_cost_usd);
   summary.total_failed_retry_cost_usd = roundUsd(summary.total_failed_retry_cost_usd);
-
+  if (ignoredLegacyEventCount > 0) summary.warnings.push(`${ignoredLegacyEventCount} legacy run-table backfill event(s) were ignored because they are not reliable song-level finance data.`);
   if (summary.estimated_event_count > 0) summary.warnings.push('Some costs are estimated because provider pricing is missing.');
   if (summary.total_failed_retry_cost_usd > 0) summary.warnings.push('Retries, failed billable calls, or unknown-priced events contributed to total incurred cost.');
-
   return summary;
 }
 
 export function getSongFinanceSummary(songId) {
-  const events = readCostEventsForSong(songId);
-  const summary = summarizeCostEvents(events);
+  const summary = summarizeCostEvents(readCostEventsForSong(songId));
   summary.song_id = songId;
   summary.summary_path = path.join(getFinanceDirForSong(songId), 'cost-summary.json');
   return summary;
 }
 
 export function getRunFinanceSummary(runId) {
-  const events = readCostEventsForRun(runId);
-  const summary = summarizeCostEvents(events);
+  const summary = summarizeCostEvents(readCostEventsForRun(runId));
   summary.run_id = runId;
   summary.summary_path = path.join(getFinanceDirForRun(runId), 'cost-summary.json');
   return summary;
@@ -366,30 +323,16 @@ export function writeRunFinanceSummary(runId) {
 
 export function getRecentFinanceOverview({ limit = 25 } = {}) {
   const songs = fs.existsSync(SONGS_DIR) ? fs.readdirSync(SONGS_DIR, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [];
-  const rows = songs
-    .map(songId => getSongFinanceSummary(songId))
-    .filter(summary => summary.event_count > 0)
-    .sort((a, b) => String(b.events[0]?.timestamp || '').localeCompare(String(a.events[0]?.timestamp || '')))
-    .slice(0, limit);
-
-  return {
-    total_cost_usd: roundUsd(rows.reduce((sum, row) => sum + row.total_cost_usd, 0)),
-    songs_with_costs: rows.length,
-    rows,
-  };
+  const rows = songs.map(songId => getSongFinanceSummary(songId)).filter(summary => summary.event_count > 0).slice(0, limit);
+  return { total_cost_usd: roundUsd(rows.reduce((sum, row) => sum + row.total_cost_usd, 0)), songs_with_costs: rows.length, rows };
 }
 
 export function getMissingPricingEntries(events = []) {
   const missing = new Map();
-  for (const event of events) {
+  for (const event of events.filter(isTrustedCostEvent)) {
     for (const key of event.pricing_missing || []) {
       const id = `${event.provider}:${event.model}:${key}`;
-      missing.set(id, {
-        provider: event.provider,
-        model: event.model,
-        missing_field: key,
-        count: (missing.get(id)?.count || 0) + 1,
-      });
+      missing.set(id, { provider: event.provider, model: event.model, missing_field: key, count: (missing.get(id)?.count || 0) + 1 });
     }
   }
   return [...missing.values()];
@@ -408,25 +351,12 @@ function extractUsage(response) {
   const outputTokens = usage.output_tokens ?? usage.outputTokens ?? 0;
   const cachedInputTokens = usage.cache_read_input_tokens ?? usage.cacheReadTokens ?? usage.cached_input_tokens ?? usage.cachedInputTokens ?? 0;
   const reasoningTokens = usage.reasoning_tokens ?? usage.reasoningTokens ?? 0;
-  return {
-    inputTokens,
-    outputTokens,
-    cachedInputTokens,
-    reasoningTokens,
-    totalTokens: usage.total_tokens ?? usage.totalTokens ?? inputTokens + outputTokens + cachedInputTokens + reasoningTokens,
-  };
+  return { inputTokens, outputTokens, cachedInputTokens, reasoningTokens, totalTokens: usage.total_tokens ?? usage.totalTokens ?? inputTokens + outputTokens + cachedInputTokens + reasoningTokens };
 }
 
 function readJsonl(filePath) {
   if (!fs.existsSync(filePath)) return [];
-  return fs.readFileSync(filePath, 'utf8')
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean)
-    .map(line => {
-      try { return JSON.parse(line); } catch { return null; }
-    })
-    .filter(Boolean);
+  return fs.readFileSync(filePath, 'utf8').split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => { try { return JSON.parse(line); } catch { return null; } }).filter(Boolean);
 }
 
 function compactObject(obj) {
