@@ -10,18 +10,31 @@ import { getSocialEnv } from '../shared/social/social-env.js';
 function statusFromResult(result) {
   if (result.ok) return result.dryRun ? 'ready' : 'published';
   const errorText = (result.errors || []).join(' ').toLowerCase();
-  if (!result.config?.ok) return 'needs_auth';
+  if (!result.config?.ok && getSocialEnv().socialPublishMode === 'live') return 'needs_auth';
   if (errorText.includes('public https') || errorText.includes('policy')) return 'blocked_by_policy';
   return 'failed';
+}
+
+function buildValidationWarnings(result) {
+  const warnings = [...(result.warnings || [])];
+  if (result.youtubeAsset?.ok) {
+    const action = result.youtubeAsset.reused ? 'reused' : 'generated';
+    warnings.push(`YouTube MP4 ${action}: ${result.youtubeAsset.videoPath}`);
+    if (result.youtubeAsset.sourceAudioPath) warnings.push(`YouTube source audio: ${result.youtubeAsset.sourceAudioPath}`);
+    if (result.youtubeAsset.sourceImagePath) warnings.push(`YouTube source image: ${result.youtubeAsset.sourceImagePath}`);
+  }
+  return warnings;
 }
 
 export async function processSocialPost(post, options = {}) {
   const result = await executeSocialPublish(post, options.overrides || {});
   const nextStatus = statusFromResult(result);
+  const assetPatch = result.assetPatch || {};
   const patch = {
+    ...assetPatch,
     status: nextStatus,
-    validation_warnings: result.warnings || [],
-    error_code: result.ok ? null : nextStatus,
+    validation_warnings: buildValidationWarnings(result),
+    error_code: result.ok ? null : (result.errorCode || nextStatus),
     error_message: result.ok ? null : (result.errors || []).join(' '),
   };
 
@@ -34,7 +47,7 @@ export async function processSocialPost(post, options = {}) {
   return updateSocialPost(post.id, patch);
 }
 
-export async function runSocialPublishWorker({ nowIso = new Date().toISOString(), campaignId = null, postIds = null, force = false } = {}) {
+export async function runSocialPublishWorker({ nowIso = new Date().toISOString(), campaignId = null, postIds = null, force = false, overrides = {} } = {}) {
   const env = getSocialEnv();
   const candidates = campaignId
     ? getSocialPostsByCampaignId(campaignId)
@@ -47,7 +60,7 @@ export async function runSocialPublishWorker({ nowIso = new Date().toISOString()
 
   const processed = [];
   for (const post of filtered) {
-    processed.push(await processSocialPost(post));
+    processed.push(await processSocialPost(post, { overrides }));
   }
 
   if (campaignId) {
