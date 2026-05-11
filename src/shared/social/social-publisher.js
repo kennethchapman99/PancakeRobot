@@ -3,6 +3,7 @@ import { instagramConnector } from './connectors/instagram-connector.js';
 import { youtubeConnector } from './connectors/youtube-connector.js';
 import { getSocialEnv } from './social-env.js';
 import { buildPublicAssetUrl } from './social-asset-validator.js';
+import { ensureYouTubeVideoAsset, isYoutubeVideoPath } from './youtube-video-builder.js';
 
 const CONNECTORS = {
   facebook: facebookConnector,
@@ -36,8 +37,91 @@ export function buildPublishRequestFromPost(post, overrides = {}) {
     madeForKids: post.made_for_kids,
     containsSyntheticMedia: post.contains_synthetic_media !== false,
     scheduledAt: post.scheduled_at,
-    privacyStatus: overrides.privacyStatus || 'private',
+    privacyStatus: overrides.privacyStatus || env.youtube.defaultPrivacyStatus || 'private',
     ...overrides,
+  };
+}
+
+async function prepareYouTubePublishRequest(post, request, env, overrides = {}) {
+  if (String(post.platform || request.platform || '').toLowerCase() !== 'youtube') {
+    return { request, assetPatch: null, youtubeAsset: null };
+  }
+
+  const alreadyVideo = String(request.assetType || '').toLowerCase() === 'video' && isYoutubeVideoPath(request.assetUrl || request.publicAssetUrl || '');
+  if (alreadyVideo) {
+    return {
+      request,
+      assetPatch: {
+        asset_type: 'video',
+        asset_url: request.assetUrl,
+        public_asset_url: request.publicAssetUrl,
+      },
+      youtubeAsset: {
+        ok: true,
+        reused: true,
+        videoPath: request.assetUrl,
+        videoAssetUrl: request.assetUrl,
+        commandSummary: 'Existing YouTube video asset selected.',
+      },
+    };
+  }
+
+  const youtubeAsset = await ensureYouTubeVideoAsset({
+    post,
+    request,
+    force: env.youtube.renderForce || Boolean(overrides.forceYoutubeRender),
+    outputPath: overrides.youtubeVideoOutputPath || '',
+    sourceAudioPath: overrides.sourceAudioPath || '',
+    sourceImagePath: overrides.sourceImagePath || '',
+    runner: overrides.youtubeVideoRunner || null,
+  });
+
+  if (!youtubeAsset.ok) {
+    return {
+      request,
+      assetPatch: null,
+      youtubeAsset,
+      errorResult: {
+        ok: false,
+        platform: 'youtube',
+        mode: env.socialPublishMode,
+        dryRun: env.socialPublishMode !== 'live',
+        errorCode: 'asset_validation_failed',
+        errors: [youtubeAsset.error || 'Unable to build YouTube video asset.'],
+        warnings: [],
+        youtubeAsset,
+      },
+    };
+  }
+
+  const assetUrl = youtubeAsset.videoAssetUrl || youtubeAsset.videoPath;
+  const nextRequest = {
+    ...request,
+    assetType: 'video',
+    assetUrl,
+    publicAssetUrl: assetUrl,
+    youtubeVideoPath: youtubeAsset.videoPath,
+  };
+
+  return {
+    request: nextRequest,
+    assetPatch: {
+      asset_type: 'video',
+      asset_url: assetUrl,
+      public_asset_url: assetUrl,
+    },
+    youtubeAsset,
+  };
+}
+
+function appendConfigWarnings(result, config, liveRequested) {
+  if (liveRequested || config.ok) return result;
+  return {
+    ...result,
+    warnings: [
+      ...(result.warnings || []),
+      `Live publish config missing: ${config.missing.join(', ')}`,
+    ],
   };
 }
 
@@ -55,28 +139,46 @@ export async function executeSocialPublish(post, overrides = {}) {
   }
 
   const config = connector.validateConfig();
-  const request = buildPublishRequestFromPost(post, overrides);
   const env = getSocialEnv();
   const liveRequested = env.socialPublishMode === 'live';
-  const dryRunResult = connector.dryRun(request);
+  const baseRequest = buildPublishRequestFromPost(post, overrides);
+  const prepared = await prepareYouTubePublishRequest(post, baseRequest, env, overrides);
 
-  if (!config.ok) {
+  if (prepared.errorResult) {
+    return { ...prepared.errorResult, config };
+  }
+
+  const request = prepared.request;
+  const dryRunResult = connector.dryRun(request);
+  const withAsset = {
+    ...dryRunResult,
+    youtubeAsset: prepared.youtubeAsset,
+    assetPatch: prepared.assetPatch,
+  };
+
+  if (liveRequested && !config.ok) {
     return {
-      ...dryRunResult,
+      ...withAsset,
       ok: false,
       config,
-      errors: [...(dryRunResult.errors || []), `Missing config: ${config.missing.join(', ')}`],
+      errors: [...(withAsset.errors || []), `Missing config: ${config.missing.join(', ')}`],
     };
   }
 
   if (!liveRequested) {
-    return {
-      ...dryRunResult,
+    return appendConfigWarnings({
+      ...withAsset,
       config,
       dryRun: true,
-    };
+    }, config, liveRequested);
   }
 
   const published = await connector.publish(request);
-  return { ...published, config, dryRun: false };
+  return {
+    ...published,
+    config,
+    dryRun: false,
+    youtubeAsset: prepared.youtubeAsset,
+    assetPatch: prepared.assetPatch,
+  };
 }
