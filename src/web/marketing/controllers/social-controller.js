@@ -41,6 +41,9 @@ function statusChip(status) {
     attention_required: 'bg-rose-100 text-rose-700',
     skipped: 'bg-zinc-100 text-zinc-500',
     failed: 'bg-rose-100 text-rose-700',
+    generated: 'bg-emerald-100 text-emerald-700',
+    reused: 'bg-blue-100 text-blue-700',
+    missing: 'bg-rose-100 text-rose-700',
   }[status] || 'bg-zinc-100 text-zinc-600';
   return `<span class="inline-flex rounded-full px-2 py-1 text-xs font-medium ${tone}">${esc(status || 'draft')}</span>`;
 }
@@ -71,6 +74,39 @@ function renderWarnings(post) {
   const warnings = [...(post.validation_warnings || []), ...(post.error_message ? [post.error_message] : [])].filter(Boolean);
   if (!warnings.length) return '<div class="text-xs text-zinc-400">No validation warnings.</div>';
   return `<ul class="space-y-1 text-xs text-amber-700">${warnings.map(item => `<li>• ${esc(item)}</li>`).join('')}</ul>`;
+}
+
+function warningValue(warnings, prefixes) {
+  const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
+  const match = warnings.find(item => prefixList.some(prefix => String(item || '').startsWith(prefix)));
+  if (!match) return '';
+  const prefix = prefixList.find(item => String(match).startsWith(item));
+  return String(match).slice(prefix.length).trim();
+}
+
+function renderYoutubeAssetDetails(post) {
+  if (post.platform !== 'youtube') return '';
+  const warnings = post.validation_warnings || [];
+  const generatedPath = warningValue(warnings, 'YouTube MP4 generated:');
+  const reusedPath = warningValue(warnings, 'YouTube MP4 reused:');
+  const selectedPath = generatedPath || reusedPath || post.asset_url || '';
+  const sourceAudio = warningValue(warnings, 'YouTube source audio:');
+  const sourceImage = warningValue(warnings, 'YouTube source image:');
+  const isVideo = String(post.asset_type || '').toLowerCase() === 'video' && String(post.asset_url || '').match(/\.(mp4|mov|webm)$/i);
+  const state = post.error_message ? 'missing' : generatedPath ? 'generated' : reusedPath ? 'reused' : isVideo ? 'ready' : 'missing';
+
+  return `<div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 space-y-2">
+    <div class="flex items-center justify-between gap-2">
+      <div class="text-[10px] uppercase tracking-wide text-zinc-400">YouTube Asset</div>
+      ${statusChip(state)}
+    </div>
+    <div class="grid gap-1 text-xs text-zinc-600">
+      <div><span class="font-medium text-zinc-700">Video:</span> ${esc(selectedPath || '—')}</div>
+      <div><span class="font-medium text-zinc-700">Source audio:</span> ${esc(sourceAudio || '—')}</div>
+      <div><span class="font-medium text-zinc-700">Source image:</span> ${esc(sourceImage || '—')}</div>
+      <div><span class="font-medium text-zinc-700">Privacy:</span> private</div>
+    </div>
+  </div>`;
 }
 
 function renderPostCard(post) {
@@ -108,6 +144,7 @@ function renderPostCard(post) {
       <div class="text-[10px] uppercase tracking-wide text-zinc-400 mb-2">Hashtags / tags</div>
       ${hashtags}
     </div>
+    ${renderYoutubeAssetDetails(post)}
     <div>
       <div class="text-[10px] uppercase tracking-wide text-zinc-400 mb-2">Validation</div>
       ${renderWarnings(post)}
@@ -199,9 +236,9 @@ function renderCampaignPanel(campaign, posts) {
   if (!campaign || !song) {
     return `<section class="rounded-2xl border border-zinc-200 bg-white p-6">
       <h2 class="text-lg font-semibold">Today’s Campaign</h2>
-      <p class="mt-2 text-sm text-zinc-500">No campaign exists for today yet. Use Generate dry run to create one.</p>
+      <p class="mt-2 text-sm text-zinc-500">No campaign exists for today yet. Use Generate Dry Run to create one.</p>
       <div class="mt-4">
-        <button type="button" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700" onclick="runSocialAction('/api/social/daily/run-dry-run')">Generate dry run</button>
+        <button type="button" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700" onclick="runSocialAction('/api/social/daily/run-dry-run')">Generate Dry Run</button>
       </div>
     </section>`;
   }
@@ -221,7 +258,7 @@ function renderCampaignPanel(campaign, posts) {
         <p class="mt-4 max-w-3xl text-sm text-zinc-600">${esc(campaign.rationale || 'No rationale saved.')}</p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button type="button" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700" onclick="runSocialAction('/api/social/daily/run-dry-run')">Generate dry run</button>
+        <button type="button" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700" onclick="runSocialAction('/api/social/daily/run-dry-run')">Generate Dry Run</button>
         <button type="button" class="rounded-lg border border-zinc-200 px-4 py-2 text-sm hover:bg-zinc-50" onclick="runSocialAction('/api/social/daily/${attr(campaign.id)}/approve')">Approve all</button>
         <button type="button" class="rounded-lg border border-zinc-200 px-4 py-2 text-sm hover:bg-zinc-50" onclick="runSocialAction('/api/social/daily/${attr(campaign.id)}/publish')">Publish now</button>
         <button type="button" class="rounded-lg border border-zinc-200 px-4 py-2 text-sm hover:bg-zinc-50" onclick="skipCampaign([${posts.map(post => `'${post.id}'`).join(', ')}])">Skip today</button>
@@ -256,23 +293,55 @@ export function renderDailySocialPage(req, res) {
         </div>
       </div>
     </section>
+    <div id="social-action-status" hidden class="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"></div>
+    <div id="social-action-error" hidden class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"></div>
     ${renderConfigCard()}
     ${renderCampaignPanel(campaign, posts)}
     ${renderHistory(history)}
   </main>
   <script>
+    function setSocialMessage(id, message) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = message || '';
+      el.hidden = !message;
+    }
+    function setSocialButtonsDisabled(disabled) {
+      document.querySelectorAll('button').forEach(button => {
+        button.disabled = disabled;
+        button.classList.toggle('opacity-60', disabled);
+        button.classList.toggle('cursor-wait', disabled);
+      });
+    }
     async function runSocialAction(url, reload = true) {
-      const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' } });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || body.ok === false) {
-        alert(body.error || 'Request failed');
-        return;
+      setSocialMessage('social-action-error', '');
+      setSocialMessage('social-action-status', 'Working...');
+      setSocialButtonsDisabled(true);
+      try {
+        const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' } });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || body.ok === false) {
+          const error = body.error || 'Request failed';
+          setSocialMessage('social-action-error', error);
+          setSocialMessage('social-action-status', '');
+          return false;
+        }
+        const processed = Array.isArray(body.processed) ? body.processed.length : null;
+        setSocialMessage('social-action-status', processed === null ? 'Done. Reloading...' : 'Done. Processed ' + processed + ' post(s). Reloading...');
+        if (reload) setTimeout(() => window.location.reload(), 350);
+        return true;
+      } catch (error) {
+        setSocialMessage('social-action-error', error.message || String(error));
+        setSocialMessage('social-action-status', '');
+        return false;
+      } finally {
+        setSocialButtonsDisabled(false);
       }
-      if (reload) window.location.reload();
     }
     async function skipCampaign(postIds) {
       for (const id of postIds) {
-        await runSocialAction('/api/social/posts/' + encodeURIComponent(id) + '/skip', false);
+        const ok = await runSocialAction('/api/social/posts/' + encodeURIComponent(id) + '/skip', false);
+        if (!ok) return;
       }
       window.location.reload();
     }
