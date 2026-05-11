@@ -119,8 +119,10 @@ export const youtubeConnector = {
     const filteredErrors = hasLocalMedia
       ? errors.filter(error => error !== 'Live publishing requires a public HTTPS media URL, not localhost/private infrastructure.')
       : errors;
+    const mediaPath = resolveLocalMediaPath(request.assetUrl || request.publicAssetUrl || '') || request.assetUrl || request.publicAssetUrl || '';
 
     if (base.assetType !== 'video') filteredErrors.push('YouTube requires assetType=video.');
+    if (!String(request.assetUrl || request.publicAssetUrl || '').match(/\.(mp4|mov|webm)(\?.*)?$/i)) filteredErrors.push('YouTube requires a video file path ending in .mp4, .mov, or .webm.');
     if (!title) filteredErrors.push('YouTube title is required.');
     if (!description) filteredErrors.push('YouTube description is required.');
     if (request.madeForKids !== true && request.madeForKids !== false) filteredErrors.push('YouTube madeForKids must be explicit true or false.');
@@ -139,9 +141,12 @@ export const youtubeConnector = {
         title,
         description,
         tags: Array.isArray(request.tags) ? request.tags : Array.isArray(request.hashtags) ? request.hashtags : [],
-        privacyStatus: request.privacyStatus || 'private',
+        privacyStatus: request.privacyStatus || env.youtube.defaultPrivacyStatus || 'private',
         selfDeclaredMadeForKids: request.madeForKids,
         containsSyntheticMedia: request.containsSyntheticMedia !== false,
+        assetType: base.assetType,
+        assetUrl: request.assetUrl || '',
+        mediaPath,
       },
       notes: [
         'Live YouTube uploads use videos.insert with snippet and status.',
