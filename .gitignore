@@ -15,11 +15,18 @@ secrets/
 pancake_robot.db
 pancake_robot.db-shm
 pancake_robot.db-wal
+test/artifacts/db/*.db
+test/artifacts/db/*.db-shm
+test/artifacts/db/*.db-wal
 music-pipeline-smoke-release-happy-path-*.db
 music-pipeline-smoke-release-happy-path-*.db-shm
 music-pipeline-smoke-release-happy-path-*.db-wal
 music-pipeline-test-release-flow-*.db
+music-pipeline-test-release-flow-*.db-shm
+music-pipeline-test-release-flow-*.db-wal
 release-selection-test-*.db
+release-selection-test-*.db-shm
+release-selection-test-*.db-wal
 Basement Cypher/
 RELEASED/
 TO BE RELEASED/

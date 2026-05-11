@@ -2,12 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'url';
+import { prepareTestDbSlug } from '../shared/test-db-artifacts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 if (!process.env.PIPELINE_APP_SLUG) {
-  process.env.PIPELINE_APP_SLUG = `music-pipeline-smoke-release-happy-path-${Date.now()}`;
+  process.env.PIPELINE_APP_SLUG = prepareTestDbSlug('music-pipeline-smoke-release-happy-path').slug;
 }
 
 const dbSlug = process.env.PIPELINE_APP_SLUG;

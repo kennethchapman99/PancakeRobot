@@ -1,10 +1,15 @@
+import { prepareTestDbSlug } from '../shared/test-db-artifacts.js';
+
 const dryRun = process.argv.includes('--dry-run');
 const useMainDb = process.argv.includes('--use-main-db');
 const explicitSlug = process.env.PIPELINE_APP_SLUG;
 const { execFileSync } = await import('node:child_process');
+let testDbArtifactDir = null;
 
 if (!useMainDb && !explicitSlug) {
-  process.env.PIPELINE_APP_SLUG = `music-pipeline-test-release-flow-${Date.now()}`;
+  const preparedDb = prepareTestDbSlug('music-pipeline-test-release-flow');
+  process.env.PIPELINE_APP_SLUG = preparedDb.slug;
+  testDbArtifactDir = preparedDb.artifactDir;
 }
 
 const dbSlug = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
@@ -16,6 +21,7 @@ const paidTargetId = `TARGET_PAID_RELEASE_TEST_${suffix}`;
 const aiBannedTargetId = `TARGET_AI_BANNED_RELEASE_TEST_${suffix}`;
 
 console.log(`[release-marketing-test] DB slug: ${dbSlug}`);
+if (testDbArtifactDir) console.log(`[release-marketing-test] DB artifact dir: ${testDbArtifactDir}`);
 console.log(`[release-marketing-test] Mode: ${dryRun ? 'dry-run' : 'write'}`);
 console.log(`[release-marketing-test] Scope: ${useMainDb ? 'main-db-compatible unique IDs' : 'isolated test DB'}`);
 

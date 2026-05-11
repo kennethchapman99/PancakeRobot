@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { prepareTestDbSlug } from '../src/shared/test-db-artifacts.js';
 
-process.env.PIPELINE_APP_SLUG = `test-workflow-${Date.now()}`;
+process.env.PIPELINE_APP_SLUG = prepareTestDbSlug('test-workflow').slug;
 
 const workflowDb = await import('../src/shared/workflow-runs-db.js');
 const telegramDb = await import('../src/shared/telegram-session-db.js');
