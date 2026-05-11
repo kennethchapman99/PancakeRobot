@@ -62,6 +62,8 @@ export function getSocialEnv() {
       channelTitle: String(youtubeToken.channel_title || '').trim(),
       tokenPath: youtubeTokenPath,
       hasSavedToken: Boolean(youtubeToken.refresh_token),
+      defaultPrivacyStatus: String(process.env.YOUTUBE_DEFAULT_PRIVACY_STATUS || 'private').trim().toLowerCase() || 'private',
+      renderForce: parseBool(process.env.YOUTUBE_RENDER_FORCE, false),
     },
     meta: {
       graphVersion: String(process.env.META_GRAPH_VERSION || 'v25.0').trim() || 'v25.0',
