@@ -11,6 +11,30 @@ import {
 } from '../src/shared/song-public-links.js';
 import { formatFinalResult } from '../src/inbound/telegram/magic-song-handler.js';
 
+const PUBLIC_URL_ENV_KEYS = [
+  'PUBLIC_APP_BASE_URL',
+  'PUBLIC_BASE_URL',
+  'TELEGRAM_PUBLIC_BASE_URL',
+  'NGROK_URL',
+  'NGROK_PUBLIC_URL',
+];
+
+function snapshotPublicUrlEnv() {
+  return Object.fromEntries(PUBLIC_URL_ENV_KEYS.map(key => [key, process.env[key]]));
+}
+
+function restorePublicUrlEnv(snapshot) {
+  for (const key of PUBLIC_URL_ENV_KEYS) {
+    if (snapshot[key] === undefined) delete process.env[key];
+    else process.env[key] = snapshot[key];
+  }
+}
+
+function setOnlyPublicBaseUrl(value) {
+  for (const key of PUBLIC_URL_ENV_KEYS) delete process.env[key];
+  process.env.PUBLIC_BASE_URL = value;
+}
+
 function uniqueSongId(prefix = 'SONG_LINK_TEST') {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }
@@ -24,8 +48,8 @@ function writeFakeAudio(songId, kind) {
 }
 
 test('buildSongPublicLinks prefers mastered audio and uses configured public base URL', () => {
-  const previousPublicBaseUrl = process.env.PUBLIC_BASE_URL;
-  process.env.PUBLIC_BASE_URL = 'https://example.ngrok-free.app/';
+  const previousEnv = snapshotPublicUrlEnv();
+  setOnlyPublicBaseUrl('https://example.ngrok-free.app/');
   const songId = uniqueSongId();
   writeFakeAudio(songId, 'original');
   writeFakeAudio(songId, 'mastered');
@@ -41,14 +65,13 @@ test('buildSongPublicLinks prefers mastered audio and uses configured public bas
     assert.equal(links.detailUrl, `https://example.ngrok-free.app/songs/${songId}`);
     assert.equal(links.releaseKitUrl, `https://example.ngrok-free.app/release-kit/${songId}?preview=1`);
   } finally {
-    if (previousPublicBaseUrl === undefined) delete process.env.PUBLIC_BASE_URL;
-    else process.env.PUBLIC_BASE_URL = previousPublicBaseUrl;
+    restorePublicUrlEnv(previousEnv);
   }
 });
 
 test('buildSongPublicLinks falls back to original audio when mastered is missing', () => {
-  const previousPublicBaseUrl = process.env.PUBLIC_BASE_URL;
-  process.env.PUBLIC_BASE_URL = 'https://songs.example.com';
+  const previousEnv = snapshotPublicUrlEnv();
+  setOnlyPublicBaseUrl('https://songs.example.com');
   const songId = uniqueSongId();
   writeFakeAudio(songId, 'original');
 
@@ -59,8 +82,7 @@ test('buildSongPublicLinks falls back to original audio when mastered is missing
     assert.equal(links.audioPath, `/media/songs/${songId}/media/source/original.mp3`);
     assert.equal(links.audioUrl, `https://songs.example.com/media/songs/${songId}/media/source/original.mp3`);
   } finally {
-    if (previousPublicBaseUrl === undefined) delete process.env.PUBLIC_BASE_URL;
-    else process.env.PUBLIC_BASE_URL = previousPublicBaseUrl;
+    restorePublicUrlEnv(previousEnv);
   }
 });
 
@@ -71,8 +93,8 @@ test('song public links reject unsafe song ids', () => {
 });
 
 test('Telegram final result includes MP3, song details, release kit, and no local filesystem paths', () => {
-  const previousPublicBaseUrl = process.env.PUBLIC_BASE_URL;
-  process.env.PUBLIC_BASE_URL = 'https://public.example.com';
+  const previousEnv = snapshotPublicUrlEnv();
+  setOnlyPublicBaseUrl('https://public.example.com');
   const songId = uniqueSongId();
   writeFakeAudio(songId, 'mastered');
 
@@ -93,7 +115,6 @@ test('Telegram final result includes MP3, song details, release kit, and no loca
     assert.doesNotMatch(message, /output\/songs/);
     assert.doesNotMatch(message, /localhost/);
   } finally {
-    if (previousPublicBaseUrl === undefined) delete process.env.PUBLIC_BASE_URL;
-    else process.env.PUBLIC_BASE_URL = previousPublicBaseUrl;
+    restorePublicUrlEnv(previousEnv);
   }
 });
