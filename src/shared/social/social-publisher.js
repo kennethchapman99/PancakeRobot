@@ -2,7 +2,7 @@ import { facebookConnector } from './connectors/facebook-connector.js';
 import { instagramConnector } from './connectors/instagram-connector.js';
 import { youtubeConnector } from './connectors/youtube-connector.js';
 import { getSocialEnv } from './social-env.js';
-import { buildPublicAssetUrl } from './social-asset-validator.js';
+import { buildPublicAssetUrl, isPublicHttpsUrl } from './social-asset-validator.js';
 import { ensureYouTubeVideoAsset, isYoutubeVideoPath } from './youtube-video-builder.js';
 
 const CONNECTORS = {
@@ -42,6 +42,10 @@ export function buildPublishRequestFromPost(post, overrides = {}) {
   };
 }
 
+function safeYoutubePublicAssetUrl(value = '') {
+  return isPublicHttpsUrl(value) ? value : '';
+}
+
 async function prepareYouTubePublishRequest(post, request, env, overrides = {}) {
   if (String(post.platform || request.platform || '').toLowerCase() !== 'youtube') {
     return { request, assetPatch: null, youtubeAsset: null };
@@ -49,12 +53,16 @@ async function prepareYouTubePublishRequest(post, request, env, overrides = {}) 
 
   const alreadyVideo = String(request.assetType || '').toLowerCase() === 'video' && isYoutubeVideoPath(request.assetUrl || request.publicAssetUrl || '');
   if (alreadyVideo) {
+    const publicAssetUrl = safeYoutubePublicAssetUrl(request.publicAssetUrl);
     return {
-      request,
+      request: {
+        ...request,
+        publicAssetUrl,
+      },
       assetPatch: {
         asset_type: 'video',
         asset_url: request.assetUrl,
-        public_asset_url: request.publicAssetUrl,
+        public_asset_url: publicAssetUrl,
       },
       youtubeAsset: {
         ok: true,
@@ -95,11 +103,12 @@ async function prepareYouTubePublishRequest(post, request, env, overrides = {}) 
   }
 
   const assetUrl = youtubeAsset.videoAssetUrl || youtubeAsset.videoPath;
+  const publicAssetUrl = safeYoutubePublicAssetUrl(request.publicAssetUrl);
   const nextRequest = {
     ...request,
     assetType: 'video',
     assetUrl,
-    publicAssetUrl: assetUrl,
+    publicAssetUrl,
     youtubeVideoPath: youtubeAsset.videoPath,
   };
 
@@ -108,7 +117,7 @@ async function prepareYouTubePublishRequest(post, request, env, overrides = {}) 
     assetPatch: {
       asset_type: 'video',
       asset_url: assetUrl,
-      public_asset_url: assetUrl,
+      public_asset_url: publicAssetUrl,
     },
     youtubeAsset,
   };
