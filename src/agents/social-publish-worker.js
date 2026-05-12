@@ -10,7 +10,8 @@ import { getSocialEnv } from '../shared/social/social-env.js';
 function statusFromResult(result) {
   if (result.ok) return result.dryRun ? 'ready' : 'published';
   const errorText = (result.errors || []).join(' ').toLowerCase();
-  if (!result.config?.ok && getSocialEnv().socialPublishMode === 'live') return 'needs_auth';
+  const platform = String(result.platform || '').toLowerCase();
+  if (!result.config?.ok && (platform !== 'youtube' || getSocialEnv().socialPublishMode === 'live')) return 'needs_auth';
   if (errorText.includes('public https') || errorText.includes('policy')) return 'blocked_by_policy';
   return 'failed';
 }
