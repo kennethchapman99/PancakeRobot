@@ -16,3 +16,16 @@ test('runMagicPipelineService rejects empty topics before invoking agents', asyn
     /Magic pipeline requires a topic/
   );
 });
+
+test('normalizeMagicPipelineStage defaults to song_only gate', () => {
+  assert.equal(service.normalizeMagicPipelineStage(), 'song_only');
+  assert.equal(service.normalizeMagicPipelineStage(''), 'song_only');
+  assert.equal(service.normalizeMagicPipelineStage('song'), 'song_only');
+  assert.equal(service.normalizeMagicPipelineStage('song-only'), 'song_only');
+  assert.equal(service.normalizeMagicPipelineStage('audio_only'), 'song_only');
+});
+
+test('normalizeMagicPipelineStage allows explicit full pipeline', () => {
+  assert.equal(service.normalizeMagicPipelineStage('full'), 'full');
+  assert.equal(service.normalizeMagicPipelineStage('FULL'), 'full');
+});
