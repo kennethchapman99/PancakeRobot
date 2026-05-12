@@ -11,6 +11,7 @@
     "setup": "node src/orchestrator.js --setup",
     "new": "node src/orchestrator.js --new",
     "magic": "node src/scripts/run-magic-pipeline-service.js",
+    "release-stage": "node src/scripts/run-magic-release-stage.js",
     "magic:legacy": "node src/orchestrator.js --magic",
     "magic:workflow": "node src/scripts/run-magic-song-workflow.js",
     "telegram": "node src/inbound/telegram/bot.js",
