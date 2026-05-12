@@ -2,6 +2,13 @@ import { loadBrandProfile } from '../shared/brand-profile.js';
 
 const BRAND = loadBrandProfile();
 
+const DEFAULT_SOCIAL_LINKS = {
+  youtube: 'https://www.youtube.com/@pancakerobotmusic',
+  instagram: 'https://www.instagram.com/pancakerobotmusic',
+  tiktok: 'https://www.tiktok.com/@pancakerobotmusic',
+  facebook: 'https://www.facebook.com/pancakerobotmusic',
+};
+
 function compact(value, fallback = '') {
   return String(value || fallback).replace(/\s+/g, ' ').trim();
 }
@@ -10,11 +17,45 @@ function unique(values) {
   return [...new Set(values.map(value => compact(value)).filter(Boolean))];
 }
 
+function isPublicFanFacingLink(value = '') {
+  const url = String(value || '').trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+  if (/distrokid\.com\/dashboard/i.test(url)) return false;
+  if (/localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(url)) return false;
+  return true;
+}
+
 function pickLink(kit) {
-  return kit?.marketing_links?.smart_link
-    || kit?.marketing_links?.release_kit_url
-    || kit?.marketing_links?.youtube_video_url
-    || '';
+  const candidates = [
+    kit?.marketing_links?.smart_link,
+    kit?.marketing_links?.release_kit_url,
+    kit?.marketing_links?.youtube_video_url,
+  ];
+  return candidates.find(isPublicFanFacingLink) || '';
+}
+
+function socialLink(envName, fallback) {
+  return compact(process.env[envName] || fallback);
+}
+
+function getSocialLinks() {
+  return {
+    youtube: socialLink('PANCAKE_SOCIAL_YOUTUBE_URL', DEFAULT_SOCIAL_LINKS.youtube),
+    instagram: socialLink('PANCAKE_SOCIAL_INSTAGRAM_URL', DEFAULT_SOCIAL_LINKS.instagram),
+    tiktok: socialLink('PANCAKE_SOCIAL_TIKTOK_URL', DEFAULT_SOCIAL_LINKS.tiktok),
+    facebook: socialLink('PANCAKE_SOCIAL_FACEBOOK_URL', DEFAULT_SOCIAL_LINKS.facebook),
+  };
+}
+
+function buildSocialLinkBlock() {
+  const links = getSocialLinks();
+  return [
+    'Follow Pancake Robot:',
+    `YouTube: ${links.youtube}`,
+    `Instagram: ${links.instagram}`,
+    `TikTok: ${links.tiktok}`,
+    `Facebook: ${links.facebook}`,
+  ].join('\n');
 }
 
 function buildTopicPhrase(song) {
@@ -42,7 +83,7 @@ export function generateSocialCopy({ platform, song, marketingKit, campaignType,
   const topic = buildTopicPhrase(song);
   const releaseLink = pickLink(marketingKit);
   const hashtags = buildHashtags(song);
-  const callToAction = releaseLink ? `Listen here: ${releaseLink}` : 'Find it on the Pancake Robot channels.';
+  const callToAction = releaseLink ? `Listen here: ${releaseLink}` : `Follow ${brandName} for more songs.`;
 
   if (platform === 'instagram') {
     return {
@@ -68,13 +109,18 @@ export function generateSocialCopy({ platform, song, marketingKit, campaignType,
     };
   }
 
+  const releaseSection = releaseLink
+    ? `Listen here:\n${releaseLink}`
+    : 'Listen everywhere soon.';
   return {
     title: compact(`${songTitle} | Pancake Robot ${campaignType === 'new_release_push' ? 'Official Short' : 'Shorts Clip'}`),
     caption: '',
-    description: `${songTitle}\n\n${compact(song.notes || topic)}\n\n${callToAction}\n\nTags: ${hashtags.map(tag => tag.replace(/^#/, '')).join(', ')}`,
+    description: `${songTitle}\n\n${compact(song.notes || topic)}\n\n${releaseSection}\n\n${buildSocialLinkBlock()}\n\nTags: ${hashtags.map(tag => tag.replace(/^#/, '')).join(', ')}`,
     hashtags: hashtags.slice(0, 10),
     madeForKids,
     assetType,
     tone: 'searchable, concise, family-safe',
   };
 }
+
+export { isPublicFanFacingLink, buildSocialLinkBlock };
