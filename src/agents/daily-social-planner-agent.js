@@ -110,6 +110,13 @@ function selectSongForDailySocial() {
   return candidates[0] || null;
 }
 
+function selectSpecificSongForDailySocial(songId) {
+  const song = getSong(songId);
+  if (!song) throw new Error(`Song not found for social campaign: ${songId}`);
+  if (String(song.status || '').toLowerCase() === 'archived') throw new Error(`Cannot create social campaign for archived song: ${songId}`);
+  return scoreSong(song);
+}
+
 function resolvePlatformAsset(platform, kit) {
   const sharedAssetUrl = kit.marketing_assets.vertical_post_url
     || kit.marketing_assets.square_post_url
@@ -133,15 +140,19 @@ export function buildSocialIdempotencyKey({ date, platform, songId, campaignType
   return `${date}:${platform}:${songId}:${campaignType}`;
 }
 
-export function createOrRefreshDailySocialCampaign({ date, platforms, force = false } = {}) {
+export function createOrRefreshDailySocialCampaign({ date, platforms, force = false, songId = null } = {}) {
   const env = getSocialEnv();
   const campaignDate = date || nowInTimezoneDate(env.dailySocialTimezone);
   const activePlatforms = Array.isArray(platforms) && platforms.length ? platforms : env.dailySocialPlatforms;
   let campaign = getDailySocialCampaignForDate(campaignDate);
   let selection = null;
 
-  if (!campaign) {
-    selection = selectSongForDailySocial();
+  if (songId) {
+    selection = selectSpecificSongForDailySocial(songId);
+  }
+
+  if (!campaign || (songId && campaign.selected_song_id !== songId)) {
+    selection = selection || selectSongForDailySocial();
     if (!selection) throw new Error('No eligible song found for daily social.');
     const campaignType = resolveCampaignType(selection.song, selection.kit);
     const release = selection.release || getOrCreateReleaseMarketing(selection.song.id);
@@ -158,7 +169,7 @@ export function createOrRefreshDailySocialCampaign({ date, platforms, force = fa
     });
   } else {
     const campaignSong = getSong(campaign.selected_song_id);
-    selection = campaignSong ? scoreSong(campaignSong) : selectSongForDailySocial();
+    selection = selection || (campaignSong ? scoreSong(campaignSong) : selectSongForDailySocial());
     if (!selection) throw new Error('No eligible song found for daily social.');
     const nextCampaignType = force ? resolveCampaignType(selection.song, selection.kit) : campaign.campaign_type;
     campaign = updateDailySocialCampaign(campaign.id, {
