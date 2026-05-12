@@ -211,8 +211,30 @@ async function runFfmpeg(args) {
   });
 }
 
+function buildEncodingArgs(outputPath) {
+  return [
+    '-c:v', 'libx264',
+    '-profile:v', 'high',
+    '-level:v', '4.0',
+    '-pix_fmt', 'yuv420p',
+    '-r', '30',
+    '-g', '15',
+    '-bf', '2',
+    '-b:v', '8M',
+    '-maxrate', '10M',
+    '-bufsize', '16M',
+    '-c:a', 'aac',
+    '-ar', '48000',
+    '-ac', '2',
+    '-b:a', '192k',
+    '-movflags', '+faststart',
+    '-shortest',
+    outputPath,
+  ];
+}
+
 function buildFfmpegArgs({ sourceImagePath, sourceAudioPath, outputPath }) {
-  const commonVideoFilter = 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p';
+  const commonVideoFilter = 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p';
   const isGif = path.extname(sourceImagePath).toLowerCase() === '.gif';
   if (isGif) {
     return [
@@ -220,26 +242,22 @@ function buildFfmpegArgs({ sourceImagePath, sourceAudioPath, outputPath }) {
       '-stream_loop', '-1',
       '-i', sourceImagePath,
       '-i', sourceAudioPath,
+      '-map', '0:v:0',
+      '-map', '1:a:0',
       '-vf', commonVideoFilter,
-      '-c:v', 'libx264',
-      '-c:a', 'aac',
-      '-b:a', '192k',
-      '-shortest',
-      outputPath,
+      ...buildEncodingArgs(outputPath),
     ];
   }
   return [
     '-y',
     '-loop', '1',
+    '-framerate', '30',
     '-i', sourceImagePath,
     '-i', sourceAudioPath,
+    '-map', '0:v:0',
+    '-map', '1:a:0',
     '-vf', commonVideoFilter,
-    '-c:v', 'libx264',
-    '-tune', 'stillimage',
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-shortest',
-    outputPath,
+    ...buildEncodingArgs(outputPath),
   ];
 }
 
