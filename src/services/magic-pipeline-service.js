@@ -19,6 +19,18 @@ const ROOT_DIR = join(__dirname, '../..');
 
 let magicRunQueue = Promise.resolve();
 
+export const MAGIC_PIPELINE_STAGES = Object.freeze({
+  SONG_ONLY: 'song_only',
+  FULL: 'full',
+});
+
+export function normalizeMagicPipelineStage(value = process.env.MAGIC_PIPELINE_STAGE || process.env.MAGIC_SONG_PIPELINE_STAGE || MAGIC_PIPELINE_STAGES.SONG_ONLY) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === MAGIC_PIPELINE_STAGES.FULL) return MAGIC_PIPELINE_STAGES.FULL;
+  if (['song', 'song-only', 'song_only', 'audio', 'audio_only', 'create_song'].includes(normalized)) return MAGIC_PIPELINE_STAGES.SONG_ONLY;
+  return MAGIC_PIPELINE_STAGES.SONG_ONLY;
+}
+
 export function createMagicSongId() {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -39,12 +51,15 @@ async function runMagicPipelineServiceInner({
   existingSongId = null,
   brandId = process.env.DEFAULT_BRAND_ID || DEFAULT_PROFILE_ID,
   mode = 'human_review',
+  pipelineStage = process.env.MAGIC_PIPELINE_STAGE || process.env.MAGIC_SONG_PIPELINE_STAGE || MAGIC_PIPELINE_STAGES.SONG_ONLY,
   onEvent = null,
   logger = console,
 } = {}) {
   const cleanTopic = String(topic || '').trim();
   if (!cleanTopic) throw new Error('Magic pipeline requires a topic');
 
+  const cleanPipelineStage = normalizeMagicPipelineStage(pipelineStage);
+  const songOnlyGate = cleanPipelineStage === MAGIC_PIPELINE_STAGES.SONG_ONLY;
   const cleanBrandId = String(brandId || DEFAULT_PROFILE_ID).trim();
   const brandProfilePath = resolveBrandProfilePath(cleanBrandId);
   const brandProfile = loadBrandProfileById(cleanBrandId);
@@ -69,7 +84,10 @@ async function runMagicPipelineServiceInner({
 
     printBanner(logger, appTitle);
     logger.log(chalk.bold.magenta(`MAGIC PIPELINE — Topic: "${cleanTopic}"\n`));
-    logger.log(chalk.dim('Flow: create → score advisory → improve once if useful → always finalize usable generated songs for human review\n'));
+    logger.log(chalk.dim(songOnlyGate
+      ? 'Flow: create song/audio only → stop for human review before scoring, packaging, release assets, social, or publishing\n'
+      : 'Flow: create → score advisory → improve once if useful → finalize usable generated songs for human review\n'
+    ));
 
     const songId = existingSongId || createMagicSongId();
     const songDir = join(ROOT_DIR, `output/songs/${songId}`);
@@ -88,6 +106,7 @@ async function runMagicPipelineServiceInner({
       distributor: defaultDistributor,
       total_cost_usd: 0,
       brand_profile_id: cleanBrandId,
+      pipeline_stage: songOnlyGate ? 'magic_song_requested_song_only' : 'magic_full_requested',
     });
 
     await emit({ type: 'pipeline_progress', stage: 'loading_research', line: 'Loading or refreshing research' });
@@ -99,13 +118,57 @@ async function runMagicPipelineServiceInner({
       researchReport,
       totalCost,
       draftPayload: existingDraftPayload,
-      passLabel: 'Magic Pass 1/2',
+      passLabel: songOnlyGate ? 'Magic Song-Only Pass' : 'Magic Pass 1/2',
+      stopAfterAudio: songOnlyGate,
       logger,
       emit,
       modules,
       brandId: cleanBrandId,
     });
     totalCost = firstPass.totalCost;
+
+    if (songOnlyGate) {
+      finalPass = firstPass;
+      await modules.updateFinancialReport({ songId, title: firstPass.lyricsResult.title, totalCost });
+      persistSongState({
+        songId,
+        topic: cleanTopic,
+        title: firstPass.lyricsResult.title,
+        lyricsPath: firstPass.lyricsResult.lyricsPath,
+        audioPromptPath: firstPass.lyricsResult.audioPromptPath,
+        metadataPath: firstPass.metadataPath,
+        brandScore: firstPass.brandReview.scores?.overall,
+        totalCost,
+        extra: {
+          brand_profile_id: cleanBrandId,
+          pipeline_stage: 'magic_song_created_pending_review',
+        },
+      });
+
+      const result = buildMagicPipelineResult({
+        songId,
+        title: firstPass.lyricsResult.title,
+        topic: cleanTopic,
+        brandId: cleanBrandId,
+        brandName: brandProfile.brand_name || cleanBrandId,
+        mode,
+        pipelineStage: cleanPipelineStage,
+        totalCost,
+        finalPass,
+        finalized: null,
+        status: 'song_created_pending_review',
+        awaitingHumanApproval: true,
+        nextAction: 'Review the generated song/audio. To build scoring, distribution package, release kit, marketing assets, social, and publish prep, rerun with MAGIC_PIPELINE_STAGE=full or pass --stage full.',
+      });
+
+      logger.log(chalk.bgYellow.black('\n ✓ SONG CREATED — GATED BEFORE RELEASE PIPELINE \n'));
+      logger.log(chalk.dim('  No scorer regeneration, distribution package, release kit, marketing assets, social assets, or publishing ran.'));
+      logger.log(`\n${chalk.dim('Total song creation cost:')} ${chalk.bold(formatCost(totalCost))}`);
+      logger.log(`${chalk.dim('Song ID:')} ${songId}\n`);
+      await emit({ type: 'pipeline_progress', stage: 'song_created_pending_review', line: 'Song/audio created; waiting for human approval before downstream release pipeline', result });
+      await emit({ type: 'pipeline_progress', stage: 'done', line: 'Magic song-only pipeline complete', result });
+      return result;
+    }
 
     if (isAssetCandidate(firstPass.releaseSelectionResult)) {
       logger.log(chalk.green(assetCandidateMessage(firstPass.releaseSelectionResult, 'First pass')));
@@ -208,23 +271,21 @@ async function runMagicPipelineServiceInner({
       await modules.updateFinancialReport({ songId, title: finalPass.lyricsResult.title, totalCost });
     }
 
-    const recommendation = finalPass?.releaseSelectionResult?.recommendation || {};
-    const result = {
+    const result = buildMagicPipelineResult({
       songId,
       title: finalPass?.lyricsResult?.title || cleanTopic,
       topic: cleanTopic,
       brandId: cleanBrandId,
       brandName: brandProfile.brand_name || cleanBrandId,
       mode,
+      pipelineStage: cleanPipelineStage,
       totalCost,
-      recommendation,
-      status: mapRecommendationToStatus(recommendation.value),
-      releaseCandidate: recommendation.value === 'recommend_to_publish',
-      assetCandidate: shouldFinalizeGeneratedSong(finalPass),
-      finalized: Boolean(finalized),
-      distDir: finalized?.distDir || null,
-      marketingDashboardUrl: finalized?.marketingResult?.dashboardUrl || null,
-    };
+      finalPass,
+      finalized,
+      status: null,
+      awaitingHumanApproval: false,
+      nextAction: null,
+    });
 
     logger.log(`\n${chalk.dim('Total pipeline cost:')} ${chalk.bold(formatCost(totalCost))}`);
     logger.log(`${chalk.dim('Song ID:')} ${songId}\n`);
@@ -304,6 +365,7 @@ async function runSongBuildPass({
   revisionNotes = null,
   existingLyrics = null,
   passLabel = 'Pass',
+  stopAfterAudio = false,
   logger,
   emit,
   modules,
@@ -403,6 +465,23 @@ async function runSongBuildPass({
     totalCost,
     extra: { brand_profile_id: brandId },
   });
+
+  if (stopAfterAudio) {
+    await emit({ type: 'pipeline_progress', stage: 'song_created_pending_review', line: `${passLabel}: Song/audio created; release pipeline gate is closed` });
+    logger.log(chalk.bgYellow.black('\n ⏸ SONG-ONLY GATE REACHED \n'));
+    logger.log(chalk.dim('  Stopping before advisory scorer, regeneration, QA checklist, distribution package, release kit, marketing assets, social, or publishing.'));
+    return {
+      lyricsResult,
+      brandReview,
+      metadata,
+      metadataPath,
+      musicResult,
+      releaseSelectionResult: null,
+      qaReport: null,
+      totalCost,
+      stoppedAfterAudio: true,
+    };
+  }
 
   await emit({ type: 'pipeline_progress', stage: 'scoring_song', line: `${passLabel}: Running advisory scorer` });
   logger.log(chalk.bold(`\n📌 ${passLabel}: Running advisory scorer...\n`));
@@ -515,6 +594,43 @@ async function finalizeMagicPipelineSuccess({
   }
 
   return { distDir, marketingResult };
+}
+
+function buildMagicPipelineResult({
+  songId,
+  title,
+  topic,
+  brandId,
+  brandName,
+  mode,
+  pipelineStage,
+  totalCost,
+  finalPass,
+  finalized,
+  status = null,
+  awaitingHumanApproval = false,
+  nextAction = null,
+}) {
+  const recommendation = finalPass?.releaseSelectionResult?.recommendation || {};
+  return {
+    songId,
+    title,
+    topic,
+    brandId,
+    brandName,
+    mode,
+    pipelineStage,
+    totalCost,
+    recommendation,
+    status: status || mapRecommendationToStatus(recommendation.value),
+    releaseCandidate: recommendation.value === 'recommend_to_publish',
+    assetCandidate: pipelineStage === MAGIC_PIPELINE_STAGES.FULL ? shouldFinalizeGeneratedSong(finalPass) : false,
+    finalized: Boolean(finalized),
+    distDir: finalized?.distDir || null,
+    marketingDashboardUrl: finalized?.marketingResult?.dashboardUrl || null,
+    awaitingHumanApproval,
+    nextAction,
+  };
 }
 
 function loadExistingDraftPayload(songId, songDir) {
