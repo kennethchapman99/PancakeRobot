@@ -46,6 +46,14 @@ function safeYoutubePublicAssetUrl(value = '') {
   return isPublicHttpsUrl(value) ? value : '';
 }
 
+function canDryRunWithoutLiveConfig(platform) {
+  return String(platform || '').toLowerCase() === 'youtube';
+}
+
+function missingConfigError(config) {
+  return `Missing config: ${config.missing.join(', ')}`;
+}
+
 async function prepareYouTubePublishRequest(post, request, env, overrides = {}) {
   if (String(post.platform || request.platform || '').toLowerCase() !== 'youtube') {
     return { request, assetPatch: null, youtubeAsset: null };
@@ -165,12 +173,12 @@ export async function executeSocialPublish(post, overrides = {}) {
     assetPatch: prepared.assetPatch,
   };
 
-  if (liveRequested && !config.ok) {
+  if (!config.ok && (liveRequested || !canDryRunWithoutLiveConfig(post.platform))) {
     return {
       ...withAsset,
       ok: false,
       config,
-      errors: [...(withAsset.errors || []), `Missing config: ${config.missing.join(', ')}`],
+      errors: [...(withAsset.errors || []), missingConfigError(config)],
     };
   }
 
