@@ -154,19 +154,26 @@ function optionalDeleteStatement(db, table, sql) {
   return tableExists(db, table) ? db.prepare(sql) : null;
 }
 
+function invalidPrefixTriggerCondition() {
+  return INVALID_ID_PREFIXES
+    .map(prefix => `NEW.id LIKE '${prefix.replaceAll("'", "''")}%'`)
+    .join(' OR ');
+}
+
 export function ensureSongCatalogCleanupSchema(db) {
   if (!columnExists(db, 'songs', 'latest_activity_at')) {
     db.exec('ALTER TABLE songs ADD COLUMN latest_activity_at TEXT');
   }
 
+  db.exec('DROP TRIGGER IF EXISTS prevent_non_song_catalog_insert');
   db.exec(`
-    CREATE TRIGGER IF NOT EXISTS prevent_non_song_catalog_insert
+    CREATE TRIGGER prevent_non_song_catalog_insert
     BEFORE INSERT ON songs
     WHEN NEW.id IS NULL
-      OR NEW.id NOT LIKE 'SONG_%'
       OR TRIM(COALESCE(NEW.title, '') || COALESCE(NEW.topic, '') || COALESCE(NEW.concept, '')) = ''
+      OR ${invalidPrefixTriggerCondition()}
     BEGIN
-      SELECT RAISE(ABORT, 'Invalid song catalog row: only real SONG_* rows with title/topic/concept can be inserted into songs');
+      SELECT RAISE(ABORT, 'Invalid song catalog row: songs table cannot receive empty rows or known non-song entity prefixes');
     END;
   `);
 }
@@ -178,12 +185,13 @@ export function applySongCatalogCleanup(db) {
   const plan = buildSongCatalogCleanupPlan(rows);
 
   const dependentDeletes = [
+    optionalDeleteStatement(db, 'social_posts', 'DELETE FROM social_posts WHERE song_id = ?'),
+    optionalDeleteStatement(db, 'social_posts', 'DELETE FROM social_posts WHERE campaign_id IN (SELECT id FROM daily_social_campaigns WHERE selected_song_id = ?)'),
+    optionalDeleteStatement(db, 'daily_social_campaigns', 'DELETE FROM daily_social_campaigns WHERE selected_song_id = ?'),
     optionalDeleteStatement(db, 'workflow_runs', 'UPDATE workflow_runs SET song_id = NULL WHERE song_id = ?'),
     optionalDeleteStatement(db, 'marketing_target_release_matches', 'DELETE FROM marketing_target_release_matches WHERE song_id = ?'),
     optionalDeleteStatement(db, 'marketing_campaigns', 'UPDATE marketing_campaigns SET focus_song_id = NULL WHERE focus_song_id = ?'),
     optionalDeleteStatement(db, 'release_marketing', 'DELETE FROM release_marketing WHERE song_id = ?'),
-    optionalDeleteStatement(db, 'social_posts', 'DELETE FROM social_posts WHERE song_id = ?'),
-    optionalDeleteStatement(db, 'daily_social_campaigns', 'DELETE FROM daily_social_campaigns WHERE selected_song_id = ?'),
     optionalDeleteStatement(db, 'publishing_checklist', 'DELETE FROM publishing_checklist WHERE song_id = ?'),
     optionalDeleteStatement(db, 'assets', 'DELETE FROM assets WHERE song_id = ?'),
     optionalDeleteStatement(db, 'release_links', 'DELETE FROM release_links WHERE song_id = ?'),
