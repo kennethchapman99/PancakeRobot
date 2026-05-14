@@ -146,6 +146,14 @@ function columnExists(db, table, column) {
   return db.prepare(`PRAGMA table_info(${table})`).all().some(item => item.name === column);
 }
 
+function tableExists(db, table) {
+  return Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table));
+}
+
+function optionalDeleteStatement(db, table, sql) {
+  return tableExists(db, table) ? db.prepare(sql) : null;
+}
+
 export function ensureSongCatalogCleanupSchema(db) {
   if (!columnExists(db, 'songs', 'latest_activity_at')) {
     db.exec('ALTER TABLE songs ADD COLUMN latest_activity_at TEXT');
@@ -156,7 +164,7 @@ export function ensureSongCatalogCleanupSchema(db) {
     BEFORE INSERT ON songs
     WHEN NEW.id IS NULL
       OR NEW.id NOT LIKE 'SONG_%'
-      OR TRIM(COALESCE(NEW.title, NEW.topic, NEW.concept, '')) = ''
+      OR TRIM(COALESCE(NEW.title, '') || COALESCE(NEW.topic, '') || COALESCE(NEW.concept, '')) = ''
     BEGIN
       SELECT RAISE(ABORT, 'Invalid song catalog row: only real SONG_* rows with title/topic/concept can be inserted into songs');
     END;
@@ -169,11 +177,23 @@ export function applySongCatalogCleanup(db) {
   const rows = db.prepare('SELECT * FROM songs').all();
   const plan = buildSongCatalogCleanupPlan(rows);
 
+  const dependentDeletes = [
+    optionalDeleteStatement(db, 'social_posts', 'DELETE FROM social_posts WHERE song_id = ?'),
+    optionalDeleteStatement(db, 'daily_social_campaigns', 'DELETE FROM daily_social_campaigns WHERE selected_song_id = ?'),
+    optionalDeleteStatement(db, 'publishing_checklist', 'DELETE FROM publishing_checklist WHERE song_id = ?'),
+    optionalDeleteStatement(db, 'assets', 'DELETE FROM assets WHERE song_id = ?'),
+    optionalDeleteStatement(db, 'release_links', 'DELETE FROM release_links WHERE song_id = ?'),
+    optionalDeleteStatement(db, 'performance_snapshots', 'DELETE FROM performance_snapshots WHERE song_id = ?'),
+  ].filter(Boolean);
+
   const deleteInvalid = db.prepare('DELETE FROM songs WHERE id = ?');
   const updateValid = db.prepare('UPDATE songs SET status = ?, latest_activity_at = ?, updated_at = COALESCE(updated_at, ?) WHERE id = ?');
 
   const run = db.transaction(() => {
-    for (const row of plan.invalid) deleteInvalid.run(row.id);
+    for (const row of plan.invalid) {
+      for (const deleteChild of dependentDeletes) deleteChild.run(row.id);
+      deleteInvalid.run(row.id);
+    }
     for (const row of plan.valid) updateValid.run(row.status, row.latest_activity_at, row.latest_activity_at, row.id);
   });
 
