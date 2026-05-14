@@ -17,16 +17,21 @@ test('song detail template exposes release-selection explanation and operator CT
   assert.match(source, /Best Hook/);
 });
 
-test('song catalog template exposes visual A&R filters, pills, and score columns', () => {
+test('song catalog template exposes clean catalog filters and removes stale A&R pill filters', () => {
   const source = fs.readFileSync(path.join(repoRoot, 'src/web/views/songs/index.ejs'), 'utf8');
-  assert.match(source, /All A&R recommendations/);
-  assert.match(source, /All release treatments/);
-  assert.match(source, /Recommend to Publish/);
-  assert.match(source, /Needs Manual Review/);
-  assert.match(source, /Full Push/);
-  assert.match(source, /Social Only/);
-  assert.match(source, /A&R Score/);
+
+  assert.match(source, /All brand profiles/);
+  assert.match(source, /All statuses/);
+  assert.match(source, /All activity dates/);
+  assert.match(source, /Latest activity first/);
+  assert.match(source, /Brand Profile/);
+  assert.match(source, /Latest Activity/);
   assert.match(source, /Run A&R Analysis/);
   assert.match(source, /Approve Selected for Release Packaging/);
+
+  assert.doesNotMatch(source, /All A&R recommendations/);
+  assert.doesNotMatch(source, /All release treatments/);
+  assert.doesNotMatch(source, /Score ≥ 85/);
+  assert.doesNotMatch(source, /Score &lt; 55/);
 });
 
