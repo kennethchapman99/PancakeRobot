@@ -234,7 +234,7 @@ export function syncSongFinanceArtifacts(songId, { writeSummary = true } = {}) {
           model: meta.model || versions[0]?.model || 'unknown',
           unitType: 'audio_generation',
           generationCount: versions.length,
-          status: meta.render_tier === 'free' ? 'success' : 'success',
+          status: 'success',
           notes: `verified_from_audio_generation_meta; render_tier=${meta.render_tier || 'unknown'}`,
         }));
       } catch {}
@@ -338,7 +338,7 @@ export function writeRunFinanceSummary(runId) {
 }
 
 export function getRecentFinanceOverview({ limit = 25 } = {}) {
-  const songs = fs.existsSync(SONS_DIR) ? fs.readdirSync(SONGS_DIR, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [];
+  const songs = fs.existsSync(SONGS_DIR) ? fs.readdirSync(SONGS_DIR, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [];
   const rows = songs.map(songId => getSongFinanceSummary(songId)).filter(summary => summary.event_count > 0).slice(0, limit);
   return { total_cost_usd: roundUsd(rows.reduce((sum, row) => sum + row.total_cost_usd, 0)), songs_with_costs: rows.length, rows };
 }
