@@ -178,6 +178,10 @@ export function applySongCatalogCleanup(db) {
   const plan = buildSongCatalogCleanupPlan(rows);
 
   const dependentDeletes = [
+    optionalDeleteStatement(db, 'workflow_runs', 'UPDATE workflow_runs SET song_id = NULL WHERE song_id = ?'),
+    optionalDeleteStatement(db, 'marketing_target_release_matches', 'DELETE FROM marketing_target_release_matches WHERE song_id = ?'),
+    optionalDeleteStatement(db, 'marketing_campaigns', 'UPDATE marketing_campaigns SET focus_song_id = NULL WHERE focus_song_id = ?'),
+    optionalDeleteStatement(db, 'release_marketing', 'DELETE FROM release_marketing WHERE song_id = ?'),
     optionalDeleteStatement(db, 'social_posts', 'DELETE FROM social_posts WHERE song_id = ?'),
     optionalDeleteStatement(db, 'daily_social_campaigns', 'DELETE FROM daily_social_campaigns WHERE selected_song_id = ?'),
     optionalDeleteStatement(db, 'publishing_checklist', 'DELETE FROM publishing_checklist WHERE song_id = ?'),
