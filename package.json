@@ -37,6 +37,7 @@
     "finance:audit": "node src/scripts/finance-manager-cli.js audit",
     "finance:missing-prices": "node src/scripts/finance-manager-cli.js missing-prices",
     "finance:reprice": "node src/scripts/finance-manager-cli.js reprice",
+    "catalog:cleanup": "node scripts/cleanup-song-catalog.js",
     "report": "node src/orchestrator.js --report",
     "research": "node src/orchestrator.js --research",
     "schedule": "node src/orchestrator.js --schedule",
