@@ -1,5 +1,5 @@
 {
-  "version": "2026-05-09",
+  "version": "2026-05-14",
   "currency": "USD",
   "providers": {
     "anthropic": {
@@ -22,7 +22,8 @@
     "minimax": {
       "models": {
         "music-2.6": {
-          "flat_usd_per_generation": null
+          "flat_usd_per_generation": 0.15,
+          "pricing_basis": "configured estimate for paid MiniMax music generation; adjust to actual invoice or token-plan allocation as needed"
         },
         "music-2.6-free": {
           "flat_usd_per_generation": 0
