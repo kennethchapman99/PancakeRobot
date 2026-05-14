@@ -10,6 +10,8 @@ const RUNS_DIR = path.join(OUTPUT_DIR, 'runs');
 const PRICING_PATH = process.env.PROVIDER_PRICING_PATH || path.join(ROOT_DIR, 'config/provider-pricing.json');
 const COST_EVENT_VERSION = '1.0.0';
 const LEGACY_UNTRUSTED_PRICING_SOURCES = new Set(['runs_table_precomputed']);
+const ARTIFACT_SYNC_IN_PROGRESS = new Set();
+const DEFAULT_MINIMAX_PAID_GENERATION_USD = 0.15;
 
 export function loadProviderPricing(pricingPath = PRICING_PATH) {
   try {
@@ -78,10 +80,16 @@ export function computeFlatGenerationCost({ provider, model, operation = 'genera
   const modelCfg = providerCfg.models?.[model] || {};
   const flatGenerationRate = numberOrNull(modelCfg.flat_usd_per_generation);
   const flatCallRate = numberOrNull(modelCfg.flat_usd_per_call);
-  const rate = flatGenerationRate ?? flatCallRate;
+  const configuredRate = flatGenerationRate ?? flatCallRate;
+  const fallbackRate = configuredRate === null ? getFlatGenerationCostFallback({ provider, model }) : null;
+  const rate = configuredRate ?? fallbackRate;
+  const pricingSource = fallbackRate !== null && configuredRate === null
+    ? `${pricing.version || 'unknown'}+provider-default`
+    : (pricing.version || 'unknown');
+
   return {
     costUsd: rate === null ? 0 : roundUsd(rate * Math.max(1, Number(generationCount) || 1)),
-    pricingSource: pricing.version || 'unknown',
+    pricingSource,
     flatRateUsd: rate,
     pricingMissing: rate === null ? [`flat_usd_per_${operation}`] : [],
   };
@@ -205,32 +213,37 @@ export async function syncSongFinanceFromRuns() {
   };
 }
 
-export function syncSongFinanceArtifacts(songId) {
+export function syncSongFinanceArtifacts(songId, { writeSummary = true } = {}) {
   if (!songId) return { synced: 0, events: [] };
   const events = [];
   const audioMetaPath = path.join(SONGS_DIR, songId, 'audio', 'generation-meta.json');
-  if (fs.existsSync(audioMetaPath)) {
-    try {
-      const meta = JSON.parse(fs.readFileSync(audioMetaPath, 'utf8'));
-      const versions = Array.isArray(meta.versions) && meta.versions.length > 0 ? meta.versions : [{ model: meta.model, tier: meta.render_tier }];
-      events.push(recordCostEvent({
-        id: `cost_${songId}_minimax_${stableIdPart(meta.generated_at || meta.model || 'audio')}`,
-        timestamp: meta.generated_at || new Date().toISOString(),
-        songId,
-        pipelineStep: 'music_generation',
-        agentName: 'music-generator',
-        operation: 'minimax_music_generation',
-        provider: 'minimax',
-        model: meta.model || versions[0]?.model || 'unknown',
-        unitType: 'audio_generation',
-        generationCount: versions.length,
-        status: 'success',
-        notes: `verified_from_audio_generation_meta; render_tier=${meta.render_tier || 'unknown'}`,
-      }));
-    } catch {}
+  ARTIFACT_SYNC_IN_PROGRESS.add(songId);
+  try {
+    if (fs.existsSync(audioMetaPath)) {
+      try {
+        const meta = JSON.parse(fs.readFileSync(audioMetaPath, 'utf8'));
+        const versions = Array.isArray(meta.versions) && meta.versions.length > 0 ? meta.versions : [{ model: meta.model, tier: meta.render_tier }];
+        events.push(recordCostEvent({
+          id: `cost_${songId}_minimax_${stableIdPart(meta.generated_at || meta.model || 'audio')}`,
+          timestamp: meta.generated_at || new Date().toISOString(),
+          songId,
+          pipelineStep: 'music_generation',
+          agentName: 'music-generator',
+          operation: 'minimax_music_generation',
+          provider: 'minimax',
+          model: meta.model || versions[0]?.model || 'unknown',
+          unitType: 'audio_generation',
+          generationCount: versions.length,
+          status: meta.render_tier === 'free' ? 'success' : 'success',
+          notes: `verified_from_audio_generation_meta; render_tier=${meta.render_tier || 'unknown'}`,
+        }));
+      } catch {}
+    }
+    if (writeSummary) writeSongFinanceSummary(songId);
+    return { synced: events.length, events };
+  } finally {
+    ARTIFACT_SYNC_IN_PROGRESS.delete(songId);
   }
-  writeSongFinanceSummary(songId);
-  return { synced: events.length, events };
 }
 
 export function readCostEventsForSong(songId) {
@@ -291,7 +304,10 @@ export function summarizeCostEvents(events = []) {
   return summary;
 }
 
-export function getSongFinanceSummary(songId) {
+export function getSongFinanceSummary(songId, { syncArtifacts = true } = {}) {
+  if (syncArtifacts && songId && !ARTIFACT_SYNC_IN_PROGRESS.has(songId)) {
+    syncSongFinanceArtifacts(songId, { writeSummary: false });
+  }
   const summary = summarizeCostEvents(readCostEventsForSong(songId));
   summary.song_id = songId;
   summary.summary_path = path.join(getFinanceDirForSong(songId), 'cost-summary.json');
@@ -322,7 +338,7 @@ export function writeRunFinanceSummary(runId) {
 }
 
 export function getRecentFinanceOverview({ limit = 25 } = {}) {
-  const songs = fs.existsSync(SONGS_DIR) ? fs.readdirSync(SONGS_DIR, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [];
+  const songs = fs.existsSync(SONS_DIR) ? fs.readdirSync(SONGS_DIR, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name) : [];
   const rows = songs.map(songId => getSongFinanceSummary(songId)).filter(summary => summary.event_count > 0).slice(0, limit);
   return { total_cost_usd: roundUsd(rows.reduce((sum, row) => sum + row.total_cost_usd, 0)), songs_with_costs: rows.length, rows };
 }
@@ -366,6 +382,22 @@ function compactObject(obj) {
 function numberOrNull(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function getFlatGenerationCostFallback({ provider, model }) {
+  const providerName = String(provider || '').toLowerCase();
+  const modelName = String(model || '').toLowerCase();
+
+  if (providerName === 'minimax' && modelName.includes('free')) return 0;
+  if (providerName === 'minimax' && modelName === 'music-2.6') {
+    return numberOrDefault(process.env.MINIMAX_MUSIC_GENERATION_COST_USD, DEFAULT_MINIMAX_PAID_GENERATION_USD);
+  }
+  return null;
+}
+
+function numberOrDefault(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
 }
 
 function roundUsd(value) {
