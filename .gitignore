@@ -2,6 +2,7 @@ node_modules/
 .env
 .DS_Store
 .playwright-cli/
+.pancake-runtime/
 pancake-robot.db
 pancake-robot.db-shm
 pancake-robot.db-wal
