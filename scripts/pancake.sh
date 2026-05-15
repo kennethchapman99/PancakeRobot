@@ -16,24 +16,63 @@ shift || true
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+current_node_version() {
+  node -v 2>/dev/null || true
+}
+
+select_node_with_volta() {
+  local volta_home="${VOLTA_HOME:-$HOME/.volta}"
+  if [ -d "$volta_home/bin" ]; then
+    export VOLTA_HOME="$volta_home"
+    export PATH="$VOLTA_HOME/bin:$PATH"
+    hash -r || true
+  fi
+
+  if ! have volta; then
+    return 1
+  fi
+
+  volta install "node@$REQUIRED_NODE" >/dev/null
+  volta pin "node@$REQUIRED_NODE" >/dev/null
+  hash -r || true
+
+  [ "$(current_node_version)" = "v$REQUIRED_NODE" ]
+}
+
+select_node_with_nvm() {
+  unset npm_config_prefix || true
+  unset NPM_CONFIG_PREFIX || true
+  unset PREFIX || true
+
+  if [ ! -s "$HOME/.nvm/nvm.sh" ]; then
+    return 1
+  fi
+
+  # shellcheck disable=SC1091
+  . "$HOME/.nvm/nvm.sh"
+  nvm install "$REQUIRED_NODE" >/dev/null
+  nvm use "$REQUIRED_NODE" >/dev/null
+  hash -r || true
+
+  [ "$(current_node_version)" = "v$REQUIRED_NODE" ]
+}
+
 ensure_node() {
-  if have volta; then
-    volta install "node@$REQUIRED_NODE" >/dev/null
-    volta pin "node@$REQUIRED_NODE" >/dev/null
+  if select_node_with_volta; then
     return 0
   fi
 
-  if [ -s "$HOME/.nvm/nvm.sh" ]; then
-    # shellcheck disable=SC1091
-    . "$HOME/.nvm/nvm.sh"
-    nvm install "$REQUIRED_NODE" >/dev/null
-    nvm use "$REQUIRED_NODE" >/dev/null
+  if select_node_with_nvm; then
     return 0
   fi
 
-  echo "[Pancake Robot] Volta or nvm is required to auto-select Node $REQUIRED_NODE." >&2
-  echo "Install Volta: curl https://get.volta.sh | bash" >&2
-  echo "Or manually use Node $REQUIRED_NODE before running Pancake Robot." >&2
+  echo "[Pancake Robot] Could not activate Node $REQUIRED_NODE." >&2
+  echo "Current node: $(current_node_version) ($(command -v node 2>/dev/null || echo 'not found'))" >&2
+  echo "" >&2
+  echo "Fix options:" >&2
+  echo "  1) Install/use Volta: curl https://get.volta.sh | bash" >&2
+  echo "  2) Or run: source ~/.nvm/nvm.sh && nvm install $REQUIRED_NODE && nvm use $REQUIRED_NODE" >&2
+  echo "  3) Then rerun: npm run pancake:doctor" >&2
   exit 1
 }
 
@@ -42,6 +81,7 @@ ensure_node
 actual="$(node -v)"
 if [ "$actual" != "v$REQUIRED_NODE" ]; then
   echo "[Pancake Robot] Wrong Node version after setup: $actual; expected v$REQUIRED_NODE" >&2
+  echo "[Pancake Robot] node path: $(command -v node)" >&2
   exit 1
 fi
 
