@@ -5,8 +5,17 @@
   "type": "module",
   "main": "src/orchestrator.js",
   "scripts": {
+    "doctor": "node scripts/ensure-node-runtime.js",
+    "pancake": "bash scripts/pancake.sh",
+    "pancake:web": "bash scripts/pancake.sh web",
+    "pancake:test": "bash scripts/pancake.sh test",
+    "pancake:cleanup": "bash scripts/pancake.sh cleanup",
+    "pancake:doctor": "bash scripts/pancake.sh doctor",
+    "prestart": "node scripts/ensure-node-runtime.js",
     "start": "node src/orchestrator.js",
+    "preweb": "node scripts/ensure-node-runtime.js",
     "web": "node --watch --import ./src/web/render-mode-preload.js src/web/server.js",
+    "predev:mobile": "node scripts/ensure-node-runtime.js",
     "dev:mobile": "node src/scripts/run-mobile-dev-stack.js",
     "setup": "node src/orchestrator.js --setup",
     "new": "node src/orchestrator.js --new",
@@ -14,6 +23,7 @@
     "release-stage": "node src/scripts/run-magic-release-stage.js",
     "magic:legacy": "node src/orchestrator.js --magic",
     "magic:workflow": "node src/scripts/run-magic-song-workflow.js",
+    "pretelegram": "node scripts/ensure-node-runtime.js",
     "telegram": "node src/inbound/telegram/bot.js",
     "workflow:runs": "node src/scripts/list-workflow-runs.js",
     "workflow:show": "node src/scripts/show-workflow-run.js",
@@ -38,6 +48,7 @@
     "finance:missing-prices": "node src/scripts/finance-manager-cli.js missing-prices",
     "finance:reprice": "node src/scripts/finance-manager-cli.js reprice",
     "catalog:repair-trigger": "node scripts/repair-song-catalog-trigger.js",
+    "precatalog:cleanup": "node scripts/ensure-node-runtime.js",
     "catalog:cleanup": "node scripts/cleanup-song-catalog.js",
     "report": "node src/orchestrator.js --report",
     "research": "node src/orchestrator.js --research",
@@ -47,6 +58,7 @@
     "verify-song": "node src/orchestrator.js --verify",
     "approve": "node src/orchestrator.js --approve",
     "reject": "node src/orchestrator.js --reject",
+    "pretest": "node scripts/ensure-node-runtime.js",
     "test": "node scripts/repair-song-catalog-trigger.js && node --test",
     "test:marketing-router": "node src/scripts/smoke-test-marketing-router.js"
   },
@@ -67,7 +79,7 @@
     "ora": "^7.0.0"
   },
   "engines": {
-    "node": ">=22 <23"
+    "node": "22.22.2"
   },
   "volta": {
     "node": "22.22.2"
