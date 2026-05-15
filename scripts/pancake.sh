@@ -90,14 +90,41 @@ if [ "$actual" != "v$REQUIRED_NODE" ]; then
   exit 1
 fi
 
+native_modules_ok() {
+  node --input-type=module - <<'EOF' >/dev/null 2>&1
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const Database = require('better-sqlite3');
+const db = new Database(':memory:');
+db.prepare('SELECT 1 AS ok').get();
+db.close();
+const { createCanvas } = require('canvas');
+const canvas = createCanvas(1, 1);
+const ctx = canvas.getContext('2d');
+ctx.fillRect(0, 0, 1, 1);
+EOF
+}
+
 ensure_deps() {
   if [ ! -d node_modules ]; then
     npm install
   fi
 
-  if ! node -e "require('better-sqlite3'); require('canvas');" >/dev/null 2>&1; then
+  if ! native_modules_ok; then
     echo "[Pancake Robot] Rebuilding native modules for Node $REQUIRED_NODE..."
     npm rebuild better-sqlite3 canvas
+  fi
+
+  if ! native_modules_ok; then
+    echo "[Pancake Robot] Native modules still invalid after rebuild; reinstalling dependencies..."
+    rm -rf node_modules
+    npm install
+    npm rebuild better-sqlite3 canvas
+  fi
+
+  if ! native_modules_ok; then
+    echo "[Pancake Robot] Native modules failed under Node $REQUIRED_NODE after reinstall." >&2
+    exit 1
   fi
 }
 
