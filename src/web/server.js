@@ -74,6 +74,12 @@ import {
 import { getSongNextAction } from '../shared/song-workflow.js';
 import { analyzeRecentDraftSongsForReleaseSelection, analyzeSongForReleaseSelection } from '../agents/release-selection-agent.js';
 import { PIPELINE_STAGES } from '../lib/release-selection/constants.js';
+import {
+  ALBUM_COST_MODES,
+  getAlbumSummary,
+  runAlbumBatch,
+} from '../services/album-batch-service.js';
+import { getAllAlbums } from '../shared/db.js';
 
 // ── Base image upload config ───────────────────────────────────────
 const ALLOWED_IMG_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
@@ -250,6 +256,94 @@ app.post('/magic-song', async (req, res) => {
   });
 
   res.redirect(`/songs/${encodeURIComponent(songId)}/generate?pipelineMode=magic&autoStart=1`);
+});
+
+// ── ALBUM BATCH ("Generate Album") ─────────────────────────────
+
+const albumBatchJobs = new Map(); // jobId → { albumId, status, events, error }
+
+app.get('/album-batch', (req, res) => {
+  const profiles = listBrandProfiles();
+  const albums = getAllAlbums().slice(0, 25).map(album => ({
+    ...album,
+    finance: album.finance_summary || null,
+  }));
+  res.render('album-batch/index', {
+    profiles,
+    activeBrandId: getActiveProfileId(),
+    costModes: ALBUM_COST_MODES,
+    albums,
+    error: null,
+  });
+});
+
+app.post('/album-batch', async (req, res) => {
+  const brandProfileId = String(req.body?.brandProfileId || getActiveProfileId() || '').trim();
+  const numberOfSongs = Math.max(1, Math.floor(Number(req.body?.numberOfSongs) || 0));
+  const costMode = String(req.body?.costMode || 'standard').trim().toLowerCase();
+  const albumTheme = String(req.body?.albumTheme || '').trim() || null;
+  const releaseIntent = String(req.body?.releaseIntent || '').trim() || null;
+  const notes = String(req.body?.notes || '').trim() || null;
+
+  if (!brandProfileId || !numberOfSongs) {
+    const profiles = listBrandProfiles();
+    return res.status(400).render('album-batch/index', {
+      profiles,
+      activeBrandId: getActiveProfileId(),
+      costModes: ALBUM_COST_MODES,
+      albums: getAllAlbums().slice(0, 25),
+      error: 'A brand profile and a number of songs are required.',
+    });
+  }
+
+  const jobId = `albumjob_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  albumBatchJobs.set(jobId, { status: 'running', events: [], albumId: null, error: null, startedAt: Date.now() });
+
+  runAlbumBatch({
+    brandProfileId,
+    numberOfSongs,
+    costMode,
+    albumTheme,
+    releaseIntent,
+    notes,
+    onEvent: (event) => {
+      const job = albumBatchJobs.get(jobId);
+      if (!job) return;
+      if (event.albumId && !job.albumId) job.albumId = event.albumId;
+      job.events.push(event);
+    },
+  }).then((result) => {
+    const job = albumBatchJobs.get(jobId);
+    if (job) {
+      job.status = result.status;
+      job.albumId = result.albumId;
+      job.result = result;
+    }
+  }).catch((err) => {
+    const job = albumBatchJobs.get(jobId);
+    if (job) { job.status = 'error'; job.error = err.message; }
+  });
+
+  res.redirect(`/album-batch/jobs/${encodeURIComponent(jobId)}`);
+});
+
+app.get('/album-batch/jobs/:jobId', (req, res) => {
+  const job = albumBatchJobs.get(req.params.jobId);
+  if (!job) return res.status(404).render('404', { message: 'Album batch job not found' });
+  const album = job.albumId ? getAlbumSummary(job.albumId) : null;
+  res.render('album-batch/job', { jobId: req.params.jobId, job, album });
+});
+
+app.get('/api/album-batch/jobs/:jobId', (req, res) => {
+  const job = albumBatchJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'not_found' });
+  res.json(job);
+});
+
+app.get('/albums/:id', (req, res) => {
+  const summary = getAlbumSummary(req.params.id);
+  if (!summary) return res.status(404).render('404', { message: 'Album not found' });
+  res.render('album-batch/detail', { ...summary });
 });
 
 // ── IDEA GENERATOR (AI pipeline) ───────────────────────────────

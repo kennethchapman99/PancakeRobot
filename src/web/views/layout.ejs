@@ -50,6 +50,13 @@
           MAGIC SONG
         </a>
 
+        <a href="/album-batch"
+           class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all mb-2
+             <%= currentPath.startsWith('/album-batch') || currentPath.startsWith('/albums') ? 'bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white' %> shadow-sm">
+          <span class="text-base">💿</span>
+          Generate Album
+        </a>
+
         <% const navLinks = [['/', 'Dashboard', '◈'], ['/ideas', 'Idea Vault', '💡'], ['/songs', 'Song Catalog', '🎵'], ['/marketing', 'Marketing', '📣'], ['/brand', 'Brand', '🎨']]; %>
         <% for (const [href, label, icon] of navLinks) { %>
           <a href="<%= href %>"
