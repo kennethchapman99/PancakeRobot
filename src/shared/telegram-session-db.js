@@ -7,6 +7,7 @@ function ensureTelegramSessionSchema() {
       chat_id TEXT PRIMARY KEY,
       user_id TEXT,
       pending_magic_song_json TEXT,
+      pending_brand_profile_json TEXT,
       last_message_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT
@@ -24,6 +25,14 @@ function ensureTelegramSessionSchema() {
       updated_at TEXT
     );
   `);
+
+  ensureColumn(db, 'telegram_sessions', 'pending_brand_profile_json', 'TEXT');
+}
+
+function ensureColumn(db, tableName, columnName, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  if (columns.some(column => column.name === columnName)) return;
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
 }
 
 export function getTelegramSessionRecord(chatId) {
@@ -47,6 +56,7 @@ export function updateTelegramSessionRecord(chatId, patch = {}) {
   if (patch.userId !== undefined) updates.user_id = patch.userId;
   if (patch.lastMessageId !== undefined) updates.last_message_id = String(patch.lastMessageId || '');
   if (patch.pendingMagicSong !== undefined) updates.pending_magic_song_json = stringifyJson(patch.pendingMagicSong);
+  if (patch.pendingBrandProfile !== undefined) updates.pending_brand_profile_json = stringifyJson(patch.pendingBrandProfile);
 
   const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
   getDb().prepare(`UPDATE telegram_sessions SET ${setClause} WHERE chat_id = ?`).run(...Object.values(updates), String(chatId));
@@ -55,6 +65,10 @@ export function updateTelegramSessionRecord(chatId, patch = {}) {
 
 export function clearTelegramPendingMagicSong(chatId) {
   return updateTelegramSessionRecord(chatId, { pendingMagicSong: null });
+}
+
+export function clearTelegramPendingBrandProfile(chatId) {
+  return updateTelegramSessionRecord(chatId, { pendingBrandProfile: null });
 }
 
 export function buildTelegramMagicSongIdempotencyKey({ chatId, messageId, callbackQueryId, brandId }) {
@@ -115,6 +129,7 @@ function parseTelegramSession(row) {
     updatedAt: row.updated_at,
     lastMessageId: row.last_message_id,
     pendingMagicSong: parseJsonObject(row.pending_magic_song_json),
+    pendingBrandProfile: parseJsonObject(row.pending_brand_profile_json),
   };
 }
 
