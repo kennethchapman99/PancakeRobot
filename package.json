@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",
-    "better-sqlite3": "^0.87.0",
+    "better-sqlite3": "^12.9.0",
     "canvas": "^2.11.0",
     "chalk": "^5.0.0",
     "chart.js": "^4.0.0",
