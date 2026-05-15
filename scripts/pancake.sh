@@ -3,10 +3,10 @@ set -euo pipefail
 
 REQUIRED_NODE="22.22.2"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RUNTIME_DIR="$ROOT_DIR/.pancake-runtime"
 cd "$ROOT_DIR"
 
-# Homebrew/global npm can export prefix vars that make nvm refuse to run.
-# The wrapper owns the project runtime, so clear them before selecting Node.
+# Homebrew/global npm can export prefix vars that poison nvm/npm. The wrapper owns this repo runtime.
 unset npm_config_prefix || true
 unset NPM_CONFIG_PREFIX || true
 unset PREFIX || true
@@ -20,59 +20,64 @@ current_node_version() {
   node -v 2>/dev/null || true
 }
 
-select_node_with_volta() {
-  local volta_home="${VOLTA_HOME:-$HOME/.volta}"
-  if [ -d "$volta_home/bin" ]; then
-    export VOLTA_HOME="$volta_home"
-    export PATH="$VOLTA_HOME/bin:$PATH"
-    hash -r || true
-  fi
+detect_platform() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
 
-  if ! have volta; then
-    return 1
-  fi
+  case "$os" in
+    Darwin) os="darwin" ;;
+    Linux) os="linux" ;;
+    *) echo "Unsupported OS: $os" >&2; return 1 ;;
+  esac
 
-  volta install "node@$REQUIRED_NODE" >/dev/null
-  volta pin "node@$REQUIRED_NODE" >/dev/null
-  hash -r || true
+  case "$arch" in
+    arm64|aarch64) arch="arm64" ;;
+    x86_64|amd64) arch="x64" ;;
+    *) echo "Unsupported architecture: $arch" >&2; return 1 ;;
+  esac
 
-  [ "$(current_node_version)" = "v$REQUIRED_NODE" ]
+  echo "$os-$arch"
 }
 
-select_node_with_nvm() {
-  unset npm_config_prefix || true
-  unset NPM_CONFIG_PREFIX || true
-  unset PREFIX || true
+select_repo_node() {
+  local platform archive node_dir node_bin url tmp_file
+  platform="$(detect_platform)"
+  archive="node-v$REQUIRED_NODE-$platform.tar.xz"
+  node_dir="$RUNTIME_DIR/node-v$REQUIRED_NODE-$platform"
+  node_bin="$node_dir/bin/node"
+  url="https://nodejs.org/dist/v$REQUIRED_NODE/$archive"
+  tmp_file="$RUNTIME_DIR/$archive"
 
-  if [ ! -s "$HOME/.nvm/nvm.sh" ]; then
-    return 1
+  if [ ! -x "$node_bin" ]; then
+    mkdir -p "$RUNTIME_DIR"
+    echo "[Pancake Robot] Installing repo-local Node v$REQUIRED_NODE for $platform..."
+    if have curl; then
+      curl -fsSL "$url" -o "$tmp_file"
+    elif have wget; then
+      wget -q "$url" -O "$tmp_file"
+    else
+      echo "[Pancake Robot] Need curl or wget to download Node runtime." >&2
+      exit 1
+    fi
+    tar -xJf "$tmp_file" -C "$RUNTIME_DIR"
+    rm -f "$tmp_file"
   fi
 
-  # shellcheck disable=SC1091
-  . "$HOME/.nvm/nvm.sh"
-  nvm install "$REQUIRED_NODE" >/dev/null
-  nvm use "$REQUIRED_NODE" >/dev/null
+  export PATH="$node_dir/bin:$PATH"
   hash -r || true
 
   [ "$(current_node_version)" = "v$REQUIRED_NODE" ]
 }
 
 ensure_node() {
-  if select_node_with_volta; then
+  if select_repo_node; then
     return 0
   fi
 
-  if select_node_with_nvm; then
-    return 0
-  fi
-
-  echo "[Pancake Robot] Could not activate Node $REQUIRED_NODE." >&2
+  echo "[Pancake Robot] Could not activate repo-local Node $REQUIRED_NODE." >&2
   echo "Current node: $(current_node_version) ($(command -v node 2>/dev/null || echo 'not found'))" >&2
-  echo "" >&2
-  echo "Fix options:" >&2
-  echo "  1) Install/use Volta: curl https://get.volta.sh | bash" >&2
-  echo "  2) Or run: source ~/.nvm/nvm.sh && nvm install $REQUIRED_NODE && nvm use $REQUIRED_NODE" >&2
-  echo "  3) Then rerun: npm run pancake:doctor" >&2
+  echo "Runtime dir: $RUNTIME_DIR" >&2
   exit 1
 }
 
@@ -99,6 +104,7 @@ ensure_deps() {
 case "$cmd" in
   doctor)
     echo "[Pancake Robot] repo: $ROOT_DIR"
+    echo "[Pancake Robot] runtime: $RUNTIME_DIR"
     echo "[Pancake Robot] node: $(node -v) ($(command -v node))"
     echo "[Pancake Robot] npm:  $(npm -v) ($(command -v npm))"
     ensure_deps
