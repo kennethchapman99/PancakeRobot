@@ -43,6 +43,12 @@ export function parseBrandProfileJson(text = '') {
   }
 }
 
+export function buildBrandProfileDraft({ brandName, brandId, description, generated = null }) {
+  const profile = normalizeBrandProfile({ generated, brandName, brandId, description });
+  validateBrandProfile(profile, `draft brand profile ${brandId}`);
+  return profile;
+}
+
 export async function generateBrandProfileFromPrompt({ brandName, brandId, description }) {
   const safeName = String(brandName || '').trim();
   const safeId = String(brandId || slugifyBrandName(safeName)).trim();
@@ -167,7 +173,7 @@ function normalizeBrandProfile({ generated, brandName, brandId, description }) {
   const defaultStyle = cleanString(music.default_style) || inferStyle(description);
   const bpm = coerceBpm(music.default_bpm, description);
 
-  const profile = {
+  return {
     ...source,
     brand_name: brandName,
     brand_type: cleanString(source.brand_type) || 'music',
@@ -231,9 +237,6 @@ function normalizeBrandProfile({ generated, brandName, brandId, description }) {
       logo_path: cleanString(ui.logo_path) || '/logo.png',
     },
   };
-
-  validateBrandProfile(profile, `normalized brand profile ${brandId}`);
-  return profile;
 }
 
 function buildGenerationTask({ brandName, brandId, description }) {
