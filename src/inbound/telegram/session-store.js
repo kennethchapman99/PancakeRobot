@@ -1,4 +1,5 @@
 import {
+  clearTelegramPendingBrandProfile,
   clearTelegramPendingMagicSong,
   getTelegramSessionRecord,
   updateTelegramSessionRecord,
@@ -13,9 +14,21 @@ export function updateTelegramSession(chatId, patch) {
     userId: patch.userId,
     lastMessageId: patch.lastMessageId,
     pendingMagicSong: patch.pendingMagicSong,
+    pendingBrandProfile: patch.pendingBrandProfile,
   });
 }
 
 export function clearPendingMagicSong(chatId) {
   return clearTelegramPendingMagicSong(chatId);
+}
+
+export function clearPendingBrandProfile(chatId) {
+  return clearTelegramPendingBrandProfile(chatId);
+}
+
+export function clearTelegramSessionWork(chatId) {
+  updateTelegramSessionRecord(chatId, {
+    pendingMagicSong: null,
+    pendingBrandProfile: null,
+  });
 }
