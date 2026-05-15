@@ -13,6 +13,9 @@ export function parseTelegramCommand(text = '') {
   if (/^\/help\b/i.test(clean)) return { type: 'help' };
   if (/^\/cancel\b/i.test(clean)) return { type: 'cancel' };
   if (/^\/brands\b/i.test(clean)) return { type: 'brands' };
+  if (/^\/brand\s+new\b/i.test(clean)) return { type: 'brand_profile_new' };
+  if (/^\/brand\s+list\b/i.test(clean)) return { type: 'brands' };
+  if (/^\/brand\s+cancel\b/i.test(clean)) return { type: 'cancel' };
 
   for (const pattern of MAGIC_PATTERNS) {
     const match = clean.match(pattern);
@@ -41,6 +44,7 @@ export function getHelpText() {
     '',
     'Commands:',
     '/brands - show available brand profiles',
+    '/brand new - create and install a new brand profile',
     '/cancel - cancel the pending request',
   ].join('\n');
 }
