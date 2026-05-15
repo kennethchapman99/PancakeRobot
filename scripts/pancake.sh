@@ -5,6 +5,12 @@ REQUIRED_NODE="22.22.2"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Homebrew/global npm can export prefix vars that make nvm refuse to run.
+# The wrapper owns the project runtime, so clear them before selecting Node.
+unset npm_config_prefix || true
+unset NPM_CONFIG_PREFIX || true
+unset PREFIX || true
+
 cmd="${1:-web}"
 shift || true
 
