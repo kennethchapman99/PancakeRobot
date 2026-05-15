@@ -178,6 +178,11 @@ export function ensureSongCatalogCleanupSchema(db) {
   `);
 }
 
+function buildQuarantineNote(existingNotes) {
+  const note = `[catalog-cleanup] quarantined invalid/non-song catalog row at ${new Date().toISOString()} because it could not be safely deleted due to database references.`;
+  return [existingNotes, note].filter(Boolean).join('\n');
+}
+
 export function applySongCatalogCleanup(db) {
   ensureSongCatalogCleanupSchema(db);
 
@@ -199,12 +204,24 @@ export function applySongCatalogCleanup(db) {
   ].filter(Boolean);
 
   const deleteInvalid = db.prepare('DELETE FROM songs WHERE id = ?');
+  const quarantineInvalid = db.prepare('UPDATE songs SET is_test = 1, status = ?, latest_activity_at = ?, updated_at = ?, notes = ? WHERE id = ?');
   const updateValid = db.prepare('UPDATE songs SET status = ?, latest_activity_at = ?, updated_at = COALESCE(updated_at, ?) WHERE id = ?');
+
+  const deletedIds = [];
+  const quarantinedIds = [];
 
   const run = db.transaction(() => {
     for (const row of plan.invalid) {
       for (const deleteChild of dependentDeletes) deleteChild.run(row.id);
-      deleteInvalid.run(row.id);
+      try {
+        deleteInvalid.run(row.id);
+        deletedIds.push(row.id);
+      } catch (error) {
+        if (error?.code !== 'SQLITE_CONSTRAINT_FOREIGNKEY') throw error;
+        const now = new Date().toISOString();
+        quarantineInvalid.run(SONG_STATUSES.DRAFT, getSongLatestActivityAt(row) || now, now, buildQuarantineNote(row.notes), row.id);
+        quarantinedIds.push(row.id);
+      }
     }
     for (const row of plan.valid) updateValid.run(row.status, row.latest_activity_at, row.latest_activity_at, row.id);
   });
@@ -214,9 +231,12 @@ export function applySongCatalogCleanup(db) {
   return {
     rows_before: plan.before,
     valid_song_rows_after: plan.after,
-    invalid_rows_removed: plan.removed,
+    invalid_rows_found: plan.invalid.length,
+    invalid_rows_removed: deletedIds.length,
+    invalid_rows_quarantined: quarantinedIds.length,
     statuses_normalized: plan.statusNormalizations.length,
     latest_activity_updates: plan.latestActivityUpdates.length,
-    removed_ids: plan.invalid.map(row => row.id),
+    removed_ids: deletedIds,
+    quarantined_ids: quarantinedIds,
   };
 }
