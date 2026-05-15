@@ -1,7 +1,13 @@
 import { createWorkflowRunId } from '../../../packages/openclaw-core/index.js';
 import { runMagicSongWorkflow } from '../../workflows/magic-song-workflow.js';
 import { buildBrandKeyboard, findBrandChoice, parseBrandCallback } from './brand-selector.js';
-import { clearPendingMagicSong, getTelegramSession, updateTelegramSession } from './session-store.js';
+import {
+  clearPendingBrandProfile,
+  clearPendingMagicSong,
+  clearTelegramSessionWork,
+  getTelegramSession,
+  updateTelegramSession,
+} from './session-store.js';
 import { getHelpText, parseTelegramCommand } from './commands.js';
 import { buildSongPublicLinks } from '../../shared/song-public-links.js';
 import {
@@ -9,6 +15,12 @@ import {
   createTelegramRequestLock,
   updateTelegramRequestLock,
 } from '../../shared/telegram-session-db.js';
+import {
+  generateBrandProfileFromPrompt,
+  installBrandProfile,
+  slugifyBrandName,
+  summarizeBrandProfile,
+} from '../../services/brand-profile-installer.js';
 
 const NOT_AUTHORIZED_MESSAGE = 'This bot is not authorized for this Telegram account.';
 
@@ -16,9 +28,44 @@ export async function handleTelegramMessage({ telegram, message, allowedUserIds 
   const fromId = String(message?.from?.id || '');
   const chatId = message?.chat?.id;
   const text = message?.text || '';
+  const cleanText = String(text || '').trim();
 
   if (!isAuthorized(fromId, allowedUserIds)) {
     await telegram.sendMessage(chatId, NOT_AUTHORIZED_MESSAGE);
+    return;
+  }
+
+  if (/^\/start\b/i.test(cleanText) || /^\/help\b/i.test(cleanText)) {
+    await telegram.sendMessage(chatId, getHelpText());
+    return;
+  }
+
+  if (/^\/cancel\b/i.test(cleanText) || /^\/brand\s+cancel\b/i.test(cleanText)) {
+    clearTelegramSessionWork(chatId);
+    await telegram.sendMessage(chatId, 'Canceled the pending Telegram request.');
+    return;
+  }
+
+  if (/^\/brands\b/i.test(cleanText) || /^\/brand\s+list\b/i.test(cleanText)) {
+    await telegram.sendMessage(chatId, 'Choose a brand profile:', { reply_markup: buildBrandKeyboard() });
+    return;
+  }
+
+  if (/^\/brand\s+new\b/i.test(cleanText)) {
+    await startBrandProfileCreation({ telegram, chatId, fromId, messageId: message.message_id });
+    return;
+  }
+
+  const session = getTelegramSession(chatId);
+  if (session.pendingBrandProfile) {
+    await handleBrandProfileCreationMessage({
+      telegram,
+      chatId,
+      fromId,
+      messageId: message.message_id,
+      text: cleanText,
+      pending: session.pendingBrandProfile,
+    });
     return;
   }
 
@@ -37,6 +84,11 @@ export async function handleTelegramMessage({ telegram, message, allowedUserIds 
 
   if (command.type === 'brands') {
     await telegram.sendMessage(chatId, 'Choose a brand profile:', { reply_markup: buildBrandKeyboard() });
+    return;
+  }
+
+  if (command.type === 'brand_profile_new') {
+    await startBrandProfileCreation({ telegram, chatId, fromId, messageId: message.message_id });
     return;
   }
 
@@ -153,6 +205,174 @@ export async function handleTelegramCallback({ telegram, callbackQuery, allowedU
       `Song generation failed.\n\nStage/error: ${error.message}\nRun: ${errorRunId}`
     );
   }
+}
+
+async function startBrandProfileCreation({ telegram, chatId, fromId, messageId }) {
+  console.log('[telegram-brand] starting profile creation');
+  clearPendingMagicSong(chatId);
+  updateTelegramSession(chatId, {
+    userId: fromId,
+    lastMessageId: messageId,
+    pendingBrandProfile: {
+      step: 'awaiting_brand_name',
+      requestedBy: fromId,
+      createdAt: new Date().toISOString(),
+    },
+  });
+
+  await telegram.sendMessage(chatId, 'What should this brand be called?');
+}
+
+async function handleBrandProfileCreationMessage({ telegram, chatId, fromId, messageId, text, pending }) {
+  if (!text) {
+    await telegram.sendMessage(chatId, 'Send text for the current brand profile step, or /cancel.');
+    return;
+  }
+
+  if (pending.step === 'awaiting_brand_name') {
+    let brandId;
+    try {
+      brandId = slugifyBrandName(text);
+    } catch (error) {
+      await telegram.sendMessage(chatId, error.message);
+      return;
+    }
+
+    updateTelegramSession(chatId, {
+      userId: fromId,
+      lastMessageId: messageId,
+      pendingBrandProfile: {
+        ...pending,
+        step: 'awaiting_brand_description',
+        brandName: text,
+        brandId,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+
+    await telegram.sendMessage(
+      chatId,
+      `Brand name: ${text}\nBrand ID: ${brandId}\n\nSend me the brand description / vibe / audience / music direction.`
+    );
+    return;
+  }
+
+  if (pending.step === 'awaiting_brand_description') {
+    await telegram.sendMessage(chatId, `Creating brand profile “${pending.brandName}”.`);
+
+    try {
+      const profile = await generateBrandProfileFromPrompt({
+        brandName: pending.brandName,
+        brandId: pending.brandId,
+        description: text,
+      });
+
+      updateTelegramSession(chatId, {
+        userId: fromId,
+        lastMessageId: messageId,
+        pendingBrandProfile: {
+          ...pending,
+          step: 'awaiting_install_confirmation',
+          description: text,
+          generatedProfile: profile,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+
+      await telegram.sendMessage(
+        chatId,
+        `${summarizeBrandProfile(profile, pending.brandId)}\n\nReply with:\ninstall\nregenerate\ncancel`
+      );
+    } catch (error) {
+      console.error('[telegram-brand] generation failed', error);
+      await telegram.sendMessage(chatId, `Brand profile generation failed: ${error.message}`);
+    }
+    return;
+  }
+
+  if (pending.step === 'awaiting_install_confirmation' || pending.step === 'awaiting_overwrite_confirmation') {
+    const action = text.toLowerCase();
+
+    if (action === 'cancel') {
+      clearPendingBrandProfile(chatId);
+      await telegram.sendMessage(chatId, 'Canceled brand profile creation.');
+      return;
+    }
+
+    if (action === 'regenerate') {
+      await telegram.sendMessage(chatId, `Regenerating brand profile “${pending.brandName}”.`);
+      try {
+        const profile = await generateBrandProfileFromPrompt({
+          brandName: pending.brandName,
+          brandId: pending.brandId,
+          description: pending.description,
+        });
+
+        updateTelegramSession(chatId, {
+          userId: fromId,
+          lastMessageId: messageId,
+          pendingBrandProfile: {
+            ...pending,
+            step: 'awaiting_install_confirmation',
+            generatedProfile: profile,
+            updatedAt: new Date().toISOString(),
+          },
+        });
+
+        await telegram.sendMessage(
+          chatId,
+          `${summarizeBrandProfile(profile, pending.brandId)}\n\nReply with:\ninstall\nregenerate\ncancel`
+        );
+      } catch (error) {
+        console.error('[telegram-brand] regeneration failed', error);
+        await telegram.sendMessage(chatId, `Brand profile regeneration failed: ${error.message}`);
+      }
+      return;
+    }
+
+    if (action === 'install' || action === 'overwrite') {
+      const overwrite = action === 'overwrite' || pending.step === 'awaiting_overwrite_confirmation';
+      try {
+        const installed = installBrandProfile({
+          brandId: pending.brandId,
+          profile: pending.generatedProfile,
+          overwrite,
+        });
+        clearPendingBrandProfile(chatId);
+        await telegram.sendMessage(
+          chatId,
+          `Created and installed “${installed.profile.brand_name}”.\nBrand ID: ${installed.brandId}\n\nIt is now available as a brand option when creating a new song.`
+        );
+      } catch (error) {
+        if (error.code === 'BRAND_PROFILE_EXISTS') {
+          updateTelegramSession(chatId, {
+            userId: fromId,
+            lastMessageId: messageId,
+            pendingBrandProfile: {
+              ...pending,
+              step: 'awaiting_overwrite_confirmation',
+              updatedAt: new Date().toISOString(),
+            },
+          });
+          await telegram.sendMessage(
+            chatId,
+            `Brand ID already exists: ${pending.brandId}\n\nReply overwrite to replace it, regenerate to create a new draft, or cancel.`
+          );
+          return;
+        }
+
+        console.error('[telegram-brand] install failed', error);
+        await telegram.sendMessage(chatId, `Brand profile install failed: ${error.message}`);
+      }
+      return;
+    }
+
+    await telegram.sendMessage(chatId, 'Reply with install, regenerate, or cancel.');
+    return;
+  }
+
+  clearPendingBrandProfile(chatId);
+  await telegram.sendMessage(chatId, 'Brand profile state was invalid, so I cleared it. Send /brand new to start again.');
 }
 
 async function sendProgressEvent({ telegram, chatId, event }) {
