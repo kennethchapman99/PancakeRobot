@@ -59,8 +59,19 @@ export function loadSavedToken(oauth2Client) {
 
 export function saveToken(oauth2Client) {
   const tokenPath = getTokenPath();
+  let existing = {};
+  if (fs.existsSync(tokenPath)) {
+    try { existing = JSON.parse(fs.readFileSync(tokenPath, 'utf8')); } catch { /* ignore */ }
+  }
+  const credentials = {
+    ...existing,
+    ...oauth2Client.credentials,
+    // Google's refresh response never re-sends refresh_token — preserve the saved one
+    refresh_token: oauth2Client.credentials.refresh_token || existing.refresh_token || '',
+    saved_at: new Date().toISOString(),
+  };
   fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
-  fs.writeFileSync(tokenPath, JSON.stringify(oauth2Client.credentials, null, 2));
+  fs.writeFileSync(tokenPath, JSON.stringify(credentials, null, 2));
 }
 
 export async function authorizeInteractive() {
@@ -107,11 +118,25 @@ export async function getAuthorizedClient() {
   if (!loadSavedToken(oauth2Client)) {
     throw new Error('Gmail not authorized. Run: npm run marketing:gmail:auth');
   }
-  // Refresh if needed
+  const savedRefreshToken = oauth2Client.credentials.refresh_token;
+  if (!savedRefreshToken) {
+    throw new Error('Gmail token is missing refresh_token — re-authorize by running: npm run marketing:gmail:auth');
+  }
   try {
     await oauth2Client.getAccessToken();
+    // Restore refresh_token in case the googleapis library cleared it after refresh
+    if (!oauth2Client.credentials.refresh_token) {
+      oauth2Client.credentials.refresh_token = savedRefreshToken;
+    }
     saveToken(oauth2Client);
   } catch (err) {
+    const isRevoked = /invalid_grant|token.*expired|token.*revoked/i.test(err.message);
+    if (isRevoked) {
+      throw new Error(
+        `OAuth token refresh failed — the Gmail refresh token has been revoked or expired. ` +
+        `Re-authorize by running: npm run marketing:gmail:auth`
+      );
+    }
     throw new Error(`Gmail token refresh failed: ${err.message}. Re-run: npm run marketing:gmail:auth`);
   }
   const verified = await verifyAccount(oauth2Client);
