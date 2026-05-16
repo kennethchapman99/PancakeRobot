@@ -1,0 +1,152 @@
+{
+  "id": "static-postcards-electro-indie-pop",
+  "schema_version": "brand-profile/v1",
+  "brand_type": "music_artist",
+  "brand_name": "Static Postcards [Electro Indie Pop]",
+  "artist_name": "Static Postcards [Electro Indie Pop]",
+  "display_name": "Static Postcards [Electro Indie Pop]",
+  "short_name": "Static Postcards",
+  "genre": "Electro Indie Pop",
+  "brand_description": "Tender electronic indie pop for people who like their synths human, nostalgic, melodic, and quietly catchy.",
+  "audience": {
+    "age_range": "13+",
+    "description": "Indie pop listeners, college radio fans, soft electronic playlists, late-night headphone listeners, and emotionally literate pop fans.",
+    "guardrail": "Keep the sound reflective and emotionally mature. Do not make it childish, novelty-oriented, heavy EDM, or a direct clone of any reference artist."
+  },
+  "character": {
+    "name": "Static Postcards",
+    "core_concept": "An introspective electro-indie project built around soft synths, programmed drums, intimate vocals, distance, memory, and small human details.",
+    "fallback_summary": "Soft, bittersweet, melodic electronic indie pop with clean drum machines, warm synths, close vocals, and lyrical snapshots of connection and longing."
+  },
+  "positioning": {
+    "one_liner": "Tender electronic indie pop for people who like their synths human, nostalgic, melodic, and quietly catchy.",
+    "core_feeling": "melancholy optimism",
+    "emotional_keywords": [
+      "wistful",
+      "warm",
+      "clever",
+      "lonely-but-hopeful",
+      "softly anthemic"
+    ]
+  },
+  "voice": {
+    "persona": "observant, slightly introverted, emotionally precise",
+    "tone": "gentle, literate, sincere, lightly ironic",
+    "avoid": [
+      "direct imitation of any specific artist",
+      "copied melodies",
+      "copied lyrics",
+      "copied vocal phrasing"
+    ]
+  },
+  "music": {
+    "default_prompt": "Create an original electro-indie pop song for Static Postcards [Electro Indie Pop]. The track should feel tender, human, and melodic: soft programmed drums, clean electronic pulses, warm analog-style synth pads, simple guitar or bell-like accents, and a vocal that sounds intimate and conversational. Keep the energy mid-tempo, bittersweet, and catchy without becoming heavy EDM. Lyrics should use small vivid details, distance, memory, messages, weather, transit, rooms, and quiet emotional realizations. Avoid copying any specific artist, melody, lyric, or production signature.",
+    "default_style": "bittersweet electro-indie pop, soft drum machine pulse, warm analog synths, glassy arpeggios, intimate vocal, nostalgic but clean mix",
+    "default_bpm": 118,
+    "target_length": "2:45-3:25",
+    "normal_word_range": [
+      140,
+      210
+    ],
+    "first_vocal_by_seconds": 12,
+    "max_instrumental_intro_seconds": 10,
+    "primary_genres": [
+      "indie pop",
+      "indietronica",
+      "synth pop",
+      "bedroom pop"
+    ],
+    "sonic_palette": [
+      "soft drum machine pulse",
+      "warm synth bass",
+      "glassy arpeggiated synths",
+      "subtle glitch percussion",
+      "breathy lead vocal"
+    ],
+    "production_do": [
+      "Keep electronics light and spacious.",
+      "Let the vocal remain intimate.",
+      "Build choruses through melody and harmony, not huge drops."
+    ],
+    "production_avoid": [
+      "dubstep drops",
+      "trap hi-hat overload",
+      "stadium EDM builds",
+      "direct artist imitation"
+    ]
+  },
+  "lyrics": {
+    "title_examples": [
+      "Between Signals",
+      "Apartment Lights",
+      "The Signal Still Finds Me",
+      "Train Window Weather",
+      "Half a Message"
+    ],
+    "topic_variety": [
+      "long-distance connection",
+      "old messages",
+      "city nights",
+      "quiet heartbreak",
+      "hope returning slowly",
+      "private rituals"
+    ],
+    "required_closing": "End with an emotionally clear final hook or repeated image; avoid abrupt comedy endings or spoken skits.",
+    "themes": [
+      "distance",
+      "memory",
+      "messages",
+      "weather",
+      "connection"
+    ],
+    "imagery": [
+      "train windows",
+      "apartment lights",
+      "rain on glass",
+      "old emails",
+      "parking lots"
+    ],
+    "hook_style": "plainspoken phrase with an emotional twist"
+  },
+  "distribution": {
+    "default_artist": "Static Postcards [Electro Indie Pop]",
+    "default_album": "Between Signals",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "indie pop",
+      "indietronica",
+      "synth pop",
+      "bedroom pop"
+    ],
+    "youtube_tags_seed": [
+      "electro indie pop",
+      "indietronica",
+      "synth pop",
+      "nostalgic pop",
+      "soft electronic"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Electronic"
+    ],
+    "coppa_status": "not_child_directed",
+    "content_advisory": "clean"
+  },
+  "ui": {
+    "sidebar_subtitle": "Electro Indie Pop",
+    "logo_path": "/media/brand-profiles/static-postcards-electro-indie-pop/logo.png"
+  },
+  "visuals": {
+    "album_art_direction": "minimal misty city architecture, analog texture, pale cyan and midnight blue, modern clean typography",
+    "brand_colors": [
+      "midnight blue",
+      "soft cyan",
+      "warm beige",
+      "faded coral"
+    ]
+  },
+  "guardrails": {
+    "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
+    "brand_safe": true
+  }
+}

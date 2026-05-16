@@ -1,0 +1,157 @@
+{
+  "id": "sunstone-signal-modern-roots-reggae",
+  "schema_version": "brand-profile/v1",
+  "brand_type": "music_artist",
+  "brand_name": "Sunstone Signal [Modern Roots Reggae]",
+  "artist_name": "Sunstone Signal [Modern Roots Reggae]",
+  "display_name": "Sunstone Signal [Modern Roots Reggae]",
+  "short_name": "Sunstone Signal",
+  "genre": "Modern Roots Reggae",
+  "brand_description": "Warm modern roots reggae with deep bass, bright hooks, horn-lifted choruses, dub touches, and grounded positive energy.",
+  "audience": {
+    "age_range": "13+",
+    "description": "Reggae, reggae-rock, summer festival, beach playlist, positive-vibe, and organic live-band listeners.",
+    "guardrail": "Respect the genre without fake accents, fake patois, cultural caricature, or stock vacation clichés. Keep vocals natural."
+  },
+  "character": {
+    "name": "Sunstone Signal",
+    "core_concept": "A warm modern roots reggae project focused on resilience, community, gratitude, movement, sunlight, and groove-led positivity.",
+    "fallback_summary": "Modern roots reggae with rolling bass, relaxed one-drop or rockers groove, skanking guitar, organ bubbles, horns, smooth vocals, and sunny resilience."
+  },
+  "positioning": {
+    "one_liner": "Warm modern roots reggae with deep bass, bright hooks, horn-lifted choruses, dub touches, and grounded positive energy.",
+    "core_feeling": "sunny resilience",
+    "emotional_keywords": [
+      "warm",
+      "uplifting",
+      "rooted",
+      "easygoing",
+      "socially aware",
+      "communal"
+    ]
+  },
+  "voice": {
+    "persona": "calm, generous, resilient, community-minded",
+    "tone": "positive, grounded, soulful, welcoming",
+    "avoid": [
+      "direct imitation of any specific artist",
+      "copied melodies",
+      "copied lyrics",
+      "copied vocal phrasing"
+    ]
+  },
+  "music": {
+    "default_prompt": "Create an original modern roots reggae song for Sunstone Signal [Modern Roots Reggae]. Build it around a warm rolling bassline, relaxed one-drop or rockers groove, clean skanking guitar, tasteful organ bubbles, optional horn responses, and a smooth melodic vocal. The feeling should be sunny, grounded, and resilient, with a chorus that works for a summer playlist or festival crowd. Lyrics should focus on community, perseverance, gratitude, movement, and finding light through pressure. Avoid fake accents, cultural caricature, or copying any specific artist's melody, lyric, vocal tone, or production signature.",
+    "default_style": "modern roots reggae, warm rolling bass, one-drop drums, skanking guitar, organ bubbles, horn responses, dub delay, smooth melodic vocal",
+    "default_bpm": 82,
+    "target_length": "3:00-3:50",
+    "normal_word_range": [
+      130,
+      210
+    ],
+    "first_vocal_by_seconds": 14,
+    "max_instrumental_intro_seconds": 14,
+    "primary_genres": [
+      "modern reggae",
+      "roots reggae",
+      "reggae rock",
+      "dub"
+    ],
+    "sonic_palette": [
+      "warm round bass",
+      "one-drop drums",
+      "skanking clean guitar",
+      "organ bubble",
+      "horn stabs",
+      "dub delay throws",
+      "group backing vocals"
+    ],
+    "production_do": [
+      "Let the bass lead.",
+      "Keep the groove relaxed.",
+      "Use horns and organ for lift.",
+      "Add dub delays tastefully."
+    ],
+    "production_avoid": [
+      "fake Jamaican accent instructions",
+      "overly tropical stock sounds",
+      "generic vacation-ad music",
+      "direct artist imitation"
+    ]
+  },
+  "lyrics": {
+    "title_examples": [
+      "Come Rooted",
+      "Sunstone Signal",
+      "Keep the Rhythm",
+      "Light Through Pressure",
+      "Open Windows"
+    ],
+    "topic_variety": [
+      "resilience",
+      "community",
+      "gratitude",
+      "movement",
+      "sunlight after pressure",
+      "shared struggle",
+      "peace without passivity"
+    ],
+    "required_closing": "End with a warm final chorus, call-and-response, or dub-style groove outro. Avoid fake accents or caricatured language.",
+    "themes": [
+      "resilience",
+      "community",
+      "sunlight",
+      "movement",
+      "gratitude",
+      "home"
+    ],
+    "imagery": [
+      "morning sun",
+      "salt air",
+      "open windows",
+      "drums in the distance",
+      "warm stone"
+    ],
+    "hook_style": "simple uplifting phrase with rhythmic bounce"
+  },
+  "distribution": {
+    "default_artist": "Sunstone Signal [Modern Roots Reggae]",
+    "default_album": "Come Rooted",
+    "primary_genre": "Reggae",
+    "spotify_genres": [
+      "modern reggae",
+      "roots reggae",
+      "reggae rock",
+      "dub"
+    ],
+    "youtube_tags_seed": [
+      "modern reggae",
+      "roots reggae",
+      "reggae rock",
+      "dub reggae",
+      "positive vibes"
+    ],
+    "apple_music_genres": [
+      "Reggae"
+    ],
+    "coppa_status": "not_child_directed",
+    "content_advisory": "clean"
+  },
+  "ui": {
+    "sidebar_subtitle": "Modern Roots Reggae",
+    "logo_path": "/media/brand-profiles/sunstone-signal-modern-roots-reggae/logo.png"
+  },
+  "visuals": {
+    "album_art_direction": "warm vintage poster texture, sun, roots, coastal landscape, organic hand-painted typography; respectful modern reggae tone without caricature",
+    "brand_colors": [
+      "sun gold",
+      "deep green",
+      "warm red clay",
+      "ocean blue"
+    ]
+  },
+  "guardrails": {
+    "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
+    "brand_safe": true
+  }
+}

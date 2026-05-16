@@ -1,0 +1,160 @@
+{
+  "id": "bright-porch-parade-joyful-indie-pop",
+  "schema_version": "brand-profile/v1",
+  "brand_type": "music_artist",
+  "brand_name": "Bright Porch Parade [Joyful Indie Pop]",
+  "artist_name": "Bright Porch Parade [Joyful Indie Pop]",
+  "display_name": "Bright Porch Parade [Joyful Indie Pop]",
+  "short_name": "Bright Porch Parade",
+  "genre": "Joyful Indie Pop",
+  "brand_description": "Joyful, clever indie pop with group vocals, playful arrangements, male/female vocal interplay, and sunshine hooks.",
+  "audience": {
+    "age_range": "13+",
+    "description": "Pop listeners, families, upbeat playlist fans, road-trip listeners, brand-safe campaign users, and live singalong audiences.",
+    "guardrail": "Keep it joyful and clean without becoming babyish, saccharine, corporate-jingle-like, or novelty-only."
+  },
+  "character": {
+    "name": "Bright Porch Parade",
+    "core_concept": "A bright indie-pop collective of friends making clever, handmade-but-polished songs with male/female vocals, handclaps, stomps, and unexpected instruments.",
+    "fallback_summary": "Happy varied indie pop with male and female vocals, bright acoustic instruments, playful percussion, group harmonies, and instantly singable choruses."
+  },
+  "positioning": {
+    "one_liner": "Joyful, clever indie pop with group vocals, playful arrangements, male/female vocal interplay, and sunshine hooks.",
+    "core_feeling": "communal happiness with craft",
+    "emotional_keywords": [
+      "happy",
+      "varied",
+      "playful",
+      "warm",
+      "clever",
+      "optimistic"
+    ]
+  },
+  "voice": {
+    "persona": "playful collective of friends making clever joyful songs together",
+    "tone": "bright, charming, human, lightly quirky",
+    "avoid": [
+      "direct imitation of any specific artist",
+      "copied melodies",
+      "copied lyrics",
+      "copied vocal phrasing"
+    ]
+  },
+  "music": {
+    "default_prompt": "Create an original joyful indie pop song for Bright Porch Parade [Joyful Indie Pop]. The track should feel upbeat, varied, and handmade-but-polished: bright acoustic guitar or ukulele, bouncy bass, handclaps, stomps, playful percussion, optional whistling, glockenspiel, brass, or toy-piano accents, and both male and female vocals trading lines or harmonizing. The chorus should be instantly singable and positive without being cheesy. Lyrics should celebrate small adventures, friendship, family, everyday magic, and forward motion. Avoid copying any specific artist's melody, lyric, arrangement, vocal blend, or production signature.",
+    "default_style": "joyful indie pop, group vocals, male and female vocal tradeoffs, bright acoustic guitar, handclaps, stomps, bouncy bass, playful percussion, singalong chorus",
+    "default_bpm": 132,
+    "target_length": "2:30-3:15",
+    "normal_word_range": [
+      130,
+      220
+    ],
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 8,
+    "primary_genres": [
+      "indie pop",
+      "folk pop",
+      "sunshine pop",
+      "family pop"
+    ],
+    "sonic_palette": [
+      "bright acoustic guitar",
+      "ukulele accents",
+      "handclaps",
+      "stomps",
+      "bouncy bass",
+      "glockenspiel",
+      "group vocals",
+      "light brass"
+    ],
+    "production_do": [
+      "Use male/female vocal interplay.",
+      "Add arrangement surprises.",
+      "Keep the groove bright.",
+      "Make the chorus communal."
+    ],
+    "production_avoid": [
+      "corporate jingle energy",
+      "generic kids music clichés",
+      "forced zaniness",
+      "direct artist imitation"
+    ]
+  },
+  "lyrics": {
+    "title_examples": [
+      "Any Day Together",
+      "We Brought the Sunshine",
+      "Front Porch Parade",
+      "Lost on Purpose",
+      "Kitchen Dancing"
+    ],
+    "topic_variety": [
+      "small adventures",
+      "togetherness",
+      "sunny resilience",
+      "creative play",
+      "road trips",
+      "family-friendly joy",
+      "turning ordinary days into celebrations"
+    ],
+    "required_closing": "End with a big group final chorus, playful tag, or repeated singalong phrase. Keep the ending clean and uplifting.",
+    "themes": [
+      "small adventures",
+      "togetherness",
+      "road trips",
+      "family-friendly joy",
+      "everyday magic"
+    ],
+    "imagery": [
+      "front porches",
+      "sidewalk chalk",
+      "kitchen dancing",
+      "open windows",
+      "bike bells",
+      "summer rain"
+    ],
+    "hook_style": "simple positive phrase that sounds good shouted by a group"
+  },
+  "distribution": {
+    "default_artist": "Bright Porch Parade [Joyful Indie Pop]",
+    "default_album": "Any Day Together",
+    "primary_genre": "Pop",
+    "spotify_genres": [
+      "indie pop",
+      "folk pop",
+      "sunshine pop",
+      "family pop"
+    ],
+    "youtube_tags_seed": [
+      "joyful indie pop",
+      "happy pop",
+      "folk pop",
+      "group vocals",
+      "family friendly music"
+    ],
+    "apple_music_genres": [
+      "Pop",
+      "Alternative"
+    ],
+    "coppa_status": "not_child_directed",
+    "content_advisory": "clean"
+  },
+  "ui": {
+    "sidebar_subtitle": "Joyful Indie Pop",
+    "logo_path": "/media/brand-profiles/bright-porch-parade-joyful-indie-pop/logo.png"
+  },
+  "visuals": {
+    "album_art_direction": "colorful handmade indie-pop collage with instruments, porch/parade energy, warm paper texture, playful but not childish",
+    "brand_colors": [
+      "sky blue",
+      "sunny yellow",
+      "tomato red",
+      "leaf green",
+      "warm white"
+    ]
+  },
+  "guardrails": {
+    "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
+    "brand_safe": true
+  }
+}
