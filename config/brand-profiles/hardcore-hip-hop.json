@@ -1,0 +1,186 @@
+{
+  "id": "borough-cipher-hardcore-hip-hop",
+  "schema_version": "brand-profile/v1",
+  "brand_type": "music_artist",
+  "brand_name": "Borough [Hardcore Hip Hop]",
+  "artist_name": "Borough [Hardcore Hip Hop]",
+  "display_name": "Borough [Hardcore Hip Hop]",
+  "short_name": "Hardcore",
+  "genre": "Hardcore Hip Hop",
+  "brand_description": "Hardcore hip hop with cinematic grit, sharp bars, oversized crisp drums, smoky bass, strong instrumental hooks, crew energy, and memorable chant-ready vocal hooks.",
+  "audience": {
+    "age_range": "13+",
+    "description": "Hip hop fans who value bars, punchlines, gritty beats, classic crew energy, modern technical rap, and hard but controlled hooks.",
+    "guardrail": "Can be intense and streetwise, but avoid cartoon violence, slurs, direct threats, or lazy gangster clichés. Make clean edits possible."
+  },
+  "character": {
+    "name": "Borough Cipher",
+    "core_concept": "A battle-tested hip hop collective with controlled aggression, technical lyricism, street-level imagery, and strategic confidence.",
+    "fallback_summary": "Gritty hardcore hip hop with big crisp beats, punchy drums, cinematic minor-key textures, smoky bass, strong instrumental motifs, tight verses, and chantable crew hooks."
+  },
+  "positioning": {
+    "one_liner": "Hardcore hip hop with cinematic grit, sharp bars, big crisp beats, smoky bass, instrumental hooks, crew energy, and memorable hooks.",
+    "core_feeling": "command, pressure, intelligence",
+    "emotional_keywords": [
+      "confident",
+      "gritty",
+      "disciplined",
+      "streetwise",
+      "battle-ready"
+    ]
+  },
+  "voice": {
+    "persona": "calm under pressure, clever, strategic, battle-tested",
+    "tone": "hard, witty, controlled, quotable",
+    "avoid": [
+      "direct imitation of any specific artist",
+      "copied melodies",
+      "copied lyrics",
+      "copied vocal phrasing"
+    ]
+  },
+  "music": {
+    "default_prompt": "Create an original hardcore hip hop track for Borough Cipher [Hardcore Hip Hop]. The track must hit with big, crisp, modern drums: heavy kick, cracking snare, tight percussion, clean transients, and a punchy low end that feels powerful without getting muddy. Blend hard boom-bap foundation, smoky bass, cinematic minor-key instrumentation, confident West Coast pocket, gritty East Coast cipher energy, and precise modern technical rapping. Include a strong instrumental hook that is recognizable even before the vocal hook: a dark piano riff, chopped string stab, brass phrase, sinister synth motif, guitar lick, or scratched vocal texture that repeats enough to brand the track. The vocal hook should be memorable and chantable without becoming pop-soft. Verses should have internal rhyme, punchlines, crew energy, strategic confidence, and vivid street-level imagery. Mix direction: drums up front, bass controlled, vocal clear, instrumental motif sharp and repeatable. Avoid copying any specific rapper's flow, lyrics, vocal tone, cadence, slogans, or production signature.",
+    "default_style": "hardcore hip hop, big crisp boom-bap drums, heavy kick, cracking snare, punchy bass, cinematic minor-key instrumental hook, smoky texture, crew hook, lyrical rap, controlled aggression, clean modern mix",
+    "default_bpm": 90,
+    "target_length": "2:35-3:20",
+    "normal_word_range": [
+      260,
+      420
+    ],
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 8,
+    "primary_genres": [
+      "hardcore hip hop",
+      "boom bap",
+      "underground hip hop",
+      "lyrical rap"
+    ],
+    "sonic_palette": [
+      "big crisp kick with clean transient",
+      "cracking snare forward in the mix",
+      "tight boom-bap drum pocket",
+      "punchy controlled sub bass",
+      "smoky bassline",
+      "dark piano riff",
+      "minor-key string stab",
+      "sinister brass or synth motif",
+      "scratched vocal texture",
+      "dusty texture without muddy mix",
+      "crew ad-libs",
+      "short instrumental hook that repeats like a signature"
+    ],
+    "production_do": [
+      "Make the beat feel big, crisp, and expensive: hard kick, cracking snare, tight percussion, clean transients.",
+      "Create a strong instrumental hook that could identify the song even without vocals.",
+      "Keep drums forward and punchy without burying the vocal.",
+      "Use cinematic grit, but keep the mix clear rather than muddy.",
+      "Let the bass hit hard while staying controlled and separated from the kick.",
+      "Make the vocal hook shoutable and the instrumental motif repeatable.",
+      "Leave enough space in verses for lyrical clarity and punchline impact.",
+      "Use beat drops, drum mutes, or motif-only moments to make transitions feel dramatic."
+    ],
+    "production_avoid": [
+      "mumble delivery",
+      "thin drums",
+      "muddy low end",
+      "weak or forgettable instrumental loops",
+      "overly glossy pop chorus",
+      "cartoon villain energy",
+      "direct artist imitation",
+      "busy arrangements that bury the vocal"
+    ],
+    "beat_signature": {
+      "priority": "The beat should be a lead character, not just a backing track.",
+      "drum_feel": "Oversized, crisp, head-nod drums with a hard kick/snare relationship and tight swing.",
+      "low_end": "Punchy and physical, but never muddy; kick and bass should feel separated.",
+      "instrumental_hook": "Every song needs a repeatable non-vocal motif: piano riff, string stab, brass phrase, synth line, guitar lick, or scratch phrase.",
+      "mix_priorities": [
+        "drums forward",
+        "vocal intelligible",
+        "instrumental motif obvious",
+        "bass powerful but controlled",
+        "no muddy midrange"
+      ]
+    }
+  },
+  "lyrics": {
+    "title_examples": [
+      "Built From Concrete",
+      "Crisp Pressure",
+      "Drums at the Door",
+      "Move Like Smoke",
+      "Cipher Pressure",
+      "The Room Already Knows",
+      "Kick Snare Concrete"
+    ],
+    "topic_variety": [
+      "discipline under pressure",
+      "crew loyalty",
+      "craft mastery",
+      "outsmarting rivals",
+      "survival",
+      "earned confidence"
+    ],
+    "required_closing": "End with a decisive final hook, crew chant, last punchline, or instrumental-hook reprise. Avoid unresolved fade-outs unless the beat outro clearly spotlights the main motif.",
+    "themes": [
+      "discipline",
+      "loyalty",
+      "survival",
+      "craft mastery",
+      "earned status"
+    ],
+    "imagery": [
+      "corner lights",
+      "chess boards",
+      "smoke",
+      "subway steel",
+      "cipher circles"
+    ],
+    "hook_style": "short hard vocal phrase that sounds like a crew motto, supported by a recognizable instrumental motif"
+  },
+  "distribution": {
+    "default_artist": "Borough Cipher [Hardcore Hip Hop]",
+    "default_album": "Built From Concrete",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "hardcore hip hop",
+      "boom bap",
+      "underground hip hop",
+      "lyrical rap"
+    ],
+    "youtube_tags_seed": [
+      "hardcore hip hop",
+      "boom bap",
+      "big beats",
+      "crisp drums",
+      "lyrical rap",
+      "underground rap",
+      "hip hop",
+      "cinematic rap",
+      "instrumental hook"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap"
+    ],
+    "coppa_status": "not_child_directed",
+    "content_advisory": "explicit_optional"
+  },
+  "ui": {
+    "sidebar_subtitle": "Hardcore Hip Hop",
+    "logo_path": "/media/brand-profiles/borough-cipher-hardcore-hip-hop/logo.png"
+  },
+  "visuals": {
+    "album_art_direction": "bold gritty street-poster design, concrete textures, black and aged gold, skyline silhouettes, sharp distressed typography, strong graphic rhythm, and visual weight that matches big crisp drums",
+    "brand_colors": [
+      "charcoal",
+      "deep green",
+      "aged gold",
+      "concrete grey"
+    ]
+  },
+  "guardrails": {
+    "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
+    "brand_safe": false
+  }
+}

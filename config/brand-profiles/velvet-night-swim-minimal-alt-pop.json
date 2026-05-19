@@ -1,0 +1,157 @@
+{
+  "id": "velvet-night-swim-minimal-alt-pop",
+  "schema_version": "brand-profile/v1",
+  "brand_type": "music_artist",
+  "brand_name": "Velvet Night Swim [Minimal Alt Pop]",
+  "artist_name": "Velvet Night Swim [Minimal Alt Pop]",
+  "display_name": "Velvet Night Swim [Minimal Alt Pop]",
+  "short_name": "Velvet Night Swim",
+  "genre": "Minimal Alt Pop",
+  "brand_description": "Sparse, nocturnal alt-pop with intimate vocals, cool restraint, sharp lyrics, and quiet emotional drama.",
+  "audience": {
+    "age_range": "13+",
+    "description": "Alternative pop listeners, mood playlist fans, coming-of-age soundtrack listeners, late-night introspective listeners, and minimal dark-pop fans.",
+    "guardrail": "Keep the mood cool and intense but not melodramatic. Avoid direct imitation, teen caricature, over-singing, or maximal EDM production."
+  },
+  "character": {
+    "name": "Velvet Night Swim",
+    "core_concept": "A nocturnal minimalist alt-pop project turning ordinary youth, status, friendship, longing, and private ambition into intimate mythology.",
+    "fallback_summary": "Sparse dark alt-pop with deep muted drums, low synth bass, negative space, intimate vocals, and vivid coming-of-age imagery."
+  },
+  "positioning": {
+    "one_liner": "Sparse, nocturnal alt-pop with intimate vocals, cool restraint, sharp lyrics, and quiet emotional drama.",
+    "core_feeling": "cool restraint with hidden intensity",
+    "emotional_keywords": [
+      "nocturnal",
+      "intimate",
+      "sharp",
+      "detached",
+      "aching",
+      "cinematic"
+    ]
+  },
+  "voice": {
+    "persona": "young but perceptive, emotionally guarded, observant, unsentimental",
+    "tone": "minimal, cool, poetic, direct",
+    "avoid": [
+      "direct imitation of any specific artist",
+      "copied melodies",
+      "copied lyrics",
+      "copied vocal phrasing"
+    ]
+  },
+  "music": {
+    "default_prompt": "Create an original minimal alt-pop song for Velvet Night Swim [Minimal Alt Pop]. The track should be sparse, nocturnal, and emotionally controlled: deep muted kick, finger snaps or dry percussion, low synth bass, small atmospheric pads, and a close female or androgynous vocal with understated intensity. The chorus should be memorable but not overproduced. Lyrics should feel observational and vivid, turning parties, suburbs, friendship, status, and private longing into sharp coming-of-age imagery. Avoid copying any specific artist, melody, lyric, vocal phrasing, or production signature.",
+    "default_style": "minimal alt-pop, sparse dark pop, deep muted kick, dry snaps, low synth bass, intimate vocal, negative space, nocturnal atmosphere",
+    "default_bpm": 88,
+    "target_length": "2:40-3:30",
+    "normal_word_range": [
+      120,
+      190
+    ],
+    "first_vocal_by_seconds": 10,
+    "max_instrumental_intro_seconds": 10,
+    "primary_genres": [
+      "alt pop",
+      "dark pop",
+      "indie pop",
+      "minimal pop"
+    ],
+    "sonic_palette": [
+      "deep muted kick",
+      "dry snaps",
+      "minimal sub bass",
+      "dark synth pad",
+      "small vocal stacks",
+      "roomy negative space"
+    ],
+    "production_do": [
+      "Use silence as part of the hook.",
+      "Keep the vocal close.",
+      "Make drums minimal but weighty.",
+      "Use small details instead of dense instrumentation."
+    ],
+    "production_avoid": [
+      "maximal EDM drops",
+      "big rock guitars",
+      "oversung diva vocals",
+      "generic radio-pop cheerfulness",
+      "direct artist imitation"
+    ]
+  },
+  "lyrics": {
+    "title_examples": [
+      "Hearts in Still Water",
+      "Borrowed Light",
+      "Pool Lights",
+      "Cheap Perfume Weather",
+      "Royal in the Kitchen"
+    ],
+    "topic_variety": [
+      "party detachment",
+      "friendship politics",
+      "quiet envy",
+      "private ambition",
+      "suburban nights",
+      "emotional restraint"
+    ],
+    "required_closing": "End with a concise repeated hook or haunting final image. Avoid jokey endings or big triumphant key changes.",
+    "themes": [
+      "youthful disillusionment",
+      "friendship politics",
+      "envy",
+      "desire",
+      "suburban myth"
+    ],
+    "imagery": [
+      "pool lights",
+      "cheap perfume",
+      "parking lots",
+      "gold chains",
+      "kitchen tile",
+      "party smoke"
+    ],
+    "hook_style": "short phrase that sounds like a secret everyone knows"
+  },
+  "distribution": {
+    "default_artist": "Velvet Night Swim [Minimal Alt Pop]",
+    "default_album": "Hearts in Still Water",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "alt pop",
+      "dark pop",
+      "indie pop",
+      "minimal pop"
+    ],
+    "youtube_tags_seed": [
+      "alt pop",
+      "dark pop",
+      "minimal pop",
+      "moody pop",
+      "indie pop"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Pop"
+    ],
+    "coppa_status": "not_child_directed",
+    "content_advisory": "clean"
+  },
+  "ui": {
+    "sidebar_subtitle": "Minimal Alt Pop",
+    "logo_path": "/media/brand-profiles/velvet-night-swim-minimal-alt-pop/logo.png"
+  },
+  "visuals": {
+    "album_art_direction": "dark water, night reflections, sparse typography, black plum and pool blue, cinematic negative space; no resemblance to existing covers",
+    "brand_colors": [
+      "black plum",
+      "pool blue",
+      "silver",
+      "soft gold"
+    ]
+  },
+  "guardrails": {
+    "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
+    "brand_safe": true
+  }
+}

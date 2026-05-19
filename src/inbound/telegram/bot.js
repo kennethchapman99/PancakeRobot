@@ -11,6 +11,7 @@ import { handleTelegramCallback, handleTelegramMessage } from './magic-song-hand
 
 const TELEGRAM_API_BASE = 'https://api.telegram.org';
 const POLL_TIMEOUT_SECONDS = 25;
+const FETCH_TIMEOUT_MS = (POLL_TIMEOUT_SECONDS + 10) * 1000;
 
 class TelegramClient {
   constructor(token) {
@@ -20,11 +21,14 @@ class TelegramClient {
   }
 
   async call(method, payload = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     const response = await fetch(`${this.baseUrl}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.ok === false) {
@@ -103,7 +107,7 @@ async function main() {
         }
       }
     } catch (error) {
-      console.error('[telegram:poll-error]', error.message);
+      console.error('[telegram:poll-error]', error.message, error.cause ? `(cause: ${error.cause?.message || error.cause})` : '');
       await delay(3000);
     }
   }

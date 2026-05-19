@@ -7,6 +7,16 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
 const OUTPUT_DIR = path.join(ROOT_DIR, 'output');
 const SONGS_DIR = path.join(OUTPUT_DIR, 'songs');
 const RUNS_DIR = path.join(OUTPUT_DIR, 'runs');
+const ALBUMS_DIR = path.join(OUTPUT_DIR, 'albums');
+
+// Cost mode budgets used by the album batch finance summary to flag overruns.
+// Values are USD ceilings per-song *including* the allocated shared album cost.
+export const COST_MODE_BUDGETS = Object.freeze({
+  draft: 0.10,
+  standard: 0.50,
+  premium: 2.00,
+  album_batch: 0.35,
+});
 const PRICING_PATH = process.env.PROVIDER_PRICING_PATH || path.join(ROOT_DIR, 'config/provider-pricing.json');
 const COST_EVENT_VERSION = '1.0.0';
 const LEGACY_UNTRUSTED_PRICING_SOURCES = new Set(['runs_table_precomputed']);
@@ -27,6 +37,14 @@ export function getFinanceDirForSong(songId) {
 
 export function getFinanceDirForRun(runId) {
   return path.join(RUNS_DIR, runId, 'finance');
+}
+
+export function getFinanceDirForAlbum(albumId) {
+  return path.join(ALBUMS_DIR, albumId, 'finance');
+}
+
+export function readCostEventsForAlbum(albumId) {
+  return readJsonl(path.join(getFinanceDirForAlbum(albumId), 'cost-events.jsonl'));
 }
 
 export function inferPipelineStep(agentName = '', operation = '') {
@@ -167,6 +185,7 @@ export function recordCostEvent(input = {}) {
   const targets = [];
   if (event.song_id) targets.push(getFinanceDirForSong(event.song_id));
   if (event.run_id) targets.push(getFinanceDirForRun(event.run_id));
+  if (event.album_id) targets.push(getFinanceDirForAlbum(event.album_id));
   for (const dir of [...new Set(targets)]) {
     fs.mkdirSync(dir, { recursive: true });
     const eventsPath = path.join(dir, 'cost-events.jsonl');
@@ -402,6 +421,76 @@ function numberOrDefault(value, fallback) {
 
 function roundUsd(value) {
   return Math.round((Number(value || 0) + Number.EPSILON) * 1_000_000) / 1_000_000;
+}
+
+export function buildAlbumFinanceSummary({
+  albumId,
+  costMode = 'standard',
+  trackSongIds = [],
+  cachedSavingsUsd = 0,
+} = {}) {
+  if (!albumId) throw new Error('buildAlbumFinanceSummary requires albumId');
+
+  // Per-track summaries from each linked song's verified finance events.
+  const perTrack = trackSongIds.map((songId) => {
+    const summary = summarizeCostEvents(readCostEventsForSong(songId));
+    return {
+      song_id: songId,
+      track_cost_usd: roundUsd(summary.total_cost_usd),
+      event_count: summary.event_count,
+    };
+  });
+
+  const sharedSummary = summarizeCostEvents(readCostEventsForAlbum(albumId));
+  // Album-scoped events that were *also* tagged to a song would already appear
+  // in that song's summary; only count truly shared album-only thinking here.
+  const sharedThinkingCostUsd = roundUsd(
+    sharedSummary.events
+      .filter(event => !event.song_id)
+      .reduce((sum, event) => sum + Number(event.computed_cost_usd || 0), 0)
+  );
+
+  const perTrackTotal = roundUsd(perTrack.reduce((sum, row) => sum + row.track_cost_usd, 0));
+  const totalAlbumCostUsd = roundUsd(sharedThinkingCostUsd + perTrackTotal);
+  const trackCount = perTrack.length || 0;
+  const allocatedSharedCostPerSongUsd = trackCount > 0 ? roundUsd(sharedThinkingCostUsd / trackCount) : 0;
+  const averageCostPerSongUsd = trackCount > 0 ? roundUsd(totalAlbumCostUsd / trackCount) : 0;
+
+  const budget = COST_MODE_BUDGETS[costMode];
+  const budgetPerSongUsd = typeof budget === 'number' ? budget : null;
+  const totalBudgetUsd = budgetPerSongUsd === null || trackCount === 0
+    ? null
+    : roundUsd(budgetPerSongUsd * trackCount);
+  const overBudget = budgetPerSongUsd !== null && averageCostPerSongUsd > budgetPerSongUsd;
+
+  return {
+    album_id: albumId,
+    cost_mode: costMode,
+    track_count: trackCount,
+    shared_thinking_cost_usd: sharedThinkingCostUsd,
+    allocated_shared_cost_per_song_usd: allocatedSharedCostPerSongUsd,
+    per_track: perTrack.map(row => ({
+      ...row,
+      allocated_shared_cost_usd: allocatedSharedCostPerSongUsd,
+      total_attributed_cost_usd: roundUsd(row.track_cost_usd + allocatedSharedCostPerSongUsd),
+    })),
+    per_track_total_cost_usd: perTrackTotal,
+    total_album_cost_usd: totalAlbumCostUsd,
+    average_cost_per_song_usd: averageCostPerSongUsd,
+    cached_savings_usd: roundUsd(Number(cachedSavingsUsd) || 0),
+    cost_mode_budget: {
+      per_song_usd: budgetPerSongUsd,
+      total_usd: totalBudgetUsd,
+      over_budget: overBudget,
+    },
+  };
+}
+
+export function writeAlbumFinanceSummary(albumId, summary) {
+  const dir = getFinanceDirForAlbum(albumId);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'cost-summary.json'), JSON.stringify(summary, null, 2));
+  return summary;
 }
 
 function stableIdPart(value) {

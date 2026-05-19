@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Resolve this file through npm link / symlinks so ROOT_DIR is always the repo root,
+# not the global npm bin directory.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  TARGET="$(readlink "$SOURCE")"
+  if [[ "$TARGET" == /* ]]; then
+    SOURCE="$TARGET"
+  else
+    SOURCE="$DIR/$TARGET"
+  fi
+done
+
+BIN_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+ROOT_DIR="$(cd "$BIN_DIR/.." && pwd)"
+
+# Default behavior is the full local/mobile stack:
+# - repo-local Node runtime
+# - dependency/native module sanity
+# - web UI
+# - workflow admin
+# - Telegram bot
+# - ngrok tunnel unless PANCAKE_DISABLE_NGROK=true
+cmd="${1:-stack}"
+if [ "$#" -gt 0 ]; then
+  shift
+fi
+
+exec "$ROOT_DIR/scripts/pancake.sh" "$cmd" "$@"

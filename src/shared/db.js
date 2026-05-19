@@ -202,6 +202,23 @@ function initSchema(db) {
       FOREIGN KEY (selected_song_id) REFERENCES songs(id)
     );
 
+    CREATE TABLE IF NOT EXISTS albums (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      updated_at TEXT,
+      brand_profile_id TEXT,
+      album_title TEXT,
+      album_theme TEXT,
+      release_intent TEXT,
+      number_of_songs INTEGER NOT NULL DEFAULT 1,
+      cost_mode TEXT NOT NULL DEFAULT 'standard',
+      status TEXT NOT NULL DEFAULT 'pending',
+      shared_orchestration_json TEXT,
+      finance_summary_json TEXT,
+      notes TEXT,
+      is_test INTEGER DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS social_posts (
       id TEXT PRIMARY KEY,
       campaign_id TEXT NOT NULL,
@@ -261,10 +278,26 @@ function initSchema(db) {
     ['marketing_assets_json', 'TEXT'],
     ['marketing_readiness_json', 'TEXT'],
     ['last_outreach_json', 'TEXT'],
+    ['album_id', 'TEXT'],
+    ['track_number', 'INTEGER'],
+    ['album_role', 'TEXT'],
+    ['inherited_album_plan_version', 'TEXT'],
   ];
   for (const [col, type] of newSongCols) {
     if (!songCols.includes(col)) {
       db.exec(`ALTER TABLE songs ADD COLUMN ${col} ${type}`);
+    }
+  }
+
+  // Migrate albums table — add new columns if older schema exists.
+  const albumCols = db.prepare("PRAGMA table_info(albums)").all().map(c => c.name);
+  const newAlbumCols = [
+    ['notes', 'TEXT'],
+    ['is_test', 'INTEGER DEFAULT 0'],
+  ];
+  for (const [col, type] of newAlbumCols) {
+    if (!albumCols.includes(col)) {
+      db.exec(`ALTER TABLE albums ADD COLUMN ${col} ${type}`);
     }
   }
 
@@ -391,6 +424,7 @@ export function upsertSong(song) {
       'total_cost_usd', 'brand_profile_id', 'pipeline_stage', 'release_recommendation_json',
       'release_recommendation_history_json', 'marketing_inputs_from_ar_json', 'marketing_links_json',
       'marketing_assets_json', 'marketing_readiness_json', 'last_outreach_json', 'is_test',
+      'album_id', 'track_number', 'album_role', 'inherited_album_plan_version',
     ];
     for (const key of patchable) {
       if (song[key] !== undefined && song[key] !== null) {
@@ -416,9 +450,10 @@ export function upsertSong(song) {
          published_at, lyrics_path, audio_prompt_path, thumbnail_path, metadata_path,
          music_service, distribution_status, brand_score, total_cost_usd, brand_profile_id,
          is_test, pipeline_stage, release_recommendation_json, release_recommendation_history_json,
-         marketing_inputs_from_ar_json, marketing_links_json, marketing_assets_json, marketing_readiness_json, last_outreach_json)
+         marketing_inputs_from_ar_json, marketing_links_json, marketing_assets_json, marketing_readiness_json, last_outreach_json,
+         album_id, track_number, album_role, inherited_album_plan_version)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       song.id,
       song.created_at || now,
@@ -457,8 +492,100 @@ export function upsertSong(song) {
       stringifyOptionalJson(song.marketing_assets),
       stringifyOptionalJson(song.marketing_readiness),
       stringifyOptionalJson(song.last_outreach),
+      song.album_id || null,
+      song.track_number == null ? null : Number(song.track_number),
+      song.album_role || null,
+      song.inherited_album_plan_version || null,
     );
   }
+}
+
+// ─────────────────────────────────────────────
+// ALBUMS / BATCHES
+// ─────────────────────────────────────────────
+
+export function createAlbum(album) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const id = album.id || `ALBUM_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  db.prepare(`
+    INSERT INTO albums
+      (id, created_at, updated_at, brand_profile_id, album_title, album_theme, release_intent,
+       number_of_songs, cost_mode, status, shared_orchestration_json, finance_summary_json, notes, is_test)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id, now, now,
+    album.brand_profile_id || null,
+    album.album_title || null,
+    album.album_theme || null,
+    album.release_intent || null,
+    Math.max(1, Number(album.number_of_songs) || 1),
+    album.cost_mode || 'standard',
+    album.status || 'pending',
+    stringifyOptionalJson(album.shared_orchestration),
+    stringifyOptionalJson(album.finance_summary),
+    album.notes || null,
+    album.is_test ? 1 : 0,
+  );
+  return id;
+}
+
+export function updateAlbum(id, fields = {}) {
+  const db = getDb();
+  const updates = { updated_at: new Date().toISOString() };
+  const allowed = [
+    'album_title', 'album_theme', 'release_intent', 'number_of_songs',
+    'cost_mode', 'status', 'notes', 'brand_profile_id',
+  ];
+  for (const key of allowed) {
+    if (fields[key] !== undefined && fields[key] !== null) {
+      updates[key] = key === 'number_of_songs' ? Number(fields[key]) : fields[key];
+    }
+  }
+  if (fields.shared_orchestration !== undefined) {
+    updates.shared_orchestration_json = stringifyOptionalJson(fields.shared_orchestration);
+  }
+  if (fields.finance_summary !== undefined) {
+    updates.finance_summary_json = stringifyOptionalJson(fields.finance_summary);
+  }
+  const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+  db.prepare(`UPDATE albums SET ${setClauses} WHERE id = ?`).run(...Object.values(updates), id);
+}
+
+function parseAlbum(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    shared_orchestration: parseJsonObject(row.shared_orchestration_json),
+    finance_summary: parseJsonObject(row.finance_summary_json),
+    is_test: Boolean(row.is_test),
+  };
+}
+
+export function getAlbum(id) {
+  return parseAlbum(getDb().prepare('SELECT * FROM albums WHERE id = ?').get(id));
+}
+
+export function getAllAlbums({ includeTests = false } = {}) {
+  const sql = includeTests
+    ? 'SELECT * FROM albums ORDER BY created_at DESC'
+    : 'SELECT * FROM albums WHERE COALESCE(is_test, 0) = 0 ORDER BY created_at DESC';
+  return getDb().prepare(sql).all().map(parseAlbum);
+}
+
+export function getSongsForAlbum(albumId) {
+  return getDb()
+    .prepare('SELECT * FROM songs WHERE album_id = ? ORDER BY COALESCE(track_number, 999), created_at ASC')
+    .all(albumId)
+    .map(parseSong);
+}
+
+export function deleteAlbum(id, { detachSongs = true } = {}) {
+  const db = getDb();
+  if (detachSongs) {
+    db.prepare('UPDATE songs SET album_id = NULL, track_number = NULL, album_role = NULL WHERE album_id = ?').run(id);
+  }
+  db.prepare('DELETE FROM albums WHERE id = ?').run(id);
 }
 
 export function getSong(id) {

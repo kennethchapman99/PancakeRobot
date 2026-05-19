@@ -54,14 +54,16 @@ function getClient() {
 
 function recordSongFinanceIfScoped({ runId, agentName, model, inputTokens, outputTokens, cacheReadTokens, runtimeSeconds, costUsd, sessionId, status = 'success' }) {
   const songId = String(process.env.PIPELINE_SONG_ID || '').trim();
-  if (!songId) return;
+  const albumId = String(process.env.PIPELINE_ALBUM_ID || '').trim();
+  if (!songId && !albumId) return;
 
   try {
     recordCostEvent({
-      id: `cost_${songId}_${runId}`,
+      id: `cost_${songId || albumId}_${runId}`,
       timestamp: new Date().toISOString(),
       runId,
-      songId,
+      songId: songId || null,
+      albumId: albumId || null,
       pipelineStep: inferPipelineStep(agentName, 'anthropic_agent_run'),
       agentName,
       operation: 'anthropic_agent_run',
@@ -78,7 +80,7 @@ function recordSongFinanceIfScoped({ runId, agentName, model, inputTokens, outpu
       notes: `runtime_seconds=${runtimeSeconds}; session_id=${sessionId || 'none'}`,
     });
   } catch (err) {
-    console.log(chalk.yellow(`[FINANCE] Warning: could not record song finance event — ${err.message}`));
+    console.log(chalk.yellow(`[FINANCE] Warning: could not record finance event — ${err.message}`));
   }
 }
 

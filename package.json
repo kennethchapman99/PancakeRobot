@@ -4,10 +4,15 @@
   "description": "Profile-driven autonomous music production pipeline",
   "type": "module",
   "main": "src/orchestrator.js",
+  "bin": {
+    "pancakerobot": "./bin/pancakerobot"
+  },
   "scripts": {
     "doctor": "node scripts/ensure-node-runtime.js",
     "pancake": "bash scripts/pancake.sh",
     "pancake:web": "bash scripts/pancake.sh web",
+    "pancake:stack": "bash scripts/pancake.sh stack",
+    "pancake:telegram": "bash scripts/pancake.sh telegram",
     "pancake:test": "bash scripts/pancake.sh test",
     "pancake:cleanup": "bash scripts/pancake.sh cleanup",
     "pancake:doctor": "bash scripts/pancake.sh doctor",
