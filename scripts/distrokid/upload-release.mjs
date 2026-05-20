@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
-import { basename, join } from 'path';
+import { join } from 'path';
 import {
   DANGEROUS_BUTTON_NAMES,
   DISTROKID_AUTH_PATH,
@@ -31,6 +31,7 @@ const { values } = parseArgs({
   'field-map': { type: 'string' },
   'pause-at-end': { type: 'string', default: 'true' },
   'browser-mode': { type: 'string', default: 'storage-state' },
+  'discover-fields': { type: 'boolean', default: false },
   help: { type: 'boolean', short: 'h' },
 });
 
@@ -42,6 +43,7 @@ if (values.help || !values.manifest) {
 const dryRun = DRY_RUN_ALWAYS;
 const headed = parseBool(values.headed, true);
 const pauseAtEnd = parseBool(values['pause-at-end'], true);
+const discoverFields = values['discover-fields'] === true;
 const slowMo = Number(values['slow-mo']) || 0;
 const manifestPath = absoluteFromMaybeRelative(values.manifest);
 
@@ -66,9 +68,14 @@ const runLog = {
   manifest_path: relativeToRepo(manifestPath),
   dry_run: dryRun,
   browser_mode: values['browser-mode'],
+  discover_fields: discoverFields,
   stopped_before_submit: true,
   started_at: new Date().toISOString(),
   finished_at: null,
+  diagnostics: {
+    skipped_fields: [],
+    discovery_files: [],
+  },
 };
 
 validatePackageFile('audio_file', manifest.audio_file, errors);
@@ -123,6 +130,7 @@ console.log(`Field map: ${relativeToRepo(fieldMapPath)}`);
 
 let browser;
 let page;
+let finishedEarly = false;
 try {
   browser = await chromium.launch({
     channel: 'chrome',
@@ -156,34 +164,55 @@ try {
   await saveScreenshot(page, 'screenshot-start.png');
   await auditDangerousButtons(page, dangerousNames);
 
-  for (const [fieldName, fieldDef] of Object.entries(fieldMap.fields || {})) {
-    const manifestKey = fieldDef.manifest_key || fieldName;
-    const value = getManifestValue(manifest, manifestKey);
-    if (!isPresent(value)) {
-      skippedFields.push({ field: fieldName, reason: `manifest value missing for ${manifestKey}` });
-      continue;
-    }
-    if (!fieldDef.selector) {
-      skippedFields.push({ field: fieldName, reason: 'selector missing in field map' });
-      continue;
-    }
-    const result = await fillField(page, fieldName, fieldDef, value);
-    if (result.ok) filledFields.push({ field: fieldName, strategy: fieldDef.strategy, manifest_key: manifestKey });
-    else {
-      skippedFields.push({ field: fieldName, reason: result.reason });
-      errors.push({ field: fieldName, error: result.reason });
-    }
+  if (discoverFields) {
+    const discovered = await discoverPageFields(page);
+    writeJson(join(runDir, 'discovered-fields.json'), discovered);
+    writeText(join(runDir, 'discovered-fields.md'), formatDiscoveredFields(discovered));
+    runLog.diagnostics.discovery_files.push('discovered-fields.json', 'discovered-fields.md');
+    console.log(`Discovery written: ${relativeToRepo(join(runDir, 'discovered-fields.md'))}`);
+    await savePageSnapshot(page);
+    await saveScreenshot(page, 'screenshot-final-review.png');
+    await finish(browser, false);
+    finishedEarly = true;
   }
 
-  await page.waitForTimeout(1000);
-  await saveScreenshot(page, 'screenshot-after-fill.png');
-  await auditDangerousButtons(page, dangerousNames);
-  await saveScreenshot(page, 'screenshot-final-review.png');
-  await savePageSnapshot(page);
+  if (!finishedEarly) {
+    for (const [fieldName, fieldDef] of Object.entries(fieldMap.fields || {})) {
+      const manifestKey = fieldDef.manifest_key || fieldName;
+      const value = getManifestValue(manifest, manifestKey);
+      const baseDiagnostic = {
+        field: fieldName,
+        selector: fieldDef.selector || '',
+        strategy: fieldDef.strategy || null,
+        manifest_key: manifestKey,
+        manifest_value_present: isPresent(value),
+      };
+      if (!isPresent(value)) {
+        addSkipped({ ...baseDiagnostic, reason: `manifest value missing for ${manifestKey}` });
+        continue;
+      }
+      if (!fieldDef.selector) {
+        addSkipped({ ...baseDiagnostic, reason: 'selector missing in field map' });
+        continue;
+      }
+      const result = await fillField(page, fieldName, fieldDef, value);
+      if (result.ok) filledFields.push({ field: fieldName, strategy: fieldDef.strategy, manifest_key: manifestKey });
+      else {
+        addSkipped({ ...baseDiagnostic, reason: result.reason, element: result.element || null, candidates: result.candidates || null });
+        errors.push({ field: fieldName, error: result.reason, selector: fieldDef.selector, strategy: fieldDef.strategy, manifest_key: manifestKey, element: result.element || null });
+      }
+    }
+
+    await page.waitForTimeout(1000);
+    await saveScreenshot(page, 'screenshot-after-fill.png');
+    await auditDangerousButtons(page, dangerousNames);
+    await saveScreenshot(page, 'screenshot-final-review.png');
+    await savePageSnapshot(page);
+  }
 } catch (error) {
   errors.push({ field: 'browser', error: error.message });
 } finally {
-  await finish(browser, false);
+  if (!finishedEarly) await finish(browser, false);
 }
 
 async function fillField(page, fieldName, fieldDef, value) {
@@ -197,6 +226,10 @@ async function fillField(page, fieldName, fieldDef, value) {
       case 'label': {
         const target = page.getByLabel(selector, { exact: false });
         if (await target.count() === 0) return { ok: false, reason: `label not found: ${selector}` };
+        const element = await describeLocator(target);
+        if (!isFillableElement(element)) {
+          return { ok: false, reason: `selector resolved to non-fillable input type ${element?.type || element?.tagName || 'unknown'}`, element };
+        }
         await target.first().fill(String(value));
         return { ok: true };
       }
@@ -206,12 +239,16 @@ async function fillField(page, fieldName, fieldDef, value) {
         const target = page.locator(selector);
         const count = await target.count();
         if (count === 0) {
-          await logFileInputCandidates(page, fieldName);
-          return { ok: false, reason: `file input not found: ${selector}` };
+          const candidates = await logFileInputCandidates(page, fieldName);
+          return { ok: false, reason: `file input not found: ${selector}`, candidates };
         }
         if (count > 1 && selector === 'input[type=\'file\']') {
-          await logFileInputCandidates(page, fieldName);
-          return { ok: false, reason: 'multiple file inputs found; selector is not reliable enough' };
+          const candidates = await logFileInputCandidates(page, fieldName);
+          return { ok: false, reason: 'multiple file inputs found; selector is not reliable enough', candidates };
+        }
+        const element = await describeLocator(target);
+        if (element && element.tagName !== 'INPUT') {
+          return { ok: false, reason: `selector resolved to non-file element ${element.tagName}`, element };
         }
         await target.first().setInputFiles(filePath);
         await page.waitForTimeout(1500);
@@ -220,6 +257,10 @@ async function fillField(page, fieldName, fieldDef, value) {
       case 'select': {
         const target = page.locator(selector);
         if (await target.count() === 0) return { ok: false, reason: `select not found: ${selector}` };
+        const element = await describeLocator(target);
+        if (element?.tagName !== 'SELECT') {
+          return { ok: false, reason: `selector resolved to non-select element ${element?.tagName || 'unknown'}`, element };
+        }
         await target.first().selectOption({ label: String(value) }).catch(async () => {
           await target.first().selectOption(String(value));
         });
@@ -237,6 +278,10 @@ async function fillField(page, fieldName, fieldDef, value) {
       case 'date': {
         const target = page.locator(selector);
         if (await target.count() === 0) return { ok: false, reason: `field not found: ${selector}` };
+        const element = await describeLocator(target);
+        if (!isFillableElement(element)) {
+          return { ok: false, reason: `selector resolved to non-fillable input type ${element?.type || element?.tagName || 'unknown'}`, element };
+        }
         await target.first().fill(String(value));
         return { ok: true };
       }
@@ -246,6 +291,29 @@ async function fillField(page, fieldName, fieldDef, value) {
   } catch (error) {
     return { ok: false, reason: error.message };
   }
+}
+
+async function describeLocator(locator) {
+  const handle = await locator.first().elementHandle().catch(() => null);
+  if (!handle) return null;
+  return handle.evaluate(el => ({
+    tagName: el.tagName,
+    type: el.getAttribute('type'),
+    id: el.id || null,
+    name: el.getAttribute('name'),
+    ariaLabel: el.getAttribute('aria-label'),
+    placeholder: el.getAttribute('placeholder'),
+    text: el.innerText || el.value || '',
+  })).catch(() => null);
+}
+
+function isFillableElement(element) {
+  if (!element) return false;
+  const tag = String(element.tagName || '').toUpperCase();
+  const type = String(element.type || '').toLowerCase();
+  if (tag === 'TEXTAREA') return true;
+  if (tag !== 'INPUT') return false;
+  return !['checkbox', 'radio', 'file', 'button', 'submit', 'reset', 'hidden'].includes(type);
 }
 
 async function installSafetyGuard(page, dangerousNames) {
@@ -289,9 +357,23 @@ async function logFileInputCandidates(page, fieldName) {
     name: input.getAttribute('name') || null,
     accept: input.getAttribute('accept') || null,
     aria_label: input.getAttribute('aria-label') || null,
+    labels: (() => {
+      const labels = new Set();
+      if (input.id) {
+        document.querySelectorAll(`label[for="${CSS.escape(input.id)}"]`).forEach(label => labels.add(label.innerText.trim()));
+      }
+      input.closest('label')?.innerText && labels.add(input.closest('label').innerText.trim());
+      return [...labels].filter(Boolean);
+    })(),
+    visible: (() => {
+      const style = window.getComputedStyle(input);
+      const rect = input.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    })(),
     classes: input.className || null,
   }))).catch(() => []);
   writeJson(join(runDir, `${fieldName}-file-input-candidates.json`), candidates);
+  return candidates;
 }
 
 async function saveScreenshot(page, filename) {
@@ -330,10 +412,125 @@ async function finish(browser, skipBrowserClose) {
 
   if (browser && pauseAtEnd && !skipBrowserClose) {
     console.log('Browser remains open for manual review. Close it when done.');
-    await browser.waitForEvent('disconnected').catch(() => {});
+    await waitForBrowserClose(browser, page);
   } else if (browser) {
     await browser.close().catch(() => {});
   }
+}
+
+async function waitForBrowserClose(browser, page) {
+  const isBrowserClosed = await Promise.resolve(browser?.isConnected?.() === false).catch(() => true);
+  if (!browser || isBrowserClosed) return;
+  if (page?.isClosed?.()) return;
+
+  await new Promise(resolve => {
+    let resolved = false;
+    const done = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve();
+    };
+
+    try { browser.on('disconnected', done); } catch {}
+    try { page?.on('close', done); } catch {}
+
+    process.once('SIGINT', done);
+    process.once('SIGTERM', done);
+  });
+}
+
+function addSkipped(item) {
+  skippedFields.push(item);
+  runLog.diagnostics.skipped_fields.push(item);
+}
+
+async function discoverPageFields(page) {
+  return page.evaluate(() => {
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const labelsForElement = el => {
+      const labels = new Set();
+      if (el.id) {
+        document.querySelectorAll(`label[for="${CSS.escape(el.id)}"]`).forEach(label => labels.add(label.innerText.trim()));
+      }
+      el.closest('label')?.innerText && labels.add(el.closest('label').innerText.trim());
+      el.getAttribute('aria-labelledby')?.split(/\s+/).forEach(id => {
+        const labelEl = document.getElementById(id);
+        if (labelEl?.innerText) labels.add(labelEl.innerText.trim());
+      });
+      return [...labels].filter(Boolean);
+    };
+    const base = (el, index) => ({
+      index,
+      id: el.id || null,
+      name: el.getAttribute('name'),
+      placeholder: el.getAttribute('placeholder'),
+      ariaLabel: el.getAttribute('aria-label'),
+      labels: labelsForElement(el),
+      visible: visible(el),
+    });
+    const inputs = [...document.querySelectorAll('input')].map((el, index) => ({
+      ...base(el, index),
+      type: el.getAttribute('type') || 'text',
+      accept: el.getAttribute('accept'),
+      value: el.type === 'password' ? null : el.value || null,
+    }));
+    const textareas = [...document.querySelectorAll('textarea')].map((el, index) => ({
+      ...base(el, index),
+      rows: el.getAttribute('rows'),
+    }));
+    const selects = [...document.querySelectorAll('select')].map((el, index) => ({
+      ...base(el, index),
+      options: [...el.options].slice(0, 50).map(option => ({ value: option.value, text: option.text })),
+    }));
+    const buttons = [...document.querySelectorAll('button,input[type="button"],input[type="submit"],[role="button"]')].map((el, index) => ({
+      index,
+      text: (el.innerText || el.value || '').trim(),
+      id: el.id || null,
+      name: el.getAttribute('name'),
+      ariaLabel: el.getAttribute('aria-label'),
+      visible: visible(el),
+    }));
+    const fileInputs = inputs.filter(input => String(input.type).toLowerCase() === 'file');
+    return { url: location.href, captured_at: new Date().toISOString(), inputs, textareas, selects, buttons, fileInputs };
+  });
+}
+
+function formatDiscoveredFields(discovered) {
+  return [
+    `# DistroKid Field Discovery`,
+    ``,
+    `URL: ${discovered.url}`,
+    `Captured: ${discovered.captured_at}`,
+    ``,
+    formatDiscoveryTable('Inputs', discovered.inputs, ['index', 'type', 'id', 'name', 'placeholder', 'ariaLabel', 'labels', 'visible', 'accept']),
+    formatDiscoveryTable('Textareas', discovered.textareas, ['index', 'id', 'name', 'placeholder', 'ariaLabel', 'labels', 'visible']),
+    formatDiscoveryTable('Selects', discovered.selects, ['index', 'id', 'name', 'ariaLabel', 'labels', 'visible']),
+    formatDiscoveryTable('Buttons', discovered.buttons, ['index', 'text', 'id', 'name', 'ariaLabel', 'visible']),
+    formatDiscoveryTable('File Inputs', discovered.fileInputs, ['index', 'id', 'name', 'accept', 'ariaLabel', 'labels', 'visible']),
+    ``,
+  ].join('\n');
+}
+
+function formatDiscoveryTable(title, rows, keys) {
+  const lines = [`## ${title}`, ''];
+  if (!rows?.length) return `${lines.join('\n')}\nNone\n`;
+  lines.push(`| ${keys.join(' | ')} |`);
+  lines.push(`| ${keys.map(() => '---').join(' | ')} |`);
+  for (const row of rows) {
+    lines.push(`| ${keys.map(key => formatCell(row[key])).join(' | ')} |`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+function formatCell(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (Array.isArray(value)) return value.join('; ').replace(/\|/g, '\\|');
+  return String(value).replace(/\n/g, ' ').replace(/\|/g, '\\|');
 }
 
 function validatePackageFile(key, value, errors) {

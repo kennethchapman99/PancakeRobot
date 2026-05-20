@@ -4,24 +4,27 @@
   "fields": {
     "artist": {
       "strategy": "label",
-      "selector": "Artist/band name",
-      "manifest_key": "artist"
+      "selector": "",
+      "manifest_key": "artist",
+      "note": "Example map is intentionally conservative. Run --discover-fields or Playwright codegen to map this field."
     },
     "release_title": {
       "strategy": "label",
-      "selector": "Album title",
-      "manifest_key": "release_title"
+      "selector": "",
+      "manifest_key": "release_title",
+      "note": "Run --discover-fields or Playwright codegen to map this field. Label text may match unrelated checkboxes."
     },
     "track_title": {
       "strategy": "label",
-      "selector": "Song title",
-      "manifest_key": "track_title"
+      "selector": "",
+      "manifest_key": "track_title",
+      "note": "Run --discover-fields or Playwright codegen to map this field. Label text may match unrelated radio inputs."
     },
     "audio_file": {
       "strategy": "inputFile",
-      "selector": "input[type='file']",
+      "selector": "",
       "manifest_key": "audio_file",
-      "note": "May need local override because DistroKid may have multiple file inputs."
+      "note": "Run --discover-fields or Playwright codegen to map this field. DistroKid may have multiple file inputs."
     },
     "cover_art": {
       "strategy": "inputFile",

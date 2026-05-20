@@ -57,6 +57,9 @@ const uploadSrc = readText('scripts/distrokid/upload-release.mjs');
 assert(uploadSrc.includes('const DRY_RUN_ALWAYS = true'), 'upload dry-run forced true');
 assert(uploadSrc.includes('isDangerousAction'), 'upload has dangerous action helper');
 assert(uploadSrc.includes('installSafetyGuard'), 'upload installs safety guard');
+assert(uploadSrc.includes('waitForBrowserClose'), 'upload has waitForBrowserClose helper');
+assert(!uploadSrc.includes("browser.waitForEvent('disconnected')"), 'upload does not call browser.waitForEvent disconnected');
+assert(uploadSrc.includes("'discover-fields'") && uploadSrc.includes('discovered-fields.json'), 'upload supports --discover-fields');
 assert(!/getByRole\([^)]*Submit[^)]*\)\.click/.test(uploadSrc), 'upload has no submit click');
 
 const saveAuthSrc = readText('scripts/distrokid/save-auth.mjs');

@@ -80,6 +80,25 @@ npm run distrokid:upload -- --manifest output/release-packages/SONG_ID/manifest.
 
 The browser opens, fills/uploads what it can, saves logs and screenshots, and stops for manual review.
 
+## Discover DistroKid Fields
+
+After the first dry-run, run discovery to map the live DistroKid form without filling anything:
+
+```bash
+bash scripts/pancake.sh distrokid:upload \
+  --manifest output/release-packages/SONG_ID/manifest.json \
+  --dry-run \
+  --discover-fields
+```
+
+Inspect:
+
+```text
+output/release-packages/SONG_ID/distrokid-run/discovered-fields.md
+```
+
+Use the discovered inputs, textareas, selects, buttons, and file inputs to create `config/distrokid/field-map.local.json`.
+
 ## Selector Capture
 
 Use codegen only after auth is saved:
@@ -89,6 +108,13 @@ npx playwright codegen --browser=chromium --load-storage=.auth/distrokid.json ht
 ```
 
 Codegen is for selectors only. Do not use codegen for Google login. Do not click final submit during capture.
+
+Recommended selector workflow:
+
+1. Run `--discover-fields`.
+2. Inspect `output/release-packages/SONG_ID/distrokid-run/discovered-fields.md`.
+3. If needed, run codegen.
+4. Do not click final submit.
 
 See `docs/distrokid-selector-capture.md`.
 
