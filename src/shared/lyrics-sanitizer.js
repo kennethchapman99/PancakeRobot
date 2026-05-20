@@ -10,20 +10,17 @@
 const EMOJI_MATCHER = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
 const EMOJI_STRIPPER = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
 const SECTION_LABEL_LINE = /^\s*\[(?:INTRO|VERSE|VERSE\s+\d+|PRE[-\s]?CHORUS|CHORUS|HOOK|BRIDGE|FINAL\s+CHORUS|OUTRO|INTERLUDE|BREAKDOWN|CALL\/?RESPONSE|CALL\s+RESPONSE)[^\]]*\]\s*$/iu;
-const ANY_BRACKETED_LINE = /^\s*\[[^\]]+\]\s*$/u;
 const ANY_BRACKETED_FRAGMENT = /\[[^\]]+\]/gu;
 const ANY_BRACKETED_PAYLOAD = /\[[^\]]+\]/u;
 const PARENTHETICAL_FRAGMENT = /\(([^)]*)\)/gu;
 const WHOLE_LINE_EMPHASIS = /^\s*(?:\*{1,3}|_{1,3}|`{1,3})([^*_`\n]{3,})(?:\*{1,3}|_{1,3}|`{1,3})\s*$/u;
 const MARKDOWN_ARTIFACT_LINE = /^\s*(?:#{1,6}\s+|[-*_]{3,}\s*$|```|>\s+)/u;
+const LYRIC_METADATA_LINE = /^\s*(?:\*{1,3})?(?:key hook|physical action|word count|song|style|instrumentation|energy|mood|voice style|structure|target length|first vocal by|max instrumental intro|exact title usage|render safety|special notes|full lyrics|music specs)(?:\*{1,3})?\s*:/iu;
 const PROMPT_ARTIFACT_LINE = /^\s*(?:\[\s*LYRICIST\s*\]|write a complete|output valid json|```|\{|\}|"?lyrics"?\s*:|"?audio_prompt"?\s*:)/iu;
 const SPEAKER_OR_CUE_LABEL = /^\s*(?:kids?|children|crowd|choir|group|spoken|sfx|sound\s*effect|stage|producer|director)\s*:/iu;
-const STANDALONE_SPEAKER_LABEL = /^\s*(?:both|[a-z][a-z0-9 ._’’&-]{0,36})\s*:\s*$/iu;
-const INLINE_SPEAKER_PREFIX = /^\s*(?:both|[a-z][a-z0-9 ._’’&-]{0,36})\s*:\s+(.+)$/iu;
-const PRODUCTION_CUE_WORDS = /\b(?:vocals?\s+start|start\s+vocals?|music\s+slows?|music\s+speeds?|music\s+stops?|drop\s+it|sfx|sound\s*effects?|spoken|stage\s+direction|production\s+note|instrumental|instrumental\s+break|non-vocal|tempo|bpm|key\s*:|glitch(?:y)?|warping|robot\s+voice|malfunction\s+sequence|scratch\s+break|dj\s+scratch|turntable\s+cuts?|beat\s+drops?|call[-\s]?and[-\s]?response|audience\s+participation|hands?\s+up|clap(?:ping|s)?|stomp(?:ing|s)?|wiggle(?:s|ing)?|bounce|jump|dance\s+break)\b/iu;
+const PRODUCTION_CUE_WORDS = /\b(?:vocals?\s+start|start\s+vocals?|music\s+slows?|music\s+speeds?|music\s+stops?|drop\s+it|sfx|sound\s*effects?|spoken|stage\s+direction|production\s+note|instrumental|non-vocal|tempo|bpm|key\s*:|glitch(?:y)?|warping|robot\s+voice|malfunction\s+sequence|call[-\s]?and[-\s]?response|audience\s+participation|hands?\s+up|clap(?:ping|s)?|stomp(?:ing|s)?|wiggle(?:s|ing)?|bounce|jump|dance\s+break)\b/iu;
 const INLINE_MARKDOWN_TOKEN = /(?:\*\*|__|`|~~)/gu;
 const INLINE_MARKDOWN_PAYLOAD = /(?:\*\*|__|`|~~)/u;
-const METADATA_HEADER_LINE = /^\s*(?:key\s+hook|physical\s+action|word\s+count|funny\s+long\s+word)\s*:/iu;
 
 export function sanitizeLyricsForProvider(lyrics = '', options = {}) {
   const forbiddenElements = Array.isArray(options.forbiddenElements) ? options.forbiddenElements : [];
@@ -61,7 +58,12 @@ export function sanitizeLyricsForProvider(lyrics = '', options = {}) {
       return;
     }
 
-    if (SECTION_LABEL_LINE.test(trimmed) || ANY_BRACKETED_LINE.test(trimmed)) {
+    if (LYRIC_METADATA_LINE.test(trimmed)) {
+      removed.push(removedItem(index, original, 'lyric metadata line'));
+      return;
+    }
+
+    if (SECTION_LABEL_LINE.test(trimmed)) {
       removed.push(removedItem(index, original, 'section label or bracketed direction line'));
       return;
     }
@@ -81,15 +83,9 @@ export function sanitizeLyricsForProvider(lyrics = '', options = {}) {
       removed.push(removedItem(index, original, 'markdown emphasis markers'));
     }
 
-    if (SPEAKER_OR_CUE_LABEL.test(current) || STANDALONE_SPEAKER_LABEL.test(current)) {
+    if (SPEAKER_OR_CUE_LABEL.test(current)) {
       removed.push(removedItem(index, original, 'speaker or production cue label'));
       return;
-    }
-
-    const inlineSpeaker = current.match(INLINE_SPEAKER_PREFIX);
-    if (inlineSpeaker && !PRODUCTION_CUE_WORDS.test(inlineSpeaker[0])) {
-      removed.push(removedItem(index, original, 'inline speaker label prefix'));
-      current = inlineSpeaker[1];
     }
 
     current = current.replace(ANY_BRACKETED_FRAGMENT, fragment => {
@@ -98,19 +94,17 @@ export function sanitizeLyricsForProvider(lyrics = '', options = {}) {
     });
 
     current = current.replace(PARENTHETICAL_FRAGMENT, (fragment, inner) => {
-      const reason = PRODUCTION_CUE_WORDS.test(inner) ? 'parenthetical production direction' : 'parenthetical non-lyric content';
-      removed.push(removedItem(index, fragment, reason));
-      return '';
+      if (PRODUCTION_CUE_WORDS.test(inner)) {
+        removed.push(removedItem(index, fragment, 'parenthetical production direction'));
+        return '';
+      }
+      removed.push(removedItem(index, fragment, 'parenthetical markers'));
+      return ` ${inner.trim()} `;
     });
 
     if (INLINE_MARKDOWN_PAYLOAD.test(current)) {
       removed.push(removedItem(index, original, 'inline markdown markers'));
       current = current.replace(INLINE_MARKDOWN_TOKEN, '');
-    }
-
-    if (METADATA_HEADER_LINE.test(current)) {
-      removed.push(removedItem(index, original, 'metadata header line'));
-      return;
     }
 
     current = normalizeProviderLine(current);
@@ -158,11 +152,11 @@ export function findProviderLyricPayloadIssues(lyrics = '', options = {}) {
   if (INLINE_MARKDOWN_PAYLOAD.test(text) || text.split('\n').some(line => MARKDOWN_ARTIFACT_LINE.test(line.trim()))) {
     issues.push('markdown remains in provider lyrics payload');
   }
-  if (text.split('\n').some(line => SPEAKER_OR_CUE_LABEL.test(line.trim()) || STANDALONE_SPEAKER_LABEL.test(line.trim()))) {
-    issues.push('speaker or cue label remains in provider lyrics payload');
+  if (text.split('\n').some(line => LYRIC_METADATA_LINE.test(line.trim()))) {
+    issues.push('lyric metadata remains in provider lyrics payload');
   }
-  if (text.split('\n').some(line => METADATA_HEADER_LINE.test(line.trim()))) {
-    issues.push('metadata header line remains in provider lyrics payload');
+  if (text.split('\n').some(line => SPEAKER_OR_CUE_LABEL.test(line.trim()))) {
+    issues.push('speaker or cue label remains in provider lyrics payload');
   }
   if (PRODUCTION_CUE_WORDS.test(text)) {
     issues.push('production direction cue remains in provider lyrics payload');
@@ -192,7 +186,7 @@ export function findForbiddenElementHits(text = '', forbiddenElements = []) {
   const normalized = normalizeForForbiddenMatch(text);
   return forbiddenElements
     .flatMap(element => buildForbiddenPatterns(element).map(pattern => ({ element, pattern })))
-    .filter(({ element, pattern }) => pattern.test(removeNegatedForbiddenMentions(normalized, element)))
+    .filter(({ pattern }) => pattern.test(normalized))
     .map(({ element, pattern }) => ({ element, pattern: pattern.source }));
 }
 
@@ -228,19 +222,7 @@ function normalizeForForbiddenMatch(value = '') {
     .trim()} `;
 }
 
-function removeNegatedForbiddenMentions(normalizedText = '', element = '') {
-  let text = ` ${String(normalizedText || '').trim()} `;
-  const terms = buildForbiddenTerms(element);
-  for (const term of terms) {
-    const escaped = escapeRegExp(term).replace(/\s+/g, '\\s+');
-    const before = new RegExp(`\\b(?:no|not|never|without|avoid|avoids|avoiding|exclude|excludes|excluding|prohibit|prohibited|forbid|forbidden|ban|banned|free\\s+of|must\\s+not\\s+include|do\\s+not\\s+include|does\\s+not\\s+contain)(?:\\s+\\w+){0,6}\\s+${escaped}\\b`, 'gi');
-    const after = new RegExp(`\\b${escaped}\\b(?:\\s+\\w+){0,4}\\s+(?:not\\s+allowed|prohibited|forbidden|banned|excluded|disallowed)\\b`, 'gi');
-    text = text.replace(before, ' ').replace(after, ' ');
-  }
-  return text.replace(/\s+/g, ' ');
-}
-
-function buildForbiddenTerms(element = '') {
+function buildForbiddenPatterns(element = '') {
   const normalized = normalizeForForbiddenMatch(element).trim();
   if (!normalized) return [];
 
@@ -258,11 +240,7 @@ function buildForbiddenTerms(element = '') {
   return [...terms]
     .map(term => term.trim())
     .filter(Boolean)
-    .filter(term => term.length > 2);
-}
-
-function buildForbiddenPatterns(element = '') {
-  return buildForbiddenTerms(element)
+    .filter(term => term.length > 2)
     .map(term => new RegExp(`\\b${escapeRegExp(term).replace(/\s+/g, '\\s+')}\\b`, 'i'));
 }
 
