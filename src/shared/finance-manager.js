@@ -243,7 +243,7 @@ export function syncSongFinanceArtifacts(songId, { writeSummary = true } = {}) {
         const meta = JSON.parse(fs.readFileSync(audioMetaPath, 'utf8'));
         const versions = Array.isArray(meta.versions) && meta.versions.length > 0 ? meta.versions : [{ model: meta.model, tier: meta.render_tier }];
         events.push(recordCostEvent({
-          id: `cost_${songId}_minimax_${stableIdPart(meta.generated_at || meta.model || 'audio')}`,
+          id: buildMiniMaxGenerationCostEventId(songId, meta.generated_at || meta.model || 'audio'),
           timestamp: meta.generated_at || new Date().toISOString(),
           songId,
           pipelineStep: 'music_generation',
@@ -495,4 +495,8 @@ export function writeAlbumFinanceSummary(albumId, summary) {
 
 function stableIdPart(value) {
   return String(value || 'unknown').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'unknown';
+}
+
+export function buildMiniMaxGenerationCostEventId(songId, generatedAt) {
+  return `cost_${songId}_minimax_${stableIdPart(generatedAt || 'audio')}`;
 }

@@ -18,6 +18,7 @@ import {
 import { loadBrandProfile } from '../shared/brand-profile.js';
 import { sanitizeLyricsForProvider } from '../shared/lyrics-sanitizer.js';
 import { buildUniqueSongFilename } from '../shared/song-filenames.js';
+import { recordCostEvent, buildMiniMaxGenerationCostEventId } from '../shared/finance-manager.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BRAND_PROFILE = loadBrandProfile();
@@ -30,10 +31,41 @@ const MAX_POLL_ATTEMPTS = 45;
 export const MINIMAX_PROVIDER_LYRICS_MAX_CHARS = Number(process.env.MINIMAX_PROVIDER_LYRICS_MAX_CHARS || 3200);
 export const MINIMAX_PROVIDER_LYRICS_RETRY_CHARS = Number(process.env.MINIMAX_PROVIDER_LYRICS_RETRY_CHARS || 2800);
 
-export async function generateMusic({ songId, title, lyricsText, audioPromptData }) {
+export const GENERATION_POLICIES = Object.freeze({
+  ONE_TAKE: 'one_take',
+  ALLOW_REGENERATION: 'allow_regeneration',
+  PRODUCER_MODE: 'producer_mode',
+});
+
+export function findExistingValidAudioFile(audioDir) {
+  if (!fs.existsSync(audioDir)) return null;
+  const files = fs.readdirSync(audioDir).filter(f => /\.(mp3|wav)$/i.test(f)).sort();
+  for (const file of files) {
+    const filePath = join(audioDir, file);
+    try {
+      if (fs.statSync(filePath).size > 0) return filePath;
+    } catch {}
+  }
+  return null;
+}
+
+export async function generateMusic({ songId, title, lyricsText, audioPromptData, forceRegenerate = false }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   const audioDir = join(songDir, 'audio');
   fs.mkdirSync(audioDir, { recursive: true });
+
+  if (!forceRegenerate) {
+    const existingAudioFile = findExistingValidAudioFile(audioDir);
+    if (existingAudioFile) {
+      const existingFilename = existingAudioFile.split('/').pop();
+      console.log(`[MUSIC-GEN] ✓ Reusing existing audio file: ${existingFilename} — skipping MiniMax generation (pass forceRegenerate=true to force new generation)`);
+      return {
+        audioFiles: [{ path: existingAudioFile, version: 1, model: null, tier: null, reused: true }],
+        skipped: false,
+        skipped_existing_audio: true,
+      };
+    }
+  }
 
   const modelConfig = resolveMiniMaxModelConfig();
   const prompt = buildStylePrompt(audioPromptData, { title });
@@ -98,6 +130,18 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     }
   } catch (err) {
     console.log(`[MUSIC-GEN] MiniMax submission failed: ${err.message}`);
+    recordCostEvent({
+      songId,
+      pipelineStep: 'music_generation',
+      agentName: 'music-generator',
+      operation: 'minimax_music_generation',
+      provider: 'minimax',
+      model: modelConfig.model,
+      unitType: 'audio_generation',
+      generationCount: 1,
+      status: 'failed_non_billable',
+      notes: `submission_error: ${String(err.message).substring(0, 120)}`,
+    });
     const instructionsPath = join(audioDir, 'MUSIC_GENERATION_INSTRUCTIONS.md');
     fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
     return { audioFiles: [], skipped: false, apiError: err.message, instructionsPath, preRenderQA, providerLyricsReport };
@@ -105,6 +149,18 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
 
   if (!audioHex) {
     console.log('[MUSIC-GEN] No audio returned — generation timed out or failed');
+    recordCostEvent({
+      songId,
+      pipelineStep: 'music_generation',
+      agentName: 'music-generator',
+      operation: 'minimax_music_generation',
+      provider: 'minimax',
+      model: modelConfig.model,
+      unitType: 'audio_generation',
+      generationCount: 1,
+      status: 'failed_billable',
+      notes: 'generation_timed_out_or_failed',
+    });
     const instructionsPath = join(audioDir, 'MUSIC_GENERATION_INSTRUCTIONS.md');
     fs.writeFileSync(instructionsPath, buildManualInstructions({ title, lyricsText: renderLyrics, stylePrompt: prompt, modelConfig }));
     return { audioFiles: [], skipped: false, error: 'generation timed out or failed', instructionsPath, preRenderQA, providerLyricsReport };
@@ -138,8 +194,25 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     postRenderQA.warnings.forEach(w => console.log(`  • ${w}`));
   }
 
+  const generatedAt = new Date().toISOString();
+
+  recordCostEvent({
+    id: buildMiniMaxGenerationCostEventId(songId, generatedAt),
+    timestamp: generatedAt,
+    songId,
+    pipelineStep: 'music_generation',
+    agentName: 'music-generator',
+    operation: 'minimax_music_generation',
+    provider: 'minimax',
+    model: modelConfig.model,
+    unitType: 'audio_generation',
+    generationCount: 1,
+    status: 'success',
+    notes: `render_tier=${modelConfig.tier}`,
+  });
+
   const meta = {
-    generated_at: new Date().toISOString(),
+    generated_at: generatedAt,
     song_id: songId,
     title,
     service: 'minimax-music-2.6',
@@ -157,9 +230,10 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     versions: [{ version: 1, tier: modelConfig.tier, model: modelConfig.model, file: filename }],
   };
   fs.writeFileSync(join(audioDir, 'generation-meta.json'), JSON.stringify(meta, null, 2));
+  fs.appendFileSync(join(audioDir, 'generation-history.jsonl'), JSON.stringify({ ...meta, audio_file: filename }) + '\n');
 
   const audioFiles = [{ path: filePath, version: 1, model: modelConfig.model, tier: modelConfig.tier }];
-  console.log(`[MUSIC-GEN] ✓ Generated ${audioFiles.length} audio file(s)`);
+  console.log(`[MUSIC-GEN] ✓ Generated ${audioFiles.length} audio file(s) returned by this generation call`);
   return { audioFiles, skipped: false, preRenderQA, postRenderQA, providerLyricsReport };
 }
 

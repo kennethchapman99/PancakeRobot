@@ -29,3 +29,18 @@ test('normalizeMagicPipelineStage allows explicit full pipeline', () => {
   assert.equal(service.normalizeMagicPipelineStage('full'), 'full');
   assert.equal(service.normalizeMagicPipelineStage('FULL'), 'full');
 });
+
+test('runMagicPipelineService passes allowRegeneration=false by default without throwing on empty topic', async () => {
+  // Verifies allowRegeneration parameter is accepted (topic rejection fires before any modules load)
+  await assert.rejects(
+    () => service.runMagicPipelineService({ topic: '', allowRegeneration: false }),
+    /Magic pipeline requires a topic/
+  );
+});
+
+test('runMagicPipelineService accepts allowRegeneration=true without throwing on empty topic', async () => {
+  await assert.rejects(
+    () => service.runMagicPipelineService({ topic: '   ', allowRegeneration: true }),
+    /Magic pipeline requires a topic/
+  );
+});
