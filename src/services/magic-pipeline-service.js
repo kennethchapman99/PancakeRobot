@@ -171,6 +171,7 @@ async function runMagicPipelineServiceInner({
       return result;
     }
 
+
     if (isAssetCandidate(firstPass.releaseSelectionResult)) {
       logger.log(chalk.green(assetCandidateMessage(firstPass.releaseSelectionResult, 'First pass')));
       finalPass = firstPass;
@@ -578,27 +579,29 @@ async function finalizeMagicPipelineSuccess({
   modules,
   brandId,
 }) {
-  const releaseCandidate = isReleaseCandidate(releaseSelectionResult);
+  const buildDistributionPackage = isReleaseCandidate(releaseSelectionResult);
   const songDir = join(ROOT_DIR, `output/songs/${songId}`);
   let distDir = null;
 
-  await emit({ type: 'pipeline_progress', stage: 'building_distribution_package', line: 'Building distribution package for human review' });
-  logger.log(chalk.bold('\n📌 Magic Finalize: Building distribution package...\n'));
-  if (!releaseCandidate) {
-    logger.log(chalk.yellow('  Scorer recommendation is advisory only; building package so the human can listen, download, review, and override.'));
+  if (buildDistributionPackage) {
+    await emit({ type: 'pipeline_progress', stage: 'building_distribution_package', line: 'Building distribution package' });
+    logger.log(chalk.bold('\n📌 Magic Finalize: Building distribution package...\n'));
+    const distributionPackage = await modules.generateHumanTasks({
+      songId,
+      title: lyricsResult.title,
+      topic,
+      songDir,
+      metadata,
+      lyricsPath: lyricsResult.lyricsPath,
+      audioPromptPath: lyricsResult.audioPromptPath,
+      brandScore: brandReview.scores?.overall,
+      totalCost,
+    });
+    distDir = distributionPackage.distDir;
+  } else {
+    await emit({ type: 'pipeline_progress', stage: 'skipping_distribution_package', line: 'Skipping distribution package for social-only asset candidate' });
+    logger.log(chalk.yellow('\n📌 Magic Finalize: Skipping distribution package — social-only asset candidate, not publish-ready.\n'));
   }
-  const distributionPackage = await modules.generateHumanTasks({
-    songId,
-    title: lyricsResult.title,
-    topic,
-    songDir,
-    metadata,
-    lyricsPath: lyricsResult.lyricsPath,
-    audioPromptPath: lyricsResult.audioPromptPath,
-    brandScore: brandReview.scores?.overall,
-    totalCost,
-  });
-  distDir = distributionPackage.distDir;
 
   await emit({ type: 'pipeline_progress', stage: 'creating_release_assets', line: 'Building marketing assets' });
   logger.log(chalk.bold('\n📌 Magic Finalize: Building marketing assets...\n'));
@@ -618,16 +621,15 @@ async function finalizeMagicPipelineSuccess({
     totalCost,
     extra: {
       brand_profile_id: brandId,
-      pipeline_stage: releaseCandidate ? 'magic_ready' : 'magic_assets_ready_advisory_review',
+      pipeline_stage: buildDistributionPackage ? 'magic_ready' : 'magic_social_assets_ready',
     },
   });
 
   logger.log(chalk.bgGreen.black('\n ✓ MAGIC PIPELINE READY \n'));
   if (distDir) {
     logger.log(`  Distribution package: ${chalk.bold(distDir)}`);
-  }
-  if (!releaseCandidate) {
-    logger.log(chalk.dim('  Release scorer: advisory recommendation only; human override remains available'));
+  } else {
+    logger.log(chalk.dim('  Distribution package: skipped for social-only treatment'));
   }
   if (marketingResult.dashboardUrl) {
     logger.log(`  Marketing dashboard: ${chalk.bold(marketingResult.dashboardUrl)}`);
@@ -759,8 +761,8 @@ function hasGeneratedAudio(pass) {
 
 function assetCandidateMessage(releaseSelectionResult, passLabel) {
   return isReleaseCandidate(releaseSelectionResult)
-    ? `\n✓ ${passLabel} received a publish recommendation`
-    : `\n✓ ${passLabel} received a social-asset recommendation`;
+    ? `\n✓ ${passLabel} cleared the release threshold`
+    : `\n✓ ${passLabel} qualified for social-only marketing assets`;
 }
 
 function mapRecommendationToStatus(value) {
