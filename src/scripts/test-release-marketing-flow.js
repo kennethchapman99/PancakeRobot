@@ -1,3 +1,4 @@
+import { getActiveProfileId } from '../shared/brand-profile.js';
 import { prepareTestDbSlug } from '../shared/test-db-artifacts.js';
 
 const dryRun = process.argv.includes('--dry-run');
@@ -13,6 +14,7 @@ if (!useMainDb && !explicitSlug) {
 }
 
 const dbSlug = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
+const activeBrandProfileId = getActiveProfileId();
 const runToken = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 const suffix = runToken.toUpperCase();
 const songId = `SONG_RELEASE_MARKETING_TEST_${suffix}`;
@@ -22,6 +24,7 @@ const aiBannedTargetId = `TARGET_AI_BANNED_RELEASE_TEST_${suffix}`;
 
 console.log(`[release-marketing-test] DB slug: ${dbSlug}`);
 if (testDbArtifactDir) console.log(`[release-marketing-test] DB artifact dir: ${testDbArtifactDir}`);
+console.log(`[release-marketing-test] Brand profile: ${activeBrandProfileId}`);
 console.log(`[release-marketing-test] Mode: ${dryRun ? 'dry-run' : 'write'}`);
 console.log(`[release-marketing-test] Scope: ${useMainDb ? 'main-db-compatible unique IDs' : 'isolated test DB'}`);
 
@@ -228,7 +231,7 @@ function seedTargets() {
   const rows = [
     {
       id: validTargetId,
-      brand_profile_id: 'default',
+      brand_profile_id: activeBrandProfileId,
       name: `Family Playlist ${suffix}`,
       type: 'playlist',
       platform: 'email',
@@ -244,7 +247,7 @@ function seedTargets() {
     },
     {
       id: paidTargetId,
-      brand_profile_id: 'default',
+      brand_profile_id: activeBrandProfileId,
       name: `Paid Submission ${suffix}`,
       type: 'blog',
       platform: 'email',
@@ -261,7 +264,7 @@ function seedTargets() {
     },
     {
       id: aiBannedTargetId,
-      brand_profile_id: 'default',
+      brand_profile_id: activeBrandProfileId,
       name: `AI Banned ${suffix}`,
       type: 'blog',
       platform: 'email',
