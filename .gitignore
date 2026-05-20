@@ -1,6 +1,11 @@
 node_modules/
 .env
 .DS_Store
+.auth/
+.browser-profiles/
+config/distrokid/field-map.local.json
+playwright-report/
+test-results/
 .playwright-cli/
 .pancake-runtime/
 pancake-robot.db
@@ -25,6 +30,9 @@ music-pipeline-smoke-release-happy-path-*.db-wal
 music-pipeline-test-release-flow-*.db
 music-pipeline-test-release-flow-*.db-shm
 music-pipeline-test-release-flow-*.db-wal
+social-publish-test-*.db
+social-publish-test-*.db-shm
+social-publish-test-*.db-wal
 release-selection-test-*.db
 release-selection-test-*.db-shm
 release-selection-test-*.db-wal

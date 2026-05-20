@@ -1,0 +1,83 @@
+{
+  "upload_url": "https://distrokid.com/new/",
+  "stop_before_submit": true,
+  "fields": {
+    "artist": {
+      "strategy": "label",
+      "selector": "Artist/band name",
+      "manifest_key": "artist"
+    },
+    "release_title": {
+      "strategy": "label",
+      "selector": "Album title",
+      "manifest_key": "release_title"
+    },
+    "track_title": {
+      "strategy": "label",
+      "selector": "Song title",
+      "manifest_key": "track_title"
+    },
+    "audio_file": {
+      "strategy": "inputFile",
+      "selector": "input[type='file']",
+      "manifest_key": "audio_file",
+      "note": "May need local override because DistroKid may have multiple file inputs."
+    },
+    "cover_art": {
+      "strategy": "inputFile",
+      "selector": "",
+      "manifest_key": "cover_art"
+    },
+    "primary_genre": {
+      "strategy": "select",
+      "selector": "",
+      "manifest_key": "primary_genre"
+    },
+    "secondary_genre": {
+      "strategy": "select",
+      "selector": "",
+      "manifest_key": "secondary_genre"
+    },
+    "language": {
+      "strategy": "select",
+      "selector": "",
+      "manifest_key": "language"
+    },
+    "explicit": {
+      "strategy": "radioOrCheckbox",
+      "selector": "",
+      "manifest_key": "explicit"
+    },
+    "lyrics": {
+      "strategy": "textarea",
+      "selector": "",
+      "manifest_key": "lyrics_file"
+    },
+    "release_date": {
+      "strategy": "date",
+      "selector": "",
+      "manifest_key": "release_date"
+    },
+    "made_for_kids": {
+      "strategy": "radioOrCheckbox",
+      "selector": "",
+      "manifest_key": "made_for_kids"
+    },
+    "ai_generated": {
+      "strategy": "radioOrCheckbox",
+      "selector": "",
+      "manifest_key": "is_ai_generated"
+    }
+  },
+  "dangerous_buttons_never_click": [
+    "Submit",
+    "Done",
+    "Finalize",
+    "Release",
+    "Upload to stores",
+    "Continue & submit",
+    "Save and submit",
+    "Submit release",
+    "Send to stores"
+  ]
+}

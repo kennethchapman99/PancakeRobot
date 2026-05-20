@@ -71,6 +71,7 @@ import {
   getSongStatusLabel,
   isRecognizedSongStatusInput,
 } from '../shared/song-status.js';
+import { markSongSubmittedToDistroKid } from '../shared/distrokid-release.js';
 import { getSongNextAction } from '../shared/song-workflow.js';
 import { analyzeRecentDraftSongsForReleaseSelection, analyzeSongForReleaseSelection } from '../agents/release-selection-agent.js';
 import { PIPELINE_STAGES } from '../lib/release-selection/constants.js';
@@ -1393,6 +1394,25 @@ app.post('/api/songs/:id/publish', (req, res) => {
     renderVideos: false,
   });
   res.json({ ok: true, releaseAssetsBuild: { started: !queued.existing, jobId: queued.jobId, existing: queued.existing } });
+});
+
+// DistroKid completion callback — called after human finalizes submission
+// Payload: { song_id?, distrokid_url, status?, submitted_at?, notes? }
+app.post('/api/distrokid/releases/:songId/complete', (req, res) => {
+  const { songId } = req.params;
+  try {
+    if (req.body?.song_id && req.body.song_id !== songId) {
+      return res.status(400).json({ error: 'song_id payload does not match route songId' });
+    }
+    if (req.body?.status && req.body.status !== 'submitted') {
+      return res.status(400).json({ error: 'status must be submitted' });
+    }
+    const result = markSongSubmittedToDistroKid(songId, req.body || {});
+    res.json({ ok: true, result });
+  } catch (error) {
+    const status = /not found/i.test(error.message) ? 404 : 500;
+    res.status(status).json({ error: error.message });
+  }
 });
 
 // Bulk status update — must be before /:id routes

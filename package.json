@@ -65,7 +65,14 @@
     "reject": "node src/orchestrator.js --reject",
     "pretest": "node scripts/ensure-node-runtime.js",
     "test": "node scripts/repair-song-catalog-trigger.js && node --test",
-    "test:marketing-router": "node src/scripts/smoke-test-marketing-router.js"
+    "test:marketing-router": "node src/scripts/smoke-test-marketing-router.js",
+    "distrokid:save-auth": "node scripts/distrokid/save-auth.mjs",
+    "distrokid:check-auth": "node scripts/distrokid/check-auth.mjs",
+    "distrokid:package": "node scripts/distrokid/build-release-package.mjs",
+    "distrokid:upload": "node scripts/distrokid/upload-release.mjs",
+    "distrokid:batch": "node scripts/distrokid/batch-upload.mjs",
+    "distrokid:mark-submitted": "node scripts/distrokid/mark-submitted.mjs",
+    "distrokid:smoke": "node scripts/distrokid/smoke-test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",
@@ -89,5 +96,8 @@
   },
   "volta": {
     "node": "22.22.2"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
   }
 }
