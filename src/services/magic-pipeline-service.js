@@ -52,6 +52,7 @@ async function runMagicPipelineServiceInner({
   brandId = process.env.DEFAULT_BRAND_ID || DEFAULT_PROFILE_ID,
   mode = 'human_review',
   pipelineStage = process.env.MAGIC_PIPELINE_STAGE || process.env.MAGIC_SONG_PIPELINE_STAGE || MAGIC_PIPELINE_STAGES.SONG_ONLY,
+  allowRegeneration = false,
   onEvent = null,
   logger = console,
 } = {}) {
@@ -195,75 +196,115 @@ async function runMagicPipelineServiceInner({
       );
       fs.writeFileSync(join(songDir, 'latest-regeneration-brief.md'), combinedRevisionBrief + '\n');
 
-      logger.log(chalk.yellow('\n↺ First pass scorer recommendation suggested another iteration. Spending the single allowed regeneration.\n'));
-      await emit({ type: 'pipeline_progress', stage: 'regenerating_song', line: 'First pass scorer recommendation suggested another iteration; running one regeneration' });
-
-      const secondPass = await runSongBuildPass({
-        songId,
-        topic: cleanTopic,
-        researchReport,
-        totalCost,
-        revisionNotes: combinedRevisionBrief,
-        existingLyrics: firstPass.lyricsResult.lyricsText,
-        passLabel: 'Magic Pass 2/2',
-        logger,
-        emit,
-        modules,
-        brandId: cleanBrandId,
-      });
-      totalCost = secondPass.totalCost;
-      finalPass = secondPass;
-
-      if (isAssetCandidate(secondPass.releaseSelectionResult)) {
-        logger.log(chalk.green(assetCandidateMessage(secondPass.releaseSelectionResult, 'Second pass')));
-        finalized = await finalizeMagicPipelineSuccess({
-          songId,
-          topic: cleanTopic,
-          lyricsResult: secondPass.lyricsResult,
-          metadata: secondPass.metadata,
-          metadataPath: secondPass.metadataPath,
-          brandReview: secondPass.brandReview,
-          releaseSelectionResult: secondPass.releaseSelectionResult,
-          totalCost,
-          logger,
-          emit,
-          modules,
-          brandId: cleanBrandId,
-        });
-      } else if (hasGeneratedAudio(secondPass)) {
-        logger.log(chalk.yellow('\n⚠ Second pass still received a conservative scorer recommendation. Finalizing generated song anyway; scorer is advisory only.\n'));
-        await emit({ type: 'pipeline_progress', stage: 'finalizing_advisory_song', line: 'Second pass kept a conservative scorer recommendation; finalizing generated song for human review anyway' });
-        finalized = await finalizeMagicPipelineSuccess({
-          songId,
-          topic: cleanTopic,
-          lyricsResult: secondPass.lyricsResult,
-          metadata: secondPass.metadata,
-          metadataPath: secondPass.metadataPath,
-          brandReview: secondPass.brandReview,
-          releaseSelectionResult: secondPass.releaseSelectionResult,
-          totalCost,
-          logger,
-          emit,
-          modules,
-          brandId: cleanBrandId,
-        });
+      if (!allowRegeneration) {
+        logger.log(chalk.yellow('\n⚠ Scorer recommended improvement, but one_take policy is active (allowRegeneration=false). Finalizing first pass. Pass allowRegeneration=true to permit a second music generation.\n'));
+        await emit({ type: 'pipeline_progress', stage: 'advisory_score_skipped_regeneration', line: 'Scorer advisory; regeneration disabled by one_take policy — finalizing first pass' });
+        finalPass = firstPass;
+        if (hasGeneratedAudio(firstPass)) {
+          finalized = await finalizeMagicPipelineSuccess({
+            songId,
+            topic: cleanTopic,
+            lyricsResult: firstPass.lyricsResult,
+            metadata: firstPass.metadata,
+            metadataPath: firstPass.metadataPath,
+            brandReview: firstPass.brandReview,
+            releaseSelectionResult: firstPass.releaseSelectionResult,
+            totalCost,
+            logger,
+            emit,
+            modules,
+            brandId: cleanBrandId,
+          });
+        } else {
+          logger.log(chalk.yellow('\n⚠ No generated audio from first pass. Keeping draft for manual audio generation/review.\n'));
+          await emit({ type: 'pipeline_progress', stage: 'needs_audio_review', line: 'No generated audio from first pass; draft kept for manual audio generation/review' });
+          persistSongState({
+            songId,
+            topic: cleanTopic,
+            title: firstPass.lyricsResult.title,
+            lyricsPath: firstPass.lyricsResult.lyricsPath,
+            audioPromptPath: firstPass.lyricsResult.audioPromptPath,
+            metadataPath: firstPass.metadataPath,
+            brandScore: firstPass.brandReview.scores?.overall,
+            totalCost,
+            extra: {
+              brand_profile_id: cleanBrandId,
+              pipeline_stage: 'magic_needs_audio_review',
+            },
+          });
+        }
       } else {
-        logger.log(chalk.yellow('\n⚠ No generated audio was available to finalize. Keeping draft for manual audio generation/review.\n'));
-        await emit({ type: 'pipeline_progress', stage: 'needs_audio_review', line: 'No generated audio was available; draft kept for manual audio generation/review' });
-        persistSongState({
+        logger.log(chalk.yellow('\n↺ First pass scorer recommendation suggested another iteration. Spending the single allowed regeneration.\n'));
+        await emit({ type: 'pipeline_progress', stage: 'regenerating_song', line: 'First pass scorer recommendation suggested another iteration; running one regeneration' });
+
+        const secondPass = await runSongBuildPass({
           songId,
           topic: cleanTopic,
-          title: secondPass.lyricsResult.title,
-          lyricsPath: secondPass.lyricsResult.lyricsPath,
-          audioPromptPath: secondPass.lyricsResult.audioPromptPath,
-          metadataPath: secondPass.metadataPath,
-          brandScore: secondPass.brandReview.scores?.overall,
+          researchReport,
           totalCost,
-          extra: {
-            brand_profile_id: cleanBrandId,
-            pipeline_stage: 'magic_needs_audio_review',
-          },
+          revisionNotes: combinedRevisionBrief,
+          existingLyrics: firstPass.lyricsResult.lyricsText,
+          passLabel: 'Magic Pass 2/2',
+          forceRegenerate: true,
+          logger,
+          emit,
+          modules,
+          brandId: cleanBrandId,
         });
+        totalCost = secondPass.totalCost;
+        finalPass = secondPass;
+
+        if (isAssetCandidate(secondPass.releaseSelectionResult)) {
+          logger.log(chalk.green(assetCandidateMessage(secondPass.releaseSelectionResult, 'Second pass')));
+          finalized = await finalizeMagicPipelineSuccess({
+            songId,
+            topic: cleanTopic,
+            lyricsResult: secondPass.lyricsResult,
+            metadata: secondPass.metadata,
+            metadataPath: secondPass.metadataPath,
+            brandReview: secondPass.brandReview,
+            releaseSelectionResult: secondPass.releaseSelectionResult,
+            totalCost,
+            logger,
+            emit,
+            modules,
+            brandId: cleanBrandId,
+          });
+        } else if (hasGeneratedAudio(secondPass)) {
+          logger.log(chalk.yellow('\n⚠ Second pass still received a conservative scorer recommendation. Finalizing generated song anyway; scorer is advisory only.\n'));
+          await emit({ type: 'pipeline_progress', stage: 'finalizing_advisory_song', line: 'Second pass kept a conservative scorer recommendation; finalizing generated song for human review anyway' });
+          finalized = await finalizeMagicPipelineSuccess({
+            songId,
+            topic: cleanTopic,
+            lyricsResult: secondPass.lyricsResult,
+            metadata: secondPass.metadata,
+            metadataPath: secondPass.metadataPath,
+            brandReview: secondPass.brandReview,
+            releaseSelectionResult: secondPass.releaseSelectionResult,
+            totalCost,
+            logger,
+            emit,
+            modules,
+            brandId: cleanBrandId,
+          });
+        } else {
+          logger.log(chalk.yellow('\n⚠ No generated audio was available to finalize. Keeping draft for manual audio generation/review.\n'));
+          await emit({ type: 'pipeline_progress', stage: 'needs_audio_review', line: 'No generated audio was available; draft kept for manual audio generation/review' });
+          persistSongState({
+            songId,
+            topic: cleanTopic,
+            title: secondPass.lyricsResult.title,
+            lyricsPath: secondPass.lyricsResult.lyricsPath,
+            audioPromptPath: secondPass.lyricsResult.audioPromptPath,
+            metadataPath: secondPass.metadataPath,
+            brandScore: secondPass.brandReview.scores?.overall,
+            totalCost,
+            extra: {
+              brand_profile_id: cleanBrandId,
+              pipeline_stage: 'magic_needs_audio_review',
+            },
+          });
+        }
       }
     }
 
@@ -366,6 +407,7 @@ async function runSongBuildPass({
   existingLyrics = null,
   passLabel = 'Pass',
   stopAfterAudio = false,
+  forceRegenerate = false,
   logger,
   emit,
   modules,
@@ -443,10 +485,12 @@ async function runSongBuildPass({
     title: lyricsResult.title,
     lyricsText: lyricsResult.lyricsText,
     audioPromptData: lyricsResult.songData?.audio_prompt,
+    forceRegenerate,
   });
 
   if (musicResult.audioFiles?.length > 0) {
-    logger.log(chalk.green(`✓ Music generated: ${musicResult.audioFiles.length} version(s)`));
+    const reuseNote = musicResult.skipped_existing_audio ? ' (reused existing)' : '';
+    logger.log(chalk.green(`✓ Music generated: ${musicResult.audioFiles.length} audio file(s)${reuseNote}`));
   } else if (musicResult.skipped || musicResult.apiError) {
     logger.log(chalk.yellow('⚠ Music generation skipped — manual instructions saved to audio/MUSIC_GENERATION_INSTRUCTIONS.md'));
     if (musicResult.apiError) {

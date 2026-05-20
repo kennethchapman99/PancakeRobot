@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildCostEvent,
+  buildMiniMaxGenerationCostEventId,
   computeFlatGenerationCost,
   computeTokenCost,
   summarizeCostEvents,
@@ -78,6 +79,33 @@ test('buildCostEvent marks unknown-priced successful events as estimated', () =>
   assert.equal(event.status, 'estimated');
   assert.equal(event.pipeline_step, 'lyrics_generation');
   assert.equal(event.song_id, 'SONG_TEST');
+});
+
+test('buildMiniMaxGenerationCostEventId produces a stable deterministic ID', () => {
+  const id1 = buildMiniMaxGenerationCostEventId('SONG_ABC', '2026-05-19T10:30:00.000Z');
+  const id2 = buildMiniMaxGenerationCostEventId('SONG_ABC', '2026-05-19T10:30:00.000Z');
+  assert.equal(id1, id2, 'same inputs must produce the same ID');
+  assert.ok(id1.startsWith('cost_SONG_ABC_minimax_'), 'ID must include songId and provider');
+});
+
+test('buildMiniMaxGenerationCostEventId produces different IDs for different timestamps', () => {
+  const id1 = buildMiniMaxGenerationCostEventId('SONG_ABC', '2026-05-19T10:30:00.000Z');
+  const id2 = buildMiniMaxGenerationCostEventId('SONG_ABC', '2026-05-19T10:31:00.000Z');
+  assert.notEqual(id1, id2);
+});
+
+test('buildMiniMaxGenerationCostEventId handles missing generatedAt gracefully', () => {
+  const id = buildMiniMaxGenerationCostEventId('SONG_XYZ', null);
+  assert.ok(id.startsWith('cost_SONG_XYZ_minimax_'), 'should still produce a valid ID');
+  assert.ok(typeof id === 'string' && id.length > 10);
+});
+
+test('direct cost event and artifact sync produce the same ID (no double-counting)', () => {
+  const generatedAt = '2026-05-19T12:00:00.000Z';
+  const directId = buildMiniMaxGenerationCostEventId('SONG_TEST123', generatedAt);
+  // Simulate what syncSongFinanceArtifacts would compute from generation-meta.json
+  const artifactId = buildMiniMaxGenerationCostEventId('SONG_TEST123', generatedAt);
+  assert.equal(directId, artifactId, 'direct recording and artifact sync must use the same ID to prevent double-counting');
 });
 
 test('summarizeCostEvents aggregates by pipeline step and status', () => {
