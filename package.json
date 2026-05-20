@@ -19,7 +19,7 @@
     "prestart": "node scripts/ensure-node-runtime.js",
     "start": "node src/orchestrator.js",
     "preweb": "node scripts/ensure-node-runtime.js",
-    "web": "node --watch --import ./src/web/render-mode-preload.js src/web/server.js",
+    "web": "node --watch --import ./src/web/render-mode-preload.js --import ./src/web/marketing-preload.js --import ./src/web/marketing-song-detail-preload.js src/web/server.js",
     "predev:mobile": "node scripts/ensure-node-runtime.js",
     "dev:mobile": "node src/scripts/run-mobile-dev-stack.js",
     "setup": "node src/orchestrator.js --setup",
@@ -69,6 +69,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",
+    "archiver": "^7.0.1",
     "better-sqlite3": "^12.9.0",
     "canvas": "^2.11.0",
     "chalk": "^5.0.0",
