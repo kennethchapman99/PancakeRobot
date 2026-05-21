@@ -49,9 +49,29 @@ assert(fieldMap.stop_before_submit === true, 'field map stops before submit');
 for (const button of DANGEROUS_BUTTON_NAMES) {
   assert(fieldMap.dangerous_buttons_never_click?.includes(button), `field map dangerous button ${button}`);
 }
-for (const key of ['artist', 'release_title', 'track_title', 'audio_file', 'cover_art', 'primary_genre', 'lyrics', 'made_for_kids', 'ai_generated']) {
-  assert(Boolean(fieldMap.fields?.[key]?.manifest_key), `field map field ${key}`);
+for (const key of ['cover_art', 'audio_file', 'track_title', 'language', 'primary_genre', 'original_song', 'ai_generated_gate', 'ai_all_audio']) {
+  assertField(fieldMap, key, 'field map');
 }
+assert(fieldMap.fields.cover_art.selector === '#artwork' && fieldMap.fields.cover_art.strategy === 'inputFile' && fieldMap.fields.cover_art.manifest_key === 'cover_art' && fieldMap.fields.cover_art.exact === true, 'field map cover art exact upload selector');
+assert(fieldMap.fields.audio_file.selector === '#js-track-upload-1' && fieldMap.fields.audio_file.strategy === 'inputFile' && fieldMap.fields.audio_file.manifest_key === 'audio_file' && fieldMap.fields.audio_file.exact === true, 'field map audio exact upload selector');
+assert(fieldMap.fields.track_title.selector.includes('input[id^="title_"]') && fieldMap.fields.track_title.strategy === 'cssFill' && fieldMap.fields.track_title.manifest_key === 'track_title', 'field map dynamic track title selector');
+assert(fieldMap.fields.language.selector === '#language' && fieldMap.fields.language.strategy === 'cssSelect' && fieldMap.fields.language.manifest_key === 'language' && fieldMap.fields.language.exact === true, 'field map language exact select');
+assert(fieldMap.fields.primary_genre.selector === '#genrePrimary' && fieldMap.fields.primary_genre.strategy === 'cssSelect' && fieldMap.fields.primary_genre.manifest_key === 'primary_genre', 'field map primary genre select');
+assert(fieldMap.fields.original_song.selector === '#not_coversong_radio_button_1' && fieldMap.fields.original_song.strategy === 'cssRadio' && fieldMap.fields.original_song.exact === true, 'field map original song radio');
+assert(fieldMap.fields.ai_generated_gate.strategy === 'dynamicRadioByNamePrefixLabel' && fieldMap.fields.ai_generated_gate.name_prefix === 'ai_gate_' && fieldMap.fields.ai_generated_gate.manifest_key === 'ai_disclosure.uses_ai', 'field map dynamic AI generated gate');
+assert(fieldMap.fields.ai_all_audio.strategy === 'checkboxByLabelText' && fieldMap.fields.ai_all_audio.labelText === 'All of the audio' && fieldMap.fields.ai_all_audio.manifest_key === 'ai_disclosure.all_audio_performed_by_ai', 'field map AI all audio by label');
+assert(fieldMap.fields.songwriter_role?.manifest_key === 'songwriter_real_name.role', 'field map songwriter role field');
+assert(fieldMap.fields.songwriter_first?.selector === 'input[name="songwriter_real_name_first1"]' && fieldMap.fields.songwriter_first?.manifest_key === 'songwriter_real_name.first' && fieldMap.fields.songwriter_first?.exact === true, 'field map songwriter first selector');
+assert(fieldMap.fields.songwriter_middle?.selector === 'input[name="songwriter_real_name_middle1"]' && fieldMap.fields.songwriter_middle?.manifest_key === 'songwriter_real_name.middle' && fieldMap.fields.songwriter_middle?.allowEmpty === true, 'field map songwriter middle selector');
+assert(fieldMap.fields.songwriter_last?.selector === 'input[name="songwriter_real_name_last1"]' && fieldMap.fields.songwriter_last?.manifest_key === 'songwriter_real_name.last' && fieldMap.fields.songwriter_last?.exact === true, 'field map songwriter last selector');
+assert(fieldMap.fields.apple_music_credits_expand?.strategy === 'clickByText' && fieldMap.safe_click_texts?.includes('Add credits for each song on this release'), 'field map Apple Music credits expansion safe click');
+assert(fieldMap.fields.apple_music_performer_role?.selector === '#track-1-performer-1-role' && fieldMap.fields.apple_music_performer_role?.manifest_key === 'apple_music_credits.performer.role', 'field map Apple performer role selector');
+assert(fieldMap.fields.apple_music_performer_name?.selector === '#track-1-performer-1-name' && fieldMap.fields.apple_music_performer_name?.manifest_key === 'apple_music_credits.performer.name', 'field map Apple performer name selector');
+assert(fieldMap.fields.apple_music_producer_role?.selector === '#track-1-producer-1-role' && fieldMap.fields.apple_music_producer_role?.manifest_key === 'apple_music_credits.producer.role', 'field map Apple producer role selector');
+assert(fieldMap.fields.apple_music_producer_name?.selector === '#track-1-producer-1-name' && fieldMap.fields.apple_music_producer_name?.manifest_key === 'apple_music_credits.producer.name', 'field map Apple producer name selector');
+assertCertificationAllowlist(fieldMap, 'field map');
+assertNoUnsafeLabelSelectors(fieldMap, 'field map');
+assertNoDangerousPaidExtras(fieldMap, 'field map');
 
 const uploadSrc = readText('scripts/distrokid/upload-release.mjs');
 const distroKidGuidance = [
@@ -179,6 +199,30 @@ function assertCommandFailsClearly(args, name) {
   } catch (error) {
     const output = `${error.stdout || ''}${error.stderr || ''}`;
     assert(/Usage:|Error:|FAIL:/i.test(output), name);
+  }
+}
+
+function assertField(map, key, name) {
+  assert(Boolean(map.fields?.[key]), `${name} field ${key}`);
+}
+
+function assertCertificationAllowlist(map, name) {
+  const required = {
+    cert_youtube_music: '#areyousureyoutube',
+    cert_no_promo_services: '#areyousurepromoservices',
+    cert_recorded_authorized: '#areyousurerecorded',
+    cert_no_unapproved_artist_names: '#areyousureotherartist',
+    cert_distribution_agreement: '#areyousuretandc',
+  };
+  for (const [fieldName, selector] of Object.entries(required)) {
+    const fieldDef = map.fields?.[fieldName];
+    assert(fieldDef?.strategy === 'cssCheckbox' && fieldDef?.selector === selector && fieldDef?.category === 'certification' && fieldDef?.requires_certify === true && fieldDef?.exact === true, `${name} certification allowlist ${fieldName}`);
+  }
+}
+
+function assertNoUnsafeLabelSelectors(map, name) {
+  for (const [fieldName, fieldDef] of Object.entries(map.fields || {})) {
+    assert(fieldDef.strategy !== 'label', `${name} field ${fieldName} avoids unsafe label selector strategy`);
   }
 }
 
