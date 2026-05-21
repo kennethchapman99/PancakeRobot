@@ -249,6 +249,26 @@ function initSchema(db) {
       FOREIGN KEY (campaign_id) REFERENCES daily_social_campaigns(id),
       FOREIGN KEY (song_id) REFERENCES songs(id)
     );
+
+    CREATE TABLE IF NOT EXISTS distrokid_release_jobs (
+      id TEXT PRIMARY KEY,
+      song_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_queued',
+      priority INTEGER DEFAULT 100,
+      scheduled_for TEXT,
+      package_path TEXT,
+      latest_run_log_path TEXT,
+      latest_error_json TEXT,
+      attempt_count INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT,
+      queued_at TEXT,
+      last_attempt_at TEXT,
+      submitted_at TEXT,
+      distrokid_url TEXT,
+      notes TEXT,
+      FOREIGN KEY (song_id) REFERENCES songs(id)
+    );
   `);
 
   // Migrate existing songs table — add new columns if they don't exist yet

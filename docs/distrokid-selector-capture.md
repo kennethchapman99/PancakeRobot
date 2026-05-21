@@ -3,8 +3,8 @@
 Login uses the hardened auth script, not codegen:
 
 ```bash
-bash scripts/pancake.sh distrokid:save-auth
-bash scripts/pancake.sh distrokid:check-auth
+npm run distrokid:save-auth
+npm run distrokid:check-auth
 ```
 
 Codegen is only for selector capture after `.auth/distrokid.json` exists.
@@ -12,7 +12,7 @@ Codegen is only for selector capture after `.auth/distrokid.json` exists.
 Recommended next step after a first dry-run is field discovery:
 
 ```bash
-bash scripts/pancake.sh distrokid:upload \
+npm run distrokid:upload -- \
   --manifest output/release-packages/SONG_ID/manifest.json \
   --dry-run \
   --discover-fields
@@ -51,4 +51,4 @@ Recommended capture flow:
 5. Copy the recorder output.
 6. Ask Claude Code to map the selectors into `config/distrokid/field-map.local.json`.
 
-If Google login fails during codegen, you are using codegen for the wrong step. Run `bash scripts/pancake.sh distrokid:save-auth` first; that script launches Chrome with the automation flag stripped.
+If Google login fails during codegen, you are using codegen for the wrong step. Run `npm run distrokid:save-auth` first; that script launches Chrome with the automation flag stripped.

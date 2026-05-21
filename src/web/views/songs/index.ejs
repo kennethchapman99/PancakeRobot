@@ -6,6 +6,23 @@
   const activeSort = typeof sort !== 'undefined' ? sort : '';
   const activeActivity = typeof filterActivity !== 'undefined' ? filterActivity : '';
   const hasServerFilters = Boolean(q || filterStatus || filterBrand || activeSort);
+  function distrokidJobLabel(job) {
+    const status = job?.status || 'not_queued';
+    const labels = {
+      not_queued: 'Not queued',
+      queued_for_distrokid: 'Queued',
+      package_built: 'Package built',
+      blocked_missing_fields: 'Blocked',
+      auth_needed: 'Auth needed',
+      dry_run_ready: 'Dry-run ready',
+      upload_started: 'Upload started',
+      awaiting_manual_review: 'Awaiting review',
+      submitted: 'Submitted',
+      failed: 'Failed',
+      skipped: 'Skipped',
+    };
+    return labels[status] || status;
+  }
 %>
 
 <div class="p-4 sm:p-6 lg:p-8" x-data="catalog()">
@@ -88,6 +105,8 @@
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button @click="runBulkAnalysis()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Run A&R Analysis</button>
+        <button @click="queueDistroKid()" class="rounded-xl bg-fuchsia-100 px-3 py-2 text-xs font-semibold text-fuchsia-950 transition hover:bg-fuchsia-200">Queue for DistroKid</button>
+        <button @click="clearDistroKidQueue()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Clear DistroKid Queue</button>
         <button @click="applyReleaseAction('publish')" class="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-100">Approve Selected for Release Packaging</button>
         <button @click="applyReleaseAction('edit')" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Send Selected to Editing</button>
         <button @click="applyReleaseAction('hold')" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Hold Selected</button>
@@ -159,6 +178,7 @@
                 <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"><%= song.hasAudio ? 'audio' : 'no audio' %></span>
                 <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"><%= song.hasArtwork ? 'artwork' : 'no artwork' %></span>
                 <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"><%= song.hasMarketingPack ? 'marketing pack' : 'no pack yet' %></span>
+                <span class="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2.5 py-1 text-[11px] font-semibold text-fuchsia-700"><%= distrokidJobLabel(song.distrokidJob) %></span>
               </div>
               <div class="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                 <select onchange="changeSongStatus('<%= song.id %>', this.value)" class="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 focus:outline-none">
@@ -210,6 +230,7 @@
 
             <div>
               <span class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold <%= statusBadge(song.status) %>"><%= songStatusLabel(song.status) %></span>
+              <span class="mt-2 inline-flex rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2.5 py-1 text-[11px] font-semibold text-fuchsia-700"><%= distrokidJobLabel(song.distrokidJob) %></span>
               <select onchange="changeSongStatus('<%= song.id %>', this.value)" class="mt-2 block w-full rounded-xl border border-zinc-200 px-3 py-2 text-xs text-zinc-700 focus:outline-none">
                 <% for (const option of songStatusOptions) { %>
                   <option value="<%= option.value %>" <%= song.status === option.value ? 'selected' : '' %>><%= option.label %></option>
@@ -290,6 +311,28 @@ window.catalog = function() {
       });
       const data = await response.json();
       if (!data.ok) return alert(data.error || 'A&R analysis failed');
+      window.location.reload();
+    },
+    async queueDistroKid() {
+      if (!this.selected.length) return;
+      const response = await fetch('/api/distrokid/jobs/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...this.selected] }),
+      });
+      const data = await response.json();
+      if (!data.ok) return alert(data.error || 'DistroKid queue failed');
+      window.location.reload();
+    },
+    async clearDistroKidQueue() {
+      if (!this.selected.length) return;
+      const response = await fetch('/api/distrokid/jobs/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...this.selected] }),
+      });
+      const data = await response.json();
+      if (!data.ok) return alert(data.error || 'DistroKid queue clear failed');
       window.location.reload();
     },
     async applyReleaseAction(action) {

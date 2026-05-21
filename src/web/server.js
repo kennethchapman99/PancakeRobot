@@ -72,6 +72,12 @@ import {
   isRecognizedSongStatusInput,
 } from '../shared/song-status.js';
 import { markSongSubmittedToDistroKid } from '../shared/distrokid-release.js';
+import {
+  clearDistroKidQueue,
+  getDistroKidJob,
+  listDistroKidJobsBySongIds,
+  queueSongForDistroKid,
+} from '../shared/distrokid-jobs.js';
 import { getSongNextAction } from '../shared/song-workflow.js';
 import { analyzeRecentDraftSongsForReleaseSelection, analyzeSongForReleaseSelection } from '../agents/release-selection-agent.js';
 import { PIPELINE_STAGES } from '../lib/release-selection/constants.js';
@@ -753,7 +759,9 @@ app.get('/api/songs/pipeline/stream/:jobId', (req, res) => {
 
 // ── SONGS ──────────────────────────────────────────────────────
 app.get('/songs', (req, res) => {
-  let songs = getAllSongs().map(s => {
+  const baseSongs = getAllSongs();
+  const distrokidJobsBySongId = listDistroKidJobsBySongIds(baseSongs.map(song => song.id));
+  let songs = baseSongs.map(s => {
     const songDir = join(__dirname, '../../output/songs', s.id);
     const fsAssets = scanSongDir(songDir);
     const metadata = readSongMetadata(songDir);
@@ -780,6 +788,7 @@ app.get('/songs', (req, res) => {
       hasLyrics: Boolean(fsAssets.lyrics),
       hasArtwork: Boolean(previewImageUrl),
       lastOutreachAt: s.last_outreach?.contacted_at || s.last_outreach?.updated_at || null,
+      distrokidJob: distrokidJobsBySongId.get(s.id) || null,
     };
   });
 
@@ -886,6 +895,7 @@ app.get('/songs/:id', (req, res) => {
     } catch {}
   }
   const releaseMarketing = getOrCreateReleaseMarketing(song.id);
+  const distrokidJob = getDistroKidJob(song.id);
   const requestedTab = String(req.query.tab || '').toLowerCase();
   const releaseSelectionSummary = getReleaseRecommendationSummary(song);
   const initialTab = resolveSongDetailInitialTab({
@@ -900,6 +910,7 @@ app.get('/songs/:id', (req, res) => {
     song, idea, assets, checklist, progress, links, snapshots, fsAssets,
     lyricsContent, audioPromptContent, metadataParsed, brandParsed,
     marketingPack, baseImage, releaseOutreachRows, marketingKit, releaseMarketing,
+    distrokidJob,
     releaseSelectionSummary,
     nextAction: getSongNextAction(song, marketingKit),
     initialTab,
@@ -1412,6 +1423,43 @@ app.post('/api/distrokid/releases/:songId/complete', (req, res) => {
   } catch (error) {
     const status = /not found/i.test(error.message) ? 404 : 500;
     res.status(status).json({ error: error.message });
+  }
+});
+
+app.post('/api/distrokid/jobs/queue', (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids
+      : [req.body?.song_id || req.body?.songId].filter(Boolean);
+    const jobs = ids.map(id => queueSongForDistroKid(String(id).trim()));
+    res.json({ ok: true, jobs });
+  } catch (error) {
+    res.status(/not found|refusing/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/api/distrokid/jobs/clear', (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids
+      : [req.body?.song_id || req.body?.songId].filter(Boolean);
+    const jobs = ids.map(id => clearDistroKidQueue(String(id).trim(), req.body?.notes || null));
+    res.json({ ok: true, jobs });
+  } catch (error) {
+    res.status(/not found/i.test(error.message) ? 404 : 500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/api/distrokid/jobs/:songId/mark-submitted', (req, res) => {
+  try {
+    const result = markSongSubmittedToDistroKid(req.params.songId, {
+      distrokid_url: req.body?.distrokid_url || req.body?.distrokidUrl || req.body?.url,
+      notes: req.body?.notes || '',
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    const status = /not found/i.test(error.message) ? 404 : 500;
+    res.status(status).json({ ok: false, error: error.message });
   }
 });
 

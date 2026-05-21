@@ -3,6 +3,11 @@
 import fs from 'fs';
 import { join } from 'path';
 import {
+  DISTROKID_JOB_STATUSES,
+  getDistroKidJob,
+  markDistroKidJobStatus,
+} from '../../src/shared/distrokid-jobs.js';
+import {
   DANGEROUS_BUTTON_NAMES,
   DISTROKID_AUTH_PATH,
   FIELD_MAP_EXAMPLE_PATH,
@@ -140,6 +145,7 @@ if (errors.length) {
 
 if (!exists(DISTROKID_AUTH_PATH)) {
   errors.push({ field: 'auth', error: '.auth/distrokid.json is missing. Run bash scripts/pancake.sh distrokid:save-auth.' });
+  markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
   await finish(null, true);
   process.exit(1);
 }
@@ -148,6 +154,7 @@ const auth = readJson(DISTROKID_AUTH_PATH);
 console.log(`Cookie domains: ${getCookieDomains(auth).join(', ') || '(none)'}`);
 if (!hasDistrokidCookies(auth)) {
   errors.push({ field: 'auth', error: '.auth/distrokid.json has no DistroKid cookies.' });
+  markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
   await finish(null, true);
   process.exit(1);
 }
@@ -180,6 +187,14 @@ if (certifyImportantCheckboxes) {
   console.log('WARNING: Certification checkboxes are legal attestations. Only use this when the statements are true.');
 }
 console.log(`Field map: ${relativeToRepo(fieldMapPath)}`);
+
+const existingJob = getDistroKidJob(songId);
+markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.UPLOAD_STARTED, {
+  attempt_count: (existingJob?.attempt_count || 0) + 1,
+  last_attempt_at: runLog.started_at,
+  latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+  latest_error_json: null,
+});
 
 let browser;
 let page;
@@ -831,6 +846,15 @@ async function finish(browser, skipBrowserClose) {
   writeJson(join(runDir, 'filled-fields.json'), filledFields);
   writeJson(join(runDir, 'skipped-fields.json'), skippedFields);
   writeJson(join(runDir, 'errors.json'), errors);
+  const authError = errors.some(item => item.field === 'auth');
+  markDistroKidJobStatus(
+    songId,
+    authError ? DISTROKID_JOB_STATUSES.AUTH_NEEDED : errors.length ? DISTROKID_JOB_STATUSES.FAILED : DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW,
+    {
+      latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+      latest_error_json: errors.length ? { errors } : null,
+    }
+  );
 
   console.log('');
   printUploadSummary();

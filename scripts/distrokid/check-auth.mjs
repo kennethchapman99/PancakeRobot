@@ -71,6 +71,7 @@ try {
 
   await page.screenshot({ path: `${RELEASE_PACKAGES_DIR}/auth-check.png`, fullPage: true }).catch(() => {});
   writeText(`${RELEASE_PACKAGES_DIR}/auth-check-page-text.txt`, text);
+  writeText(`${RELEASE_PACKAGES_DIR}/auth-check.html`, html);
 
   const lowerUrl = url.toLowerCase();
   const lowerText = text.toLowerCase();
@@ -101,4 +102,4 @@ if (!ok) {
 }
 
 console.log(`PASS: saved auth reaches DistroKid. ${reason}`);
-console.log('Artifacts: output/release-packages/auth-check.png and auth-check-page-text.txt');
+console.log('Artifacts: output/release-packages/auth-check.png, auth-check-page-text.txt, and auth-check.html');
