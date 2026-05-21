@@ -71,6 +71,8 @@
     "distrokid:package": "node scripts/distrokid/build-release-package.mjs",
     "distrokid:upload": "node scripts/distrokid/upload-release.mjs",
     "distrokid:batch": "node scripts/distrokid/batch-upload.mjs",
+    "distrokid:queue": "node scripts/distrokid/queue-song.mjs",
+    "distrokid:run-queued": "node scripts/distrokid/run-queued.mjs",
     "distrokid:mark-submitted": "node scripts/distrokid/mark-submitted.mjs",
     "distrokid:smoke": "node scripts/distrokid/smoke-test.mjs"
   },

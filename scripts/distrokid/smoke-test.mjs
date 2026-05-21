@@ -14,7 +14,10 @@ checkFile('scripts/distrokid/check-auth.mjs');
 checkFile('scripts/distrokid/build-release-package.mjs');
 checkFile('scripts/distrokid/upload-release.mjs');
 checkFile('scripts/distrokid/batch-upload.mjs');
+checkFile('scripts/distrokid/queue-song.mjs');
+checkFile('scripts/distrokid/run-queued.mjs');
 checkFile('scripts/distrokid/mark-submitted.mjs');
+checkFile('src/shared/distrokid-jobs.js');
 checkFile('config/distrokid/field-map.example.json');
 checkFile('docs/distrokid-uploader.md');
 checkFile('docs/distrokid-selector-capture.md');
@@ -26,6 +29,8 @@ for (const script of [
   'distrokid:package',
   'distrokid:upload',
   'distrokid:batch',
+  'distrokid:queue',
+  'distrokid:run-queued',
   'distrokid:mark-submitted',
   'distrokid:smoke',
 ]) {
@@ -80,12 +85,14 @@ const distroKidGuidance = [
   'scripts/distrokid/build-release-package.mjs',
   'scripts/distrokid/upload-release.mjs',
   'scripts/distrokid/batch-upload.mjs',
+  'scripts/distrokid/queue-song.mjs',
+  'scripts/distrokid/run-queued.mjs',
   'scripts/distrokid/mark-submitted.mjs',
   'docs/distrokid-uploader.md',
   'docs/distrokid-selector-capture.md',
 ].map(path => readText(path)).join('\n');
-assert(!/(?:Next|Run):\s+npm run distrokid:/i.test(distroKidGuidance), 'DistroKid printed Next/Run guidance prefers pancake wrapper');
-assert(readText('docs/distrokid-uploader.md').includes('bash scripts/pancake.sh distrokid:upload --manifest output/release-packages/SONG_ID/manifest.json --dry-run'), 'DistroKid docs primary upload command uses pancake wrapper');
+assert(readText('docs/distrokid-uploader.md').includes('npm run distrokid:upload -- --manifest output/release-packages/SONG_ID/manifest.json --dry-run'), 'DistroKid docs primary upload command uses npm script');
+assert(readText('docs/distrokid-uploader.md').includes('npm run distrokid:run-queued -- --limit 5 --dry-run'), 'DistroKid docs include queued runner command');
 assert(uploadSrc.includes('const DRY_RUN_ALWAYS = true'), 'upload dry-run forced true');
 assert(uploadSrc.includes('isDangerousAction'), 'upload has dangerous action helper');
 assert(uploadSrc.includes('installSafetyGuard'), 'upload installs safety guard');
@@ -162,8 +169,17 @@ assert(saveAuthSrc.includes("'domcontentloaded'") && saveAuthSrc.includes("'fram
 const checkAuthSrc = readText('scripts/distrokid/check-auth.mjs');
 assert(checkAuthSrc.includes('auth-check.png'), 'check-auth saves screenshot');
 assert(checkAuthSrc.includes('auth-check-page-text.txt'), 'check-auth saves text snapshot');
+assert(checkAuthSrc.includes('auth-check.html'), 'check-auth saves html snapshot');
+
+const jobSrc = readText('src/shared/distrokid-jobs.js');
+assert(jobSrc.includes('queued_for_distrokid') && jobSrc.includes('awaiting_manual_review') && jobSrc.includes('submitted'), 'queue helpers define allowed statuses');
+assert(readText('src/shared/db.js').includes('CREATE TABLE IF NOT EXISTS distrokid_release_jobs'), 'queue table exists');
+assert(readText('scripts/distrokid/queue-song.mjs').includes('queueSongForDistroKid'), 'queue CLI queues jobs');
+assert(readText('scripts/distrokid/run-queued.mjs').includes('listQueuedDistroKidJobs'), 'run-queued CLI lists queued jobs');
+assert(uploadSrc.includes('markDistroKidJobStatus') && uploadSrc.includes('AWAITING_MANUAL_REVIEW'), 'upload updates DistroKid job status');
 
 assertCommandFailsClearly(['scripts/distrokid/build-release-package.mjs'], 'build-release-package missing args fails clearly');
+assertCommandFailsClearly(['scripts/distrokid/queue-song.mjs'], 'queue-song missing args fails clearly');
 assertCommandFailsClearly(['scripts/distrokid/mark-submitted.mjs'], 'mark-submitted missing args fails clearly');
 
 console.log('');

@@ -4,6 +4,7 @@ import { basename, extname, join } from 'path';
 import fs from 'fs';
 import { getSong, getAssetsForSong } from '../../src/shared/db.js';
 import { getActiveProfileId, loadBrandProfile, loadBrandProfileById } from '../../src/shared/brand-profile.js';
+import { DISTROKID_JOB_STATUSES, getDistroKidJob, markDistroKidJobStatus } from '../../src/shared/distrokid-jobs.js';
 import {
   OUTPUT_DIR,
   absoluteFromMaybeRelative,
@@ -288,6 +289,15 @@ function buildReleasePackage(songId) {
     blockingMissingFields,
     warnings,
   }));
+
+  const currentJob = getDistroKidJob(songId);
+  if (!currentJob || ![DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW, DISTROKID_JOB_STATUSES.SUBMITTED].includes(currentJob.status)) {
+    markDistroKidJobStatus(
+      songId,
+      blockingMissingFields.length ? DISTROKID_JOB_STATUSES.BLOCKED_MISSING_FIELDS : DISTROKID_JOB_STATUSES.PACKAGE_BUILT,
+      { package_path: relativeToRepo(packageDir), latest_error_json: blockingMissingFields.length ? { blocking_missing_fields: blockingMissingFields } : null }
+    );
+  }
 
   return manifest;
 }

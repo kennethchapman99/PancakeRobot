@@ -8,6 +8,7 @@ import {
   upsertSong,
   updateChecklistItem,
 } from './db.js';
+import { DISTROKID_JOB_STATUSES, markDistroKidJobStatus } from './distrokid-jobs.js';
 import { SONG_STATUSES } from './song-status.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -36,6 +37,12 @@ export function markSongSubmittedToDistroKid(songId, options = {}) {
   if (distrokidUrl) {
     upsertReleaseLink(songId, 'DistroKid', distrokidUrl);
   }
+
+  markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.SUBMITTED, {
+    submitted_at: submittedAt,
+    distrokid_url: distrokidUrl || null,
+    notes: notes || null,
+  });
 
   try {
     updateChecklistItem(songId, 'uploaded_distributor', {

@@ -31,16 +31,15 @@
 
 ```bash
 cd /Users/kchapman/PancakeRobot
-
-bash scripts/pancake.sh doctor
+npm install
+npx playwright install chromium
+npm run distrokid:smoke
 ```
-
-The wrapper installs and selects the repo-local Node runtime before touching dependencies. Fallback only: `npm install && npx playwright install chromium`.
 
 ## Primary Auth Flow
 
 ```bash
-bash scripts/pancake.sh distrokid:save-auth
+npm run distrokid:save-auth
 ```
 
 Log in to DistroKid in the Chrome window. Wait for the dashboard or upload page. Close Chrome after the script says auth was saved.
@@ -50,24 +49,34 @@ Do not use codegen for Google login. The auth script launches Chrome with the wo
 ## Auth Check
 
 ```bash
-bash scripts/pancake.sh distrokid:check-auth
+npm run distrokid:check-auth
 ```
 
 Artifacts:
 
 - `output/release-packages/auth-check.png`
 - `output/release-packages/auth-check-page-text.txt`
+- `output/release-packages/auth-check.html`
+
+## Queue Songs
+
+```bash
+npm run distrokid:queue -- --song-id SONG_ID
+npm run distrokid:queue -- --list
+```
+
+The Song Catalog bulk action and Song Detail card call the same queue helpers. Queueing does not change `song.status`.
 
 ## Build Package
 
 ```bash
-bash scripts/pancake.sh distrokid:package --song-id SONG_ID
+npm run distrokid:package -- --song-id SONG_ID
 ```
 
 Multiple songs:
 
 ```bash
-bash scripts/pancake.sh distrokid:package --song-ids SONG_1,SONG_2,SONG_3
+npm run distrokid:package -- --song-ids SONG_1,SONG_2,SONG_3
 ```
 
 Output:
@@ -80,7 +89,7 @@ Output:
 ## Upload Dry-Run
 
 ```bash
-bash scripts/pancake.sh distrokid:upload --manifest output/release-packages/SONG_ID/manifest.json --dry-run
+npm run distrokid:upload -- --manifest output/release-packages/SONG_ID/manifest.json --dry-run
 ```
 
 The browser opens, fills/uploads what it can, saves logs and screenshots, and stops for manual review.
@@ -95,7 +104,7 @@ For Pancake Robot releases, the uploader maps DistroKid-specific required fields
 To also check the allowlisted legal/certification checkboxes:
 
 ```bash
-bash scripts/pancake.sh distrokid:upload \
+npm run distrokid:upload -- \
   --manifest output/release-packages/SONG_ID/manifest.json \
   --dry-run \
   --certify-important-checkboxes
@@ -108,7 +117,7 @@ Only use `--certify-important-checkboxes` when the legal statements are true. Th
 After the first dry-run, run discovery to map the live DistroKid form without filling anything:
 
 ```bash
-bash scripts/pancake.sh distrokid:upload \
+npm run distrokid:upload -- \
   --manifest output/release-packages/SONG_ID/manifest.json \
   --dry-run \
   --discover-fields
@@ -169,7 +178,7 @@ See `docs/distrokid-selector-capture.md`.
 After you manually submit in DistroKid:
 
 ```bash
-bash scripts/pancake.sh distrokid:mark-submitted --song-id SONG_ID --distrokid-url "URL_FROM_DISTROKID"
+npm run distrokid:mark-submitted -- --song-id SONG_ID --distrokid-url "URL_FROM_DISTROKID"
 ```
 
 This updates Pancake Robot status to `submitted to DistroKid`, records distributor metadata, upserts the DistroKid release link, marks the distributor checklist item done, and writes `output/release-packages/<SONG_ID>/distrokid-submission.json`.
@@ -177,7 +186,7 @@ This updates Pancake Robot status to `submitted to DistroKid`, records distribut
 ## Batch Dry-Run
 
 ```bash
-bash scripts/pancake.sh distrokid:batch --song-ids SONG_1,SONG_2,SONG_3 --dry-run
+npm run distrokid:batch -- --song-ids SONG_1,SONG_2,SONG_3 --dry-run
 ```
 
 Batch mode processes one song at a time and writes:
@@ -185,10 +194,18 @@ Batch mode processes one song at a time and writes:
 - `output/release-packages/batch-runs/<timestamp>/batch-report.json`
 - `output/release-packages/batch-runs/<timestamp>/batch-report.md`
 
+## Weekly Queued Runner
+
+Suggested weekly command only; no cron is installed automatically:
+
+```bash
+cd /Users/kchapman/PancakeRobot && npm run distrokid:run-queued -- --limit 5 --dry-run
+```
+
 ## Troubleshooting
 
-- Auth missing: run `bash scripts/pancake.sh distrokid:save-auth`.
-- Auth rejected: run `bash scripts/pancake.sh distrokid:check-auth` and inspect the screenshot/text artifacts.
+- Auth missing: run `npm run distrokid:save-auth`.
+- Auth rejected: run `npm run distrokid:check-auth` and inspect the screenshot/text artifacts.
 - Missing audio/art: rebuild Pancake Robot distribution-ready assets before packaging.
 - Fields skipped: capture real selectors and update `config/distrokid/field-map.local.json`.
 - Multiple file inputs: add a specific local selector for audio and cover art.

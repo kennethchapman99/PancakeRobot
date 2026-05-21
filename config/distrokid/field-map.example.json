@@ -2,6 +2,20 @@
   "upload_url": "https://distrokid.com/new/",
   "stop_before_submit": true,
   "fields": {
+    "artist": {
+      "strategy": "cssFill",
+      "selector": "",
+      "manifest_key": "artist",
+      "optional": true,
+      "note": "Use config/distrokid/field-map.local.json if your DistroKid account shows an editable artist field."
+    },
+    "release_title": {
+      "strategy": "cssFill",
+      "selector": "",
+      "manifest_key": "release_title",
+      "optional": true,
+      "note": "Use config/distrokid/field-map.local.json if your DistroKid account shows a release/album title field."
+    },
     "cover_art": {
       "strategy": "inputFile",
       "selector": "#artwork",
@@ -38,6 +52,24 @@
       "manifest_key": "secondary_genre",
       "optional": true,
       "exact": true
+    },
+    "lyrics": {
+      "strategy": "textarea",
+      "selector": "",
+      "manifest_key": "lyrics_file",
+      "optional": true
+    },
+    "release_date": {
+      "strategy": "date",
+      "selector": "",
+      "manifest_key": "release_date",
+      "optional": true
+    },
+    "made_for_kids": {
+      "strategy": "radioOrCheckbox",
+      "selector": "",
+      "manifest_key": "made_for_kids",
+      "optional": true
     },
     "original_song": {
       "strategy": "cssRadio",
