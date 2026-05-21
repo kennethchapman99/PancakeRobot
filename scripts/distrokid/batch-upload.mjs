@@ -7,7 +7,7 @@
  * batch report.
  *
  * Usage:
- *   node scripts/distrokid/batch-upload.mjs --song-ids SONG_1,SONG_2,SONG_3 --dry-run
+ *   bash scripts/pancake.sh distrokid:batch --song-ids SONG_1,SONG_2,SONG_3 --dry-run
  */
 
 import { fileURLToPath } from 'url';
@@ -40,7 +40,7 @@ const rawIds = args['song-ids']
 
 if (rawIds.length === 0) {
   console.error('Error: --song-ids is required');
-  console.error('Usage: node scripts/distrokid/batch-upload.mjs --song-ids SONG_1,SONG_2 --dry-run');
+  console.error('Usage: bash scripts/pancake.sh distrokid:batch --song-ids SONG_1,SONG_2 --dry-run');
   process.exit(1);
 }
 
@@ -189,7 +189,7 @@ const mdLines = [
 ];
 
 for (const r of batchResults.filter(r => r.upload_run)) {
-  mdLines.push(`   \`npm run distrokid:mark-submitted -- --song-id ${r.song_id} --distrokid-url URL\``);
+  mdLines.push(`   \`bash scripts/pancake.sh distrokid:mark-submitted --song-id ${r.song_id} --distrokid-url URL\``);
 }
 
 mdLines.push('');

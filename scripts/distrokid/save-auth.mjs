@@ -7,7 +7,7 @@
  * strips that flag and hides navigator.webdriver so Google sign-in works.
  *
  * Run once:
- *   node scripts/distrokid/save-auth.mjs
+ *   bash scripts/pancake.sh distrokid:save-auth
  *
  * Then log in to DistroKid in the Chrome window that opens.
  * Wait for the DistroKid dashboard or upload page.
@@ -29,7 +29,7 @@ try {
   ({ chromium } = await import('playwright'));
 } catch {
   console.error('FAIL: Playwright is not installed.');
-  console.error('Run: npm install && npx playwright install chromium');
+  console.error('Run: bash scripts/pancake.sh doctor');
   process.exit(1);
 }
 
@@ -156,4 +156,4 @@ if (!hasDistrokidCookies(saved)) {
 }
 
 console.log('PASS: DistroKid auth saved to .auth/distrokid.json.');
-console.log('Next: npm run distrokid:check-auth');
+console.log('Next: bash scripts/pancake.sh distrokid:check-auth');

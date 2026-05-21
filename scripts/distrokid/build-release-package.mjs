@@ -37,6 +37,42 @@ if (!songIds.length) {
   process.exit(1);
 }
 
+const PANCAKE_ROBOT_DISTROKID_DEFAULTS = Object.freeze({
+  primary_genre: "Children's Music",
+  ai_disclosure: {
+    uses_ai: true,
+    lyrics_written_by_ai: false,
+    music_composed_by_ai: false,
+    all_audio_performed_by_ai: true,
+    part_audio_performed_by_ai_and_humans: false,
+  },
+  songwriter_real_name: {
+    role: 'Music and lyrics',
+    first: 'Kenneth',
+    middle: '',
+    last: 'Chapman',
+  },
+  apple_music_credits: {
+    performer: {
+      role: 'Performer',
+      name: 'Pancake Robot',
+    },
+    producer: {
+      role: 'Executive Producer',
+      name: 'Kenneth Chapman',
+    },
+  },
+  rights_confirmations: {
+    youtube_music_selected_acknowledged: true,
+    no_promo_services: true,
+    recorded_and_authorized: true,
+    no_unapproved_artist_names: true,
+    distribution_agreement_accepted: true,
+    tiktok_commercial_music_library: false,
+    snapchat: false,
+  },
+});
+
 let hadError = false;
 for (const songId of songIds) {
   try {
@@ -44,7 +80,7 @@ for (const songId of songIds) {
     console.log(`Package: ${relativeToRepo(getReleasePackageDir(songId))}`);
     console.log(`Readiness: ${manifest.readiness.ready_for_distrokid_dry_run ? 'ready' : 'not ready'}`);
     console.log(`Blocking missing fields: ${manifest.readiness.blocking_missing_fields.join(', ') || 'none'}`);
-    console.log(`Next: npm run distrokid:upload -- --manifest output/release-packages/${songId}/manifest.json --dry-run`);
+    console.log(`Next: bash scripts/pancake.sh distrokid:upload --manifest output/release-packages/${songId}/manifest.json --dry-run`);
   } catch (error) {
     hadError = true;
     console.error(`FAIL ${songId}: ${error.message}`);
@@ -55,8 +91,8 @@ if (hadError) process.exit(1);
 
 function printUsage() {
   console.error('Usage:');
-  console.error('  node scripts/distrokid/build-release-package.mjs --song-id SONG_ID');
-  console.error('  node scripts/distrokid/build-release-package.mjs --song-ids SONG_1,SONG_2,SONG_3');
+  console.error('  bash scripts/pancake.sh distrokid:package --song-id SONG_ID');
+  console.error('  bash scripts/pancake.sh distrokid:package --song-ids SONG_1,SONG_2,SONG_3');
 }
 
 function buildReleasePackage(songId) {
@@ -102,6 +138,7 @@ function buildReleasePackage(songId) {
       [metadata.value?.genre, metadata.source],
       [firstArrayValue(song.genre_tags), 'song'],
       [dist.primary_genre, 'brand_profile'],
+      [PANCAKE_ROBOT_DISTROKID_DEFAULTS.primary_genre, 'pancake_robot_default'],
     ], fieldSources),
     secondary_genre: pick('secondary_genre', [
       [metadata.value?.secondary_genre, metadata.source],
@@ -120,6 +157,7 @@ function buildReleasePackage(songId) {
       [metadata.value?.is_ai_generated, metadata.source],
       [true, 'default'],
     ], fieldSources),
+    ai_disclosure: buildNestedDefaults('ai_disclosure', PANCAKE_ROBOT_DISTROKID_DEFAULTS.ai_disclosure, metadata.value?.ai_disclosure, metadata.source, fieldSources),
     release_date: pick('release_date', [
       [song.release_date, 'song'],
       [metadata.value?.release_date, metadata.source],
@@ -133,10 +171,13 @@ function buildReleasePackage(songId) {
       [dist.songwriter, 'brand_profile'],
       [dist.default_artist, 'brand_profile'],
     ], fieldSources),
+    songwriter_real_name: buildNestedDefaults('songwriter_real_name', PANCAKE_ROBOT_DISTROKID_DEFAULTS.songwriter_real_name, metadata.value?.songwriter_real_name, metadata.source, fieldSources),
     producer: pick('producer', [
       [metadata.value?.producer, metadata.source],
       [dist.producer, 'brand_profile'],
     ], fieldSources),
+    apple_music_credits: buildNestedDefaults('apple_music_credits', PANCAKE_ROBOT_DISTROKID_DEFAULTS.apple_music_credits, metadata.value?.apple_music_credits, metadata.source, fieldSources),
+    rights_confirmations: buildNestedDefaults('rights_confirmations', PANCAKE_ROBOT_DISTROKID_DEFAULTS.rights_confirmations, metadata.value?.rights_confirmations, metadata.source, fieldSources),
     copyright_year: pick('copyright_year', [
       [metadata.value?.copyright_year, metadata.source],
       [song.release_date ? String(new Date(song.release_date).getUTCFullYear()) : null, 'derived'],
@@ -161,6 +202,11 @@ function buildReleasePackage(songId) {
     field_sources: {},
     readiness: {},
   };
+
+  if (isPresent(metadata.value?.ai_artist_identity)) {
+    manifest.ai_artist_identity = metadata.value.ai_artist_identity;
+    fieldSources.ai_artist_identity = metadata.source || 'metadata';
+  }
 
   manifest.release_title = pick('release_title', [
     [metadata.value?.release_title, metadata.source],
@@ -323,6 +369,44 @@ function pick(field, candidates, fieldSources) {
   return null;
 }
 
+function buildNestedDefaults(field, defaults, sourceData, sourceName, fieldSources) {
+  const result = Array.isArray(defaults) ? [] : {};
+  const sources = Array.isArray(defaults) ? [] : {};
+  for (const [key, defaultValue] of Object.entries(defaults)) {
+    const providedValue = sourceData?.[key];
+    if (defaultValue && typeof defaultValue === 'object' && !Array.isArray(defaultValue)) {
+      result[key] = buildNestedDefaults(`${field}.${key}`, defaultValue, providedValue, sourceName, fieldSources);
+      sources[key] = fieldSources[field]?.[key] || nestedSourceTree(result[key], 'pancake_robot_default');
+      continue;
+    }
+    if (isPresent(providedValue) || providedValue === false) {
+      result[key] = providedValue;
+      sources[key] = sourceName || 'metadata';
+    } else {
+      result[key] = defaultValue;
+      sources[key] = 'pancake_robot_default';
+    }
+  }
+  setNestedFieldSource(fieldSources, field, sources);
+  return result;
+}
+
+function setNestedFieldSource(fieldSources, field, value) {
+  const parts = field.split('.');
+  let cursor = fieldSources;
+  while (parts.length > 1) {
+    const part = parts.shift();
+    cursor[part] = cursor[part] && typeof cursor[part] === 'object' ? cursor[part] : {};
+    cursor = cursor[part];
+  }
+  cursor[parts[0]] = value;
+}
+
+function nestedSourceTree(value, source) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return source;
+  return Object.fromEntries(Object.keys(value).map(key => [key, nestedSourceTree(value[key], source)]));
+}
+
 function isPresent(value) {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string') return value.trim().length > 0;
@@ -371,10 +455,13 @@ function buildSummary({ songId, manifest, audio, cover, lyrics, blockingMissingF
     ['Language', manifest.language, manifest.field_sources.language],
     ['Explicit', manifest.explicit, manifest.field_sources.explicit],
     ['AI generated', manifest.is_ai_generated, manifest.field_sources.is_ai_generated],
+    ['AI disclosure', JSON.stringify(manifest.ai_disclosure), manifest.field_sources.ai_disclosure],
     ['Made for kids', manifest.made_for_kids, manifest.field_sources.made_for_kids],
     ['Release date', manifest.release_date, manifest.field_sources.release_date],
     ['Songwriter', manifest.songwriter, manifest.field_sources.songwriter],
+    ['Songwriter real name', `${manifest.songwriter_real_name.first} ${manifest.songwriter_real_name.last}`, manifest.field_sources.songwriter_real_name],
     ['Producer', manifest.producer, manifest.field_sources.producer],
+    ['Apple Music credits', JSON.stringify(manifest.apple_music_credits), manifest.field_sources.apple_music_credits],
     ['Copyright owner', manifest.copyright_owner, manifest.field_sources.copyright_owner],
   ];
 
@@ -413,7 +500,9 @@ function buildSummary({ songId, manifest, audio, cover, lyrics, blockingMissingF
     '- Correct audio file',
     '- Correct artwork',
     '- Explicit flag',
-    '- AI-generated disclosure if DistroKid asks',
+    '- AI-generated disclosure',
+    '- Songwriter real name',
+    '- Apple Music performer and producer credits',
     '- Made for Kids/COPPA flag',
     '- Genre',
     '- Language',
@@ -422,6 +511,7 @@ function buildSummary({ songId, manifest, audio, cover, lyrics, blockingMissingF
     '- Store selection',
     '- YouTube/Content ID options',
     '- Paid extras not accidentally selected',
+    '- Certification checkboxes only if the legal statements are true',
     '- Final submit is still manual',
     '',
   ].join('\n');

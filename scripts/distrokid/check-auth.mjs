@@ -16,13 +16,13 @@ try {
   ({ chromium } = await import('playwright'));
 } catch {
   console.error('FAIL: Playwright is not installed.');
-  console.error('Run: npm install && npx playwright install chromium');
+  console.error('Run: bash scripts/pancake.sh doctor');
   process.exit(1);
 }
 
 if (!exists(DISTROKID_AUTH_PATH)) {
   console.error('FAIL: .auth/distrokid.json is missing.');
-  console.error('Run: npm run distrokid:save-auth');
+  console.error('Run: bash scripts/pancake.sh distrokid:save-auth');
   process.exit(1);
 }
 
@@ -30,7 +30,7 @@ const storage = readJson(DISTROKID_AUTH_PATH);
 console.log(`Cookie domains: ${getCookieDomains(storage).join(', ') || '(none)'}`);
 if (!hasDistrokidCookies(storage)) {
   console.error('FAIL: .auth/distrokid.json has no DistroKid cookies.');
-  console.error('Run: npm run distrokid:save-auth');
+  console.error('Run: bash scripts/pancake.sh distrokid:save-auth');
   process.exit(1);
 }
 
@@ -96,7 +96,7 @@ try {
 if (!ok) {
   console.error(`FAIL: ${reason}`);
   console.error('Artifacts: output/release-packages/auth-check.png and auth-check-page-text.txt');
-  console.error('Run: npm run distrokid:save-auth');
+  console.error('Run: bash scripts/pancake.sh distrokid:save-auth');
   process.exit(1);
 }
 

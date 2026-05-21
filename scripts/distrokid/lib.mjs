@@ -19,9 +19,14 @@ export const DANGEROUS_BUTTON_NAMES = Object.freeze([
   'Release',
   'Upload to stores',
   'Continue & submit',
+  'Continue',
   'Save and submit',
   'Submit release',
   'Send to stores',
+]);
+
+export const SAFE_CLICK_TEXTS = Object.freeze([
+  'Add credits for each song on this release',
 ]);
 
 export function parseArgs(options = {}) {
@@ -103,12 +108,15 @@ export function isDistrokidNonSigninUrl(url) {
 }
 
 export function isDangerousAction(nameOrText, dangerousNames = DANGEROUS_BUTTON_NAMES) {
-  const text = String(nameOrText || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const text = normalizeActionText(nameOrText);
   if (!text) return false;
-  return dangerousNames.some(name => {
-    const dangerous = String(name).toLowerCase().replace(/\s+/g, ' ');
-    return text === dangerous || text.includes(dangerous);
-  });
+  if (SAFE_CLICK_TEXTS.some(name => text === normalizeActionText(name))) return false;
+  if (text === '#donebutton' || text === 'donebutton') return true;
+  return dangerousNames.some(name => text === normalizeActionText(name));
+}
+
+export function normalizeActionText(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^\p{L}\p{N}#&]+/gu, ' ').replace(/\s+/g, ' ');
 }
 
 export function makeRunSummary({ ok, message, details = {} }) {

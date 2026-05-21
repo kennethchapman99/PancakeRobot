@@ -2,76 +2,322 @@
   "upload_url": "https://distrokid.com/new/",
   "stop_before_submit": true,
   "fields": {
-    "artist": {
-      "strategy": "label",
-      "selector": "",
-      "manifest_key": "artist",
-      "note": "Example map is intentionally conservative. Run --discover-fields or Playwright codegen to map this field."
-    },
-    "release_title": {
-      "strategy": "label",
-      "selector": "",
-      "manifest_key": "release_title",
-      "note": "Run --discover-fields or Playwright codegen to map this field. Label text may match unrelated checkboxes."
-    },
-    "track_title": {
-      "strategy": "label",
-      "selector": "",
-      "manifest_key": "track_title",
-      "note": "Run --discover-fields or Playwright codegen to map this field. Label text may match unrelated radio inputs."
+    "cover_art": {
+      "strategy": "inputFile",
+      "selector": "#artwork",
+      "manifest_key": "cover_art",
+      "exact": true
     },
     "audio_file": {
       "strategy": "inputFile",
-      "selector": "",
+      "selector": "#js-track-upload-1",
       "manifest_key": "audio_file",
-      "note": "Run --discover-fields or Playwright codegen to map this field. DistroKid may have multiple file inputs."
+      "exact": true
     },
-    "cover_art": {
-      "strategy": "inputFile",
-      "selector": "",
-      "manifest_key": "cover_art"
-    },
-    "primary_genre": {
-      "strategy": "select",
-      "selector": "",
-      "manifest_key": "primary_genre"
-    },
-    "secondary_genre": {
-      "strategy": "select",
-      "selector": "",
-      "manifest_key": "secondary_genre"
+    "track_title": {
+      "strategy": "cssFill",
+      "selector": "input[id^=\"title_\"][placeholder=\"Track 1 title\"]",
+      "manifest_key": "track_title"
     },
     "language": {
-      "strategy": "select",
-      "selector": "",
-      "manifest_key": "language"
+      "strategy": "cssSelect",
+      "selector": "#language",
+      "manifest_key": "language",
+      "exact": true
+    },
+    "primary_genre": {
+      "strategy": "cssSelect",
+      "selector": "#genrePrimary",
+      "manifest_key": "primary_genre",
+      "value": "Children's Music",
+      "exact": true
+    },
+    "secondary_genre": {
+      "strategy": "cssSelect",
+      "selector": "#genreSecondary",
+      "manifest_key": "secondary_genre",
+      "optional": true,
+      "exact": true
+    },
+    "original_song": {
+      "strategy": "cssRadio",
+      "selector": "#not_coversong_radio_button_1",
+      "value": true,
+      "when": [
+        {
+          "manifest_key": "is_cover",
+          "notEquals": true
+        },
+        {
+          "manifest_key": "cover_song",
+          "notEquals": true
+        }
+      ],
+      "exact": true
+    },
+    "not_explicit": {
+      "strategy": "cssRadio",
+      "selector": "#js-not-explicit-radio-button-1",
+      "manifest_key": "explicit",
+      "value": true,
+      "when": {
+        "manifest_key": "explicit",
+        "equals": false
+      },
+      "exact": true
     },
     "explicit": {
-      "strategy": "radioOrCheckbox",
-      "selector": "",
-      "manifest_key": "explicit"
+      "strategy": "cssRadio",
+      "selector": "#js-explicit-radio-button-1",
+      "manifest_key": "explicit",
+      "value": true,
+      "when": {
+        "manifest_key": "explicit",
+        "equals": true
+      },
+      "exact": true
     },
-    "lyrics": {
-      "strategy": "textarea",
-      "selector": "",
-      "manifest_key": "lyrics_file"
+    "clean_always": {
+      "strategy": "cssRadio",
+      "selector": "#js-not-cleaned-radio-button-1",
+      "value": true,
+      "when": {
+        "manifest_key": "explicit",
+        "equals": false
+      },
+      "exact": true
     },
-    "release_date": {
-      "strategy": "date",
-      "selector": "",
-      "manifest_key": "release_date"
+    "contains_lyrics": {
+      "strategy": "cssRadio",
+      "selector": "#js-not-instrumental-radio-button-1",
+      "value": true,
+      "when": {
+        "value_source": "has_lyrics_file",
+        "equals": true
+      },
+      "optional": true,
+      "exact": true
     },
-    "made_for_kids": {
-      "strategy": "radioOrCheckbox",
-      "selector": "",
-      "manifest_key": "made_for_kids"
+    "instrumental": {
+      "strategy": "cssRadio",
+      "selector": "#js-instrumental-radio-button-1",
+      "value": true,
+      "when": [
+        {
+          "value_source": "has_lyrics_file",
+          "equals": false
+        },
+        {
+          "value_source": "instrumental_from_manifest",
+          "equals": true
+        }
+      ],
+      "optional": true,
+      "exact": true
     },
-    "ai_generated": {
-      "strategy": "radioOrCheckbox",
-      "selector": "",
-      "manifest_key": "is_ai_generated"
+    "ai_generated_gate": {
+      "strategy": "dynamicRadioByNamePrefixLabel",
+      "name_prefix": "ai_gate_",
+      "manifest_key": "ai_disclosure.uses_ai",
+      "label_text": "Yes"
+    },
+    "ai_music": {
+      "strategy": "dynamicCheckboxByNamePrefix",
+      "name_prefix": "ai_music_",
+      "labelText": "Music",
+      "manifest_key": "ai_disclosure.music_composed_by_ai",
+      "when": {
+        "manifest_key": "ai_disclosure.uses_ai",
+        "equals": true
+      },
+      "optional": true
+    },
+    "ai_lyrics": {
+      "strategy": "dynamicCheckboxByNamePrefix",
+      "name_prefix": "ai_lyrics_",
+      "labelText": "Lyrics",
+      "manifest_key": "ai_disclosure.lyrics_written_by_ai",
+      "when": [
+        {
+          "manifest_key": "ai_disclosure.uses_ai",
+          "equals": true
+        }
+      ],
+      "optional": true
+    },
+    "ai_all_audio": {
+      "strategy": "checkboxByLabelText",
+      "labelText": "All of the audio",
+      "manifest_key": "ai_disclosure.all_audio_performed_by_ai",
+      "when": {
+        "manifest_key": "ai_disclosure.uses_ai",
+        "equals": true
+      },
+      "optional": true
+    },
+    "ai_part_audio": {
+      "strategy": "checkboxByLabelText",
+      "labelText": "Part of the audio",
+      "manifest_key": "ai_disclosure.part_audio_performed_by_ai_and_humans",
+      "when": {
+        "manifest_key": "ai_disclosure.uses_ai",
+        "equals": true
+      },
+      "optional": true
+    },
+    "ai_modal_save": {
+      "strategy": "clickModalButton",
+      "selector": "Save",
+      "buttonText": "Save",
+      "modalContainsText": "Which parts of this song were AI-generated?",
+      "value": true,
+      "when": {
+        "manifest_key": "ai_disclosure.uses_ai",
+        "equals": true
+      },
+      "optional": true
+    },
+    "songwriter_role": {
+      "strategy": "cssSelect",
+      "selector": "select[name*=\"songwriter\"][name*=\"role\"], select[id*=\"songwriter\"][id*=\"role\"]",
+      "manifest_key": "songwriter_real_name.role",
+      "optional": true
+    },
+    "songwriter_first": {
+      "strategy": "cssFill",
+      "selector": "input[name=\"songwriter_real_name_first1\"]",
+      "manifest_key": "songwriter_real_name.first",
+      "exact": true
+    },
+    "songwriter_middle": {
+      "strategy": "cssFill",
+      "selector": "input[name=\"songwriter_real_name_middle1\"]",
+      "manifest_key": "songwriter_real_name.middle",
+      "value": "",
+      "allowEmpty": true,
+      "optional": true,
+      "exact": true
+    },
+    "songwriter_last": {
+      "strategy": "cssFill",
+      "selector": "input[name=\"songwriter_real_name_last1\"]",
+      "manifest_key": "songwriter_real_name.last",
+      "exact": true
+    },
+    "apple_music_credits_expand": {
+      "strategy": "clickByText",
+      "selector": "Add credits for each song on this release",
+      "text": "Add credits for each song on this release",
+      "value": true,
+      "optional": true
+    },
+    "apple_music_performer_role": {
+      "strategy": "cssSelect",
+      "selector": "#track-1-performer-1-role",
+      "manifest_key": "apple_music_credits.performer.role",
+      "allowHidden": true,
+      "exact": true
+    },
+    "apple_music_performer_name": {
+      "strategy": "cssFill",
+      "selector": "#track-1-performer-1-name",
+      "manifest_key": "apple_music_credits.performer.name",
+      "exact": true
+    },
+    "apple_music_producer_role": {
+      "strategy": "cssSelect",
+      "selector": "#track-1-producer-1-role",
+      "manifest_key": "apple_music_credits.producer.role",
+      "allowHidden": true,
+      "exact": true
+    },
+    "apple_music_producer_name": {
+      "strategy": "cssFill",
+      "selector": "#track-1-producer-1-name",
+      "manifest_key": "apple_music_credits.producer.name",
+      "exact": true
+    },
+    "cert_youtube_music": {
+      "strategy": "cssCheckbox",
+      "selector": "#areyousureyoutube",
+      "manifest_key": "rights_confirmations.youtube_music_selected_acknowledged",
+      "category": "certification",
+      "requires_certify": true,
+      "exact": true
+    },
+    "cert_no_promo_services": {
+      "strategy": "cssCheckbox",
+      "selector": "#areyousurepromoservices",
+      "manifest_key": "rights_confirmations.no_promo_services",
+      "category": "certification",
+      "requires_certify": true,
+      "exact": true
+    },
+    "cert_recorded_authorized": {
+      "strategy": "cssCheckbox",
+      "selector": "#areyousurerecorded",
+      "manifest_key": "rights_confirmations.recorded_and_authorized",
+      "category": "certification",
+      "requires_certify": true,
+      "exact": true
+    },
+    "cert_no_unapproved_artist_names": {
+      "strategy": "cssCheckbox",
+      "selector": "#areyousureotherartist",
+      "manifest_key": "rights_confirmations.no_unapproved_artist_names",
+      "category": "certification",
+      "requires_certify": true,
+      "exact": true
+    },
+    "cert_distribution_agreement": {
+      "strategy": "cssCheckbox",
+      "selector": "#areyousuretandc",
+      "manifest_key": "rights_confirmations.distribution_agreement_accepted",
+      "category": "certification",
+      "requires_certify": true,
+      "exact": true
+    },
+    "cert_tiktok_cml": {
+      "strategy": "cssCheckbox",
+      "selector": "#areyousureticktokcml",
+      "manifest_key": "rights_confirmations.tiktok_commercial_music_library",
+      "category": "certification",
+      "conditional_certification": true,
+      "requires_certify": true,
+      "when": {
+        "manifest_key": "rights_confirmations.tiktok_commercial_music_library",
+        "equals": true
+      },
+      "optional": true,
+      "exact": true
+    },
+    "cert_snapchat": {
+      "strategy": "cssCheckbox",
+      "selector": "#areyousuresnap",
+      "manifest_key": "rights_confirmations.snapchat",
+      "category": "certification",
+      "conditional_certification": true,
+      "requires_certify": true,
+      "when": {
+        "manifest_key": "rights_confirmations.snapchat",
+        "equals": true
+      },
+      "optional": true,
+      "exact": true
     }
   },
+  "safe_click_texts": [
+    "Add credits for each song on this release"
+  ],
+  "dangerous_paid_extras_never_autofill": [
+    "Social Media Pack",
+    "Store Maximizer",
+    "Loudness Normalization",
+    "Discovery Pack",
+    "Leave a Legacy",
+    "DistroVid",
+    "Cover Song Licensing"
+  ],
   "dangerous_buttons_never_click": [
     "Submit",
     "Done",
@@ -79,6 +325,7 @@
     "Release",
     "Upload to stores",
     "Continue & submit",
+    "Continue",
     "Save and submit",
     "Submit release",
     "Send to stores"

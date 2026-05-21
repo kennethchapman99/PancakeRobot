@@ -3,7 +3,7 @@
 import fs from 'fs';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
-import { DANGEROUS_BUTTON_NAMES, REPO_ROOT } from './lib.mjs';
+import { DANGEROUS_BUTTON_NAMES, REPO_ROOT, isDangerousAction } from './lib.mjs';
 
 let passed = 0;
 let failed = 0;
@@ -54,13 +54,84 @@ for (const key of ['artist', 'release_title', 'track_title', 'audio_file', 'cove
 }
 
 const uploadSrc = readText('scripts/distrokid/upload-release.mjs');
+const distroKidGuidance = [
+  'scripts/distrokid/save-auth.mjs',
+  'scripts/distrokid/check-auth.mjs',
+  'scripts/distrokid/build-release-package.mjs',
+  'scripts/distrokid/upload-release.mjs',
+  'scripts/distrokid/batch-upload.mjs',
+  'scripts/distrokid/mark-submitted.mjs',
+  'docs/distrokid-uploader.md',
+  'docs/distrokid-selector-capture.md',
+].map(path => readText(path)).join('\n');
+assert(!/(?:Next|Run):\s+npm run distrokid:/i.test(distroKidGuidance), 'DistroKid printed Next/Run guidance prefers pancake wrapper');
+assert(readText('docs/distrokid-uploader.md').includes('bash scripts/pancake.sh distrokid:upload --manifest output/release-packages/SONG_ID/manifest.json --dry-run'), 'DistroKid docs primary upload command uses pancake wrapper');
 assert(uploadSrc.includes('const DRY_RUN_ALWAYS = true'), 'upload dry-run forced true');
 assert(uploadSrc.includes('isDangerousAction'), 'upload has dangerous action helper');
 assert(uploadSrc.includes('installSafetyGuard'), 'upload installs safety guard');
 assert(uploadSrc.includes('waitForBrowserClose'), 'upload has waitForBrowserClose helper');
 assert(!uploadSrc.includes("browser.waitForEvent('disconnected')"), 'upload does not call browser.waitForEvent disconnected');
 assert(uploadSrc.includes("'discover-fields'") && uploadSrc.includes('discovered-fields.json'), 'upload supports --discover-fields');
+assert(uploadSrc.includes("'no-pause'") && uploadSrc.includes("values['no-pause']"), 'upload supports --no-pause');
+assert(uploadSrc.includes("'certify-important-checkboxes'") && uploadSrc.includes('Certification checkboxes are legal attestations'), 'upload supports --certify-important-checkboxes with warning');
+assert(uploadSrc.includes('normalizeDistroKidManifest') && uploadSrc.includes('Manifest normalized with Pancake Robot DistroKid defaults'), 'upload normalizes stale manifests');
+assert(uploadSrc.includes("case 'cssFill'") && uploadSrc.includes("case 'cssSelect'"), 'upload supports css selectors');
+assert(uploadSrc.includes("case 'cssRadio'") && uploadSrc.includes("case 'cssCheckbox'"), 'upload supports css radio/check selectors');
+assert(uploadSrc.includes('dynamicRadioByNamePrefixLabel'), 'upload supports dynamic radio group by name prefix and label');
+assert(uploadSrc.includes('dynamicCheckboxByNamePrefix'), 'upload supports dynamic checkbox by name prefix');
+assert(uploadSrc.includes("case 'checkboxByLabelText'") && uploadSrc.includes('ai_all_audio'), 'upload supports AI all-audio checkbox by label text');
+assert(uploadSrc.includes("setChecked('Lyrics', disclosure.lyrics_written_by_ai === true)"), 'upload actively enforces AI lyrics checkbox state');
+assert(uploadSrc.includes("setChecked('Music', disclosure.music_composed_by_ai === true)"), 'upload actively enforces AI music checkbox state');
+assert(uploadSrc.includes("setChecked('All of the audio', disclosure.all_audio_performed_by_ai === true)"), 'upload actively enforces AI all-audio checkbox state');
+assert(uploadSrc.includes("setChecked('Part of the audio', disclosure.part_audio_performed_by_ai_and_humans === true)"), 'upload actively enforces AI part-audio checkbox state');
+assert(uploadSrc.includes('ai_artist_identity') && uploadSrc.includes('AI artist identity question visible'), 'upload detects AI artist identity question for manual handling');
+assert(uploadSrc.includes('- ai_lyrics:') && uploadSrc.includes('- ai_music:') && uploadSrc.includes('- ai_all_audio:') && uploadSrc.includes('- ai_part_audio:'), 'upload prints explicit AI disclosure checked/unchecked summary');
+assert(uploadSrc.includes("case 'clickModalButton'") && uploadSrc.includes('modalContainsText'), 'upload saves only guarded modal buttons');
+assert(uploadSrc.includes("case 'clickByText'"), 'upload supports safe text expansion clicks');
+assert(!isDangerousAction('Add credits for each song on this release'), 'Add credits expansion is safe');
+assert(isDangerousAction('#doneButton') && isDangerousAction('Continue'), '#doneButton and Continue remain blocked');
+assert(uploadSrc.includes('IMPORTANT_CERTIFICATION_CHECKBOXES') && uploadSrc.includes('#areyousureyoutube') && uploadSrc.includes('blocked_not_allowlisted'), 'important checkboxes are explicit allowlist gated');
+assert(uploadSrc.includes('getCertificationValue') && uploadSrc.includes('if (IMPORTANT_CERTIFICATION_CHECKBOXES.has(selector)) return true'), '--certify-important-checkboxes asserts allowlisted cert checkboxes');
+assert(uploadSrc.includes('isFillableElement') && uploadSrc.includes("['checkbox', 'radio', 'file'"), 'upload never fills checkbox/radio/file inputs');
+assert(uploadSrc.includes('isExactSelector') && uploadSrc.includes('multiple file inputs found'), 'upload blocks broad multi-candidate file upload');
+assert(uploadSrc.includes('allowHidden') && uploadSrc.includes('selector resolved to hidden'), 'upload skips hidden selectors by default');
 assert(!/getByRole\([^)]*Submit[^)]*\)\.click/.test(uploadSrc), 'upload has no submit click');
+assert(!uploadSrc.split(/\n/).some(line => /doneButton|Continue/.test(line) && /\.click\(/.test(line)), 'upload does not click Continue');
+assert(!uploadSrc.includes('#doneButton') || !uploadSrc.split(/\n/).some(line => line.includes('#doneButton') && /\.click\(/.test(line)), '#doneButton is not clicked');
+assert(!/name=["']extras["']/.test(uploadSrc), 'upload does not target paid extras by name');
+assert(uploadSrc.includes('getOrderedFields') && uploadSrc.includes("fieldDef.strategy === 'inputFile'") && uploadSrc.includes('return 60'), 'field order puts file uploads last');
+assert(uploadSrc.includes('page.isClosed()') && uploadSrc.includes('DistroKid page closed before field loop completed'), 'upload detects page close before field loop completes');
+
+const packageBuilderSrc = readText('scripts/distrokid/build-release-package.mjs');
+assert(packageBuilderSrc.includes("\"Children's Music\"") && packageBuilderSrc.includes('ai_disclosure'), 'package builder has genre and AI defaults');
+assert(packageBuilderSrc.includes('lyrics_written_by_ai: false'), 'package builder defaults AI lyrics to false');
+assert(packageBuilderSrc.includes('music_composed_by_ai: false'), 'package builder defaults AI music to false');
+assert(packageBuilderSrc.includes('all_audio_performed_by_ai: true'), 'package builder defaults AI all-audio to true');
+assert(packageBuilderSrc.includes('part_audio_performed_by_ai_and_humans: false'), 'package builder defaults AI part-audio to false');
+assert(packageBuilderSrc.includes('ai_artist_identity'), 'package builder preserves future AI artist identity metadata when present');
+assert(packageBuilderSrc.includes('songwriter_real_name') && packageBuilderSrc.includes('Kenneth') && packageBuilderSrc.includes('Chapman'), 'package builder has songwriter real-name defaults');
+assert(packageBuilderSrc.includes('apple_music_credits') && packageBuilderSrc.includes('Executive Producer'), 'package builder has Apple Music credit defaults');
+assert(packageBuilderSrc.includes('rights_confirmations') && packageBuilderSrc.includes('distribution_agreement_accepted: true'), 'package builder has rights confirmation defaults');
+assert(packageBuilderSrc.includes('buildNestedDefaults') && packageBuilderSrc.includes('pancake_robot_default'), 'package builder sources nested defaults');
+
+const localMapPath = 'config/distrokid/field-map.local.json';
+if (fs.existsSync(join(REPO_ROOT, localMapPath))) {
+  const localMap = readJson(localMapPath);
+  assert(localMap.stop_before_submit === true, 'local field map stops before submit');
+  for (const key of ['cover_art', 'audio_file', 'track_title', 'language', 'primary_genre', 'secondary_genre', 'original_song', 'ai_generated_gate']) {
+    assert(Boolean(localMap.fields?.[key]), `local field map field ${key}`);
+  }
+  assert(localMap.fields.cover_art.selector === '#artwork', 'local field map artwork selector');
+  assert(localMap.fields.audio_file.selector === '#js-track-upload-1', 'local field map audio selector');
+  assert(localMap.fields.track_title.selector.includes('input[id^="title_"]'), 'local field map dynamic track title selector');
+  assert(localMap.fields.ai_generated_gate.strategy === 'dynamicRadioByNamePrefixLabel', 'local field map dynamic AI gate');
+  assert(localMap.fields.ai_all_audio?.strategy === 'checkboxByLabelText' && localMap.fields.ai_all_audio?.labelText === 'All of the audio', 'local field map AI all audio by label');
+  assert(localMap.fields.apple_music_performer_role?.selector === '#track-1-performer-1-role', 'local field map Apple performer role selector');
+  assert(localMap.fields.apple_music_producer_role?.selector === '#track-1-producer-1-role', 'local field map Apple producer role selector');
+  assert(localMap.fields.songwriter_first?.selector === 'input[name="songwriter_real_name_first1"]', 'local field map songwriter first selector');
+  assert(localMap.fields.cert_youtube_music?.selector === '#areyousureyoutube' && localMap.fields.cert_youtube_music?.requires_certify === true, 'local field map certification gated allowlist');
+  assertNoDangerousPaidExtras(localMap, 'local field map');
+}
 
 const saveAuthSrc = readText('scripts/distrokid/save-auth.mjs');
 assert(saveAuthSrc.includes("ignoreDefaultArgs: ['--enable-automation']"), 'save-auth strips --enable-automation');
@@ -108,5 +179,22 @@ function assertCommandFailsClearly(args, name) {
   } catch (error) {
     const output = `${error.stdout || ''}${error.stderr || ''}`;
     assert(/Usage:|Error:|FAIL:/i.test(output), name);
+  }
+}
+
+function assertNoDangerousPaidExtras(map, name) {
+  const dangerous = [
+    'socialmediapack',
+    'Social Media Pack',
+    'Store Maximizer',
+    'Loudness Normalization',
+    'Discovery Pack',
+    'Leave a Legacy',
+    'DistroVid',
+    'Cover Song Licensing',
+  ];
+  const fillSurface = JSON.stringify(map.fields || {});
+  for (const item of dangerous) {
+    assert(!fillSurface.includes(item), `${name} does not autofill ${item}`);
   }
 }

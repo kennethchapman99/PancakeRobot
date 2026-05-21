@@ -12,8 +12,8 @@ const { values } = parseArgs({
 
 if (values.help || !values['song-id'] || !values['distrokid-url']) {
   console.error('Usage:');
-  console.error('  node scripts/distrokid/mark-submitted.mjs --song-id SONG_ID --distrokid-url URL');
-  console.error('  node scripts/distrokid/mark-submitted.mjs --song-id SONG_ID --distrokid-url URL --notes "..."');
+  console.error('  bash scripts/pancake.sh distrokid:mark-submitted --song-id SONG_ID --distrokid-url URL');
+  console.error('  bash scripts/pancake.sh distrokid:mark-submitted --song-id SONG_ID --distrokid-url URL --notes "..."');
   process.exit(values.help ? 0 : 1);
 }
 

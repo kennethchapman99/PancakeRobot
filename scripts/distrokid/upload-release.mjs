@@ -30,29 +30,79 @@ const { values } = parseArgs({
   'slow-mo': { type: 'string', default: '0' },
   'field-map': { type: 'string' },
   'pause-at-end': { type: 'string', default: 'true' },
+  'no-pause': { type: 'boolean', default: false },
   'browser-mode': { type: 'string', default: 'storage-state' },
   'discover-fields': { type: 'boolean', default: false },
+  'certify-important-checkboxes': { type: 'boolean', default: false },
   help: { type: 'boolean', short: 'h' },
 });
 
 if (values.help || !values.manifest) {
-  console.error('Usage: node scripts/distrokid/upload-release.mjs --manifest output/release-packages/SONG_ID/manifest.json --dry-run');
+  console.error('Usage: bash scripts/pancake.sh distrokid:upload --manifest output/release-packages/SONG_ID/manifest.json --dry-run');
   process.exit(values.help ? 0 : 1);
 }
 
 const dryRun = DRY_RUN_ALWAYS;
 const headed = parseBool(values.headed, true);
-const pauseAtEnd = parseBool(values['pause-at-end'], true);
+const pauseAtEnd = values['no-pause'] ? false : parseBool(values['pause-at-end'], true);
 const discoverFields = values['discover-fields'] === true;
+const certifyImportantCheckboxes = values['certify-important-checkboxes'] === true;
 const slowMo = Number(values['slow-mo']) || 0;
 const manifestPath = absoluteFromMaybeRelative(values.manifest);
+const IMPORTANT_CERTIFICATION_CHECKBOXES = new Set([
+  '#areyousureyoutube',
+  '#areyousurepromoservices',
+  '#areyousurerecorded',
+  '#areyousureotherartist',
+  '#areyousuretandc',
+]);
+const CONDITIONAL_CERTIFICATION_CHECKBOXES = new Set([
+  '#areyousureticktokcml',
+  '#areyousuresnap',
+]);
+const PANCAKE_ROBOT_DISTROKID_DEFAULTS = Object.freeze({
+  primary_genre: "Children's Music",
+  ai_disclosure: {
+    uses_ai: true,
+    lyrics_written_by_ai: false,
+    music_composed_by_ai: false,
+    all_audio_performed_by_ai: true,
+    part_audio_performed_by_ai_and_humans: false,
+  },
+  songwriter_real_name: {
+    role: 'Music and lyrics',
+    first: 'Kenneth',
+    middle: '',
+    last: 'Chapman',
+  },
+  apple_music_credits: {
+    performer: {
+      role: 'Performer',
+      name: 'Pancake Robot',
+    },
+    producer: {
+      role: 'Executive Producer',
+      name: 'Kenneth Chapman',
+    },
+  },
+  rights_confirmations: {
+    youtube_music_selected_acknowledged: true,
+    no_promo_services: true,
+    recorded_and_authorized: true,
+    no_unapproved_artist_names: true,
+    distribution_agreement_accepted: true,
+    tiktok_commercial_music_library: false,
+    snapchat: false,
+  },
+});
 
 if (!exists(manifestPath)) {
   console.error(`FAIL: manifest not found: ${values.manifest}`);
   process.exit(1);
 }
 
-const manifest = readJson(manifestPath);
+let manifest = readJson(manifestPath);
+manifest = normalizeDistroKidManifest(manifest);
 const songId = manifest.song_id;
 if (!songId) {
   console.error('FAIL: manifest is missing song_id.');
@@ -89,7 +139,7 @@ if (errors.length) {
 }
 
 if (!exists(DISTROKID_AUTH_PATH)) {
-  errors.push({ field: 'auth', error: '.auth/distrokid.json is missing. Run npm run distrokid:save-auth.' });
+  errors.push({ field: 'auth', error: '.auth/distrokid.json is missing. Run bash scripts/pancake.sh distrokid:save-auth.' });
   await finish(null, true);
   process.exit(1);
 }
@@ -113,24 +163,28 @@ if (!exists(fieldMapPath)) {
 
 const fieldMap = readJson(fieldMapPath);
 runLog.field_map = relativeToRepo(fieldMapPath);
-const dangerousNames = fieldMap.dangerous_buttons_never_click || DANGEROUS_BUTTON_NAMES;
+const dangerousNames = [...new Set([...DANGEROUS_BUTTON_NAMES, ...(fieldMap.dangerous_buttons_never_click || [])])];
 
 let chromium;
 try {
   ({ chromium } = await import('playwright'));
 } catch {
-  errors.push({ field: 'playwright', error: 'Playwright is not installed. Run npm install && npx playwright install chromium.' });
+  errors.push({ field: 'playwright', error: 'Playwright is not installed. Run bash scripts/pancake.sh doctor.' });
   await finish(null, true);
   process.exit(1);
 }
 
 console.log(`DistroKid upload dry-run: ${songId}`);
 console.log('Safety: dry-run is forced true and final submit is blocked.');
+if (certifyImportantCheckboxes) {
+  console.log('WARNING: Certification checkboxes are legal attestations. Only use this when the statements are true.');
+}
 console.log(`Field map: ${relativeToRepo(fieldMapPath)}`);
 
 let browser;
 let page;
 let finishedEarly = false;
+let finished = false;
 try {
   browser = await chromium.launch({
     channel: 'chrome',
@@ -177,9 +231,39 @@ try {
   }
 
   if (!finishedEarly) {
-    for (const [fieldName, fieldDef] of Object.entries(fieldMap.fields || {})) {
+    for (const [fieldName, fieldDef] of getOrderedFields(fieldMap.fields || {})) {
+      if (page.isClosed()) {
+        const message = 'DistroKid page closed before field loop completed';
+        errors.push({ field: 'browser', error: message });
+        break;
+      }
+      const condition = shouldRunField(manifest, fieldDef);
+      if (!condition.ok) {
+        addSkipped({ field: fieldName, selector: fieldDef.selector || '', strategy: fieldDef.strategy || null, status: fieldDef.category === 'certification' ? 'skipped_manual' : undefined, reason: condition.reason });
+        continue;
+      }
+      if (fieldDef.requires_certify && !certifyImportantCheckboxes) {
+        addSkipped({
+          field: fieldName,
+          selector: fieldDef.selector || '',
+          strategy: fieldDef.strategy || null,
+          status: 'skipped_manual',
+          reason: 'certification checkbox requires --certify-important-checkboxes',
+        });
+        continue;
+      }
+      if (fieldDef.category === 'certification' && !isCertificationSelectorAllowed(fieldDef.selector, fieldDef)) {
+        addSkipped({
+          field: fieldName,
+          selector: fieldDef.selector || '',
+          strategy: fieldDef.strategy || null,
+          status: 'blocked_not_allowlisted',
+          reason: 'certification checkbox selector is not allowlisted',
+        });
+        continue;
+      }
       const manifestKey = fieldDef.manifest_key || fieldName;
-      const value = getManifestValue(manifest, manifestKey);
+      const value = getCertificationValue(manifest, fieldDef) ?? getFieldValue(manifest, fieldName, fieldDef);
       const baseDiagnostic = {
         field: fieldName,
         selector: fieldDef.selector || '',
@@ -187,19 +271,32 @@ try {
         manifest_key: manifestKey,
         manifest_value_present: isPresent(value),
       };
-      if (!isPresent(value)) {
-        addSkipped({ ...baseDiagnostic, reason: `manifest value missing for ${manifestKey}` });
+      if (!isPresent(value) && fieldDef.allowEmpty !== true && !Object.hasOwn(fieldDef, 'value')) {
+        addSkipped({ ...baseDiagnostic, status: fieldDef.category === 'certification' ? 'skipped_manual' : undefined, reason: `manifest value missing for ${manifestKey}` });
+        if (fieldDef.optional) continue;
         continue;
       }
-      if (!fieldDef.selector) {
+      if (fieldDef.category === 'certification' && !certifyImportantCheckboxes && !toBool(value)) {
+        addSkipped({ ...baseDiagnostic, status: 'skipped_manual', reason: `rights confirmation is not true for ${manifestKey}` });
+        continue;
+      }
+      if (!fieldDef.selector && !fieldDef.name_prefix && !fieldDef.labelText) {
         addSkipped({ ...baseDiagnostic, reason: 'selector missing in field map' });
+        if (fieldDef.optional) continue;
         continue;
       }
       const result = await fillField(page, fieldName, fieldDef, value);
-      if (result.ok) filledFields.push({ field: fieldName, strategy: fieldDef.strategy, manifest_key: manifestKey });
+      if (result.ok) filledFields.push({ field: fieldName, strategy: fieldDef.strategy, manifest_key: manifestKey, category: fieldDef.category || null, status: fieldDef.category === 'certification' ? 'checked' : undefined });
       else {
-        addSkipped({ ...baseDiagnostic, reason: result.reason, element: result.element || null, candidates: result.candidates || null });
-        errors.push({ field: fieldName, error: result.reason, selector: fieldDef.selector, strategy: fieldDef.strategy, manifest_key: manifestKey, element: result.element || null });
+        if (isPageClosedError(result.reason)) {
+          const message = 'DistroKid page closed before field loop completed';
+          errors.push({ field: 'browser', error: message, during_field: fieldName });
+          break;
+        }
+        addSkipped({ ...baseDiagnostic, status: result.status || (fieldDef.category === 'certification' ? 'unavailable' : undefined), reason: result.reason, element: result.element || null, candidates: result.candidates || null, options: result.options || null });
+        if (!fieldDef.optional && !result.skipped) {
+          errors.push({ field: fieldName, error: result.reason, selector: fieldDef.selector, strategy: fieldDef.strategy, manifest_key: manifestKey, element: result.element || null });
+        }
       }
     }
 
@@ -217,6 +314,7 @@ try {
 
 async function fillField(page, fieldName, fieldDef, value) {
   try {
+    if (page.isClosed()) return { ok: false, skipped: true, reason: 'page is closed' };
     const selector = fieldDef.selector;
     if (isDangerousAction(selector, dangerousNames)) {
       return { ok: false, reason: `selector text looks dangerous: ${selector}` };
@@ -227,6 +325,7 @@ async function fillField(page, fieldName, fieldDef, value) {
         const target = page.getByLabel(selector, { exact: false });
         if (await target.count() === 0) return { ok: false, reason: `label not found: ${selector}` };
         const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden field: ${selector}`, element };
         if (!isFillableElement(element)) {
           return { ok: false, reason: `selector resolved to non-fillable input type ${element?.type || element?.tagName || 'unknown'}`, element };
         }
@@ -242,43 +341,156 @@ async function fillField(page, fieldName, fieldDef, value) {
           const candidates = await logFileInputCandidates(page, fieldName);
           return { ok: false, reason: `file input not found: ${selector}`, candidates };
         }
-        if (count > 1 && selector === 'input[type=\'file\']') {
+        if (count > 1 && !isExactSelector(selector, fieldDef)) {
           const candidates = await logFileInputCandidates(page, fieldName);
           return { ok: false, reason: 'multiple file inputs found; selector is not reliable enough', candidates };
         }
         const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden file input: ${selector}`, element };
         if (element && element.tagName !== 'INPUT') {
           return { ok: false, reason: `selector resolved to non-file element ${element.tagName}`, element };
+        }
+        if (String(element?.type || '').toLowerCase() !== 'file') {
+          return { ok: false, reason: `selector resolved to non-file input type ${element?.type || 'unknown'}`, element };
         }
         await target.first().setInputFiles(filePath);
         await page.waitForTimeout(1500);
         return { ok: true };
       }
+      case 'cssSelect':
       case 'select': {
         const target = page.locator(selector);
         if (await target.count() === 0) return { ok: false, reason: `select not found: ${selector}` };
         const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden select: ${selector}`, element };
         if (element?.tagName !== 'SELECT') {
           return { ok: false, reason: `selector resolved to non-select element ${element?.tagName || 'unknown'}`, element };
         }
-        await target.first().selectOption({ label: String(value) }).catch(async () => {
-          await target.first().selectOption(String(value));
-        });
+        if (element.visible === false && fieldDef.allowHidden) {
+          const options = await getSelectOptions(target);
+          const exactOption = findExactSelectOption(options, value);
+          if (!exactOption) {
+            const nonFatal = fieldDef.optional || fieldName === 'secondary_genre' || fieldName.startsWith('apple_music_');
+            return { ok: false, skipped: nonFatal, reason: `select option label not found: ${value}`, options };
+          }
+          await setHiddenSelectValue(target, exactOption.value);
+          return { ok: true };
+        }
+        const selectResult = await target.first().selectOption({ label: String(value) }).catch(async error => ({
+          error,
+          options: await getSelectOptions(target),
+        }));
+        if (selectResult?.error) {
+          if (fieldDef.allowValueFallback) await target.first().selectOption(String(value)).catch(error => ({ error }));
+          else {
+            const exactOption = findExactSelectOption(selectResult.options, value);
+            if (exactOption) {
+              const retry = await target.first().selectOption({ value: exactOption.value }).catch(error => ({ error }));
+              if (retry?.error) {
+                const nonFatal = fieldDef.optional || fieldName === 'secondary_genre' || fieldName.startsWith('apple_music_');
+                return { ok: false, skipped: nonFatal, reason: retry.error.message, options: selectResult.options };
+              }
+              return { ok: true };
+            }
+            const nonFatal = fieldDef.optional || fieldName === 'secondary_genre' || fieldName.startsWith('apple_music_');
+            return { ok: false, skipped: nonFatal, reason: `select option label not found: ${value}`, options: selectResult.options };
+          }
+        }
+        return { ok: true };
+      }
+      case 'cssRadio':
+      case 'cssCheckbox':
+      case 'cssCheck': {
+        const target = page.locator(selector);
+        if (await target.count() === 0) return { ok: false, reason: `radio/checkbox not found: ${selector}` };
+        if (await target.count() > 1 && !isExactSelector(selector, fieldDef)) {
+          return { ok: false, reason: `multiple radio/checkbox candidates found for non-exact selector: ${selector}` };
+        }
+        const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden radio/checkbox: ${selector}`, element };
+        if (!isCheckableElement(element)) {
+          return { ok: false, reason: `selector resolved to non-checkable input type ${element?.type || element?.tagName || 'unknown'}`, element };
+        }
+        const truthy = toBool(value);
+        if (truthy) await target.first().check();
+        else if (String(element.type || '').toLowerCase() === 'checkbox') await target.first().uncheck().catch(() => {});
         return { ok: true };
       }
       case 'radioOrCheckbox': {
         const target = page.getByLabel(selector, { exact: false });
         if (await target.count() === 0) return { ok: false, reason: `radio/checkbox not found: ${selector}` };
-        const truthy = value === true || String(value).toLowerCase() === 'true' || String(value).toLowerCase() === 'yes';
+        const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden radio/checkbox: ${selector}`, element };
+        if (!isCheckableElement(element)) {
+          return { ok: false, reason: `selector resolved to non-checkable input type ${element?.type || element?.tagName || 'unknown'}`, element };
+        }
+        const truthy = toBool(value);
         if (truthy) await target.first().check();
+        else if (String(element.type || '').toLowerCase() === 'checkbox') await target.first().uncheck().catch(() => {});
+        return { ok: true };
+      }
+      case 'dynamicRadioByNamePrefixLabel': {
+        const labelText = fieldDef.label_text || (toBool(value) ? 'Yes' : 'No');
+        const match = await findVisibleInputByNamePrefixAndLabel(page, 'radio', fieldDef.name_prefix, labelText);
+        if (!match) return { ok: false, reason: `visible radio not found for name prefix ${fieldDef.name_prefix} and label ${labelText}` };
+        const target = page.locator(`input[type="radio"][name^="${cssAttrValue(fieldDef.name_prefix)}"]`).nth(match.index);
+        await target.check();
+        await page.waitForTimeout(500);
+        return { ok: true };
+      }
+      case 'dynamicCheckboxByNamePrefix': {
+        await page.waitForSelector(`input[type="checkbox"][name^="${cssAttrValue(fieldDef.name_prefix)}"]`, { timeout: 2000 }).catch(() => {});
+        const target = page.locator(`input[type="checkbox"][name^="${cssAttrValue(fieldDef.name_prefix)}"]`);
+        const count = await target.count();
+        if (count === 0 && (fieldDef.labelText || fieldDef.label_text)) {
+          return fillField(page, fieldName, { ...fieldDef, strategy: 'checkboxByLabelText' }, value);
+        }
+        if (count === 0) return { ok: false, skipped: true, reason: `checkbox not found for name prefix ${fieldDef.name_prefix}` };
+        if (count > 1 && !fieldDef.allowMultiple) return { ok: false, reason: `multiple checkboxes found for name prefix ${fieldDef.name_prefix}` };
+        const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden dynamic checkbox: ${fieldDef.name_prefix}`, element };
+        if (toBool(value)) await target.first().check();
         else await target.first().uncheck().catch(() => {});
         return { ok: true };
       }
+      case 'checkboxByLabelText': {
+        const labelText = fieldDef.labelText || fieldDef.label_text || selector;
+        const target = page.getByLabel(labelText, { exact: false });
+        if (await target.count() === 0) return { ok: false, skipped: true, reason: `checkbox label not found: ${labelText}` };
+        const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden checkbox label: ${labelText}`, element };
+        if (!isCheckableElement(element) || String(element.type || '').toLowerCase() !== 'checkbox') {
+          return { ok: false, reason: `label resolved to non-checkbox input type ${element?.type || element?.tagName || 'unknown'}`, element };
+        }
+        if (toBool(value)) await target.first().check();
+        else await target.first().uncheck().catch(() => {});
+        return { ok: true };
+      }
+      case 'clickByText': {
+        const text = fieldDef.text || selector;
+        if (isDangerousAction(text, dangerousNames)) return { ok: false, reason: `click text looks dangerous: ${text}` };
+        const target = page.getByText(text, { exact: fieldDef.exactText === true });
+        if (await target.count() === 0) return { ok: false, skipped: true, reason: `click text not found: ${text}` };
+        await target.first().click();
+        await page.waitForTimeout(fieldDef.waitAfterMs || 500);
+        return { ok: true };
+      }
+      case 'clickModalButton': {
+        if (fieldName === 'ai_modal_save') {
+          const enforced = await enforceAiDisclosureModal(page, manifest.ai_disclosure || {});
+          if (!enforced.ok) return enforced;
+        }
+        const result = await clickModalButton(page, fieldDef);
+        return result;
+      }
+      case 'cssFill':
+      case 'fill':
       case 'textarea':
       case 'date': {
         const target = page.locator(selector);
         if (await target.count() === 0) return { ok: false, reason: `field not found: ${selector}` };
         const element = await describeLocator(target);
+        if (isHidden(element, fieldDef)) return { ok: false, skipped: true, reason: `selector resolved to hidden field: ${selector}`, element };
         if (!isFillableElement(element)) {
           return { ok: false, reason: `selector resolved to non-fillable input type ${element?.type || element?.tagName || 'unknown'}`, element };
         }
@@ -304,7 +516,133 @@ async function describeLocator(locator) {
     ariaLabel: el.getAttribute('aria-label'),
     placeholder: el.getAttribute('placeholder'),
     text: el.innerText || el.value || '',
+    visible: (() => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    })(),
   })).catch(() => null);
+}
+
+async function getSelectOptions(locator) {
+  return locator.first().evaluate(el => [...el.options].map(option => ({
+    value: option.value,
+    text: option.text,
+  }))).catch(() => []);
+}
+
+function findExactSelectOption(options, value) {
+  const wanted = String(value || '').trim().toLowerCase();
+  if (!wanted) return null;
+  return (options || []).find(option => String(option.text || '').trim().toLowerCase() === wanted)
+    || (options || []).find(option => String(option.value || '').trim().toLowerCase() === wanted)
+    || null;
+}
+
+async function setHiddenSelectValue(locator, value) {
+  await locator.first().evaluate((select, selectedValue) => {
+    select.value = selectedValue;
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    select.dispatchEvent(new Event('blur', { bubbles: true }));
+  }, value);
+}
+
+async function clickModalButton(page, fieldDef) {
+  const buttonText = fieldDef.buttonText || fieldDef.selector || 'Save';
+  if (isDangerousAction(buttonText, dangerousNames)) return { ok: false, reason: `modal button text looks dangerous: ${buttonText}` };
+  const requiredText = fieldDef.modalContainsText || '';
+  const result = await page.evaluate(({ buttonText, requiredText }) => {
+    const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const containers = [...document.querySelectorAll('[role="dialog"], .modal, .modal-dialog, [aria-modal="true"]')]
+      .filter(visible)
+      .filter(el => !requiredText || normalize(el.innerText).includes(normalize(requiredText)));
+    for (const container of containers) {
+      const buttons = [...container.querySelectorAll('button,input[type="button"],input[type="submit"],[role="button"]')]
+        .filter(visible);
+      const button = buttons.find(el => normalize(el.innerText || el.value || el.getAttribute('aria-label')).includes(normalize(buttonText)));
+      if (button) {
+        button.click();
+        return { ok: true };
+      }
+    }
+    return { ok: false };
+  }, { buttonText, requiredText }).catch(error => ({ ok: false, reason: error.message }));
+  if (!result.ok) return { ok: false, skipped: true, reason: result.reason || `visible AI modal with ${buttonText} button not found` };
+  await page.waitForTimeout(fieldDef.waitAfterMs || 500);
+  return { ok: true };
+}
+
+async function enforceAiDisclosureModal(page, disclosure) {
+  const result = await page.evaluate(({ disclosure }) => {
+    const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const containers = [...document.querySelectorAll('[role="dialog"], .modal, .modal-dialog, [aria-modal="true"]')]
+      .filter(visible)
+      .filter(el => normalize(el.innerText).includes('which parts of this song were ai-generated?'));
+    const modal = containers[0];
+    if (!modal) return { ok: false, skipped: true, reason: 'visible AI disclosure modal not found' };
+
+    const labelsFor = input => {
+      const labels = new Set();
+      if (input.id) modal.querySelectorAll(`label[for="${CSS.escape(input.id)}"]`).forEach(label => labels.add(label.innerText));
+      if (input.closest('label')?.innerText) labels.add(input.closest('label').innerText);
+      let cursor = input.parentElement;
+      for (let depth = 0; cursor && depth < 3 && cursor !== modal; depth += 1, cursor = cursor.parentElement) {
+        if (cursor.innerText) labels.add(cursor.innerText);
+      }
+      return [...labels].map(normalize);
+    };
+    const findCheckbox = labelText => {
+      const wanted = normalize(labelText);
+      const checkboxes = [...modal.querySelectorAll('input[type="checkbox"]')].filter(visible);
+      return checkboxes.find(input => labelsFor(input).some(label => label === wanted))
+        || checkboxes.find(input => labelsFor(input).some(label => label.includes(wanted)));
+    };
+    const setChecked = (labelText, checked) => {
+      const input = findCheckbox(labelText);
+      if (!input) return { labelText, ok: false };
+      if (input.checked !== checked) {
+        input.click();
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return { labelText, ok: true, checked: input.checked };
+    };
+    const checkboxResults = [
+      setChecked('Lyrics', disclosure.lyrics_written_by_ai === true),
+      setChecked('Music', disclosure.music_composed_by_ai === true),
+      setChecked('All of the audio', disclosure.all_audio_performed_by_ai === true),
+      setChecked('Part of the audio', disclosure.part_audio_performed_by_ai_and_humans === true),
+    ];
+    const personaVisible = normalize(modal.innerText).includes('is pancake robot a human artist or an ai persona?');
+    return {
+      ok: checkboxResults.every(item => item.ok),
+      checkboxResults,
+      personaVisible,
+    };
+  }, { disclosure }).catch(error => ({ ok: false, reason: error.message }));
+
+  if (result.personaVisible) {
+    if (isPresent(manifest.ai_artist_identity)) {
+      addSkipped({ field: 'ai_artist_identity', status: 'skipped_manual', reason: `AI artist identity question visible; manifest value present but not yet mapped: ${manifest.ai_artist_identity}` });
+    } else {
+      addSkipped({ field: 'ai_artist_identity', status: 'skipped_manual', reason: 'AI artist identity question visible; no manifest value provided' });
+    }
+  }
+  if (!result.ok) {
+    return { ok: false, skipped: true, reason: result.reason || `AI disclosure modal checkbox not found: ${(result.checkboxResults || []).filter(item => !item.ok).map(item => item.labelText).join(', ')}` };
+  }
+  return { ok: true };
 }
 
 function isFillableElement(element) {
@@ -316,18 +654,111 @@ function isFillableElement(element) {
   return !['checkbox', 'radio', 'file', 'button', 'submit', 'reset', 'hidden'].includes(type);
 }
 
+function isCheckableElement(element) {
+  if (!element) return false;
+  const tag = String(element.tagName || '').toUpperCase();
+  const type = String(element.type || '').toLowerCase();
+  return tag === 'INPUT' && ['checkbox', 'radio'].includes(type);
+}
+
+function isHidden(element, fieldDef = {}) {
+  return !fieldDef.allowHidden && element && element.visible === false;
+}
+
+function isExactSelector(selector, fieldDef = {}) {
+  if (fieldDef.exact) return true;
+  return /^#[A-Za-z][\w:-]*$/.test(String(selector || ''));
+}
+
+function toBool(value) {
+  return value === true || ['true', 'yes', '1', 'on'].includes(String(value).toLowerCase());
+}
+
+function cssAttrValue(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function isCertificationSelectorAllowed(selector, fieldDef = {}) {
+  const normalized = String(selector || '').trim();
+  if (fieldDef.conditional_certification === true) return CONDITIONAL_CERTIFICATION_CHECKBOXES.has(normalized);
+  return IMPORTANT_CERTIFICATION_CHECKBOXES.has(normalized);
+}
+
+function isPageClosedError(reason) {
+  return /target page, context or browser has been closed|page is closed/i.test(String(reason || ''));
+}
+
+function getCertificationValue(manifest, fieldDef = {}) {
+  if (fieldDef.category !== 'certification') return null;
+  if (!certifyImportantCheckboxes) return null;
+  const selector = String(fieldDef.selector || '').trim();
+  if (IMPORTANT_CERTIFICATION_CHECKBOXES.has(selector)) return true;
+  if (CONDITIONAL_CERTIFICATION_CHECKBOXES.has(selector)) return getFieldValue(manifest, fieldDef.manifest_key, fieldDef);
+  return null;
+}
+
+function getOrderedFields(fields) {
+  const entries = Object.entries(fields);
+  return entries
+    .map((entry, index) => ({ entry, index, order: fieldOrder(entry[0], entry[1]) }))
+    .sort((a, b) => a.order - b.order || a.index - b.index)
+    .map(item => item.entry);
+}
+
+function fieldOrder(fieldName, fieldDef = {}) {
+  if (fieldDef.strategy === 'inputFile') return 60;
+  if (fieldDef.category === 'certification') return 50;
+  if (fieldName.startsWith('apple_music_')) return 40;
+  if (fieldName.startsWith('songwriter_')) return 30;
+  if (fieldName.startsWith('ai_')) return 20;
+  return 10;
+}
+
+async function findVisibleInputByNamePrefixAndLabel(page, type, namePrefix, labelText) {
+  return page.evaluate(({ type, namePrefix, labelText }) => {
+    const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const wanted = normalize(labelText);
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const labelsFor = el => {
+      const labels = new Set();
+      if (el.id) document.querySelectorAll(`label[for="${CSS.escape(el.id)}"]`).forEach(label => labels.add(label.innerText));
+      if (el.closest('label')?.innerText) labels.add(el.closest('label').innerText);
+      let cursor = el.parentElement;
+      for (let depth = 0; cursor && depth < 3; depth += 1, cursor = cursor.parentElement) {
+        if (cursor.innerText) labels.add(cursor.innerText);
+      }
+      return [...labels];
+    };
+    const candidates = [...document.querySelectorAll(`input[type="${type}"]`)]
+      .filter(el => String(el.getAttribute('name') || '').startsWith(namePrefix))
+      .map((el, index) => ({ el, index }))
+      .filter(({ el }) => visible(el));
+    const exact = candidates.find(({ el }) => labelsFor(el).some(label => normalize(label) === wanted));
+    if (exact) return { index: exact.index };
+    const includes = candidates.find(({ el }) => labelsFor(el).some(label => normalize(label).includes(wanted)));
+    return includes ? { index: includes.index } : null;
+  }, { type, namePrefix, labelText }).catch(() => null);
+}
+
 async function installSafetyGuard(page, dangerousNames) {
   await page.addInitScript((names) => {
-    const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const normalize = value => String(value || '').trim().toLowerCase().replace(/[^\p{L}\p{N}#&]+/gu, ' ').replace(/\s+/g, ' ');
+    const safeClickTexts = new Set(['add credits for each song on this release']);
     const dangerous = text => {
       const normalized = normalize(text);
-      return names.some(name => normalized === normalize(name) || normalized.includes(normalize(name)));
+      if (!normalized || safeClickTexts.has(normalized)) return false;
+      if (normalized === '#donebutton' || normalized === 'donebutton') return true;
+      return names.some(name => normalized === normalize(name));
     };
     document.addEventListener('click', event => {
       const target = event.target?.closest?.('button,a,input,[role="button"]');
       if (!target) return;
       const text = target.innerText || target.value || target.getAttribute('aria-label') || target.getAttribute('name') || '';
-      if (dangerous(text)) {
+      if (dangerous(text) || target.id === 'doneButton') {
         event.preventDefault();
         event.stopImmediatePropagation();
         console.warn(`Blocked dangerous DistroKid action: ${text}`);
@@ -339,7 +770,7 @@ async function installSafetyGuard(page, dangerousNames) {
 async function auditDangerousButtons(page, dangerousNames) {
   const found = [];
   for (const name of dangerousNames) {
-    const count = await page.getByRole('button', { name, exact: false }).count().catch(() => 0);
+    const count = await page.getByRole('button', { name, exact: true }).count().catch(() => 0);
     if (count) found.push({ name, count });
   }
   if (found.length) {
@@ -377,10 +808,12 @@ async function logFileInputCandidates(page, fieldName) {
 }
 
 async function saveScreenshot(page, filename) {
+  if (!page || page.isClosed()) return;
   await page.screenshot({ path: join(runDir, filename), fullPage: true }).catch(() => {});
 }
 
 async function savePageSnapshot(page) {
+  if (!page || page.isClosed()) return;
   const text = await page.locator('body').innerText().catch(() => '');
   const html = await page.content().catch(() => '');
   writeText(join(runDir, 'page-text-snapshot.txt'), text);
@@ -388,6 +821,8 @@ async function savePageSnapshot(page) {
 }
 
 async function finish(browser, skipBrowserClose) {
+  if (finished) return;
+  finished = true;
   runLog.finished_at = new Date().toISOString();
   runLog.filled_count = filledFields.length;
   runLog.skipped_count = skippedFields.length;
@@ -398,9 +833,7 @@ async function finish(browser, skipBrowserClose) {
   writeJson(join(runDir, 'errors.json'), errors);
 
   console.log('');
-  console.log(`Filled: ${filledFields.length}`);
-  console.log(`Skipped: ${skippedFields.length}`);
-  console.log(`Failed: ${errors.length}`);
+  printUploadSummary();
   console.log(`Package: output/release-packages/${songId}/`);
   console.log(`Screenshots/logs: ${relativeToRepo(runDir)}`);
   if (skippedFields.length) {
@@ -408,7 +841,7 @@ async function finish(browser, skipBrowserClose) {
     for (const item of skippedFields) console.log(`- ${item.field}: ${item.reason}`);
   }
   console.log('Manual next steps: review DistroKid, fill skipped fields, and submit manually only when ready.');
-  console.log(`After manual submission: npm run distrokid:mark-submitted -- --song-id ${songId} --distrokid-url URL`);
+  console.log(`After manual submission: bash scripts/pancake.sh distrokid:mark-submitted --song-id ${songId} --distrokid-url URL`);
 
   if (browser && pauseAtEnd && !skipBrowserClose) {
     console.log('Browser remains open for manual review. Close it when done.');
@@ -416,6 +849,44 @@ async function finish(browser, skipBrowserClose) {
   } else if (browser) {
     await browser.close().catch(() => {});
   }
+}
+
+function printUploadSummary() {
+  console.log(`Filled: ${filledFields.length}`);
+  console.log(`Skipped: ${skippedFields.length}`);
+  console.log(`Failed: ${errors.length}`);
+  const groups = [
+    ['Files uploaded', ['audio_file', 'cover_art']],
+    ['Core metadata filled', ['artist', 'release_title', 'track_title', 'primary_genre', 'secondary_genre', 'language', 'explicit', 'not_explicit', 'clean_always', 'contains_lyrics', 'instrumental', 'original_song', 'lyrics', 'release_date', 'made_for_kids']],
+    ['Songwriter credits filled', ['songwriter_role', 'songwriter_first', 'songwriter_middle', 'songwriter_last']],
+    ['Apple Music credits filled', ['apple_music_credits_expand', 'apple_music_performer_role', 'apple_music_performer_name', 'apple_music_producer_role', 'apple_music_producer_name']],
+  ];
+  for (const [title, names] of groups) {
+    const items = filledFields.filter(item => names.includes(item.field));
+    console.log(`${title}: ${items.map(item => item.field).join(', ') || 'none'}`);
+  }
+  printAiDisclosureSummary();
+  const certificationFilled = filledFields.filter(item => item.category === 'certification');
+  const certificationSkipped = skippedFields.filter(item => item.status && ['checked', 'skipped_manual', 'unavailable', 'blocked_not_allowlisted'].includes(item.status));
+  console.log('Certification checkboxes:');
+  if (!certificationFilled.length && !certificationSkipped.length) console.log('- none');
+  for (const item of certificationFilled) console.log(`- ${item.field}: checked`);
+  for (const item of certificationSkipped) console.log(`- ${item.field}: ${item.status}`);
+  const neverAutomated = fieldMap.dangerous_paid_extras_never_autofill || [];
+  console.log(`Manual remaining fields: ${skippedFields.filter(item => item.status !== 'blocked_not_allowlisted').map(item => item.field).join(', ') || 'none'}`);
+  console.log(`Never automated fields: final submit, Continue${neverAutomated.length ? `, ${neverAutomated.join(', ')}` : ''}`);
+}
+
+function printAiDisclosureSummary() {
+  const disclosure = manifest.ai_disclosure || {};
+  const filledNames = new Set(filledFields.map(item => item.field));
+  const checked = value => value === true ? 'checked' : 'unchecked';
+  console.log('AI disclosure filled:');
+  console.log(`- ai_generated_gate: ${filledNames.has('ai_generated_gate') && disclosure.uses_ai === true ? 'yes' : 'none'}`);
+  console.log(`- ai_lyrics: ${checked(disclosure.lyrics_written_by_ai)}`);
+  console.log(`- ai_music: ${checked(disclosure.music_composed_by_ai)}`);
+  console.log(`- ai_all_audio: ${checked(disclosure.all_audio_performed_by_ai)}`);
+  console.log(`- ai_part_audio: ${checked(disclosure.part_audio_performed_by_ai_and_humans)}`);
 }
 
 async function waitForBrowserClose(browser, page) {
@@ -539,11 +1010,114 @@ function validatePackageFile(key, value, errors) {
   }
 }
 
+function normalizeDistroKidManifest(manifest) {
+  let changed = false;
+  const normalized = { ...manifest };
+  normalized.field_sources = normalized.field_sources && typeof normalized.field_sources === 'object'
+    ? { ...normalized.field_sources }
+    : {};
+  if (!isPresent(normalized.primary_genre)) {
+    normalized.primary_genre = PANCAKE_ROBOT_DISTROKID_DEFAULTS.primary_genre;
+    normalized.field_sources.primary_genre = 'pancake_robot_default';
+    changed = true;
+  }
+  for (const key of ['ai_disclosure', 'songwriter_real_name', 'apple_music_credits', 'rights_confirmations']) {
+    const result = mergeMissingDefaults(normalized[key], PANCAKE_ROBOT_DISTROKID_DEFAULTS[key], normalized.field_sources[key]);
+    normalized[key] = result.value;
+    normalized.field_sources[key] = result.sources;
+    changed = changed || result.changed;
+  }
+  const aiResult = normalizePancakeRobotAiDisclosure(normalized.ai_disclosure, normalized.field_sources.ai_disclosure);
+  normalized.ai_disclosure = aiResult.value;
+  normalized.field_sources.ai_disclosure = aiResult.sources;
+  changed = changed || aiResult.changed;
+  if (changed) console.log('Manifest normalized with Pancake Robot DistroKid defaults');
+  return normalized;
+}
+
+function normalizePancakeRobotAiDisclosure(current, currentSources) {
+  const value = current && typeof current === 'object' && !Array.isArray(current) ? { ...current } : {};
+  const sources = currentSources && typeof currentSources === 'object' && !Array.isArray(currentSources) ? { ...currentSources } : {};
+  let changed = false;
+  for (const [key, defaultValue] of Object.entries(PANCAKE_ROBOT_DISTROKID_DEFAULTS.ai_disclosure)) {
+    if (value[key] !== defaultValue) {
+      value[key] = defaultValue;
+      sources[key] = 'pancake_robot_default';
+      changed = true;
+    }
+  }
+  return { value, sources, changed };
+}
+
+function mergeMissingDefaults(current, defaults, currentSources) {
+  const value = current && typeof current === 'object' && !Array.isArray(current) ? { ...current } : {};
+  const sources = currentSources && typeof currentSources === 'object' && !Array.isArray(currentSources) ? { ...currentSources } : {};
+  let changed = false;
+  for (const [key, defaultValue] of Object.entries(defaults)) {
+    if (defaultValue && typeof defaultValue === 'object' && !Array.isArray(defaultValue)) {
+      const nested = mergeMissingDefaults(value[key], defaultValue, sources[key]);
+      value[key] = nested.value;
+      sources[key] = nested.sources;
+      changed = changed || nested.changed;
+      continue;
+    }
+    if (isMissingForDefault(value[key], defaultValue)) {
+      value[key] = defaultValue;
+      sources[key] = 'pancake_robot_default';
+      changed = true;
+    }
+  }
+  return { value, sources, changed };
+}
+
+function isMissingForDefault(value, defaultValue) {
+  if (defaultValue === '') return value === null || value === undefined;
+  return !isPresent(value) && value !== false;
+}
+
+function getFieldValue(manifest, fieldName, fieldDef) {
+  if (Object.hasOwn(fieldDef, 'value')) return fieldDef.value;
+  if (fieldDef.value_source === 'has_lyrics_file') {
+    return Boolean(manifest.lyrics_file && exists(absoluteFromMaybeRelative(manifest.lyrics_file)));
+  }
+  if (fieldDef.value_source === 'instrumental_from_manifest') {
+    return manifest.instrumental === true || manifest.is_instrumental === true;
+  }
+  return getManifestValue(manifest, fieldDef.manifest_key || fieldName);
+}
+
 function getManifestValue(manifest, key) {
   if (key === 'lyrics_file' && manifest.lyrics_file) {
     return fs.readFileSync(absoluteFromMaybeRelative(manifest.lyrics_file), 'utf8');
   }
-  return manifest[key];
+  if (!String(key || '').includes('.')) return manifest[key];
+  return String(key).split('.').reduce((value, part) => value?.[part], manifest);
+}
+
+function shouldRunField(manifest, fieldDef = {}) {
+  if (!fieldDef.when) return { ok: true };
+  const conditions = Array.isArray(fieldDef.when) ? fieldDef.when : [fieldDef.when];
+  for (const condition of conditions) {
+    const value = condition.value_source
+      ? getFieldValue(manifest, condition.manifest_key || condition.value_source, condition)
+      : getManifestValue(manifest, condition.manifest_key);
+    if (Object.hasOwn(condition, 'equals') && value !== condition.equals) {
+      return { ok: false, reason: `condition not met: ${condition.manifest_key || condition.value_source} !== ${condition.equals}` };
+    }
+    if (Object.hasOwn(condition, 'notEquals') && value === condition.notEquals) {
+      return { ok: false, reason: `condition not met: ${condition.manifest_key || condition.value_source} === ${condition.notEquals}` };
+    }
+    if (condition.exists === true && !isPresent(value)) {
+      return { ok: false, reason: `condition not met: ${condition.manifest_key || condition.value_source} missing` };
+    }
+    if (condition.truthy === true && !toBool(value)) {
+      return { ok: false, reason: `condition not met: ${condition.manifest_key || condition.value_source} is not true` };
+    }
+    if (condition.truthy === false && toBool(value)) {
+      return { ok: false, reason: `condition not met: ${condition.manifest_key || condition.value_source} is true` };
+    }
+  }
+  return { ok: true };
 }
 
 function parseBool(value, fallback) {
