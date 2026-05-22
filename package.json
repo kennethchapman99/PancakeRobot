@@ -19,7 +19,7 @@
     "prestart": "node scripts/ensure-node-runtime.js",
     "start": "node src/orchestrator.js",
     "preweb": "node scripts/ensure-node-runtime.js",
-    "web": "node --watch --import ./src/web/render-mode-preload.js --import ./src/web/marketing-preload.js --import ./src/web/marketing-song-detail-preload.js src/web/server.js",
+    "web": "node --watch --import ./src/web/render-mode-preload.js --import ./src/web/marketing-song-detail-preload.js src/web/server.js",
     "predev:mobile": "node scripts/ensure-node-runtime.js",
     "dev:mobile": "node src/scripts/run-mobile-dev-stack.js",
     "setup": "node src/orchestrator.js --setup",
@@ -66,6 +66,7 @@
     "pretest": "node scripts/ensure-node-runtime.js",
     "test": "node scripts/repair-song-catalog-trigger.js && node --test",
     "test:marketing-router": "node src/scripts/smoke-test-marketing-router.js",
+    "smoke:cloudflare-tunnel": "node scripts/smoke-cloudflare-tunnel.js",
     "distrokid:save-auth": "node scripts/distrokid/save-auth.mjs",
     "distrokid:check-auth": "node scripts/distrokid/check-auth.mjs",
     "distrokid:package": "node scripts/distrokid/build-release-package.mjs",
@@ -74,7 +75,8 @@
     "distrokid:queue": "node scripts/distrokid/queue-song.mjs",
     "distrokid:run-queued": "node scripts/distrokid/run-queued.mjs",
     "distrokid:mark-submitted": "node scripts/distrokid/mark-submitted.mjs",
-    "distrokid:smoke": "node scripts/distrokid/smoke-test.mjs"
+    "distrokid:smoke": "node scripts/distrokid/smoke-test.mjs",
+    "distrokid:ui-smoke": "node scripts/distrokid/ui-smoke-test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",

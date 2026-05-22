@@ -107,10 +107,19 @@ async function main() {
         }
       }
     } catch (error) {
+      if (isTelegramPollingConflict(error)) {
+        console.error('[telegram:poll-conflict] Telegram rejected polling because another bot instance is already running for this token.');
+        console.error('[telegram:poll-conflict] Stop the other Pancake Robot/Telegram process, then restart this stack. The tunnel may still be healthy; this is a Telegram bot instance conflict.');
+        process.exit(2);
+      }
       console.error('[telegram:poll-error]', error.message, error.cause ? `(cause: ${error.cause?.message || error.cause})` : '');
       await delay(3000);
     }
   }
+}
+
+function isTelegramPollingConflict(error) {
+  return /409|conflict|terminated by other getupdates request/i.test(String(error?.message || ''));
 }
 
 function delay(ms) {

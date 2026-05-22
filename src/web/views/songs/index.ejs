@@ -94,6 +94,11 @@
     <% } %>
   </div>
 
+  <div x-show="message" x-cloak
+    class="mb-5 rounded-2xl border px-4 py-3 text-sm"
+    :class="messageType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'"
+    x-text="message"></div>
+
   <div x-show="selected.length > 0" x-cloak class="sticky top-4 z-20 mb-5 rounded-2xl border border-zinc-900 bg-zinc-900 px-4 py-3 text-white shadow-2xl">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div class="flex items-center gap-3 text-sm">
@@ -104,20 +109,20 @@
         <button @click="clearSelection()" class="text-zinc-300 transition hover:text-white">Clear</button>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button @click="runBulkAnalysis()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Run A&R Analysis</button>
-        <button @click="queueDistroKid()" class="rounded-xl bg-fuchsia-100 px-3 py-2 text-xs font-semibold text-fuchsia-950 transition hover:bg-fuchsia-200">Queue for DistroKid</button>
-        <button @click="clearDistroKidQueue()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Clear DistroKid Queue</button>
-        <button @click="applyReleaseAction('publish')" class="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-100">Approve Selected for Release Packaging</button>
-        <button @click="applyReleaseAction('edit')" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Send Selected to Editing</button>
-        <button @click="applyReleaseAction('hold')" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Hold Selected</button>
+        <button type="button" @click="runBulkAnalysis()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Run A&R Analysis</button>
+        <button type="button" data-distrokid-bulk-queue @click="queueDistroKid()" class="rounded-xl bg-fuchsia-100 px-3 py-2 text-xs font-semibold text-fuchsia-950 transition hover:bg-fuchsia-200">Queue for DistroKid</button>
+        <button type="button" data-distrokid-bulk-clear @click="clearDistroKidQueue()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Clear DistroKid Queue</button>
+        <button type="button" @click="applyReleaseAction('publish')" class="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-100">Approve Selected for Release Packaging</button>
+        <button type="button" @click="applyReleaseAction('edit')" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Send Selected to Editing</button>
+        <button type="button" @click="applyReleaseAction('hold')" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Hold Selected</button>
         <select x-model="bulkStatus" class="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-white focus:outline-none">
           <option value="">Set status…</option>
           <% for (const option of songStatusOptions) { %>
             <option value="<%= option.value %>"><%= option.label %></option>
           <% } %>
         </select>
-        <button @click="applyBulkStatus()" :disabled="!bulkStatus" class="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-100 disabled:opacity-40">Update Status</button>
-        <button @click="archiveSelected()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Archive</button>
+        <button type="button" @click="applyBulkStatus()" :disabled="!bulkStatus" class="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-100 disabled:opacity-40">Update Status</button>
+        <button type="button" @click="archiveSelected()" class="rounded-xl border border-zinc-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800">Archive</button>
       </div>
     </div>
   </div>
@@ -268,6 +273,8 @@ window.catalog = function() {
   return {
     selected: [],
     bulkStatus: '',
+    message: '',
+    messageType: 'success',
     get totalCards() { return document.querySelectorAll('[data-song-card]:not(.hidden)').length; },
     toggleOne(id, checked) {
       if (checked) {
@@ -286,6 +293,10 @@ window.catalog = function() {
     clearSelection() {
       this.selected = [];
       this.bulkStatus = '';
+    },
+    showMessage(text, type = 'success') {
+      this.message = text;
+      this.messageType = type;
     },
     async applyBulkStatus() {
       if (!this.bulkStatus || !this.selected.length) return;
@@ -318,22 +329,30 @@ window.catalog = function() {
       const response = await fetch('/api/distrokid/jobs/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [...this.selected] }),
+        body: JSON.stringify({ songIds: [...this.selected] }),
       });
       const data = await response.json();
-      if (!data.ok) return alert(data.error || 'DistroKid queue failed');
-      window.location.reload();
+      if (!data.ok) {
+        this.showMessage((data.errors || [data.error || 'DistroKid queue failed']).join('\n'), 'error');
+        return;
+      }
+      this.showMessage(data.message || 'Queued for DistroKid.');
+      window.setTimeout(() => window.location.reload(), 700);
     },
     async clearDistroKidQueue() {
       if (!this.selected.length) return;
       const response = await fetch('/api/distrokid/jobs/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [...this.selected] }),
+        body: JSON.stringify({ songIds: [...this.selected] }),
       });
       const data = await response.json();
-      if (!data.ok) return alert(data.error || 'DistroKid queue clear failed');
-      window.location.reload();
+      if (!data.ok) {
+        this.showMessage((data.errors || [data.error || 'DistroKid queue clear failed']).join('\n'), 'error');
+        return;
+      }
+      this.showMessage(data.message || 'Cleared DistroKid queue.');
+      window.setTimeout(() => window.location.reload(), 700);
     },
     async applyReleaseAction(action) {
       if (!this.selected.length) return;

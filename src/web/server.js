@@ -74,6 +74,7 @@ import {
 import { markSongSubmittedToDistroKid } from '../shared/distrokid-release.js';
 import {
   clearDistroKidQueue,
+  DISTROKID_JOB_STATUSES,
   getDistroKidJob,
   listDistroKidJobsBySongIds,
   queueSongForDistroKid,
@@ -1426,40 +1427,140 @@ app.post('/api/distrokid/releases/:songId/complete', (req, res) => {
   }
 });
 
+function distrokidSongIdsFromBody(body = {}) {
+  const raw = Array.isArray(body.songIds)
+    ? body.songIds
+    : Array.isArray(body.ids)
+      ? body.ids
+      : [body.song_id || body.songId].filter(Boolean);
+  return [...new Set(raw.map(id => String(id || '').trim()).filter(Boolean))];
+}
+
+function readJsonIfExists(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function distrokidCommands(songId) {
+  const manifestPath = `output/release-packages/${songId}/manifest.json`;
+  return {
+    save_auth: 'npm run distrokid:save-auth',
+    check_auth: 'npm run distrokid:check-auth',
+    build_package: `npm run distrokid:package -- --song-id ${songId}`,
+    upload_dry_run: `npm run distrokid:upload -- --manifest ${manifestPath} --dry-run`,
+    run_queued: 'npm run distrokid:run-queued -- --limit 5 --dry-run',
+    mark_submitted: `npm run distrokid:mark-submitted -- --song-id ${songId} --distrokid-url "URL_FROM_DISTROKID"`,
+  };
+}
+
+function distrokidJobPayload(songId) {
+  const manifestPath = join(__dirname, '../../output/release-packages', songId, 'manifest.json');
+  const missingPath = join(__dirname, '../../output/release-packages', songId, 'missing-fields.json');
+  const manifest = readJsonIfExists(manifestPath);
+  const missing = readJsonIfExists(missingPath);
+  const job = getDistroKidJob(songId) || {
+    song_id: songId,
+    status: DISTROKID_JOB_STATUSES.NOT_QUEUED,
+    package_path: null,
+    latest_run_log_path: null,
+    latest_error: null,
+    distrokid_url: null,
+    attempt_count: 0,
+  };
+  const blocking = manifest?.readiness?.blocking_missing_fields
+    || missing?.blocking_missing_fields
+    || job.latest_error?.blocking_missing_fields
+    || job.latest_error?.errors?.map(item => item.field).filter(Boolean)
+    || [];
+  return {
+    job,
+    readiness: {
+      ready_for_distrokid_dry_run: Boolean(manifest?.readiness?.ready_for_distrokid_dry_run),
+      blocking_missing_fields: blocking,
+      summary: manifest
+        ? (manifest.readiness?.ready_for_distrokid_dry_run ? 'Ready for DistroKid dry-run upload' : 'Blocked until required package fields are present')
+        : 'Package has not been built yet',
+      manifest_path: manifest ? `output/release-packages/${songId}/manifest.json` : null,
+      missing_fields_path: missing ? `output/release-packages/${songId}/missing-fields.json` : null,
+    },
+    package: {
+      path: job.package_path || (manifest ? `output/release-packages/${songId}` : null),
+      manifest_path: manifest ? `output/release-packages/${songId}/manifest.json` : `output/release-packages/${songId}/manifest.json`,
+    },
+    commands: distrokidCommands(songId),
+  };
+}
+
 app.post('/api/distrokid/jobs/queue', (req, res) => {
   try {
-    const ids = Array.isArray(req.body?.ids)
-      ? req.body.ids
-      : [req.body?.song_id || req.body?.songId].filter(Boolean);
+    const ids = distrokidSongIdsFromBody(req.body);
+    if (!ids.length) return res.status(400).json({ ok: false, message: 'No song IDs provided.', job: null, jobs: [], errors: ['songIds[] required'] });
     const jobs = ids.map(id => queueSongForDistroKid(String(id).trim()));
-    res.json({ ok: true, jobs });
+    res.json({ ok: true, message: `Queued ${jobs.length} song${jobs.length === 1 ? '' : 's'} for DistroKid.`, job: jobs[0] || null, jobs, errors: [] });
   } catch (error) {
-    res.status(/not found|refusing/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
+    res.status(/not found|refusing/i.test(error.message) ? 400 : 500).json({ ok: false, message: 'DistroKid queue failed.', job: null, jobs: [], errors: [error.message], error: error.message });
   }
 });
 
 app.post('/api/distrokid/jobs/clear', (req, res) => {
   try {
-    const ids = Array.isArray(req.body?.ids)
-      ? req.body.ids
-      : [req.body?.song_id || req.body?.songId].filter(Boolean);
+    const ids = distrokidSongIdsFromBody(req.body);
+    if (!ids.length) return res.status(400).json({ ok: false, message: 'No song IDs provided.', job: null, jobs: [], errors: ['songIds[] required'] });
     const jobs = ids.map(id => clearDistroKidQueue(String(id).trim(), req.body?.notes || null));
-    res.json({ ok: true, jobs });
+    res.json({ ok: true, message: `Cleared DistroKid queue for ${jobs.length} song${jobs.length === 1 ? '' : 's'}.`, job: jobs[0] || null, jobs, errors: [] });
   } catch (error) {
-    res.status(/not found/i.test(error.message) ? 404 : 500).json({ ok: false, error: error.message });
+    res.status(/not found/i.test(error.message) ? 404 : 500).json({ ok: false, message: 'DistroKid queue clear failed.', job: null, jobs: [], errors: [error.message], error: error.message });
+  }
+});
+
+app.get('/api/distrokid/jobs/:songId', (req, res) => {
+  try {
+    if (!getSong(req.params.songId)) {
+      return res.status(404).json({ ok: false, message: 'Song not found.', job: null, errors: [`Song not found: ${req.params.songId}`] });
+    }
+    const payload = distrokidJobPayload(req.params.songId);
+    res.json({ ok: true, message: 'DistroKid job loaded.', errors: [], ...payload });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: 'DistroKid job load failed.', job: null, errors: [error.message], error: error.message });
+  }
+});
+
+app.post('/api/distrokid/jobs/:songId/package', (req, res) => {
+  try {
+    if (!getSong(req.params.songId)) {
+      return res.status(404).json({ ok: false, message: 'Song not found.', job: null, errors: [`Song not found: ${req.params.songId}`] });
+    }
+    const payload = distrokidJobPayload(req.params.songId);
+    res.json({
+      ok: true,
+      message: 'Package building is CLI-only from the web UI. Run the build package command below.',
+      errors: [],
+      safe_to_run_from_web: false,
+      ...payload,
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: 'DistroKid package command lookup failed.', job: null, errors: [error.message], error: error.message });
   }
 });
 
 app.post('/api/distrokid/jobs/:songId/mark-submitted', (req, res) => {
   try {
+    const distrokidUrl = String(req.body?.distrokid_url || req.body?.distrokidUrl || req.body?.url || '').trim();
+    if (!distrokidUrl) {
+      return res.status(400).json({ ok: false, message: 'DistroKid URL is required.', job: null, errors: ['distrokid_url required'] });
+    }
     const result = markSongSubmittedToDistroKid(req.params.songId, {
-      distrokid_url: req.body?.distrokid_url || req.body?.distrokidUrl || req.body?.url,
+      distrokid_url: distrokidUrl,
       notes: req.body?.notes || '',
     });
-    res.json({ ok: true, result });
+    res.json({ ok: true, message: 'Song marked submitted to DistroKid.', job: getDistroKidJob(req.params.songId), result, errors: [] });
   } catch (error) {
     const status = /not found/i.test(error.message) ? 404 : 500;
-    res.status(status).json({ ok: false, error: error.message });
+    res.status(status).json({ ok: false, message: 'Mark submitted failed.', job: null, errors: [error.message], error: error.message });
   }
 });
 

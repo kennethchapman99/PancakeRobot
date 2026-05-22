@@ -19,6 +19,20 @@
   const dkPackagePath = dkJob?.package_path || `output/release-packages/${song.id}`;
   const dkManifestPath = `output/release-packages/${song.id}/manifest.json`;
   const dkBlocking = dkJob?.latest_error?.blocking_missing_fields || dkJob?.latest_error?.errors?.map(item => item.field).filter(Boolean) || [];
+  const dkLatestError = dkJob?.latest_error?.message || dkJob?.latest_error?.error || (dkBlocking.length ? `Missing: ${dkBlocking.join(', ')}` : '');
+  const dkReadiness = dkStatus === 'package_built' || dkStatus === 'dry_run_ready' || dkStatus === 'awaiting_manual_review' || dkStatus === 'submitted'
+    ? 'Ready for DistroKid dry-run upload'
+    : dkStatus === 'blocked_missing_fields'
+      ? 'Blocked until required package fields are present'
+      : 'Build the package to calculate readiness';
+  const dkCommands = {
+    saveAuth: 'npm run distrokid:save-auth',
+    checkAuth: 'npm run distrokid:check-auth',
+    buildPackage: `npm run distrokid:package -- --song-id ${song.id}`,
+    uploadDryRun: `npm run distrokid:upload -- --manifest ${dkManifestPath} --dry-run`,
+    runQueued: 'npm run distrokid:run-queued -- --limit 5 --dry-run',
+    markSubmitted: `npm run distrokid:mark-submitted -- --song-id ${song.id} --distrokid-url "URL_FROM_DISTROKID"`,
+  };
 %>
 
 <div class="p-8 max-w-4xl" x-data="songDetail()" @keydown.escape.window="editOpen = false">
@@ -332,7 +346,7 @@
     <!-- Submit modal -->
     <div x-show="open" x-cloak class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-8">
       <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" @click.stop>
-        <h3 class="text-lg font-bold text-zinc-900 mb-1">📤 Submit to <%= defaultDistributor || 'DistroKid' %></h3>
+        <h3 class="text-lg font-bold text-zinc-900 mb-1">Record <%= defaultDistributor || 'DistroKid' %> Submission</h3>
         <p class="text-sm text-zinc-500 mb-4"><%= song.title || song.topic %></p>
         <div class="bg-zinc-50 rounded-xl p-4 mb-5 text-xs text-zinc-600 space-y-2">
           <p>1. Go to <% if (distributorUrl) { %><a href="<%= distributorUrl %>" target="_blank" class="text-blue-600 underline"><%= defaultDistributor || 'your distributor' %></a><% } else { %><%= defaultDistributor || 'your distributor' %><% } %> and upload your audio and cover art</p>
@@ -362,15 +376,25 @@
           <span class="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2.5 py-1 text-[11px] font-semibold text-fuchsia-700"><%= dkLabels[dkStatus] || dkStatus %></span>
         </div>
         <div class="mt-3 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2">
+          <div><span class="font-semibold text-zinc-500">Readiness:</span> <%= dkReadiness %></div>
           <div><span class="font-semibold text-zinc-500">Package:</span> <span class="font-mono break-all"><%= dkPackagePath || '—' %></span></div>
           <div><span class="font-semibold text-zinc-500">Run log:</span> <span class="font-mono break-all"><%= dkJob?.latest_run_log_path || '—' %></span></div>
           <div><span class="font-semibold text-zinc-500">DistroKid URL:</span> <span class="break-all"><%= dkJob?.distrokid_url || '—' %></span></div>
           <div><span class="font-semibold text-zinc-500">Attempts:</span> <%= dkJob?.attempt_count || 0 %></div>
+          <div><span class="font-semibold text-zinc-500">Latest error:</span> <span class="break-words"><%= dkLatestError || '—' %></span></div>
         </div>
-        <div class="mt-3 text-xs text-zinc-500">
-          <div class="font-semibold text-zinc-600">CLI</div>
-          <div class="mt-1 font-mono break-all">npm run distrokid:package -- --song-id <%= song.id %></div>
-          <div class="mt-1 font-mono break-all">npm run distrokid:upload -- --manifest <%= dkManifestPath %> --dry-run</div>
+        <div class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+          <div class="font-semibold text-zinc-700">Manual CLI commands</div>
+          <div class="mt-2 space-y-1 font-mono">
+            <button type="button" @click="copy('<%= dkCommands.saveAuth %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.saveAuth %></button>
+            <button type="button" @click="copy('<%= dkCommands.checkAuth %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.checkAuth %></button>
+            <button type="button" @click="copy('<%= dkCommands.buildPackage %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.buildPackage %></button>
+            <button type="button" @click="copy('<%= dkCommands.uploadDryRun %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.uploadDryRun %></button>
+            <button type="button" @click="copy('<%= dkCommands.runQueued %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.runQueued %></button>
+            <button type="button" @click="copy('<%= dkCommands.markSubmitted %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.markSubmitted %></button>
+          </div>
+          <div class="mt-2 text-[11px] text-zinc-500">Web UI never runs final DistroKid submit. Dry-run upload opens a browser for manual review and stops before submit.</div>
+          <div x-show="commandMessage" x-cloak class="mt-2 rounded-lg border border-fuchsia-200 bg-white px-2 py-1 font-mono text-[11px] text-fuchsia-800" x-text="commandMessage"></div>
         </div>
         <div class="mt-3 flex flex-wrap gap-2">
           <% if (dkBlocking.length) { %>
@@ -385,6 +409,8 @@
       <div class="flex min-w-[240px] flex-col gap-2">
         <button type="button" @click="queue()" class="rounded-xl bg-fuchsia-700 px-4 py-2 text-sm font-semibold text-white hover:bg-fuchsia-600">Queue for DistroKid</button>
         <button type="button" @click="clear()" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Clear Queue</button>
+        <button type="button" @click="buildPackage()" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Build Package</button>
+        <button type="button" @click="showDryRunCommand()" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Show Dry-Run Upload Command</button>
         <form @submit.prevent="markSubmitted()" class="mt-2 space-y-2">
           <input x-model="url" type="url" required placeholder="DistroKid URL after manual submit" class="w-full rounded-xl border border-zinc-200 px-3 py-2 text-xs">
           <button type="submit" :disabled="saving" class="w-full rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Mark Submitted</button>
@@ -1032,25 +1058,50 @@ window.distroKidAutomation = function(songId) {
   return {
     url: '',
     saving: false,
+    commandMessage: '',
+    async copy(command) {
+      this.commandMessage = command;
+      try {
+        await navigator.clipboard.writeText(command);
+        this.commandMessage = 'Copied: ' + command;
+      } catch {
+        this.commandMessage = command;
+      }
+    },
     async queue() {
       const response = await fetch('/api/distrokid/jobs/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ song_id: songId }),
+        body: JSON.stringify({ songIds: [songId] }),
       });
       const data = await response.json();
-      if (!data.ok) return alert(data.error || 'Queue failed');
+      if (!data.ok) return alert((data.errors || [data.error || 'Queue failed']).join('\n'));
       window.location.reload();
     },
     async clear() {
       const response = await fetch('/api/distrokid/jobs/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ song_id: songId }),
+        body: JSON.stringify({ songIds: [songId] }),
       });
       const data = await response.json();
-      if (!data.ok) return alert(data.error || 'Clear failed');
+      if (!data.ok) return alert((data.errors || [data.error || 'Clear failed']).join('\n'));
       window.location.reload();
+    },
+    async buildPackage() {
+      const response = await fetch('/api/distrokid/jobs/' + encodeURIComponent(songId) + '/package', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (!data.ok) return alert((data.errors || [data.error || 'Package command lookup failed']).join('\n'));
+      this.copy(data.commands?.build_package || ('npm run distrokid:package -- --song-id ' + songId));
+    },
+    async showDryRunCommand() {
+      const response = await fetch('/api/distrokid/jobs/' + encodeURIComponent(songId));
+      const data = await response.json();
+      if (!data.ok) return alert((data.errors || [data.error || 'Dry-run command lookup failed']).join('\n'));
+      this.copy(data.commands?.upload_dry_run || ('npm run distrokid:upload -- --manifest output/release-packages/' + songId + '/manifest.json --dry-run'));
     },
     async markSubmitted() {
       if (!this.url.trim()) return;
@@ -1063,7 +1114,7 @@ window.distroKidAutomation = function(songId) {
       const data = await response.json();
       if (!data.ok) {
         this.saving = false;
-        return alert(data.error || 'Mark submitted failed');
+        return alert((data.errors || [data.error || 'Mark submitted failed']).join('\n'));
       }
       window.location.assign('/songs/' + encodeURIComponent(songId) + '?tab=marketing');
     },
