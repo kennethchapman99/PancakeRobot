@@ -1,0 +1,183 @@
+{
+  "id": "postal-v2",
+  "schema_version": "brand-profile/v1",
+  "brand_type": "music_artist",
+  "brand_name": "Postal v2",
+  "artist_name": "Postal v2",
+  "display_name": "Postal v2",
+  "short_name": "Postal v2",
+  "genre": "Glitchy Analog Indietronica",
+  "brand_description": "Handmade-feeling indietronica built from glitchy clicks, simple drum machine loops, warm synth pads, sampled textures, and bittersweet melodies that feel intimate rather than polished.",
+  "audience": {
+    "age_range": "13+",
+    "description": "Indietronica listeners, college radio fans, late-night headphone listeners, soft electronic playlists, analog synth fans, and people drawn to melancholic but comforting songs.",
+    "guardrail": "Keep the sound reflective, handmade, and emotionally mature. Do not make it glossy pop, modern radio crooner-pop, heavy EDM, novelty electronic music, or a direct clone of any reference artist."
+  },
+  "character": {
+    "name": "Postal v2",
+    "core_concept": "An introspective glitch-pop / indietronica project built from tiny electronic artifacts, analog-feeling synths, modest drum machines, intimate vocals, looping motifs, distance, memory, and small human details.",
+    "fallback_summary": "Bittersweet, handmade-feeling indietronica with glitchy clicks, soft synth pads, simple drum machine grooves, sampled textures, looping motifs, and close vocals that feel melancholic but comforting."
+  },
+  "positioning": {
+    "one_liner": "Melancholic, comforting indietronica made from glitch beats, soft synth pads, tiny sampled textures, and intimate human songwriting.",
+    "core_feeling": "sadness without heaviness; nostalgia without irony",
+    "emotional_keywords": [
+      "wistful",
+      "comforting",
+      "tender",
+      "lonely-but-lit-up",
+      "analog-warm",
+      "quietly hopeful"
+    ]
+  },
+  "voice": {
+    "persona": "observant, introverted, emotionally precise, quietly vulnerable",
+    "tone": "plainspoken, sincere, literate, restrained, gently self-aware",
+    "avoid": [
+      "direct imitation of any specific artist",
+      "copied melodies",
+      "copied lyrics",
+      "copied vocal phrasing",
+      "glossy pop-star swagger",
+      "big belted choruses",
+      "overly slick radio-pop phrasing"
+    ]
+  },
+  "music": {
+    "default_prompt": "Create an original song for Postal v2. Push the production toward handmade, analog-feeling indietronica: glitchy clicks, soft synth pads, simple drum machine grooves, warm bass pulses, tiny sampled textures, filtered noise, tape hiss, bell-like fragments, and looping motifs that evolve gently rather than explode. The emotional center should be melancholic but comforting: sadness without heaviness, nostalgia without irony, and intimacy without melodrama. Keep the vocal close, modest, and conversational, with restrained melodies that sit inside the electronics instead of floating above them like glossy pop. Use small vivid details: messages half-written, weather through windows, trains, parking lots, old rooms, late-night screens, distance, memory, and quiet attempts to stay connected. Avoid arena-pop polish, pop-star vocal runs, heavy EDM drops, trap hi-hat overload, or copying any specific artist, melody, lyric, vocal phrasing, or production signature.",
+    "default_style": "glitchy analog indietronica, handmade electronic clicks, simple drum machine loop, soft synth pads, warm bass pulse, sampled textures, intimate restrained vocal, melancholic but comforting",
+    "default_bpm": 122,
+    "target_length": "2:45-3:25",
+    "normal_word_range": [
+      120,
+      190
+    ],
+    "first_vocal_by_seconds": 14,
+    "max_instrumental_intro_seconds": 12,
+    "primary_genres": [
+      "indietronica",
+      "glitch pop",
+      "electro indie",
+      "synth pop",
+      "bedroom electronic"
+    ],
+    "sonic_palette": [
+      "glitchy clicks and micro-percussion",
+      "simple dry drum machine grooves",
+      "warm analog-style synth pads",
+      "soft square-wave or sine-wave leads",
+      "subtle tape hiss and filtered noise",
+      "chopped vocal or found-sound samples",
+      "looping bell-like motifs",
+      "warm rounded synth bass",
+      "intimate restrained lead vocal"
+    ],
+    "production_do": [
+      "Make the beat feel assembled from small clicks, ticks, taps, and drum machine fragments.",
+      "Use looping motifs that feel handmade and slightly imperfect.",
+      "Keep the arrangement spacious, warm, and emotionally direct.",
+      "Let synth pads, soft bass, and tiny sampled textures carry the nostalgia.",
+      "Build movement through small additions and variations, not huge drops.",
+      "Keep choruses memorable but modest, more glowing than anthemic."
+    ],
+    "production_avoid": [
+      "arena-pop polish",
+      "big glossy pop choruses",
+      "pop-star vocal runs",
+      "stadium EDM builds",
+      "dubstep drops",
+      "trap hi-hat overload",
+      "overly pristine modern radio production",
+      "direct artist imitation"
+    ]
+  },
+  "lyrics": {
+    "title_examples": [
+      "Packet Loss",
+      "Apartment Static",
+      "Half-Sent Message",
+      "Train Window Weather",
+      "Soft Failure",
+      "Between Signals",
+      "Your Name in Blue Light"
+    ],
+    "topic_variety": [
+      "long-distance connection",
+      "unsent or half-sent messages",
+      "old emails and archived chats",
+      "city nights seen from windows",
+      "quiet heartbreak without bitterness",
+      "comfort returning slowly",
+      "private rituals",
+      "technology as a fragile emotional bridge"
+    ],
+    "required_closing": "End with a simple repeated image or final hook that feels emotionally clear and gently unresolved; avoid abrupt comedy endings, spoken skits, or overly triumphant resolutions.",
+    "themes": [
+      "distance",
+      "memory",
+      "messages",
+      "weather",
+      "connection",
+      "signal loss",
+      "quiet repair"
+    ],
+    "imagery": [
+      "train windows",
+      "apartment lights",
+      "rain on glass",
+      "old emails",
+      "parking lots",
+      "blue screen glow",
+      "cheap headphones",
+      "static between stations",
+      "laundromat windows",
+      "empty bus seats"
+    ],
+    "hook_style": "plainspoken, emotionally direct phrase with a small technological or domestic image"
+  },
+  "distribution": {
+    "default_artist": "Postal v2",
+    "default_album": "Packet Loss",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "indietronica",
+      "glitch pop",
+      "synth pop",
+      "indie electronic",
+      "bedroom pop"
+    ],
+    "youtube_tags_seed": [
+      "glitch pop",
+      "indietronica",
+      "analog synth",
+      "soft electronic",
+      "melancholic electronic",
+      "indie electronic",
+      "drum machine"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Electronic"
+    ],
+    "coppa_status": "not_child_directed",
+    "content_advisory": "clean"
+  },
+  "ui": {
+    "sidebar_subtitle": "Glitchy Analog Indietronica",
+    "logo_path": "/media/brand-profiles/postal-v2/logo.png"
+  },
+  "visuals": {
+    "album_art_direction": "minimal misty city architecture, analog texture, soft grain, blue screen glow, pale cyan and midnight blue, tiny postal or signal motifs, clean modern typography",
+    "brand_colors": [
+      "midnight blue",
+      "soft cyan",
+      "warm beige",
+      "faded coral",
+      "screen-glow blue"
+    ]
+  },
+  "guardrails": {
+    "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists. Preserve the handmade glitch-indietronica direction without cloning any specific act.",
+    "brand_safe": true
+  }
+}

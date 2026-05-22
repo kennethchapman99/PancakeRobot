@@ -202,6 +202,39 @@ Suggested weekly command only; no cron is installed automatically:
 cd /Users/kchapman/PancakeRobot && npm run distrokid:run-queued -- --limit 5 --dry-run
 ```
 
+## UI Test Sequence
+
+The web UI queues jobs and records submission state. Browser upload and final DistroKid submission stay manual/CLI-driven.
+
+1. Run `npm run web`.
+2. Open `http://localhost:3737`.
+3. Go to Song Catalog.
+4. Select 2 songs.
+5. Click `Queue for DistroKid`.
+6. Confirm the catalog rows show queued DistroKid pills.
+7. Open one song detail page.
+8. Confirm the `DistroKid Automation` card is visible.
+9. Click `Build Package` to copy the CLI command, or run:
+
+```bash
+npm run distrokid:package -- --song-id SONG_ID
+```
+
+10. Run queued dry-run from CLI:
+
+```bash
+npm run distrokid:run-queued -- --limit 5 --dry-run
+```
+
+11. Return to the UI and confirm the job reaches `Awaiting review` when the dry-run completed.
+12. After you manually submit in DistroKid, paste the DistroKid URL in the card and click `Mark Submitted`.
+
+Useful UI smoke check:
+
+```bash
+npm run distrokid:ui-smoke
+```
+
 ## Troubleshooting
 
 - Auth missing: run `npm run distrokid:save-auth`.
