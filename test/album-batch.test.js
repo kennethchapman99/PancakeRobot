@@ -13,13 +13,18 @@ process.env.PIPELINE_APP_SLUG = prepareTestDbSlug('test-album-batch').slug;
 
 const {
   runAlbumBatch,
+  repairAlbumBatch,
+  resumeAlbumBatch,
+  ensureAlbumTrackJobs,
   normalizeCostMode,
   ALBUM_COST_MODES,
 } = await import('../src/services/album-batch-service.js');
 const {
+  createAlbum,
   getAlbum,
   getSongsForAlbum,
   getAllAlbums,
+  updateAlbum,
   upsertSong,
   getSong,
 } = await import('../src/shared/db.js');
@@ -340,4 +345,256 @@ test('getAllAlbums returns persisted albums (excluding test rows by default)', a
   assert.ok(!nonTestAlbums.some(a => a.id === result.albumId), 'test rows must not leak into default listing');
   const allAlbums = getAllAlbums({ includeTests: true });
   assert.ok(allAlbums.some(a => a.id === result.albumId));
+});
+
+test('album repair creates planned track jobs when plan exists but songs are missing', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 8, albumTheme: 'Repair Theme' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_REPAIR_NO_TRACKS',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 8,
+    cost_mode: 'album_batch',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan, orchestration_cost_usd: 0.072783 },
+    is_test: true,
+  });
+  recordCostEvent({
+    id: `cost_${albumId}_shared_repair_test`,
+    albumId,
+    pipelineStep: 'orchestration',
+    agentName: 'album-orchestrator',
+    operation: 'album_plan_generated',
+    provider: 'anthropic',
+    model: 'claude',
+    unitType: 'tokens',
+    computedCostUsd: 0.072783,
+    pricingSource: 'test',
+    status: 'success',
+  });
+
+  const result = await repairAlbumBatch({
+    albumId,
+    resume: false,
+    brandLoader: fakeBrandLoader,
+  });
+
+  const songs = getSongsForAlbum(albumId);
+  assert.equal(result.ensured.length, 8);
+  assert.equal(songs.length, 8);
+  assert.deepEqual(songs.map(song => song.track_number), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.equal(result.financeSummary.track_count, 8);
+  assert.ok(result.financeSummary.shared_thinking_cost_usd > 0);
+});
+
+test('album repair is idempotent and does not create duplicate track jobs', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 3, albumTheme: 'Idempotent' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_REPAIR_IDEMPOTENT',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 3,
+    cost_mode: 'standard',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+
+  ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
+  const firstIds = getSongsForAlbum(albumId).map(song => song.id);
+  await repairAlbumBatch({ albumId, resume: false, brandLoader: fakeBrandLoader });
+  await repairAlbumBatch({ albumId, resume: false, brandLoader: fakeBrandLoader });
+  const secondIds = getSongsForAlbum(albumId).map(song => song.id);
+
+  assert.equal(secondIds.length, 3);
+  assert.deepEqual(secondIds, firstIds);
+});
+
+test('album resume resumes only first incomplete track and skips completed tracks', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 3, albumTheme: 'Resume' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_REPAIR_RESUME',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 3,
+    cost_mode: 'standard',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+  updateAlbum(albumId, {
+    shared_orchestration: {
+      plan_version: plan.plan_version,
+      plan,
+      latest_error: 'previous auth failure',
+    },
+  });
+  const songs = ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
+  upsertSong({ id: songs[0].id, pipeline_stage: 'album_track_generated', total_cost_usd: 0.12 });
+  const recordedTracks = [];
+
+  const result = await resumeAlbumBatch({
+    albumId,
+    brandLoader: fakeBrandLoader,
+    trackPipeline: makeTrackPipeline({ recordedTracks, costPerTrack: 0.03 }),
+  });
+
+  assert.equal(result.resumed.length, 1);
+  assert.deepEqual(recordedTracks.map(track => track.track_number), [2]);
+  assert.equal(getSong(songs[0].id).pipeline_stage, 'album_track_generated');
+  assert.equal(getAlbum(albumId).shared_orchestration.latest_error, null);
+});
+
+test('album repair finance shows shared thinking cost before tracks finish', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 2, albumTheme: 'Finance Repair' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_REPAIR_FINANCE',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 2,
+    cost_mode: 'album_batch',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+  recordCostEvent({
+    id: `cost_${albumId}_shared_before_tracks`,
+    albumId,
+    pipelineStep: 'orchestration',
+    agentName: 'album-orchestrator',
+    operation: 'album_plan_generated',
+    provider: 'anthropic',
+    model: 'claude',
+    unitType: 'tokens',
+    computedCostUsd: 0.07,
+    pricingSource: 'test',
+    status: 'success',
+  });
+
+  const result = await repairAlbumBatch({
+    albumId,
+    resume: false,
+    brandLoader: fakeBrandLoader,
+  });
+
+  const album = getAlbum(albumId);
+  assert.equal(result.financeSummary.track_count, 2);
+  assert.ok(result.financeSummary.shared_thinking_cost_usd >= 0.07);
+  assert.ok(album.finance_summary.shared_thinking_cost_usd >= 0.07);
+  assert.ok(album.finance_summary.allocated_shared_cost_per_song_usd > 0);
+});
+
+test('album finance does not double-count orchestration marker when verified event exists', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 2, albumTheme: 'Dedupe' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_REPAIR_FINANCE_DEDUPE',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 2,
+    cost_mode: 'album_batch',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+  recordCostEvent({
+    id: `cost_${albumId}_orchestration_marker`,
+    albumId,
+    pipelineStep: 'orchestration',
+    agentName: 'album-orchestrator',
+    operation: 'album_plan_generated',
+    provider: 'anthropic',
+    model: 'album-orchestrator',
+    unitType: 'tokens',
+    computedCostUsd: 0.05,
+    pricingSource: 'album_batch_service',
+    status: 'success',
+  });
+  recordCostEvent({
+    id: `cost_${albumId}_verified_orchestration`,
+    albumId,
+    pipelineStep: 'orchestration',
+    agentName: 'album-orchestrator',
+    operation: 'anthropic_agent_run',
+    provider: 'anthropic',
+    model: 'claude',
+    unitType: 'tokens',
+    computedCostUsd: 0.07,
+    pricingSource: 'anthropic_usage',
+    status: 'success',
+  });
+
+  const result = await repairAlbumBatch({
+    albumId,
+    brandLoader: fakeBrandLoader,
+  });
+
+  assert.equal(result.financeSummary.shared_thinking_cost_usd, 0.07);
+});
+
+test('album resume does not rerun orchestration and chooses the first failed or incomplete track', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 3, albumTheme: 'No Orchestration' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_RESUME_NO_ORCHESTRATION',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 3,
+    cost_mode: 'standard',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+  const songs = ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
+  upsertSong({ id: songs[0].id, pipeline_stage: 'album_track_generated', total_cost_usd: 0.12 });
+  upsertSong({ id: songs[1].id, pipeline_stage: 'album_track_failed', notes: 'previous failure' });
+  const recordedTracks = [];
+
+  const result = await resumeAlbumBatch({
+    albumId,
+    brandLoader: fakeBrandLoader,
+    trackPipeline: makeTrackPipeline({ recordedTracks, costPerTrack: 0.03 }),
+  });
+
+  assert.equal(result.generationStarted, true);
+  assert.equal(recordedTracks.length, 1);
+  assert.equal(recordedTracks[0].track_number, 2);
+  assert.equal(getSongsForAlbum(albumId).length, 3);
+  assert.equal(getSong(songs[0].id).pipeline_stage, 'album_track_generated');
+});
+
+test('album resume persists provider auth/config errors in album latest event', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 2, albumTheme: 'Auth Error' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_RESUME_AUTH_ERROR',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 2,
+    cost_mode: 'standard',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+  const authError = 'Could not resolve authentication method for Anthropic';
+
+  const result = await resumeAlbumBatch({
+    albumId,
+    brandLoader: fakeBrandLoader,
+    trackPipeline: async () => {
+      throw new Error(authError);
+    },
+  });
+
+  const album = getAlbum(albumId);
+  const songs = getSongsForAlbum(albumId);
+  assert.equal(result.generationStarted, true);
+  assert.match(result.latestError, /Could not resolve authentication method/);
+  assert.match(album.shared_orchestration.latest_error, /Could not resolve authentication method/);
+  assert.equal(album.shared_orchestration.latest_event.type, 'album_resume_complete');
+  assert.equal(songs[0].pipeline_stage, 'album_track_failed');
 });

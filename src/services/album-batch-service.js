@@ -16,6 +16,7 @@ import {
   updateAlbum,
   getAlbum,
   upsertSong,
+  getSongForAlbumTrack,
   getSongsForAlbum,
 } from '../shared/db.js';
 import { SONG_STATUSES } from '../shared/song-status.js';
@@ -57,8 +58,7 @@ export function createAlbumId() {
 }
 
 function createTrackSongId(albumId, trackNumber) {
-  const rand = Math.random().toString(36).slice(2, 5).toUpperCase();
-  return `SONG_${albumId.replace(/^ALBUM_/, '')}_T${String(trackNumber).padStart(2, '0')}_${rand}`;
+  return `SONG_${albumId.replace(/^ALBUM_/, '')}_T${String(trackNumber).padStart(2, '0')}`;
 }
 
 /**
@@ -193,6 +193,15 @@ export async function runAlbumBatch({
     status: 'generating_tracks',
   });
 
+  const ensuredTracks = ensureAlbumTrackJobs({ albumId, album: getAlbum(albumId), plan, brandProfileId: cleanBrandId, isTest });
+  const initialFinanceSummary = rebuildAndPersistAlbumFinanceSummary({
+    albumId,
+    costMode: cleanCostMode,
+    trackSongIds: ensuredTracks.map(row => row.id),
+    cachedSavingsUsd: brandInterpretationFromCache ? estimateBrandInterpretationSavings(plan.tracks.length) : 0,
+  });
+  updateAlbum(albumId, { finance_summary: initialFinanceSummary });
+
   await emit(onEvent, {
     type: 'album_plan_ready',
     albumId,
@@ -204,20 +213,7 @@ export async function runAlbumBatch({
   // they do not abort the batch.
   const trackResults = [];
   for (const track of plan.tracks) {
-    const songId = createTrackSongId(albumId, track.track_number);
-    upsertSong({
-      id: songId,
-      topic: track.title,
-      title: track.title,
-      concept: track.concept,
-      status: SONG_STATUSES.DRAFT,
-      brand_profile_id: cleanBrandId,
-      album_id: albumId,
-      track_number: track.track_number,
-      album_role: track.emotional_role,
-      inherited_album_plan_version: plan.plan_version,
-      is_test: isTest,
-    });
+    const songId = getSongForAlbumTrack(albumId, track.track_number)?.id || createTrackSongId(albumId, track.track_number);
 
     await emit(onEvent, { type: 'track_started', albumId, songId, track });
 
@@ -275,7 +271,7 @@ export async function runAlbumBatch({
   const financeSummary = buildAlbumFinanceSummary({
     albumId,
     costMode: cleanCostMode,
-    trackSongIds: succeeded.map(t => t.songId),
+    trackSongIds: getSongsForAlbum(albumId).map(song => song.id),
     cachedSavingsUsd: brandInterpretationFromCache ? estimateBrandInterpretationSavings(plan.tracks.length) : 0,
   });
   writeAlbumFinanceSummary(albumId, financeSummary);
@@ -303,6 +299,172 @@ export async function runAlbumBatch({
     failed,
     financeSummary,
     brandInterpretationFromCache,
+  };
+}
+
+export async function repairAlbumBatch({
+  albumId,
+  brandLoader = loadBrandProfileById,
+  onEvent = null,
+} = {}) {
+  const cleanAlbumId = String(albumId || '').trim();
+  if (!cleanAlbumId) throw new Error('repairAlbumBatch requires albumId');
+
+  const album = getAlbum(cleanAlbumId);
+  if (!album) throw new Error(`Album not found: ${cleanAlbumId}`);
+  const plan = loadSavedAlbumPlan(album);
+  const brandProfileId = album.brand_profile_id || DEFAULT_PROFILE_ID;
+  const brandProfile = brandLoader(brandProfileId);
+  if (!brandProfile) throw new Error(`Brand profile not found: ${brandProfileId}`);
+
+  const songsBefore = getSongsForAlbum(cleanAlbumId);
+  await emit(onEvent, { type: 'album_repair_started', albumId: cleanAlbumId, stage: 'repair', line: 'Loading saved album plan' });
+  updateAlbumLatestEvent(cleanAlbumId, { type: 'album_repair_started', message: 'Loading saved album plan' });
+
+  const ensuredTracks = ensureAlbumTrackJobs({
+    albumId: cleanAlbumId,
+    album,
+    plan,
+    brandProfileId,
+    isTest: album.is_test,
+  });
+  const beforeResumeSummary = rebuildAndPersistAlbumFinanceSummary({
+    albumId: cleanAlbumId,
+    costMode: album.cost_mode,
+    trackSongIds: ensuredTracks.map(row => row.id),
+  });
+  updateAlbum(cleanAlbumId, {
+    status: 'generating_tracks',
+    finance_summary: beforeResumeSummary,
+  });
+
+  await emit(onEvent, {
+    type: 'album_repair_materialized_tracks',
+    albumId: cleanAlbumId,
+    stage: 'repair',
+    line: `Ensured ${ensuredTracks.length} planned track jobs`,
+  });
+  updateAlbumLatestEvent(cleanAlbumId, { type: 'album_repair_materialized_tracks', message: `Ensured ${ensuredTracks.length} planned track jobs` });
+
+  const incomplete = getIncompleteAlbumTracks(cleanAlbumId, plan);
+  const created = ensuredTracks.filter(song => !songsBefore.some(existing => existing.id === song.id));
+  return {
+    albumId: cleanAlbumId,
+    status: 'repaired',
+    currentAlbumStatus: getAlbum(cleanAlbumId)?.status || 'unknown',
+    plan,
+    ensured: ensuredTracks,
+    existingTracks: songsBefore.length,
+    created,
+    createdTracks: created.length,
+    incomplete,
+    skipped: ensuredTracks.filter(song => !incomplete.some(item => item.song.id === song.id)),
+    financeSummary: beforeResumeSummary,
+    latestError: getAlbum(cleanAlbumId)?.shared_orchestration?.latest_error || null,
+  };
+}
+
+export async function resumeAlbumBatch({
+  albumId,
+  trackPipeline = defaultTrackPipeline,
+  brandLoader = loadBrandProfileById,
+  onEvent = null,
+  logger = console,
+} = {}) {
+  const cleanAlbumId = String(albumId || '').trim();
+  if (!cleanAlbumId) throw new Error('resumeAlbumBatch requires albumId');
+
+  const repairResult = await repairAlbumBatch({
+    albumId: cleanAlbumId,
+    brandLoader,
+    onEvent,
+  });
+
+  const album = getAlbum(cleanAlbumId);
+  if (!album) throw new Error(`Album not found: ${cleanAlbumId}`);
+  const plan = loadSavedAlbumPlan(album);
+  const brandProfileId = album.brand_profile_id || DEFAULT_PROFILE_ID;
+  const brandProfile = brandLoader(brandProfileId);
+  if (!brandProfile) throw new Error(`Brand profile not found: ${brandProfileId}`);
+
+  const brandInterpretation = buildRepairBrandInterpretation({ album, brandProfile, brandProfileId });
+  const trackResults = [];
+  const next = getIncompleteAlbumTracks(cleanAlbumId, plan)[0] || null;
+  let generationStarted = false;
+
+  if (next) {
+    const { track, song } = next;
+    await emit(onEvent, { type: 'track_resumed', albumId: cleanAlbumId, songId: song.id, track });
+    updateAlbumLatestEvent(cleanAlbumId, { type: 'track_resumed', message: `Resuming track ${track.track_number}: ${track.title}` });
+    try {
+      generationStarted = true;
+      const trackResult = await trackPipeline({
+        songId: song.id,
+        albumId: cleanAlbumId,
+        brandProfileId,
+        brandInterpretation,
+        plan,
+        track,
+        costMode: album.cost_mode,
+        onEvent,
+        logger,
+        isTest: album.is_test,
+      });
+      upsertSong({
+        id: song.id,
+        status: SONG_STATUSES.DRAFT,
+        pipeline_stage: trackResult?.pipelineStage || 'album_track_generated',
+        total_cost_usd: Number(trackResult?.totalCost) || 0,
+      });
+      trackResults.push({ status: 'success', songId: song.id, trackNumber: track.track_number, title: trackResult?.title || track.title });
+      updateAlbumLatestEvent(cleanAlbumId, { type: 'track_succeeded', message: `Track ${track.track_number} completed: ${track.title}`, clear_error: true });
+      await emit(onEvent, { type: 'track_succeeded', albumId: cleanAlbumId, songId: song.id, track });
+    } catch (err) {
+      upsertSong({
+        id: song.id,
+        status: SONG_STATUSES.DRAFT,
+        pipeline_stage: 'album_track_failed',
+        notes: `Album track generation failed: ${err.message}`,
+      });
+      trackResults.push({ status: 'failed', songId: song.id, trackNumber: track.track_number, title: track.title, error: err.message });
+      updateAlbumLatestEvent(cleanAlbumId, { type: 'track_failed', message: `Track ${track.track_number} failed: ${err.message}`, error: err.message });
+      await emit(onEvent, { type: 'track_failed', albumId: cleanAlbumId, songId: song.id, track, error: err.message });
+    }
+  }
+
+  const songs = getSongsForAlbum(cleanAlbumId);
+  const stillIncomplete = getIncompleteAlbumTracks(cleanAlbumId, plan);
+  const failed = songs.filter(song => song.pipeline_stage === 'album_track_failed');
+  const completed = songs.filter(isCompletedAlbumTrack);
+  const finalStatus = stillIncomplete.length === 0 && failed.length === 0
+    ? 'completed'
+    : (failed.length > 0 && completed.length === 0 ? 'failed' : (failed.length > 0 ? 'completed_with_failures' : 'generating_tracks'));
+  const financeSummary = rebuildAndPersistAlbumFinanceSummary({
+    albumId: cleanAlbumId,
+    costMode: album.cost_mode,
+    trackSongIds: songs.map(song => song.id),
+  });
+  const nextAfterResume = getIncompleteAlbumTracks(cleanAlbumId, plan)[0] || null;
+
+  updateAlbum(cleanAlbumId, {
+    status: finalStatus,
+    finance_summary: financeSummary,
+  });
+  updateAlbumLatestEvent(cleanAlbumId, { type: 'album_resume_complete', message: `Resume complete with status ${finalStatus}` });
+  await emit(onEvent, { type: 'album_resume_complete', albumId: cleanAlbumId, status: finalStatus, results: trackResults, financeSummary });
+
+  return {
+    albumId: cleanAlbumId,
+    status: finalStatus,
+    plan,
+    repair: repairResult,
+    ensured: songs,
+    resumed: trackResults,
+    skipped: songs.filter(song => !trackResults.some(result => result.songId === song.id)),
+    financeSummary,
+    generationStarted,
+    nextTrack: nextAfterResume ? nextAfterResume.track : null,
+    latestError: getAlbum(cleanAlbumId)?.shared_orchestration?.latest_error || null,
   };
 }
 
@@ -369,6 +531,93 @@ function estimateBrandInterpretationSavings(trackCount) {
   return Math.max(0, trackCount * PER_TRACK_AVOIDED_USD);
 }
 
+export function loadSavedAlbumPlan(albumOrId) {
+  const album = typeof albumOrId === 'string' ? getAlbum(albumOrId) : albumOrId;
+  const plan = album?.shared_orchestration?.plan;
+  if (!plan || !Array.isArray(plan.tracks) || plan.tracks.length === 0) {
+    throw new Error(`Album plan is missing for ${album?.id || albumOrId}`);
+  }
+  return plan;
+}
+
+export function ensureAlbumTrackJobs({ albumId, album = null, plan = null, brandProfileId = null, isTest = false } = {}) {
+  const resolvedAlbum = album || getAlbum(albumId);
+  if (!resolvedAlbum) throw new Error(`Album not found: ${albumId}`);
+  const resolvedPlan = plan || loadSavedAlbumPlan(resolvedAlbum);
+  const resolvedBrandProfileId = brandProfileId || resolvedAlbum.brand_profile_id || DEFAULT_PROFILE_ID;
+  const ensured = [];
+  for (const track of resolvedPlan.tracks) {
+    const trackNumber = Number(track.track_number);
+    const existing = getSongForAlbumTrack(albumId, trackNumber);
+    const songId = existing?.id || createTrackSongId(albumId, trackNumber);
+    upsertSong({
+      id: songId,
+      topic: existing?.topic || track.title,
+      title: existing?.title || track.title,
+      concept: existing?.concept || track.concept,
+      status: existing?.status || SONG_STATUSES.DRAFT,
+      brand_profile_id: existing?.brand_profile_id || resolvedBrandProfileId,
+      album_id: albumId,
+      track_number: trackNumber,
+      album_role: existing?.album_role || track.emotional_role,
+      inherited_album_plan_version: existing?.inherited_album_plan_version || resolvedPlan.plan_version || ALBUM_PLAN_VERSION,
+      is_test: isTest || resolvedAlbum.is_test,
+    });
+    ensured.push(getSongForAlbumTrack(albumId, trackNumber));
+  }
+  return ensured;
+}
+
+export function getIncompleteAlbumTracks(albumId, plan = null) {
+  const resolvedPlan = plan || loadSavedAlbumPlan(albumId);
+  return resolvedPlan.tracks
+    .map(track => ({ track, song: getSongForAlbumTrack(albumId, track.track_number) }))
+    .filter(({ song }) => !isCompletedAlbumTrack(song));
+}
+
+export function isCompletedAlbumTrack(song) {
+  return song?.pipeline_stage === 'album_track_generated';
+}
+
+function rebuildAndPersistAlbumFinanceSummary({ albumId, costMode, trackSongIds, cachedSavingsUsd = 0 }) {
+  const financeSummary = buildAlbumFinanceSummary({ albumId, costMode, trackSongIds, cachedSavingsUsd });
+  writeAlbumFinanceSummary(albumId, financeSummary);
+  return financeSummary;
+}
+
+function buildRepairBrandInterpretation({ album, brandProfile, brandProfileId }) {
+  return {
+    brand_profile_id: brandProfileId,
+    signature: album.shared_orchestration?.brand_signature || makeBrandInterpretationSignature(brandProfile),
+    summary: {
+      brand_name: brandProfile.brand_name,
+      character_name: brandProfile.character?.name || null,
+      music: brandProfile.music || null,
+      songwriting: brandProfile.songwriting || null,
+      audience: brandProfile.audience || null,
+      lyrics: brandProfile.lyrics || null,
+    },
+  };
+}
+
+function updateAlbumLatestEvent(albumId, event) {
+  const album = getAlbum(albumId);
+  if (!album) return;
+  const latestError = event.error || (event.clear_error ? null : album.shared_orchestration?.latest_error || null);
+  const persistedEvent = { ...event };
+  delete persistedEvent.clear_error;
+  updateAlbum(albumId, {
+    shared_orchestration: {
+      ...album.shared_orchestration,
+      latest_event: {
+        timestamp: new Date().toISOString(),
+        ...persistedEvent,
+      },
+      latest_error: latestError,
+    },
+  });
+}
+
 async function emit(onEvent, event) {
   if (typeof onEvent !== 'function') return;
   try {
@@ -379,10 +628,20 @@ async function emit(onEvent, event) {
 }
 
 export function getAlbumSummary(albumId) {
-  const album = getAlbum(albumId);
+  let album = getAlbum(albumId);
   if (!album) return null;
+  const songs = getSongsForAlbum(albumId);
+  const financeSummary = rebuildAndPersistAlbumFinanceSummary({
+    albumId,
+    costMode: album.cost_mode,
+    trackSongIds: songs.map(song => song.id),
+  });
+  if (JSON.stringify(album.finance_summary || {}) !== JSON.stringify(financeSummary)) {
+    updateAlbum(albumId, { finance_summary: financeSummary });
+    album = getAlbum(albumId);
+  }
   return {
     album,
-    songs: getSongsForAlbum(albumId),
+    songs,
   };
 }

@@ -26,6 +26,8 @@
     "new": "node src/orchestrator.js --new",
     "magic": "node src/scripts/run-magic-pipeline-service.js",
     "release-stage": "node src/scripts/run-magic-release-stage.js",
+    "album:repair": "node src/scripts/repair-album-batch.js",
+    "album:resume": "node src/scripts/repair-album-batch.js --resume",
     "magic:legacy": "node src/orchestrator.js --magic",
     "magic:workflow": "node src/scripts/run-magic-song-workflow.js",
     "pretelegram": "node scripts/ensure-node-runtime.js",

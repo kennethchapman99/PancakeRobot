@@ -85,6 +85,8 @@ import { PIPELINE_STAGES } from '../lib/release-selection/constants.js';
 import {
   ALBUM_COST_MODES,
   getAlbumSummary,
+  repairAlbumBatch,
+  resumeAlbumBatch,
   runAlbumBatch,
 } from '../services/album-batch-service.js';
 import { getAllAlbums } from '../shared/db.js';
@@ -352,6 +354,58 @@ app.get('/albums/:id', (req, res) => {
   const summary = getAlbumSummary(req.params.id);
   if (!summary) return res.status(404).render('404', { message: 'Album not found' });
   res.render('album-batch/detail', { ...summary });
+});
+
+app.post('/albums/:id/repair', (req, res) => {
+  const albumId = req.params.id;
+  const jobId = `albumrepair_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  albumBatchJobs.set(jobId, { status: 'running', events: [], albumId, error: null, startedAt: Date.now(), repair: true });
+
+  repairAlbumBatch({
+    albumId,
+    onEvent: (event) => {
+      const job = albumBatchJobs.get(jobId);
+      if (!job) return;
+      job.events.push(event);
+    },
+  }).then((result) => {
+    const job = albumBatchJobs.get(jobId);
+    if (job) {
+      job.status = result.status;
+      job.result = result;
+    }
+  }).catch((err) => {
+    const job = albumBatchJobs.get(jobId);
+    if (job) { job.status = 'error'; job.error = err.message; }
+  });
+
+  res.redirect(`/album-batch/jobs/${encodeURIComponent(jobId)}`);
+});
+
+app.post('/albums/:id/resume', (req, res) => {
+  const albumId = req.params.id;
+  const jobId = `albumresume_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  albumBatchJobs.set(jobId, { status: 'running', events: [], albumId, error: null, startedAt: Date.now(), resume: true });
+
+  resumeAlbumBatch({
+    albumId,
+    onEvent: (event) => {
+      const job = albumBatchJobs.get(jobId);
+      if (!job) return;
+      job.events.push(event);
+    },
+  }).then((result) => {
+    const job = albumBatchJobs.get(jobId);
+    if (job) {
+      job.status = result.status;
+      job.result = result;
+    }
+  }).catch((err) => {
+    const job = albumBatchJobs.get(jobId);
+    if (job) { job.status = 'error'; job.error = err.message; }
+  });
+
+  res.redirect(`/album-batch/jobs/${encodeURIComponent(jobId)}`);
 });
 
 // ── IDEA GENERATOR (AI pipeline) ───────────────────────────────

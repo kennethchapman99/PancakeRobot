@@ -444,9 +444,9 @@ export function buildAlbumFinanceSummary({
   const sharedSummary = summarizeCostEvents(readCostEventsForAlbum(albumId));
   // Album-scoped events that were *also* tagged to a song would already appear
   // in that song's summary; only count truly shared album-only thinking here.
+  const albumOnlyEvents = dedupeAlbumSharedCostEvents(sharedSummary.events.filter(event => !event.song_id));
   const sharedThinkingCostUsd = roundUsd(
-    sharedSummary.events
-      .filter(event => !event.song_id)
+    albumOnlyEvents
       .reduce((sum, event) => sum + Number(event.computed_cost_usd || 0), 0)
   );
 
@@ -484,6 +484,16 @@ export function buildAlbumFinanceSummary({
       over_budget: overBudget,
     },
   };
+}
+
+function dedupeAlbumSharedCostEvents(events = []) {
+  const hasVerifiedOrchestration = events.some(event =>
+    event.operation === 'anthropic_agent_run'
+    && event.pipeline_step === 'orchestration'
+    && event.pricing_source !== 'album_batch_service'
+  );
+  if (!hasVerifiedOrchestration) return events;
+  return events.filter(event => !(event.operation === 'album_plan_generated' && event.pricing_source === 'album_batch_service'));
 }
 
 export function writeAlbumFinanceSummary(albumId, summary) {

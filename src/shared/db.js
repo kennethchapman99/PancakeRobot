@@ -448,7 +448,9 @@ export function upsertSong(song) {
     ];
     for (const key of patchable) {
       if (song[key] !== undefined && song[key] !== null) {
-        updates[key] = key === 'status' ? normalizedStatus : song[key];
+        updates[key] = key === 'status'
+          ? normalizedStatus
+          : (key === 'is_test' ? (song[key] ? 1 : 0) : song[key]);
       }
     }
     if (song.marketing_links !== undefined) updates.marketing_links_json = stringifyOptionalJson(song.marketing_links);
@@ -598,6 +600,12 @@ export function getSongsForAlbum(albumId) {
     .prepare('SELECT * FROM songs WHERE album_id = ? ORDER BY COALESCE(track_number, 999), created_at ASC')
     .all(albumId)
     .map(parseSong);
+}
+
+export function getSongForAlbumTrack(albumId, trackNumber) {
+  return parseSong(getDb()
+    .prepare('SELECT * FROM songs WHERE album_id = ? AND track_number = ? ORDER BY created_at ASC LIMIT 1')
+    .get(albumId, Number(trackNumber)));
 }
 
 export function deleteAlbum(id, { detachSongs = true } = {}) {
