@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { marketingPack } from '../src/web/public/song-detail-marketing.js';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const repoRoot = path.resolve(import.meta.dirname, '..');
 
 function createElement(id) {
   return {
@@ -143,4 +147,13 @@ test('backend failure shows a visible error instead of a silent no-op', async t 
   assert.equal(controller.packState, 'error');
   assert.match(documentStub.elements.get(`pack-status-${songId}`).textContent, /simulated backend failure/i);
   assert.match(documentStub.elements.get(`pack-log-${songId}`).children.at(-1)?.textContent || '', /simulated backend failure/i);
+});
+
+test('song detail makes album inheritance explicit and removes competing song release controls', () => {
+  const source = fs.readFileSync(path.join(repoRoot, 'src/web/views/songs/detail.ejs'), 'utf8');
+
+  assert.match(source, /Album Release Context/);
+  assert.match(source, /inherits release media, DistroKid submission, HyperFollow, social readiness, and campaign context from the album/);
+  assert.match(source, /This track uses album media\. Change or rebuild it on the album page\./);
+  assert.match(source, /This track is submitted as part of its album/);
 });

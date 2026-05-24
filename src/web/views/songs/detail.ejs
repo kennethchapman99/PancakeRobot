@@ -34,6 +34,7 @@
     runQueued: './bin/pancakerobot distrokid:run-queued --limit 5 --dry-run',
     markSubmitted: `./bin/pancakerobot distrokid:mark-submitted --song-id ${song.id} --distrokid-url "URL_FROM_DISTROKID"`,
   };
+  const albumReleaseContext = albumContext || null;
 %>
 
 <div class="p-8 max-w-4xl" x-data="songDetail()" @keydown.escape.window="editOpen = false">
@@ -67,6 +68,7 @@
         ✏️ Edit Song
       </button>
       <% } %>
+      <a href="/releases/<%= albumReleaseContext ? 'album' : 'single' %>/<%= encodeURIComponent(albumReleaseContext ? albumReleaseContext.id : song.id) %>" class="border border-zinc-200 text-sm px-3 py-1.5 rounded-lg hover:bg-zinc-50 transition">Release Cockpit</a>
       <% if (!releaseLocked) { %>
       <!-- Generate / Regenerate -->
       <a href="/songs/<%= song.id %>/generate"
@@ -85,6 +87,21 @@
       </select>
     </div>
   </div>
+
+  <% if (albumReleaseContext) { %>
+  <section class="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Album Release Context</div>
+        <div class="mt-1 text-lg font-black text-zinc-900">
+          Track <%= song.track_number || '?' %> on <a href="/albums/<%= encodeURIComponent(albumReleaseContext.id) %>" class="text-indigo-700 hover:underline"><%= albumReleaseContext.album_title || albumReleaseContext.id %></a>
+        </div>
+        <p class="mt-1 text-sm text-indigo-900">This song inherits release media, DistroKid submission, HyperFollow, social readiness, and campaign context from the album.</p>
+      </div>
+      <a href="/albums/<%= encodeURIComponent(albumReleaseContext.id) %>" class="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700">Manage Album Release</a>
+    </div>
+  </section>
+  <% } %>
 
   <% const releaseRec = song.release_recommendation || null; %>
   <% const arInputs = song.marketing_inputs_from_ar || {}; %>
@@ -336,6 +353,17 @@
   </div>
   <% } %>
 
+  <% if (albumReleaseContext) { %>
+  <section class="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h2 class="text-sm font-bold text-zinc-900">DistroKid Automation</h2>
+        <p class="mt-1 text-sm text-zinc-600">This track is submitted as part of its album. Preview, live submit, HyperFollow, and campaign readiness are managed on the album detail page.</p>
+      </div>
+      <a href="/albums/<%= encodeURIComponent(albumReleaseContext.id) %>" class="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700">Open Album</a>
+    </div>
+  </section>
+  <% } else { %>
   <section class="mb-6 rounded-2xl border border-fuchsia-200 bg-white p-5 shadow-sm" x-data="distroKidAutomation('<%= song.id %>')">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div class="min-w-0">
@@ -394,6 +422,7 @@
       </div>
     </div>
   </section>
+  <% } %>
 
   <!-- Checklist progress banner -->
   <div class="bg-white border border-zinc-200 rounded-xl p-5 mb-6">

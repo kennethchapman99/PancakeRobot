@@ -27,6 +27,7 @@ import {
   getAllIdeas, getIdea, createIdea, updateIdea,
   deleteIdeas,
   getAllSongs, getSong, upsertSong, updateSongStatus, deleteSong,
+  assignSongsToAlbum, createAlbum, reorderAlbumTracks, updateAlbum,
   getAssetsForSong, createAsset,
   getPublishingChecklist, updateChecklistItem, getChecklistProgress,
   getReleaseLinks, upsertReleaseLink,
@@ -100,7 +101,18 @@ import {
   resumeAlbumBatch,
   runAlbumBatch,
 } from '../services/album-batch-service.js';
-import { getAllAlbums, getAlbum } from '../shared/db.js';
+import { getAllAlbums, getAlbum, getSongsForAlbum } from '../shared/db.js';
+import {
+  assertReleaseLiveSubmitReady,
+  buildReleaseCockpitViewModel,
+  buildReleasePackageForCockpit,
+  listReleaseCockpitEntries,
+  logReleaseCockpitEvent,
+} from '../shared/release-cockpit.js';
+import {
+  createOutreachRun,
+  getCanonicalEmailOutletsForSelection,
+} from '../agents/marketing-outreach-run-agent.js';
 
 // ── Base image upload config ───────────────────────────────────────
 const ALLOWED_IMG_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
@@ -139,6 +151,15 @@ const albumImageUpload = _multer({
       cb(null, `primary-image${ext}`);
     },
   }),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, ALLOWED_IMG_EXTS.has(ext));
+  },
+});
+
+const albumCreateImageUpload = _multer({
+  storage: _multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -247,6 +268,113 @@ app.get('/', (req, res) => {
   }));
   const recentIdeas = getAllIdeas().slice(0, 5);
   res.render('dashboard', { stats, recentSongs, recentIdeas });
+});
+
+// ── RELEASE COCKPIT ─────────────────────────────────────────────
+app.get('/releases', (req, res) => {
+  res.render('releases/index', {
+    releases: listReleaseCockpitEntries(),
+  });
+});
+
+app.get('/releases/:type/:id', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).render('404', { message: 'Release not found' });
+  res.render('releases/detail', { cockpit });
+});
+
+app.post('/releases/:type/:id/actions/readiness', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  logReleaseCockpitEvent(cockpit.type, cockpit.id, 'readiness_check', cockpit.canLiveSubmit ? 'complete' : 'blocked', cockpit.canLiveSubmit ? 'Readiness check passed.' : `Readiness check found ${cockpit.blockers.length} blocker(s).`, { blockers: cockpit.blockers });
+  respondReleaseAction(req, res, cockpit, 'Readiness check complete.');
+});
+
+app.post('/releases/:type/:id/actions/package', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const result = await buildReleasePackageForCockpit(cockpit.type, cockpit.id);
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'build_package', 'complete', `Built release package for ${result.trackCount} track(s).`, result);
+    respondReleaseAction(req, res, cockpit, 'Release package built.');
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'build_package', 'failed', error.message);
+    if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/actions/distrokid-preview', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const result = cockpit.type === 'album'
+      ? await runDistroKidAlbumAutomation(cockpit.id, { mode: 'preview' })
+      : await runDistroKidSongAutomation(cockpit.id, { mode: 'preview' });
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_preview', 'complete', 'DistroKid automation preview finished.', result);
+    respondReleaseAction(req, res, cockpit, 'DistroKid preview finished.');
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_preview', 'failed', error.message);
+    if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/actions/distrokid-live-submit', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    assertReleaseLiveSubmitReady(cockpit.type, cockpit.id);
+    if (req.body?.confirm !== 'true' && req.body?.confirm !== true) throw new Error('Live DistroKid submit requires explicit confirmation.');
+    const result = cockpit.type === 'album'
+      ? await runDistroKidAlbumAutomation(cockpit.id, { mode: 'live', confirm: true })
+      : await runDistroKidSongAutomation(cockpit.id, { mode: 'live', confirm: true });
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_live_submit', 'complete', 'DistroKid live submit finished.', result);
+    respondReleaseAction(req, res, cockpit, 'DistroKid live submit finished.');
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_live_submit', 'blocked', error.message);
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/actions/hyperfollow', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const url = req.body?.hyperfollow_url || req.body?.url;
+    const results = [];
+    for (const track of cockpit.tracks) results.push(await captureHyperFollowLink(track.id, { hyperfollowUrl: url }));
+    const captured = results.find(result => result.url) || results[0] || { url: null };
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'hyperfollow', captured.url ? 'complete' : 'pending', captured.url ? 'HyperFollow URL saved.' : 'HyperFollow URL is not available yet.', captured);
+    respondReleaseAction(req, res, cockpit, captured.url ? 'HyperFollow URL saved.' : 'HyperFollow URL is not available yet.');
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'hyperfollow', 'failed', error.message);
+    if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/actions/outreach', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const outlets = getCanonicalEmailOutletsForSelection().slice(0, 25);
+    if (!outlets.length) throw new Error('No approved email outreach outlets are available.');
+    const result = createOutreachRun({
+      song_ids: cockpit.tracks.map(track => track.id),
+      outlet_ids: outlets.map(outlet => outlet.id),
+      mode: cockpit.type === 'album' ? 'bundle' : 'single_release',
+      dry_run: true,
+      allow_same_release: false,
+    });
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'outreach_campaign', 'complete', 'Draft outreach campaign built.', result);
+    respondReleaseAction(req, res, cockpit, 'Draft outreach campaign built.');
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'outreach_campaign', 'blocked', error.message);
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  }
 });
 
 app.get('/magic-song', (req, res) => {
@@ -386,7 +514,57 @@ app.get('/api/album-batch/jobs/:jobId', (req, res) => {
 app.get('/albums/:id', (req, res) => {
   const summary = getAlbumSummary(req.params.id);
   if (!summary) return res.status(404).render('404', { message: 'Album not found' });
-  res.render('album-batch/detail', { ...summary, albumAssets: getAlbumAssetState(req.params.id) });
+  const albumTracks = getSongsForAlbum(req.params.id);
+  res.render('album-batch/detail', {
+    ...summary,
+    songs: albumTracks,
+    albumAssets: getAlbumAssetState(req.params.id),
+    albumSmartLink: buildAlbumSmartLink(albumTracks),
+  });
+});
+
+app.post('/albums/add-tracks', albumCreateImageUpload.single('primary_image'), (req, res) => {
+  try {
+    const songIds = normalizeSongIdList(req.body?.song_ids || req.body?.songIds);
+    const mode = req.body?.album_mode === 'existing' ? 'existing' : 'new';
+    const warnings = validateAlbumTrackAssignment(songIds, { targetAlbumId: mode === 'existing' ? req.body?.existing_album_id : null });
+    if (warnings.length && req.body?.allow_conflicts !== 'on' && req.body?.allow_conflicts !== true) {
+      return res.status(400).send(`Album assignment needs confirmation: ${warnings.join('; ')}`);
+    }
+
+    let albumId = null;
+    if (mode === 'existing') {
+      albumId = String(req.body?.existing_album_id || '').trim();
+      if (!getAlbum(albumId)) return res.status(404).send('Album not found');
+      const existingTracks = getSongsForAlbum(albumId);
+      assignSongsToAlbum(albumId, songIds, {
+        startTrackNumber: existingTracks.reduce((max, song) => Math.max(max, Number(song.track_number) || 0), 0) + 1,
+      });
+      if (req.body?.release_date) updateAlbum(albumId, { release_date: req.body.release_date });
+    } else {
+      const title = String(req.body?.album_title || '').trim();
+      if (!title) return res.status(400).send('Album title is required');
+      albumId = createAlbum({
+        album_title: title,
+        album_theme: String(req.body?.album_theme || '').trim() || null,
+        brand_profile_id: String(req.body?.brand_profile_id || '').trim() || getActiveProfileId(),
+        release_date: String(req.body?.release_date || '').trim() || null,
+        number_of_songs: songIds.length,
+        status: 'assembled',
+        cost_mode: 'standard',
+      });
+      assignSongsToAlbum(albumId, songIds, { startTrackNumber: 1 });
+    }
+
+    const orderedSongIds = parseTrackOrderFromBody(req.body, songIds);
+    if (orderedSongIds.length) reorderAlbumTracks(albumId, orderedSongIds);
+    if (req.file) saveUploadedAlbumPrimaryImage(albumId, req.file);
+
+    res.redirect(303, `/albums/${encodeURIComponent(albumId)}`);
+  } catch (error) {
+    const status = /not found/i.test(error.message) ? 404 : 400;
+    res.status(status).send(error.message);
+  }
 });
 
 app.post('/api/albums/:id/primary-image', (req, res) => {
@@ -494,6 +672,23 @@ app.post('/albums/:id/repair', (req, res) => {
   });
 
   res.redirect(`/album-batch/jobs/${encodeURIComponent(jobId)}`);
+});
+
+app.post('/albums/:id/tracks/order', (req, res) => {
+  try {
+    const tracks = getSongsForAlbum(req.params.id);
+    const ordered = tracks
+      .map(song => ({
+        id: song.id,
+        order: Number(req.body?.[`track_order_${song.id}`]) || Number(song.track_number) || 999,
+      }))
+      .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+      .map(item => item.id);
+    reorderAlbumTracks(req.params.id, ordered);
+    res.redirect(303, `/albums/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    res.status(/not found/i.test(error.message) ? 404 : 400).send(error.message);
+  }
 });
 
 app.post('/albums/:id/resume', (req, res) => {
@@ -955,6 +1150,7 @@ app.get('/songs', (req, res) => {
       releaseLinkCount: links.length,
       hasMarketingPack: marketingPack.status === 'built',
       hasLyrics: Boolean(fsAssets.lyrics),
+      hasMetadata: Boolean(fsAssets.metadata),
       hasArtwork: Boolean(previewImageUrl),
       lastOutreachAt: s.last_outreach?.contacted_at || s.last_outreach?.updated_at || null,
       distrokidJob: distrokidJobsBySongId.get(s.id) || null,
@@ -1007,6 +1203,7 @@ app.get('/songs', (req, res) => {
   }
 
   const profiles = listBrandProfiles();
+  const albums = getAllAlbums();
   res.render('songs/index', {
     songs,
     q: q || '',
@@ -1020,6 +1217,7 @@ app.get('/songs', (req, res) => {
     sort: sort || '',
     totalCounts,
     profiles,
+    albums,
   });
 });
 
@@ -1066,6 +1264,7 @@ app.get('/songs/:id', (req, res) => {
   }
   const releaseMarketing = getOrCreateReleaseMarketing(song.id);
   const distrokidJob = getDistroKidJob(song.id);
+  const albumContext = song.album_id ? getAlbum(song.album_id) : null;
   const requestedTab = String(req.query.tab || '').toLowerCase();
   const releaseSelectionSummary = getReleaseRecommendationSummary(song);
   const initialTab = resolveSongDetailInitialTab({
@@ -1080,6 +1279,7 @@ app.get('/songs/:id', (req, res) => {
     song, idea, assets, checklist, progress, links, snapshots, fsAssets,
     lyricsContent, audioPromptContent, metadataParsed, brandParsed,
     marketingPack, baseImage, releaseAssetState, releaseOutreachRows, marketingKit, releaseMarketing,
+    albumContext,
     distrokidJob,
     distrokidRecentLog: summarizeDistroKidRunLog(song.id),
     releaseSelectionSummary,
@@ -1848,6 +2048,22 @@ app.post('/api/distrokid/albums/:albumId/live-submit', async (req, res) => {
   }
 });
 
+app.post('/api/distrokid/albums/:albumId/hyperfollow', async (req, res) => {
+  try {
+    const tracks = getSongsForAlbum(req.params.albumId);
+    if (!tracks.length) return res.status(400).json({ ok: false, message: 'Album has no tracks.', errors: ['Album has no tracks.'] });
+    const results = [];
+    for (const track of tracks) {
+      results.push(await captureHyperFollowLink(track.id, { hyperfollowUrl: req.body?.hyperfollow_url || req.body?.url }));
+    }
+    const hyperfollow = results.find(result => result.url) || results[0] || { status: 'submitted_pending_hyperfollow', url: null };
+    res.json({ ok: true, message: hyperfollow.url ? 'HyperFollow link saved for album tracks.' : 'HyperFollow link is not available yet.', hyperfollow, errors: [] });
+  } catch (error) {
+    const status = /not found/i.test(error.message) ? 404 : 500;
+    res.status(status).json({ ok: false, message: 'Album HyperFollow capture failed.', errors: [error.message], error: error.message });
+  }
+});
+
 app.post('/api/distrokid/jobs/:songId/mark-submitted', (req, res) => {
   try {
     const distrokidUrl = String(req.body?.distrokid_url || req.body?.distrokidUrl || req.body?.url || '').trim();
@@ -1946,6 +2162,86 @@ app.use((req, res) => {
 const OUTPUT_DIR = join(__dirname, '../../output');
 function toWebUrl(absPath) {
   return '/media/' + absPath.replace(OUTPUT_DIR, '').replace(/\\/g, '/').replace(/^\//, '');
+}
+
+function normalizeSongIdList(input) {
+  const raw = Array.isArray(input)
+    ? input
+    : String(input || '').split(',');
+  return [...new Set(raw.map(id => String(id || '').trim()).filter(Boolean))];
+}
+
+function validateAlbumTrackAssignment(songIds, { targetAlbumId = null } = {}) {
+  const warnings = [];
+  const songs = songIds.map(id => getSong(id)).filter(Boolean);
+  if (songs.length !== songIds.length) warnings.push('One or more selected songs were not found');
+
+  const brands = new Set(songs.map(song => song.brand_profile_id || '').filter(Boolean));
+  if (brands.size > 1) warnings.push('Selected songs use mixed brand profiles');
+
+  const assigned = songs.filter(song => song.album_id && song.album_id !== targetAlbumId);
+  if (assigned.length) warnings.push(`${assigned.length} selected song${assigned.length === 1 ? ' is' : 's are'} already assigned to another album`);
+
+  const missingAudio = [];
+  const missingMetadata = [];
+  const missingTitle = [];
+  for (const song of songs) {
+    const songDir = join(__dirname, '../../output/songs', song.id);
+    const fsAssets = scanSongDir(songDir);
+    if (!(fsAssets.audioFiles || []).length) missingAudio.push(song.id);
+    if (!fsAssets.metadata) missingMetadata.push(song.id);
+    if (!song.title && !song.topic) missingTitle.push(song.id);
+  }
+  if (missingAudio.length) warnings.push(`${missingAudio.length} selected song${missingAudio.length === 1 ? ' is' : 's are'} missing audio files`);
+  if (missingMetadata.length) warnings.push(`${missingMetadata.length} selected song${missingMetadata.length === 1 ? ' is' : 's are'} missing metadata files`);
+  if (missingTitle.length) warnings.push(`${missingTitle.length} selected song${missingTitle.length === 1 ? ' is' : 's are'} missing title metadata`);
+  return warnings;
+}
+
+function parseTrackOrderFromBody(body, fallbackSongIds) {
+  return fallbackSongIds
+    .map((id, index) => ({
+      id,
+      order: Number(body?.[`track_order_${id}`]) || index + 1,
+    }))
+    .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+    .map(item => item.id);
+}
+
+function saveUploadedAlbumPrimaryImage(albumId, file) {
+  const ext = path.extname(file.originalname || '').toLowerCase() || '.png';
+  if (!ALLOWED_IMG_EXTS.has(ext)) throw new Error('No valid image file provided (png/jpg/jpeg/webp)');
+  const refDir = join(__dirname, '../../output/albums', albumId, 'reference');
+  fs.mkdirSync(refDir, { recursive: true });
+  for (const name of fs.readdirSync(refDir)) {
+    if (/^primary-image\.(png|jpe?g|webp)$/i.test(name)) fs.unlinkSync(join(refDir, name));
+  }
+  fs.writeFileSync(join(refDir, `primary-image${ext}`), file.buffer);
+  markReleaseAssetsStale('album', albumId);
+}
+
+function buildAlbumSmartLink(tracks) {
+  for (const track of tracks || []) {
+    const link = getReleaseLinks(track.id).find(item => /hyperfollow/i.test(item.platform || '') || /hyperfollow/i.test(item.url || ''));
+    if (link?.url) return link.url;
+    if (track.marketing_links?.smart_link) return track.marketing_links.smart_link;
+  }
+  return '';
+}
+
+function wantsJson(req) {
+  return String(req.headers.accept || '').includes('application/json') || req.xhr;
+}
+
+function respondReleaseAction(req, res, cockpit, message) {
+  if (wantsJson(req)) {
+    return res.json({
+      ok: true,
+      message,
+      cockpit: buildReleaseCockpitViewModel(cockpit.type, cockpit.id),
+    });
+  }
+  return res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
 }
 
 function scanSongDir(songDir) {

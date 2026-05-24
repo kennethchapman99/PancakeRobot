@@ -1,0 +1,35 @@
+<% title = 'Release Cockpit' %>
+<div class="p-8 max-w-6xl">
+  <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <div>
+      <h1 class="text-3xl font-black tracking-tight text-zinc-900">Release Cockpit</h1>
+      <p class="mt-2 text-sm text-zinc-600">Canonical release management for albums and singles.</p>
+    </div>
+  </div>
+
+  <section class="mt-6 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+    <div class="grid grid-cols-[1fr_120px_120px_120px] gap-3 border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <div>Release</div>
+      <div>Type</div>
+      <div>Readiness</div>
+      <div>Release Date</div>
+    </div>
+    <% if (releases.length) { %>
+      <% releases.forEach(release => { %>
+        <a href="/releases/<%= encodeURIComponent(release.type) %>/<%= encodeURIComponent(release.id) %>" class="grid grid-cols-[1fr_120px_120px_120px] gap-3 border-b border-zinc-100 px-4 py-3 text-sm hover:bg-zinc-50">
+          <div class="min-w-0">
+            <div class="truncate font-semibold text-zinc-900"><%= release.title %></div>
+            <div class="mt-0.5 truncate text-xs text-zinc-500"><%= release.id %></div>
+          </div>
+          <div><span class="badge-gray"><%= release.type === 'album' ? 'Album' : 'Single' %></span></div>
+          <div>
+            <span class="<%= release.blockerCount ? 'badge-yellow' : 'badge-green' %>"><%= release.stageSummary %></span>
+          </div>
+          <div class="text-zinc-600"><%= release.releaseDate || '—' %></div>
+        </a>
+      <% }) %>
+    <% } else { %>
+      <div class="p-8 text-center text-sm text-zinc-500">No releases are available yet.</div>
+    <% } %>
+  </section>
+</div>

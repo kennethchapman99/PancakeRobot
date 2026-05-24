@@ -1,0 +1,126 @@
+<% title = cockpit.title + ' Release Cockpit' %>
+<%
+  const statusClass = (status) => ({
+    complete: 'badge-green',
+    blocked: 'badge-red',
+    needs_action: 'badge-yellow',
+    placeholder: 'badge-purple',
+    not_started: 'badge-gray',
+    pending: 'badge-yellow',
+    failed: 'badge-red',
+  }[status] || 'badge-gray');
+%>
+<div class="p-8 max-w-7xl">
+  <a href="/releases" class="mb-4 inline-flex text-sm text-zinc-500 hover:text-zinc-700">← Release Cockpit</a>
+
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+      <div class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500"><%= cockpit.type === 'album' ? 'Album Release' : 'Single Release' %></div>
+      <h1 class="mt-1 text-3xl font-black tracking-tight text-zinc-900"><%= cockpit.title %></h1>
+      <div class="mt-2 flex flex-wrap gap-2 text-sm text-zinc-600">
+        <span><%= cockpit.tracks.length %> track<%= cockpit.tracks.length === 1 ? '' : 's' %></span>
+        <span>·</span>
+        <span>Release date <%= cockpit.releaseDate || '—' %></span>
+        <% if (cockpit.brandProfileId) { %><span>·</span><span>Brand profile <%= cockpit.brandProfileId %></span><% } %>
+      </div>
+    </div>
+    <div class="rounded-xl border <%= cockpit.canLiveSubmit ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' %> px-4 py-3 text-sm">
+      <div class="font-bold <%= cockpit.canLiveSubmit ? 'text-emerald-800' : 'text-amber-900' %>"><%= cockpit.canLiveSubmit ? 'Live submit unblocked' : 'Live submit blocked' %></div>
+      <div class="mt-1 text-xs <%= cockpit.canLiveSubmit ? 'text-emerald-700' : 'text-amber-800' %>"><%= cockpit.blockers.length ? cockpit.blockers.join('; ') : 'Metadata, audio, and release media are ready.' %></div>
+    </div>
+  </div>
+
+  <section class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="rounded-xl border border-zinc-200 bg-white p-4">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">Release Readiness</h2>
+        <form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/readiness">
+          <button class="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold hover:bg-zinc-50">Run Readiness Check</button>
+        </form>
+      </div>
+      <div class="mt-4 divide-y divide-zinc-100">
+        <% cockpit.stages.forEach(stage => { %>
+          <div class="grid gap-3 py-3 md:grid-cols-[220px_120px_minmax(0,1fr)] md:items-start">
+            <div class="font-semibold text-sm text-zinc-900"><%= stage.label %></div>
+            <div><span class="<%= statusClass(stage.status) %>"><%= stage.status.replace(/_/g, ' ') %></span></div>
+            <div class="text-sm text-zinc-600">
+              <% if (stage.issues.length) { %>
+                <%= stage.issues.join('; ') %>
+              <% } else { %>
+                Ready
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <aside class="rounded-xl border border-zinc-200 bg-white p-4">
+      <h2 class="text-lg font-bold">Next Actions</h2>
+      <div class="mt-1 text-xs text-zinc-500">Run DistroKid live submit requires explicit confirmation before any external submission.</div>
+      <div class="mt-4 space-y-2">
+        <% cockpit.nextActions.forEach(action => { %>
+          <% if (action.placeholder) { %>
+            <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2">
+              <div class="text-sm font-semibold text-zinc-600"><%= action.label %></div>
+              <div class="mt-0.5 text-xs text-zinc-500"><%= action.disabledReason %></div>
+            </div>
+          <% } else { %>
+            <form method="POST" action="<%= action.url %>" onsubmit="<%= action.confirmation ? `return confirm('${action.confirmation.replace(/'/g, "\\'")}')` : 'return true' %>">
+              <% if (action.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
+              <button <%= action.enabled ? '' : 'disabled' %> class="<%= action.key === 'live_submit' ? 'bg-zinc-900 text-white hover:bg-zinc-700' : 'border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50' %> w-full rounded-lg px-3 py-2 text-left text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                <%= action.label %>
+              </button>
+              <% if (action.disabledReason) { %><div class="mt-1 text-xs text-amber-700"><%= action.disabledReason %></div><% } %>
+            </form>
+          <% } %>
+        <% }) %>
+      </div>
+      <form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/hyperfollow" class="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+        <label class="text-xs font-semibold text-zinc-600" for="hyperfollow-url">HyperFollow URL</label>
+        <input id="hyperfollow-url" name="hyperfollow_url" value="<%= cockpit.hyperfollow?.url || '' %>" placeholder="https://distrokid.com/hyperfollow/..." class="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs">
+        <button class="mt-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-zinc-50">Save / Refresh</button>
+      </form>
+    </aside>
+  </section>
+
+  <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-lg font-bold">Tracks</h2>
+      <% if (cockpit.type === 'album') { %><a href="/albums/<%= encodeURIComponent(cockpit.id) %>" class="text-sm font-semibold text-indigo-700 hover:underline">Open album detail</a><% } %>
+    </div>
+    <div class="mt-4 divide-y divide-zinc-100">
+      <% cockpit.tracks.forEach(track => { %>
+        <div class="grid gap-3 py-3 md:grid-cols-[70px_minmax(0,1fr)_160px_160px] md:items-center">
+          <div class="text-sm font-bold text-zinc-500">#<%= track.track_number || 1 %></div>
+          <div class="min-w-0">
+            <a href="/songs/<%= encodeURIComponent(track.id) %>" class="truncate text-sm font-semibold text-indigo-700 hover:underline"><%= track.title || track.topic || track.id %></a>
+            <div class="mt-0.5 text-xs text-zinc-500"><%= track.id %></div>
+          </div>
+          <div><span class="<%= (track.fsAssets.audioFiles || []).length ? 'badge-green' : 'badge-red' %>">Audio <%= (track.fsAssets.audioFiles || []).length ? 'present' : 'missing' %></span></div>
+          <div><span class="<%= track.fsAssets.metadata || track.metadata_path ? 'badge-green' : 'badge-red' %>">Metadata <%= track.fsAssets.metadata || track.metadata_path ? 'ready' : 'missing' %></span></div>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
+    <h2 class="text-lg font-bold">Execution Log</h2>
+    <% if (cockpit.logs.length) { %>
+      <div class="mt-4 space-y-2">
+        <% cockpit.logs.forEach(log => { %>
+          <div class="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-sm">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="<%= statusClass(log.status) %>"><%= log.status %></span>
+              <span class="font-semibold text-zinc-900"><%= log.action %></span>
+              <span class="text-xs text-zinc-500"><%= formatDateTime(log.created_at) %></span>
+            </div>
+            <div class="mt-1 text-zinc-600"><%= log.message || '—' %></div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="mt-3 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-500">No cockpit actions have run yet.</div>
+    <% } %>
+  </section>
+</div>
