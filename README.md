@@ -22,7 +22,7 @@ Seven specialized agents handle the pipeline:
 | Brand Manager | Brand bible guardian, scores every song 0–100 |
 | Lyricist | Writes lyrics + Suno/Udio audio generation prompts |
 | Product Manager | YouTube/Spotify metadata, SEO, distribution research |
-| Creative Manager | AI thumbnail prompts + Cloudflare image generation |
+| Creative Manager | AI prompt guidance and release asset source art |
 | Financial Manager | Cost tracking, service research, visual reports |
 | Ops Manager | QA checklist, human task instructions |
 
@@ -59,7 +59,7 @@ The automatic hook runs inside the main generation pipeline immediately after au
 
 ### 1. Prerequisites
 
-- Node.js 18+
+- The repo launcher installs and uses Node.js 22.22.2 locally.
 - An Anthropic API key (with access to the `managed-agents-2026-04-01` beta)
 
 ### 2. Install dependencies
@@ -82,15 +82,15 @@ Edit `.env`:
 ```env
 ANTHROPIC_API_KEY=sk-ant-api03-...
 
-# Optional — required for automatic thumbnail generation
-CF_ACCOUNT_ID=your_cloudflare_account_id
-CF_API_TOKEN=your_cloudflare_api_token
+# Optional — preferred for generated album/single cover art
+OPENAI_API_KEY=sk-...
+OPENAI_IMAGE_MODEL=gpt-image-1.5
 ```
 
 ### 4. Run first-time setup
 
 ```bash
-node src/orchestrator.js --setup
+./bin/pancakerobot setup
 ```
 
 This will:
@@ -104,19 +104,33 @@ Agent IDs and environment IDs are stored in `music-pipeline.config.json` — the
 
 ---
 
-## Getting Free Cloudflare Credentials (for thumbnails)
+## Release Images and Asset Packs
 
-Cloudflare Workers AI gives you **100,000 free image generations per day** using Flux Schnell.
+The normal album/single asset workflow is:
 
-1. Sign up at [dash.cloudflare.com](https://dash.cloudflare.com) (free account)
-2. Go to **Workers & Pages → Workers AI**
-3. Your **Account ID** is shown in the right sidebar of any Workers page (or in the URL: `dash.cloudflare.com/{account_id}/...`)
-4. Create an API token:
-   - Go to **My Profile → API Tokens → Create Token**
-   - Use the **"Workers AI"** template, or create a custom token with `Workers AI - Run` permission
-5. Add both to your `.env` file
+1. Open a song detail page or album detail page.
+2. In the marketing/assets panel, choose a primary image source:
+   - Generate with OpenAI image generation (`OPENAI_API_KEY`, optional `OPENAI_IMAGE_MODEL=gpt-image-1.5`).
+   - Upload a PNG, JPG/JPEG, or WEBP image.
+   - Reuse the repo base image library in `base images/`.
+3. Generate derivatives.
+4. Preview or download the asset pack.
 
-If credentials aren't set, the pipeline still runs — the creative manager writes image prompt instructions to `output/songs/{songId}/thumbnails/THUMBNAIL_INSTRUCTIONS.md` so you can generate images manually.
+Generated derivatives:
+
+- Spotify / generic DSP cover: `spotify-cover-3000x3000.png`
+- YouTube thumbnail: `youtube-thumbnail-1280x720.png`
+- Instagram square: `instagram-square-1080x1080.png`
+- Instagram story/reel vertical: `instagram-vertical-1080x1920.png`
+- Facebook post: `facebook-post-1200x630.png`
+
+Cloudflare image generation is not part of the main release image pipeline. The only supported automatic provider in the normal UI is OpenAI image generation; manual upload and base-image selection work without any image provider configured. A legacy Cloudflare provider remains hidden behind `PANCAKE_ENABLE_LEGACY_CLOUDFLARE_IMAGE=1` for debugging old flows.
+
+Smoke test:
+
+```bash
+./bin/pancakerobot smoke:release-assets
+```
 
 ---
 
@@ -124,38 +138,40 @@ If credentials aren't set, the pipeline still runs — the creative manager writ
 
 ```bash
 # First-time setup (run once)
-node src/orchestrator.js --setup
+./bin/pancakerobot setup
 
 # Generate a new song (full pipeline)
-node src/orchestrator.js --new "dinosaurs"
-node src/orchestrator.js --new "brushing teeth"
-node src/orchestrator.js --new "sharing with friends"
+./bin/pancakerobot new "dinosaurs"
+./bin/pancakerobot new "brushing teeth"
+./bin/pancakerobot new "sharing with friends"
 
 # Run the one-click magic pipeline
-node src/orchestrator.js --magic "dinosaurs"
-npm run magic -- "sharing with friends"
+./bin/pancakerobot magic "dinosaurs"
+
+# Start the app
+./bin/pancakerobot web
 
 # Refresh market research
-node src/orchestrator.js --research
+./bin/pancakerobot research
 
 # Generate financial report
-node src/orchestrator.js --report
+./bin/pancakerobot report
 
 # List all songs with status
-node src/orchestrator.js --list
+./bin/pancakerobot list
 
 # Run release-selection analysis manually
 npm run release-selection -- --song SONG_1234567890_abc123
 npm run release-selection -- --recent
 
 # Approve a song for distribution
-node src/orchestrator.js --approve SONG_1234567890_abc123
+./bin/pancakerobot approve SONG_1234567890_abc123
 
 # Reject a song
-node src/orchestrator.js --reject SONG_1234567890_abc123 "Topic too mature for age group"
+./bin/pancakerobot reject SONG_1234567890_abc123 "Topic too mature for age group"
 
 # Start recurring task scheduler (keeps running)
-node src/orchestrator.js --schedule
+./bin/pancakerobot schedule
 ```
 
 ---
@@ -171,12 +187,12 @@ node src/orchestrator.js --schedule
 | Creative Manager | ~$0.05 | Image prompt generation |
 | Ops Manager | ~$0.05 | QA + human task instructions |
 | **AI pipeline total** | **~$0.50–$0.70** | |
-| Thumbnail generation | **$0.00** | Cloudflare free tier (100k/day) |
+| Release image generation | varies | Optional OpenAI image generation, or $0 with manual upload/base images |
 | Music generation | **$0.00–$0.10** | Suno free tier or paid |
 | Distribution | varies | Based on the active profile's distributor |
 | **Total per song** | **~$0.50–$0.80** | |
 
-Costs are tracked per-agent in SQLite and visualized in the financial report. Run `node src/orchestrator.js --report` at any time to see the breakdown.
+Costs are tracked per-agent in SQLite and visualized in the financial report. Run `./bin/pancakerobot report` at any time to see the breakdown.
 
 ---
 
@@ -209,8 +225,8 @@ Decision:
 You can also approve/reject after the fact:
 
 ```bash
-node src/orchestrator.js --approve SONG_1234567890_abc123
-node src/orchestrator.js --reject SONG_1234567890_abc123 "Too similar to existing song"
+./bin/pancakerobot approve SONG_1234567890_abc123
+./bin/pancakerobot reject SONG_1234567890_abc123 "Too similar to existing song"
 ```
 
 ---
@@ -227,12 +243,19 @@ output/
 │       ├── audio-prompt.md              # Ready-to-paste Suno/Udio prompt
 │       ├── metadata.json                # YouTube, Spotify, Apple Music metadata
 │       ├── qa-report.json               # Automated QA checklist results
-│       └── thumbnails/
-│           ├── image-prompts.json       # AI-generated image prompts
-│           ├── youtube_landscape-base.png  # 1280x720 (if CF configured)
-│           ├── spotify_square-base.png     # 3000x3000 (if CF configured)
-│           ├── apple_music_square-base.png # 3000x3000 (if CF configured)
-│           └── THUMBNAIL_INSTRUCTIONS.md   # Manual prompts (if CF not configured)
+│       └── reference/
+│           ├── base-image.png           # selected primary cover image
+│           └── base-image.metadata.json # OpenAI generation metadata when used
+├── marketing-ready/
+│   └── SONG_1234567890_abc123/
+│       ├── spotify-cover-3000x3000.png
+│       ├── youtube-thumbnail-1280x720.png
+│       ├── facebook-post-1200x630.png
+│       ├── instagram/
+│       │   ├── instagram-square-1080x1080.png
+│       │   └── instagram-vertical-1080x1920.png
+│       ├── metadata.json
+│       └── index.html
 ├── human-tasks/
 │   └── SONG_1234567890_abc123-human-tasks.md  # Your to-do list
 ├── reports/
@@ -261,7 +284,7 @@ The report shows:
 - **Spend Over Time** — daily spend + cumulative curve
 - **Service Research** — comparison of music generation, distribution, and image services with free tier info
 
-The report regenerates automatically after every song pipeline completes. Run `node src/orchestrator.js --report` to regenerate on demand with AI cost-reduction recommendations.
+The report regenerates automatically after every song pipeline completes. Run `./bin/pancakerobot report` to regenerate on demand with AI cost-reduction recommendations.
 
 ---
 
@@ -270,7 +293,7 @@ The report regenerates automatically after every song pipeline completes. Run `n
 The scheduler keeps the pipeline current without manual intervention:
 
 ```bash
-node src/orchestrator.js --schedule
+./bin/pancakerobot schedule
 ```
 
 | Task | Schedule | What it does |
@@ -284,7 +307,7 @@ The scheduler blocks the terminal. Use a process manager (PM2, systemd, launchd)
 ```bash
 # PM2 example
 npm install -g pm2
-pm2 start "node src/orchestrator.js --schedule" --name music-pipeline-scheduler
+pm2 start "./bin/pancakerobot schedule" --name music-pipeline-scheduler
 pm2 save
 pm2 startup
 ```
@@ -296,9 +319,9 @@ pm2 startup
 Just pass any topic to `--new`:
 
 ```bash
-node src/orchestrator.js --new "a serious piano ballad about leaving home"
-node src/orchestrator.js --new "old-school cypher about building something from nothing"
-node src/orchestrator.js --new "late-night synth pop song about starting over"
+./bin/pancakerobot new "a serious piano ballad about leaving home"
+./bin/pancakerobot new "old-school cypher about building something from nothing"
+./bin/pancakerobot new "late-night synth pop song about starting over"
 ```
 
 Topics work best when they are:

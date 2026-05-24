@@ -26,11 +26,11 @@ import {
   writeText,
 } from './lib.mjs';
 
-const DRY_RUN_ALWAYS = true;
-
 const { values } = parseArgs({
   manifest: { type: 'string' },
   'dry-run': { type: 'boolean', default: true },
+  'live-submit': { type: 'boolean', default: false },
+  'confirm-live-submit': { type: 'boolean', default: false },
   headed: { type: 'string', default: 'true' },
   'slow-mo': { type: 'string', default: '0' },
   'field-map': { type: 'string' },
@@ -47,7 +47,12 @@ if (values.help || !values.manifest) {
   process.exit(values.help ? 0 : 1);
 }
 
-const dryRun = DRY_RUN_ALWAYS;
+const liveSubmit = values['live-submit'] === true;
+if (liveSubmit && values['confirm-live-submit'] !== true) {
+  console.error('FAIL: --live-submit requires --confirm-live-submit.');
+  process.exit(1);
+}
+const dryRun = !liveSubmit;
 const headed = parseBool(values.headed, true);
 const pauseAtEnd = values['no-pause'] ? false : parseBool(values['pause-at-end'], true);
 const discoverFields = values['discover-fields'] === true;
@@ -181,8 +186,9 @@ try {
   process.exit(1);
 }
 
-console.log(`DistroKid upload dry-run: ${songId}`);
-console.log('Safety: dry-run is forced true and final submit is blocked.');
+console.log(`DistroKid upload ${dryRun ? 'preview' : 'live submit'}: ${songId}`);
+if (dryRun) console.log('Safety: preview mode stops before final submit.');
+else console.log('LIVE SUBMIT: final DistroKid submission is enabled by explicit confirmation.');
 if (certifyImportantCheckboxes) {
   console.log('WARNING: Certification checkboxes are legal attestations. Only use this when the statements are true.');
 }
@@ -223,7 +229,7 @@ try {
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
   });
   page = await context.newPage();
-  await installSafetyGuard(page, dangerousNames);
+  await installSafetyGuard(page, dangerousNames, { allowSubmit: liveSubmit });
 
   await page.goto(fieldMap.upload_url || 'https://distrokid.com/new/', {
     waitUntil: 'domcontentloaded',
@@ -252,10 +258,43 @@ try {
         errors.push({ field: 'browser', error: message });
         break;
       }
-      const condition = shouldRunField(manifest, fieldDef);
+      if (isAlbumManifest(manifest) && isTrackLevelField(fieldName, fieldDef)) {
+        for (const [trackIndex, trackManifest] of manifest.tracks.entries()) {
+          const trackFieldDef = fieldDefForTrack(fieldDef, trackIndex + 1);
+          await runFieldForManifest(page, `${fieldName}_track_${trackIndex + 1}`, trackFieldDef, trackManifest);
+        }
+        continue;
+      }
+      await runFieldForManifest(page, fieldName, fieldDef, manifest);
+    }
+
+    await page.waitForTimeout(1000);
+    await saveScreenshot(page, 'screenshot-after-fill.png');
+    await auditDangerousButtons(page, dangerousNames);
+    await saveScreenshot(page, 'screenshot-final-review.png');
+    await savePageSnapshot(page);
+    if (liveSubmit) {
+      const submitResult = await submitRelease(page, fieldMap);
+      runLog.submission = submitResult;
+      if (submitResult.ok) {
+        runLog.stopped_before_submit = false;
+        console.log(`DistroKid submit clicked: ${submitResult.selector || submitResult.text}`);
+      } else {
+        errors.push({ field: 'submit', error: submitResult.reason });
+      }
+    }
+  }
+} catch (error) {
+  errors.push({ field: 'browser', error: error.message });
+} finally {
+  if (!finishedEarly) await finish(browser, false);
+}
+
+async function runFieldForManifest(page, fieldName, fieldDef, sourceManifest) {
+      const condition = shouldRunField(sourceManifest, fieldDef);
       if (!condition.ok) {
         addSkipped({ field: fieldName, selector: fieldDef.selector || '', strategy: fieldDef.strategy || null, status: fieldDef.category === 'certification' ? 'skipped_manual' : undefined, reason: condition.reason });
-        continue;
+        return;
       }
       if (fieldDef.requires_certify && !certifyImportantCheckboxes) {
         addSkipped({
@@ -265,7 +304,7 @@ try {
           status: 'skipped_manual',
           reason: 'certification checkbox requires --certify-important-checkboxes',
         });
-        continue;
+        return;
       }
       if (fieldDef.category === 'certification' && !isCertificationSelectorAllowed(fieldDef.selector, fieldDef)) {
         addSkipped({
@@ -275,10 +314,10 @@ try {
           status: 'blocked_not_allowlisted',
           reason: 'certification checkbox selector is not allowlisted',
         });
-        continue;
+        return;
       }
       const manifestKey = fieldDef.manifest_key || fieldName;
-      const value = getCertificationValue(manifest, fieldDef) ?? getFieldValue(manifest, fieldName, fieldDef);
+      const value = getCertificationValue(sourceManifest, fieldDef) ?? getFieldValue(sourceManifest, fieldName, fieldDef);
       const baseDiagnostic = {
         field: fieldName,
         selector: fieldDef.selector || '',
@@ -288,17 +327,15 @@ try {
       };
       if (!isPresent(value) && fieldDef.allowEmpty !== true && !Object.hasOwn(fieldDef, 'value')) {
         addSkipped({ ...baseDiagnostic, status: fieldDef.category === 'certification' ? 'skipped_manual' : undefined, reason: `manifest value missing for ${manifestKey}` });
-        if (fieldDef.optional) continue;
-        continue;
+        return;
       }
       if (fieldDef.category === 'certification' && !certifyImportantCheckboxes && !toBool(value)) {
         addSkipped({ ...baseDiagnostic, status: 'skipped_manual', reason: `rights confirmation is not true for ${manifestKey}` });
-        continue;
+        return;
       }
       if (!fieldDef.selector && !fieldDef.name_prefix && !fieldDef.labelText) {
         addSkipped({ ...baseDiagnostic, reason: 'selector missing in field map' });
-        if (fieldDef.optional) continue;
-        continue;
+        return;
       }
       const result = await fillField(page, fieldName, fieldDef, value);
       if (result.ok) filledFields.push({ field: fieldName, strategy: fieldDef.strategy, manifest_key: manifestKey, category: fieldDef.category || null, status: fieldDef.category === 'certification' ? 'checked' : undefined });
@@ -306,25 +343,13 @@ try {
         if (isPageClosedError(result.reason)) {
           const message = 'DistroKid page closed before field loop completed';
           errors.push({ field: 'browser', error: message, during_field: fieldName });
-          break;
+          return;
         }
         addSkipped({ ...baseDiagnostic, status: result.status || (fieldDef.category === 'certification' ? 'unavailable' : undefined), reason: result.reason, element: result.element || null, candidates: result.candidates || null, options: result.options || null });
         if (!fieldDef.optional && !result.skipped) {
           errors.push({ field: fieldName, error: result.reason, selector: fieldDef.selector, strategy: fieldDef.strategy, manifest_key: manifestKey, element: result.element || null });
         }
       }
-    }
-
-    await page.waitForTimeout(1000);
-    await saveScreenshot(page, 'screenshot-after-fill.png');
-    await auditDangerousButtons(page, dangerousNames);
-    await saveScreenshot(page, 'screenshot-final-review.png');
-    await savePageSnapshot(page);
-  }
-} catch (error) {
-  errors.push({ field: 'browser', error: error.message });
-} finally {
-  if (!finishedEarly) await finish(browser, false);
 }
 
 async function fillField(page, fieldName, fieldDef, value) {
@@ -729,6 +754,50 @@ function fieldOrder(fieldName, fieldDef = {}) {
   return 10;
 }
 
+function isAlbumManifest(manifest) {
+  return Array.isArray(manifest.tracks) && manifest.tracks.length > 0;
+}
+
+function isTrackLevelField(fieldName, fieldDef = {}) {
+  const key = fieldDef.manifest_key || fieldName;
+  return [
+    'audio_file',
+    'track_title',
+    'lyrics_file',
+    'explicit',
+    'clean_always',
+    'contains_lyrics',
+    'instrumental',
+    'songwriter_real_name.role',
+    'songwriter_real_name.first',
+    'songwriter_real_name.middle',
+    'songwriter_real_name.last',
+    'apple_music_credits.performer.role',
+    'apple_music_credits.performer.name',
+    'apple_music_credits.producer.role',
+    'apple_music_credits.producer.name',
+  ].includes(key);
+}
+
+function fieldDefForTrack(fieldDef, trackNumber) {
+  const replaceTrack = value => String(value)
+    .replaceAll('{{track}}', String(trackNumber))
+    .replaceAll('{{trackIndex}}', String(trackNumber))
+    .replaceAll('Track 1', `Track ${trackNumber}`)
+    .replaceAll('track-1-', `track-${trackNumber}-`)
+    .replaceAll('title_1', `title_${trackNumber}`)
+    .replaceAll('js-track-upload-1', `js-track-upload-${trackNumber}`)
+    .replaceAll('radio-button-1', `radio-button-${trackNumber}`)
+    .replaceAll('songwriter_real_name_first1', `songwriter_real_name_first${trackNumber}`)
+    .replaceAll('songwriter_real_name_middle1', `songwriter_real_name_middle${trackNumber}`)
+    .replaceAll('songwriter_real_name_last1', `songwriter_real_name_last${trackNumber}`);
+  const next = { ...fieldDef, track_number: trackNumber };
+  for (const key of ['selector', 'name_prefix', 'labelText', 'label_text']) {
+    if (next[key]) next[key] = replaceTrack(next[key]);
+  }
+  return next;
+}
+
 async function findVisibleInputByNamePrefixAndLabel(page, type, namePrefix, labelText) {
   return page.evaluate(({ type, namePrefix, labelText }) => {
     const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -759,8 +828,8 @@ async function findVisibleInputByNamePrefixAndLabel(page, type, namePrefix, labe
   }, { type, namePrefix, labelText }).catch(() => null);
 }
 
-async function installSafetyGuard(page, dangerousNames) {
-  await page.addInitScript((names) => {
+async function installSafetyGuard(page, dangerousNames, options = {}) {
+  await page.addInitScript(({ names, allowSubmit }) => {
     const normalize = value => String(value || '').trim().toLowerCase().replace(/[^\p{L}\p{N}#&]+/gu, ' ').replace(/\s+/g, ' ');
     const safeClickTexts = new Set(['add credits for each song on this release']);
     const dangerous = text => {
@@ -774,12 +843,36 @@ async function installSafetyGuard(page, dangerousNames) {
       if (!target) return;
       const text = target.innerText || target.value || target.getAttribute('aria-label') || target.getAttribute('name') || '';
       if (dangerous(text) || target.id === 'doneButton') {
+        if (allowSubmit && (target.id === 'doneButton' || normalize(text) === 'submit' || normalize(text) === 'submit release')) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         console.warn(`Blocked dangerous DistroKid action: ${text}`);
       }
     }, true);
-  }, dangerousNames);
+  }, { names: dangerousNames, allowSubmit: options.allowSubmit === true });
+}
+
+async function submitRelease(page, fieldMap = {}) {
+  const selector = fieldMap.submit_selector || '#doneButton';
+  if (selector) {
+    const target = page.locator(selector).first();
+    if (await target.count().catch(() => 0)) {
+      await target.click();
+      await page.waitForTimeout(3000);
+      await saveScreenshot(page, 'screenshot-after-submit.png');
+      return { ok: true, selector };
+    }
+  }
+  for (const text of ['Submit release', 'Submit', 'Done']) {
+    const target = page.getByRole('button', { name: text, exact: true }).first();
+    if (await target.count().catch(() => 0)) {
+      await target.click();
+      await page.waitForTimeout(3000);
+      await saveScreenshot(page, 'screenshot-after-submit.png');
+      return { ok: true, text };
+    }
+  }
+  return { ok: false, reason: `submit control not found (${selector})` };
 }
 
 async function auditDangerousButtons(page, dangerousNames) {
@@ -849,7 +942,7 @@ async function finish(browser, skipBrowserClose) {
   const authError = errors.some(item => item.field === 'auth');
   markDistroKidJobStatus(
     songId,
-    authError ? DISTROKID_JOB_STATUSES.AUTH_NEEDED : errors.length ? DISTROKID_JOB_STATUSES.FAILED : DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW,
+    authError ? DISTROKID_JOB_STATUSES.AUTH_NEEDED : errors.length ? DISTROKID_JOB_STATUSES.FAILED : liveSubmit ? DISTROKID_JOB_STATUSES.SUBMITTED : DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW,
     {
       latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
       latest_error_json: errors.length ? { errors } : null,
@@ -864,8 +957,12 @@ async function finish(browser, skipBrowserClose) {
     console.log('Skipped fields:');
     for (const item of skippedFields) console.log(`- ${item.field}: ${item.reason}`);
   }
-  console.log('Manual next steps: review DistroKid, fill skipped fields, and submit manually only when ready.');
-  console.log(`After manual submission: bash scripts/pancake.sh distrokid:mark-submitted --song-id ${songId} --distrokid-url URL`);
+  if (liveSubmit) {
+    console.log('Live submit completed if DistroKid accepted the final click. Confirm the release URL in DistroKid.');
+  } else {
+    console.log('Manual next steps: review DistroKid, fill skipped fields, and submit manually only when ready.');
+    console.log(`After manual submission: bash scripts/pancake.sh distrokid:mark-submitted --song-id ${songId} --distrokid-url URL`);
+  }
 
   if (browser && pauseAtEnd && !skipBrowserClose) {
     console.log('Browser remains open for manual review. Close it when done.');

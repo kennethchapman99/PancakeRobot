@@ -1,0 +1,222 @@
+{
+  "id": "postal-v3",
+  "schema_version": "brand-profile/v1",
+  "brand_type": "music_artist",
+  "brand_name": "Postal v3",
+  "artist_name": "Postal v3",
+  "display_name": "Postal v3",
+  "short_name": "Postal v3",
+  "genre": "Glitch Analog Indietronica",
+  "brand_description": "Handmade-feeling analog indietronica built from glitch clicks, relaxed drum-machine pockets, warm pads, sampled textures, unusual instrumental colors, looping motifs, and restrained vocals with room for silence and lyrical variety.",
+  "audience": {
+    "age_range": "13+",
+    "description": "Indietronica listeners, late-night headphone listeners, college radio fans, analog synth fans, quiet electronic playlists, and people drawn to melancholic songs with texture, restraint, and surprising details.",
+    "guardrail": "Keep the sound reflective, handmade, spacious, and emotionally mature. Allow lyrical variety and unusual instrumental choices, but do not make it glossy pop, fast wordy singer-songwriter pop, constant-rhyme pop, heavy EDM, novelty electronic music, or a direct clone of any reference artist."
+  },
+  "character": {
+    "name": "Postal v3",
+    "core_concept": "An introspective glitch-indietronica project built from small electronic artifacts, analog-feeling synths, relaxed dry drum machines, intimate low-pressure vocals, looping motifs, negative space, varied lyrical worlds, and occasional unexpected instrumental colors.",
+    "fallback_summary": "Sparse, bittersweet analog indietronica with glitchy clicks, soft pads, relaxed drum-machine grooves, sampled textures, looping motifs, creative instrumental accents, and close vocals that leave space between lines."
+  },
+  "positioning": {
+    "one_liner": "Melancholic handmade indietronica made from glitch beats, warm analog pads, sampled textures, understated vocals, and surprising instrumental details.",
+    "core_feeling": "sadness without heaviness; nostalgia without irony; intimacy without over-explaining; curiosity without novelty",
+    "emotional_keywords": [
+      "wistful",
+      "comforting",
+      "understated",
+      "curious",
+      "lonely-but-warm",
+      "analog-warm",
+      "quietly hopeful",
+      "spacious"
+    ]
+  },
+  "voice": {
+    "persona": "observant, introverted, emotionally precise, restrained, unshowy",
+    "tone": "plainspoken, sparse, sincere, literate, intimate, low-pressure",
+    "avoid": [
+      "direct imitation of any specific artist",
+      "copied melodies",
+      "copied lyrics",
+      "copied vocal phrasing",
+      "glossy pop-star swagger",
+      "big belted choruses",
+      "overly slick radio-pop phrasing",
+      "fast constant lyrics",
+      "forced end rhymes",
+      "overly clever rhyme schemes",
+      "phone-screen cliché writing",
+      "songs built mainly around texts, drafts, cursors, notifications, or apps"
+    ]
+  },
+  "music": {
+    "default_prompt": "Create an original song for Postal v3. The production should feel handmade, analog, spacious, and glitch-based: tiny clicks, ticks, soft digital artifacts, warm synth pads, rounded bass pulses, dry relaxed drum-machine pockets, tape hiss, filtered room noise, small found sounds, and looping motifs that gently mutate. Keep the tempo unhurried and do not fill every bar with vocals. Let instrumental space, repeated motifs, texture, and small arrangement changes carry much of the emotion. Vocals should be close, modest, and conversational, with short phrases, pauses, and restrained melodies that sit inside the electronics. Lyric writing should be image-led and emotionally specific, not rhyme-led: use loose/slant rhyme sparingly, avoid rapid couplets, avoid dense syllable packing, and avoid trying to rhyme every line. Do not overuse one narrow set of images. Each song should find its own small world: physical places, relationships, seasons, work, travel, childhood, aging, ordinary objects, nature, streets, family memory, rooms, landscapes, routines, dreams, or slightly surreal metaphors can all work if they feel intimate and restrained. Use digital/phone/message imagery rarely and only as a minor accent, not the main subject. Instrumentals may include creative accents when tasteful: turntable scratches, wood flute, melodica, detuned piano, muted guitar, bowed or plucked strings, kalimba, field recordings, tape loops, toy keyboards, or other organic fragments woven into the electronics. Avoid glossy pop beats, upbeat pop bounce, four-on-the-floor EDM, trap hi-hat patterns, arena-pop choruses, pop-star vocal runs, fast constant lyrics, forced rhymes, or copying any specific artist, melody, lyric, vocal phrasing, or production signature.",
+    "default_style": "glitch analog indietronica, relaxed dry drum-machine pocket, handmade clicks, soft synth pads, warm bass pulse, sampled texture, creative organic instrumental accents, intimate restrained vocal, low lyric density, melancholic but comforting",
+    "default_bpm": 104,
+    "target_length": "2:50-3:35",
+    "normal_word_range": [
+      75,
+      140
+    ],
+    "first_vocal_by_seconds": 20,
+    "max_instrumental_intro_seconds": 18,
+    "primary_genres": [
+      "indietronica",
+      "glitch pop",
+      "minimal synth pop",
+      "indie electronic",
+      "bedroom electronic"
+    ],
+    "sonic_palette": [
+      "glitchy clicks, ticks, and micro-percussion",
+      "relaxed dry drum-machine pockets",
+      "warm analog-style synth pads",
+      "rounded understated synth bass",
+      "soft square-wave or sine-wave motifs",
+      "subtle tape hiss, vinyl noise, and filtered room tone",
+      "small found-sound samples used musically",
+      "turntable scratches or cut-up texture used sparingly",
+      "wood flute, melodica, kalimba, toy-keyboard, or music-box fragments when they fit",
+      "muted guitar, detuned piano, bowed/plucked strings, or other organic accents",
+      "field recordings and tape loops as atmosphere",
+      "intimate restrained lead vocal with pauses",
+      "instrumental gaps and negative space"
+    ],
+    "production_do": [
+      "Make the beat feel handmade from small clicks, ticks, taps, and dry drum-machine fragments.",
+      "Keep the groove relaxed; prefer a loping pocket over a fast pop beat.",
+      "Leave audible negative space between vocal lines.",
+      "Let synth pads, soft bass, instrumental motifs, and texture carry emotion without constant lyrical explanation.",
+      "Use looping motifs that feel slightly imperfect and gently mutate over time.",
+      "Add one or two unexpected instrumental colors when they deepen the mood, not as gimmicks.",
+      "Let some songs be driven more by instrumental hooks than vocal hooks.",
+      "Build movement through tiny variations, texture, harmony, and arrangement choices rather than big chorus lifts.",
+      "Keep hooks modest, memorable, and understated; more haunted glow than pop anthem."
+    ],
+    "production_avoid": [
+      "fast constant vocal delivery",
+      "forced end-rhyme couplets",
+      "dense syllable-packed verses",
+      "glossy pop beats",
+      "upbeat radio-pop bounce",
+      "arena-pop polish",
+      "big glossy pop choruses",
+      "pop-star vocal runs",
+      "stadium EDM builds",
+      "four-on-the-floor club energy",
+      "dubstep drops",
+      "trap hi-hat overload",
+      "overly pristine modern radio production",
+      "direct artist imitation"
+    ]
+  },
+  "lyrics": {
+    "title_examples": [
+      "Small Weather",
+      "Soft Return",
+      "The Light Under Everything",
+      "Northbound",
+      "House With No Clock",
+      "Quiet Machinery",
+      "A Map of Minor Things",
+      "After the Rain Stopped"
+    ],
+    "topic_variety": [
+      "quiet distance without constant texting imagery",
+      "memory attached to specific but varied places",
+      "small rituals and ordinary human routines",
+      "family, friendship, or romantic connection handled with restraint",
+      "travel, weather, nature, neighborhoods, work, childhood, aging, or recovery",
+      "loneliness softened by observation",
+      "comfort returning slowly",
+      "slightly surreal images that still feel emotionally grounded",
+      "instrumental mood pieces with minimal lyrical snapshots"
+    ],
+    "required_closing": "End with a simple repeated image, short phrase, or instrumental callback that feels emotionally clear and gently unresolved. Keep it sparse. Avoid abrupt comedy endings, spoken skits, overly triumphant resolutions, dense final explanations, or a big pop payoff.",
+    "themes": [
+      "distance",
+      "memory",
+      "quiet repair",
+      "small routines",
+      "ordinary beauty",
+      "restraint",
+      "connection",
+      "change",
+      "place",
+      "time passing",
+      "comfort after sadness"
+    ],
+    "imagery": [
+      "Use fresh, specific images that change from song to song.",
+      "Draw from physical places, objects, nature, weather, travel, work, family memory, dreams, streets, interiors, and landscapes.",
+      "Prefer concrete details over abstract declarations.",
+      "Allow odd or surprising objects if they feel emotionally true.",
+      "Do not anchor every song in the same recurring set of trains, apartments, parking lots, laundromats, winter light, old photos, or phone/message imagery."
+    ],
+    "hook_style": "short plainspoken phrase, repeated image, or instrumental motif; low rhyme pressure, lots of space, emotionally direct without over-explaining",
+    "lyric_density": "Low to moderate-low. Prefer 75-140 words total, short lines, pauses, instrumental gaps, and repeated images over rapid narrative detail. Some tracks can be nearly instrumental with only a few vocal fragments.",
+    "rhyme_guidance": "Use loose internal echoes, vowel sounds, repeated phrases, and occasional slant rhyme. Rhymes should feel incidental, not like the engine of the song. Avoid couplet-after-couplet end rhymes, obvious perfect rhymes, or lyrics that sound written to prove cleverness.",
+    "technology_imagery_rule": "Digital, phone, cursor, draft, notification, email, app, and message imagery should be rare. Maximum one small reference per song, and never as the central topic unless explicitly requested.",
+    "avoid": [
+      "fast constant lyrics",
+      "trying-hard rhyme schemes",
+      "obvious perfect rhymes on every other line",
+      "songs centered on draft messages, cursors, texts, phones, notifications, apps, or screens",
+      "over-repeating the same imagery across an album",
+      "overly online heartbreak language",
+      "pop chorus slogans",
+      "teen diary melodrama",
+      "glossy romantic confessionals"
+    ]
+  },
+  "distribution": {
+    "default_artist": "Postal v3",
+    "default_album": "Quiet Machinery",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "indietronica",
+      "glitch pop",
+      "indie electronic",
+      "minimal synth pop",
+      "bedroom electronic"
+    ],
+    "youtube_tags_seed": [
+      "glitch indietronica",
+      "analog synth",
+      "soft electronic",
+      "melancholic electronic",
+      "indie electronic",
+      "drum machine",
+      "minimal synth pop",
+      "experimental pop",
+      "organic electronic"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Electronic"
+    ],
+    "coppa_status": "not_child_directed",
+    "content_advisory": "clean"
+  },
+  "ui": {
+    "sidebar_subtitle": "Glitch Analog Indietronica",
+    "logo_path": "/media/brand-profiles/postal-v3/logo.png"
+  },
+  "visuals": {
+    "album_art_direction": "understated analog texture, soft grain, quiet physical spaces or abstract fragments, minimal typography, natural and synthetic elements blended subtly; avoid locking every cover into city/winter/postal/signal imagery",
+    "brand_colors": [
+      "midnight blue",
+      "soft cyan",
+      "warm beige",
+      "faded coral",
+      "winter grey"
+    ]
+  },
+  "guardrails": {
+    "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists. Preserve the handmade glitch-indietronica direction without cloning any specific act. Keep lyric density low, technology imagery rare, and lyrical imagery varied across songs.",
+    "brand_safe": true,
+    "lyric_guardrail": "Prioritize space, restraint, and image-led writing. Avoid fast constant lyrics, forced rhymes, pop slogans, songs centered on phones/draft messages/cursors/apps/notifications, and repeating the same narrow set of images across an album.",
+    "instrumental_guardrail": "Creative instrumentation is encouraged when it fits the mood: scratching, wood flute, melodica, toy keys, muted guitar, field recordings, tape loops, bowed strings, or other organic fragments can appear, but should feel integrated and intimate rather than novelty-driven."
+  }
+}

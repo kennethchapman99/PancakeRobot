@@ -155,12 +155,11 @@ function writeDashboard(assets, metadata, renderResult, qaReport) {
 }
 
 const CORE_RELEASE_ASSET_FORMATS = [
-  'ig-square-post-1080x1080.png',
-  'ig-feed-announcement-1080x1350.png',
-  'tiktok-cover.jpg',
-  'outreach-hero-1600x900.png',
-  'ig-reel-cover.jpg',
-  'no-text-variation.png',
+  'spotify-cover-3000x3000.png',
+  'youtube-thumbnail-1280x720.png',
+  'instagram-square-1080x1080.png',
+  'instagram-vertical-1080x1920.png',
+  'facebook-post-1200x630.png',
 ];
 
 function assertCoreReleaseAssetsPresent(manifestAssets, { partialRegeneration = false, requiredFormats = CORE_RELEASE_ASSET_FORMATS } = {}) {

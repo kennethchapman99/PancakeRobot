@@ -68,6 +68,7 @@
     "pretest": "node scripts/ensure-node-runtime.js",
     "test": "node scripts/repair-song-catalog-trigger.js && node --test",
     "test:marketing-router": "node src/scripts/smoke-test-marketing-router.js",
+    "smoke:release-assets": "node src/scripts/smoke-release-assets.js",
     "smoke:cloudflare-tunnel": "node scripts/smoke-cloudflare-tunnel.js",
     "distrokid:save-auth": "node scripts/distrokid/save-auth.mjs",
     "distrokid:check-auth": "node scripts/distrokid/check-auth.mjs",

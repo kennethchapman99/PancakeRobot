@@ -11,6 +11,7 @@ export const DISTROKID_JOB_STATUSES = Object.freeze({
   UPLOAD_STARTED: 'upload_started',
   AWAITING_MANUAL_REVIEW: 'awaiting_manual_review',
   SUBMITTED: 'submitted',
+  SUBMITTED_PENDING_HYPERFOLLOW: 'submitted_pending_hyperfollow',
   FAILED: 'failed',
   SKIPPED: 'skipped',
 });
@@ -113,6 +114,7 @@ export function listQueuedDistroKidJobs(limit = 10) {
       'upload_started',
       'awaiting_manual_review',
       'submitted',
+      'submitted_pending_hyperfollow',
       'failed'
     )
     ORDER BY COALESCE(j.scheduled_for, j.queued_at, j.updated_at, j.created_at) ASC, j.priority ASC

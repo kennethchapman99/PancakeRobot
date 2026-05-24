@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const TEST_DB_ARTIFACT_DIR = path.join(REPO_ROOT, 'test', 'artifacts', 'db');
+const OUTPUT_DIR = path.join(REPO_ROOT, 'output');
 const DEFAULT_RETENTION_DAYS = 7;
 
 export function prepareTestDbSlug(prefix, options = {}) {
@@ -61,4 +62,48 @@ export function cleanupOldTestDbArtifacts(options = {}) {
 
 export function getTestDbArtifactDir() {
   return TEST_DB_ARTIFACT_DIR;
+}
+
+export function cleanupTestOutputArtifacts(options = {}) {
+  const songIds = normalizeIdList(options.songIds || options.songs);
+  const albumIds = normalizeIdList(options.albumIds || options.albums);
+  const marketingIds = normalizeIdList(options.marketingIds || options.marketing);
+  const packageIds = normalizeIdList(options.packageIds || options.packages);
+  let deleted = 0;
+
+  for (const songId of songIds) {
+    deleted += removeOutputDir('songs', songId);
+    deleted += removeOutputDir('distribution-ready', songId);
+    deleted += removeOutputDir('marketing-ready', songId);
+    deleted += removeOutputDir('release-packages', songId);
+  }
+  for (const albumId of albumIds) {
+    deleted += removeOutputDir('albums', albumId);
+  }
+  for (const marketingId of marketingIds) {
+    deleted += removeOutputDir('marketing-ready', marketingId);
+  }
+  for (const packageId of packageIds) {
+    deleted += removeOutputDir('release-packages', packageId);
+  }
+
+  return { deleted };
+}
+
+function normalizeIdList(value) {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : [value])
+    .map(item => String(item || '').trim())
+    .filter(Boolean);
+}
+
+function removeOutputDir(namespace, id) {
+  const target = path.join(OUTPUT_DIR, namespace, id);
+  const resolved = path.resolve(target);
+  const allowedRoot = path.resolve(OUTPUT_DIR, namespace);
+  if (!resolved.startsWith(`${allowedRoot}${path.sep}`)) return 0;
+  if (!fs.existsSync(resolved)) return 0;
+
+  fs.rmSync(resolved, { recursive: true, force: true });
+  return 1;
 }

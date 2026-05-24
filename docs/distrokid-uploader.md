@@ -206,7 +206,7 @@ cd /Users/kchapman/PancakeRobot && npm run distrokid:run-queued -- --limit 5 --d
 
 The web UI queues jobs and records submission state. Browser upload and final DistroKid submission stay manual/CLI-driven.
 
-1. Run `npm run web`.
+1. Run `./bin/pancakerobot web`.
 2. Open `http://localhost:3737`.
 3. Go to Song Catalog.
 4. Select 2 songs.

@@ -13,6 +13,7 @@
     upload_started: 'Upload started',
     awaiting_manual_review: 'Awaiting review',
     submitted: 'Submitted',
+    submitted_pending_hyperfollow: 'Pending HyperFollow',
     failed: 'Failed',
     skipped: 'Skipped',
   };
@@ -20,18 +21,18 @@
   const dkManifestPath = `output/release-packages/${song.id}/manifest.json`;
   const dkBlocking = dkJob?.latest_error?.blocking_missing_fields || dkJob?.latest_error?.errors?.map(item => item.field).filter(Boolean) || [];
   const dkLatestError = dkJob?.latest_error?.message || dkJob?.latest_error?.error || (dkBlocking.length ? `Missing: ${dkBlocking.join(', ')}` : '');
-  const dkReadiness = dkStatus === 'package_built' || dkStatus === 'dry_run_ready' || dkStatus === 'awaiting_manual_review' || dkStatus === 'submitted'
+  const dkReadiness = dkStatus === 'package_built' || dkStatus === 'dry_run_ready' || dkStatus === 'awaiting_manual_review' || dkStatus === 'submitted' || dkStatus === 'submitted_pending_hyperfollow'
     ? 'Ready for DistroKid dry-run upload'
     : dkStatus === 'blocked_missing_fields'
       ? 'Blocked until required package fields are present'
       : 'Build the package to calculate readiness';
   const dkCommands = {
-    saveAuth: 'npm run distrokid:save-auth',
-    checkAuth: 'npm run distrokid:check-auth',
-    buildPackage: `npm run distrokid:package -- --song-id ${song.id}`,
-    uploadDryRun: `npm run distrokid:upload -- --manifest ${dkManifestPath} --dry-run`,
-    runQueued: 'npm run distrokid:run-queued -- --limit 5 --dry-run',
-    markSubmitted: `npm run distrokid:mark-submitted -- --song-id ${song.id} --distrokid-url "URL_FROM_DISTROKID"`,
+    saveAuth: './bin/pancakerobot distrokid:save-auth',
+    checkAuth: './bin/pancakerobot distrokid:check-auth',
+    buildPackage: `./bin/pancakerobot distrokid:package --song-id ${song.id}`,
+    uploadDryRun: `./bin/pancakerobot distrokid:upload --manifest ${dkManifestPath} --dry-run`,
+    runQueued: './bin/pancakerobot distrokid:run-queued --limit 5 --dry-run',
+    markSubmitted: `./bin/pancakerobot distrokid:mark-submitted --song-id ${song.id} --distrokid-url "URL_FROM_DISTROKID"`,
   };
 %>
 
@@ -333,39 +334,6 @@
       <div class="text-sm text-emerald-600">This release has finished the current distribution and outreach cycle.</div>
     </div>
   </div>
-  <% } else { %>
-  <div class="bg-gradient-to-r from-zinc-900 to-zinc-800 rounded-2xl p-5 mb-6 text-white flex items-center justify-between gap-4" x-data="distributorSubmit()">
-    <div>
-      <div class="font-bold text-lg mb-0.5">Distribution Status</div>
-      <div class="text-zinc-300 text-sm">When this track is uploaded to <%= defaultDistributor || 'DistroKid' %>, mark it submitted here.</div>
-    </div>
-    <button @click="open = true" class="shrink-0 bg-white text-zinc-900 font-bold px-5 py-2.5 rounded-xl hover:bg-zinc-100 transition text-sm shadow">
-      📤 Mark Submitted
-    </button>
-
-    <!-- Submit modal -->
-    <div x-show="open" x-cloak class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-8">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" @click.stop>
-        <h3 class="text-lg font-bold text-zinc-900 mb-1">Record <%= defaultDistributor || 'DistroKid' %> Submission</h3>
-        <p class="text-sm text-zinc-500 mb-4"><%= song.title || song.topic %></p>
-        <div class="bg-zinc-50 rounded-xl p-4 mb-5 text-xs text-zinc-600 space-y-2">
-          <p>1. Go to <% if (distributorUrl) { %><a href="<%= distributorUrl %>" target="_blank" class="text-blue-600 underline"><%= defaultDistributor || 'your distributor' %></a><% } else { %><%= defaultDistributor || 'your distributor' %><% } %> and upload your audio and cover art</p>
-          <p>2. Complete the release form using the song metadata</p>
-          <p>3. Paste your release URL below (optional)</p>
-        </div>
-        <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">Release URL (optional)</label>
-        <input x-model="url" type="url" placeholder="https://…"
-          class="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-zinc-900">
-        <div class="flex gap-3">
-          <button @click="submit('<%= song.id %>')" :disabled="saving"
-            class="flex-1 bg-zinc-900 hover:bg-zinc-700 disabled:opacity-50 text-white font-semibold px-4 py-2.5 rounded-xl transition text-sm">
-            <span x-text="saving ? 'Saving…' : '📤 Mark as Submitted'"></span>
-          </button>
-          <button @click="open = false" class="flex-1 border border-zinc-200 text-zinc-600 px-4 py-2.5 rounded-xl hover:bg-zinc-50 transition text-sm">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
   <% } %>
 
   <section class="mb-6 rounded-2xl border border-fuchsia-200 bg-white p-5 shadow-sm" x-data="distroKidAutomation('<%= song.id %>')">
@@ -377,24 +345,20 @@
         </div>
         <div class="mt-3 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2">
           <div><span class="font-semibold text-zinc-500">Readiness:</span> <%= dkReadiness %></div>
-          <div><span class="font-semibold text-zinc-500">Package:</span> <span class="font-mono break-all"><%= dkPackagePath || '—' %></span></div>
+          <div><span class="font-semibold text-zinc-500">Link:</span> <span class="break-all" x-text="link || '<%= (marketingKit?.marketing_links?.smart_link || dkJob?.distrokid_url || '—') %>'"></span></div>
           <div><span class="font-semibold text-zinc-500">Run log:</span> <span class="font-mono break-all"><%= dkJob?.latest_run_log_path || '—' %></span></div>
-          <div><span class="font-semibold text-zinc-500">DistroKid URL:</span> <span class="break-all"><%= dkJob?.distrokid_url || '—' %></span></div>
           <div><span class="font-semibold text-zinc-500">Attempts:</span> <%= dkJob?.attempt_count || 0 %></div>
-          <div><span class="font-semibold text-zinc-500">Latest error:</span> <span class="break-words"><%= dkLatestError || '—' %></span></div>
+          <div class="sm:col-span-2"><span class="font-semibold text-zinc-500">Latest error:</span> <span class="break-words"><%= dkLatestError || '—' %></span></div>
         </div>
         <div class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
-          <div class="font-semibold text-zinc-700">Manual CLI commands</div>
-          <div class="mt-2 space-y-1 font-mono">
-            <button type="button" @click="copy('<%= dkCommands.saveAuth %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.saveAuth %></button>
-            <button type="button" @click="copy('<%= dkCommands.checkAuth %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.checkAuth %></button>
-            <button type="button" @click="copy('<%= dkCommands.buildPackage %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.buildPackage %></button>
-            <button type="button" @click="copy('<%= dkCommands.uploadDryRun %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.uploadDryRun %></button>
-            <button type="button" @click="copy('<%= dkCommands.runQueued %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.runQueued %></button>
-            <button type="button" @click="copy('<%= dkCommands.markSubmitted %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.markSubmitted %></button>
-          </div>
-          <div class="mt-2 text-[11px] text-zinc-500">Web UI never runs final DistroKid submit. Dry-run upload opens a browser for manual review and stops before submit.</div>
-          <div x-show="commandMessage" x-cloak class="mt-2 rounded-lg border border-fuchsia-200 bg-white px-2 py-1 font-mono text-[11px] text-fuchsia-800" x-text="commandMessage"></div>
+          <div class="font-semibold text-zinc-700">Recent automation log</div>
+          <template x-if="log.length">
+            <div class="mt-2 space-y-1">
+              <template x-for="line in log" :key="line"><div x-text="line"></div></template>
+            </div>
+          </template>
+          <div x-show="!log.length" class="mt-2 text-zinc-400">No automation run recorded yet.</div>
+          <div x-show="message" x-cloak class="mt-2 rounded-lg border border-fuchsia-200 bg-white px-2 py-1 text-[11px] text-fuchsia-800" x-text="message"></div>
         </div>
         <div class="mt-3 flex flex-wrap gap-2">
           <% if (dkBlocking.length) { %>
@@ -407,14 +371,26 @@
         </div>
       </div>
       <div class="flex min-w-[240px] flex-col gap-2">
-        <button type="button" @click="queue()" class="rounded-xl bg-fuchsia-700 px-4 py-2 text-sm font-semibold text-white hover:bg-fuchsia-600">Queue for DistroKid</button>
-        <button type="button" @click="clear()" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Clear Queue</button>
-        <button type="button" @click="buildPackage()" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Build Package</button>
-        <button type="button" @click="showDryRunCommand()" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50">Show Dry-Run Upload Command</button>
-        <form @submit.prevent="markSubmitted()" class="mt-2 space-y-2">
-          <input x-model="url" type="url" required placeholder="DistroKid URL after manual submit" class="w-full rounded-xl border border-zinc-200 px-3 py-2 text-xs">
-          <button type="submit" :disabled="saving" class="w-full rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Mark Submitted</button>
-        </form>
+        <button type="button" @click="runPreview()" :disabled="saving" class="rounded-xl bg-fuchsia-700 px-4 py-2 text-sm font-semibold text-white hover:bg-fuchsia-600 disabled:opacity-50">Run Automation Preview</button>
+        <button type="button" @click="runLiveSubmit()" :disabled="saving" class="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50">Run Live Submit</button>
+        <button type="button" @click="fetchHyperFollow()" :disabled="saving" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50">Fetch HyperFollow Link</button>
+        <details class="mt-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <summary class="cursor-pointer text-xs font-semibold text-zinc-600">Advanced</summary>
+          <div class="mt-3 flex flex-col gap-2">
+            <button type="button" @click="queue()" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">Queue for DistroKid</button>
+            <button type="button" @click="clear()" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">Clear Queue</button>
+            <button type="button" @click="buildPackage()" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">Build Package</button>
+            <button type="button" @click="showDryRunCommand()" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">Show Dry-Run Upload Command</button>
+          </div>
+          <div class="mt-3 space-y-1 font-mono text-[11px] text-zinc-500">
+            <button type="button" @click="copy('<%= dkCommands.saveAuth %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.saveAuth %></button>
+            <button type="button" @click="copy('<%= dkCommands.checkAuth %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.checkAuth %></button>
+            <button type="button" @click="copy('<%= dkCommands.buildPackage %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.buildPackage %></button>
+            <button type="button" @click="copy('<%= dkCommands.uploadDryRun %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.uploadDryRun %></button>
+            <button type="button" @click="copy('<%= dkCommands.runQueued %>')" class="block w-full break-all rounded-lg px-2 py-1 text-left hover:bg-white"><%= dkCommands.runQueued %></button>
+          </div>
+          <div x-show="commandMessage" x-cloak class="mt-2 rounded-lg border border-fuchsia-200 bg-white px-2 py-1 font-mono text-[11px] text-fuchsia-800" x-text="commandMessage"></div>
+        </details>
       </div>
     </div>
   </section>
@@ -539,220 +515,119 @@
 
     <!-- Marketing tab -->
     <div x-show="tab==='marketing'" x-cloak>
-      <% const mk = marketingKit || {}; const mLinks = mk.marketing_links || {}; const mAssets = mk.marketing_assets || {}; const mReady = mk.marketing_readiness || { score: 0, missing_required_fields: [], missing_recommended_fields: [], warnings: [] }; const mValidation = mk.validation || { warnings: [], errors: [] }; const imageSource = mk.image_source || {}; const fallbackLabel = imageSource.source_label || (mAssets.base_image_url ? 'Release base image' : mAssets.fallback_image_url ? 'Fallback image' : 'Missing'); const releaseKitPreviewUrl = '/release-kit/' + encodeURIComponent(song.id) + '?preview=1'; const releaseKitPublicUrl = '/release-kit/' + encodeURIComponent(song.id); const assetVersion = mAssets.generated_at || ''; const withAssetVersion = (url) => !url ? '' : url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(assetVersion); const assetCards = [ ['square_post_url','Square Instagram Post','ig-square-post-1080x1080.png'], ['vertical_post_url','Vertical TikTok/Reels/Stories','tiktok-cover.jpg'], ['portrait_post_url','4:5 Instagram Feed','ig-feed-announcement-1080x1350.png'], ['outreach_banner_url','16:9 Outreach Hero','outreach-hero-1600x900.png'], ['cover_safe_promo_url','Cover-art-safe Promo','ig-reel-cover.jpg'], ['no_text_variation_url','No-text Variation','no-text-variation.png'] ]; const releaseAssetFormats = ['ig-square-post-1080x1080.png','ig-feed-announcement-1080x1350.png','tiktok-cover.jpg','outreach-hero-1600x900.png','ig-reel-cover.jpg','no-text-variation.png']; const hasGeneratedPreviewAssets = assetCards.some(([key]) => !!mAssets[key]); %>
+      <% const mk = marketingKit || {}; const mLinks = mk.marketing_links || {}; const mAssets = mk.marketing_assets || {}; const releaseState = releaseAssetState || {}; const inheritedAssets = !!releaseState.inheritedFrom; const assetVersion = releaseState.metadata?.generated_at || mAssets.generated_at || ''; const withAssetVersion = (url) => !url ? '' : url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(assetVersion); const releaseAssetFormats = ['spotify-cover-3000x3000.png','youtube-thumbnail-1280x720.png','instagram-square-1080x1080.png','instagram-vertical-1080x1920.png','facebook-post-1200x630.png']; const hasGeneratedPreviewAssets = (releaseState.assets || []).some(asset => !!asset.publicUrl); const assetPackDownloadUrl = releaseState.downloadUrl || ('/api/songs/' + encodeURIComponent(song.id) + '/release-assets/download'); const linkLabels = { smart_link:'HyperFollow URL', spotify_url:'Spotify URL', apple_music_url:'Apple Music URL', youtube_music_url:'YouTube Music URL', youtube_video_url:'YouTube video URL', artist_website_url:'Artist website URL', instagram_url:'Instagram URL', tiktok_url:'TikTok URL', contact_email:'Contact email' }; %>
       <section id="marketing-links" class="bg-white border border-zinc-200 rounded-xl mb-6">
         <div class="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
           <div>
-            <h2 class="font-semibold text-sm text-zinc-700">Marketing Kit</h2>
-            <div class="text-xs text-zinc-500 mt-1">Phase 1 baseline: HyperFollow + generated release assets. Extra hosted share links are optional.</div>
+            <h2 class="font-semibold text-sm text-zinc-700">Release Marketing</h2>
           </div>
           <div class="flex items-center gap-2">
             <button form="marketing-kit-form" class="border border-zinc-200 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">Save Changes</button>
-            <span class="text-xs px-2 py-1 rounded-full <%= mReady.score >= 80 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' %>">Readiness <%= mReady.score || 0 %></span>
-            <span class="text-xs text-zinc-400">Saved <%= marketingKit?.marketing_assets?.release_kit_last_saved_at ? formatDateTime(marketingKit.marketing_assets.release_kit_last_saved_at) : '—' %></span>
           </div>
         </div>
         <form id="marketing-kit-form" method="POST" action="/songs/<%= song.id %>/marketing-kit" class="p-4 space-y-5">
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <section class="border border-zinc-200 rounded-xl p-4">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="font-semibold text-sm text-zinc-700">Release Links</h3>
-                <button type="button" onclick="copyMarketingLinkBlock()" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Copy Outreach Link Block</button>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <% const linkLabels = { smart_link:'HyperFollow URL', spotify_url:'Spotify URL', apple_music_url:'Apple Music URL', youtube_music_url:'YouTube Music URL', youtube_video_url:'YouTube video URL', artist_website_url:'Artist website URL', instagram_url:'Instagram URL', tiktok_url:'TikTok URL', contact_email:'Contact email', release_kit_url:'Release kit URL', audio_download_url:'Audio download URL', promo_assets_folder_url:'Promo assets folder URL', cover_art_url:'Cover art URL', lyrics_url:'Lyrics URL' }; %>
-                <% for (const field of ['smart_link','spotify_url','apple_music_url','youtube_music_url','youtube_video_url','artist_website_url','instagram_url','tiktok_url','contact_email']) { %>
-                <label class="block">
-                  <span class="text-xs text-zinc-500"><%= linkLabels[field] %></span>
-                  <input name="<%= field %>" value="<%= mLinks[field] || '' %>" type="<%= field === 'contact_email' ? 'email' : 'url' %>" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm">
-                </label>
+          <section id="release-kit-actions" class="border border-zinc-200 rounded-xl p-4" data-reload-url="/songs/<%= encodeURIComponent(song.id) %>?tab=marketing#release-kit-actions" x-data="marketingPack('<%= song.id %>')" x-init="register()">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-lg font-bold text-zinc-900"><%= inheritedAssets ? 'Inherited Release Assets' : 'Song Release Assets' %></h3>
+                <% if (inheritedAssets) { %>
+                  <div class="mt-1 text-sm text-zinc-500">Inherited from album: <a href="/albums/<%= encodeURIComponent(releaseState.inheritedFrom.id) %>" class="underline hover:text-zinc-700"><%= releaseState.inheritedFrom.title %></a></div>
+                <% } else { %>
+                  <div class="mt-1 text-sm text-zinc-500">Upload/select a primary image, then derive Spotify, YouTube, Instagram, and Facebook assets.</div>
                 <% } %>
               </div>
-              <div class="mt-3 text-[11px] text-zinc-500">HyperFollow is the primary CTA. Phase 1 outreach only needs this link plus generated release assets.</div>
-            </section>
+              <div class="flex flex-wrap gap-2">
+                <% if (releaseState.primaryImage) { %><a href="<%= releaseState.previewUrl %>" target="_blank" class="rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50">Preview</a><% } %>
+                <a href="<%= assetPackDownloadUrl %>" class="rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50">Download Pack</a>
+              </div>
+            </div>
 
-            <section class="border border-zinc-200 rounded-xl p-4">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="font-semibold text-sm text-zinc-700">Daily Social Push</h3>
-                <a href="/marketing/social" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Open Daily Social</a>
-              </div>
-              <div class="space-y-3">
-                <label class="flex items-start gap-3 text-sm">
-                  <input type="checkbox" name="use_in_daily_social_push" <%= song.marketing_inputs_from_ar?.use_in_daily_social_push ? 'checked' : '' %> class="mt-1">
-                  <span>
-                    <span class="block font-medium text-zinc-700">Use in Daily Social Push</span>
-                    <span class="block text-xs text-zinc-500">Allows the owned-social planner to treat this release as an eligible daily broadcast candidate.</span>
-                  </span>
-                </label>
-                <label class="flex items-start gap-3 text-sm">
-                  <input type="checkbox" name="prioritize_next_daily_campaign" <%= song.marketing_inputs_from_ar?.prioritize_next_daily_campaign ? 'checked' : '' %> class="mt-1">
-                  <span>
-                    <span class="block font-medium text-zinc-700">Prioritize this release for next daily campaign</span>
-                    <span class="block text-xs text-zinc-500">Bumps this song above normal rotation without mixing it into reviewer, blog, radio, or playlist outreach.</span>
-                  </span>
-                </label>
-              </div>
-              <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div class="rounded-lg border border-zinc-200 p-3">
-                  <div class="text-[10px] uppercase tracking-wide text-zinc-400">Latest Instagram URL</div>
-                  <% if (marketingKit?.latestSocial?.latestInstagramUrl) { %><a href="<%= marketingKit.latestSocial.latestInstagramUrl %>" target="_blank" rel="noopener" class="mt-1 block break-all text-blue-600"><%= marketingKit.latestSocial.latestInstagramUrl %></a><% } else { %><div class="mt-1 text-zinc-400">—</div><% } %>
-                </div>
-                <div class="rounded-lg border border-zinc-200 p-3">
-                  <div class="text-[10px] uppercase tracking-wide text-zinc-400">Latest Facebook URL</div>
-                  <% if (marketingKit?.latestSocial?.latestFacebookUrl) { %><a href="<%= marketingKit.latestSocial.latestFacebookUrl %>" target="_blank" rel="noopener" class="mt-1 block break-all text-blue-600"><%= marketingKit.latestSocial.latestFacebookUrl %></a><% } else { %><div class="mt-1 text-zinc-400">—</div><% } %>
-                </div>
-                <div class="rounded-lg border border-zinc-200 p-3">
-                  <div class="text-[10px] uppercase tracking-wide text-zinc-400">Latest YouTube URL</div>
-                  <% if (marketingKit?.latestSocial?.latestYouTubeUrl) { %><a href="<%= marketingKit.latestSocial.latestYouTubeUrl %>" target="_blank" rel="noopener" class="mt-1 block break-all text-blue-600"><%= marketingKit.latestSocial.latestYouTubeUrl %></a><% } else { %><div class="mt-1 text-zinc-400">—</div><% } %>
-                </div>
-              </div>
-            </section>
-
-            <section id="release-kit-actions" class="border border-zinc-200 rounded-xl p-4" data-reload-url="/songs/<%= encodeURIComponent(song.id) %>?tab=marketing#release-kit-actions" x-data="marketingPack('<%= song.id %>')" x-init="register()">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="font-semibold text-sm text-zinc-700">Base Image / Release Assets</h3>
-                <div class="flex flex-wrap gap-2">
-                  <button type="button" onclick="copyText('<%= releaseKitPublicUrl %>')" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Copy Release Kit Link</button>
-                  <a href="<%= releaseKitPreviewUrl %>" target="_blank" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Open Release Kit Preview</a>
-                </div>
-              </div>
-              <label class="block text-sm">
-                <span class="text-xs text-zinc-500">Base image URL</span>
-                <input name="base_image_url" value="<%= mAssets.base_image_url || '' %>" type="text" spellcheck="false" readonly class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-zinc-50 text-zinc-600">
-              </label>
-              <div class="mt-2 text-[11px] text-zinc-500">Phase 1 only needs a base image and generated release assets. Base image URL is managed by the upload/replace control below.</div>
-              <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="border border-zinc-200 rounded-lg p-3">
-                  <div class="text-xs font-medium text-zinc-600 mb-2">Current creative source</div>
-                  <% if (imageSource.active_image_url || mAssets.base_image_url || baseImage) { %>
-                  <img src="<%= withAssetVersion(imageSource.active_image_url || mAssets.base_image_url || baseImage.url) %>" alt="Base image" class="w-full h-32 object-cover rounded-lg border border-zinc-200">
-                  <% } else { %>
-                  <div class="w-full h-32 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center text-xs text-zinc-400">No release base image</div>
-                  <% } %>
-                  <div class="mt-2 text-[11px] text-zinc-500">Using <%= fallbackLabel %></div>
-                  <% if (imageSource.warning) { %><div class="mt-2 text-[11px] text-amber-700"><%= imageSource.warning %></div><% } %>
-                  <% if (mAssets.fallback_image_url) { %><div class="mt-2 text-[11px] text-zinc-500 break-all">Fallback URL: <%= mAssets.fallback_image_url %></div><% } %>
-                </div>
-                <div class="border border-zinc-200 rounded-lg p-3">
-                  <div class="text-xs font-medium text-zinc-600 mb-2">Base image controls</div>
-                  <label class="flex flex-col gap-2 cursor-pointer">
-                    <input type="file" accept=".png,.jpg,.jpeg,.webp" class="hidden" onchange="uploadBaseImage('<%= song.id %>', this)">
-                    <span class="inline-flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs px-3 py-2 rounded-lg transition">Upload / Replace Base Image</span>
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+              <div class="rounded-lg border border-zinc-200 p-3">
+                <div class="text-sm font-semibold text-zinc-600">Primary image</div>
+                <% if (releaseState.primaryImage) { %>
+                  <img src="<%= withAssetVersion(releaseState.primaryImage.url) %>" alt="Primary image" class="mt-3 h-44 w-full rounded-lg border border-zinc-200 object-cover">
+                <% } else { %>
+                  <div class="mt-3 flex h-44 items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-400">No primary image</div>
+                <% } %>
+                <% if (releaseState.derivativesStale && releaseState.primaryImage) { %><div class="mt-2 text-xs text-amber-700">Derivatives will refresh automatically on preview or download.</div><% } %>
+                <% if (inheritedAssets) { %>
+                  <a href="/albums/<%= encodeURIComponent(releaseState.inheritedFrom.id) %>" class="mt-3 inline-flex text-xs text-zinc-600 underline hover:text-zinc-800">Open album media</a>
+                <% } else { %>
+                  <label class="mt-3 block">
+                    <input type="file" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-xs text-zinc-600 file:mr-2 file:rounded-md file:border file:border-zinc-200 file:bg-zinc-50 file:px-2 file:py-1 file:text-xs" onchange="uploadBaseImage('<%= song.id %>', this)">
                   </label>
                   <div class="mt-3 flex flex-wrap gap-2">
-                    <button id="clear-base-image-button-<%= song.id %>" type="button" onclick="clearBaseImage('<%= song.id %>')" class="border border-zinc-200 rounded-lg px-3 py-2 text-xs hover:bg-zinc-50 disabled:opacity-50">
-                      <span id="clear-base-image-label-<%= song.id %>">Clear Base Image</span>
-                    </button>
-                    <button id="pack-trigger-<%= song.id %>" data-song-id="<%= song.id %>" data-release-assets-build="1" type="button" onclick="buildPackAllFormats('<%= song.id %>', <%- JSON.stringify(releaseAssetFormats) %>)" :disabled="packState === 'running'" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-lg disabled:opacity-50">
-                      <span id="pack-trigger-idle-<%= song.id %>" x-show="packState !== 'running'"><%= hasGeneratedPreviewAssets ? 'Regenerate Release Assets' : 'Generate Release Assets' %></span>
-                      <span id="pack-trigger-running-<%= song.id %>" x-show="packState === 'running'" class="hidden">Generating…</span>
-                    </button>
+                    <button type="button" onclick="generateOpenAIPrimaryImage('<%= song.id %>')" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50">Generate with OpenAI</button>
+                    <button type="button" onclick="selectDefaultPrimaryImage('<%= song.id %>')" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50">Use Base Library</button>
+                    <button id="clear-base-image-button-<%= song.id %>" type="button" onclick="clearBaseImage('<%= song.id %>')" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50 disabled:opacity-50"><span id="clear-base-image-label-<%= song.id %>">Clear Primary Image</span></button>
                   </div>
-                  <div id="base-image-status-<%= song.id %>" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs font-medium"></div>
-                  <div id="pack-status-<%= song.id %>" class="mt-3 hidden rounded-lg border px-3 py-3 text-sm font-medium shadow-sm"></div>
-                  <div class="mt-3 text-[11px] text-zinc-500">This is the release-asset pipeline: it uses the current base image and builds the core social set used for release.</div>
-                  <% if (mAssets.generated_at) { %><div class="mt-3 text-[11px] text-zinc-500">Last generated: <%= formatDateTime(mAssets.generated_at) %></div><% } %>
-                  <div class="mt-3 text-[11px] text-zinc-500">Generation source: <%= mAssets.generation_source || 'not selected yet' %></div>
-                  <div class="mt-3 text-[11px] text-zinc-500">Release kit preview/share is optional in phase 1. You can start outreach without publishing anything externally.</div>
-                </div>
+                <% } %>
+                <div id="base-image-status-<%= song.id %>" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs font-medium"></div>
               </div>
-              <div id="pack-terminal-<%= song.id %>" x-show="packState !== 'idle'" x-cloak class="mt-3 border border-zinc-200 bg-zinc-950 rounded-xl overflow-hidden">
-                <div class="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-                  <span class="text-zinc-300 text-xs font-mono">Release Asset Build</span>
-                  <span x-html="packBadge" class="text-xs" id="pack-badge-<%= song.id %>"></span>
+
+              <div class="rounded-lg border border-zinc-200 p-3">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-sm font-semibold text-zinc-600">Platform derivatives</div>
+                  <% if (!inheritedAssets) { %>
+                    <button id="pack-trigger-<%= song.id %>" data-song-id="<%= song.id %>" data-release-assets-build="1" type="button" onclick="buildPackAllFormats('<%= song.id %>', <%- JSON.stringify(releaseAssetFormats) %>)" :disabled="packState === 'running'" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">
+                      <span id="pack-trigger-idle-<%= song.id %>" x-show="packState !== 'running'"><%= hasGeneratedPreviewAssets ? 'Rebuild Derivatives' : 'Generate Derivatives' %></span>
+                      <span id="pack-trigger-running-<%= song.id %>" x-show="packState === 'running'" class="hidden">Generating...</span>
+                    </button>
+                  <% } %>
                 </div>
-                <div id="pack-log-<%= song.id %>" class="font-mono text-xs p-4 max-h-48 overflow-y-auto space-y-0.5 text-zinc-300"></div>
-                <div class="px-4 py-2 text-xs text-zinc-500" x-text="packFooter" id="pack-footer-<%= song.id %>"></div>
+                <% if (inheritedAssets) { %>
+                  <div class="mt-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">This track uses album media. Change or rebuild it on the album page.</div>
+                <% } %>
+                <div class="mt-3 space-y-2">
+                  <% for (const asset of (releaseState.assets || [])) { const assetUrl = asset.publicUrl || ''; const assetPreviewUrl = withAssetVersion(assetUrl); %>
+                    <div class="rounded-lg border border-zinc-100 px-3 py-2 text-xs">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-semibold text-zinc-700"><%= asset.label || asset.name %> <span class="font-normal text-zinc-400"><%= asset.dimensions?.width %>x<%= asset.dimensions?.height %></span></div>
+                        <span class="<%= assetUrl ? 'text-emerald-600' : 'text-zinc-400' %>"><%= assetUrl ? 'ready' : 'missing' %></span>
+                      </div>
+                      <% if (assetUrl) { %>
+                        <div class="mt-1 flex flex-wrap gap-2">
+                          <a href="<%= assetPreviewUrl %>" target="_blank" rel="noopener" class="underline hover:text-zinc-700">Open</a>
+                          <button type="button" class="underline hover:text-zinc-700" onclick="copyText('<%= assetPreviewUrl %>')">Copy URL</button>
+                          <a href="<%= assetPreviewUrl %>" download class="underline hover:text-zinc-700">Download</a>
+                        </div>
+                      <% } %>
+                    </div>
+                  <% } %>
+                </div>
+                <div id="pack-status-<%= song.id %>" class="mt-3 hidden rounded-lg border px-3 py-3 text-sm font-medium shadow-sm"></div>
               </div>
-            </section>
-          </div>
+            </div>
+
+            <div id="pack-terminal-<%= song.id %>" x-show="packState !== 'idle'" x-cloak class="mt-3 border border-zinc-200 bg-zinc-950 rounded-xl overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+                <span class="text-zinc-300 text-xs font-mono">Release Asset Build</span>
+                <span x-html="packBadge" class="text-xs" id="pack-badge-<%= song.id %>"></span>
+              </div>
+              <div id="pack-log-<%= song.id %>" class="font-mono text-xs p-4 max-h-48 overflow-y-auto space-y-0.5 text-zinc-300"></div>
+              <div class="px-4 py-2 text-xs text-zinc-500" x-text="packFooter" id="pack-footer-<%= song.id %>"></div>
+            </div>
+          </section>
 
           <section class="border border-zinc-200 rounded-xl p-4">
             <div class="flex items-center justify-between mb-3">
-              <div>
-                <h3 class="font-semibold text-sm text-zinc-700">Optional Share Links</h3>
-                <div class="text-[11px] text-zinc-500 mt-1">Not required for the phase-1 outreach baseline. Useful later for blog, radio, or public sharing.</div>
-              </div>
-              <a href="<%= releaseKitPreviewUrl %>" target="_blank" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Open Release Kit</a>
+              <h3 class="font-semibold text-sm text-zinc-700">Release Links</h3>
+              <button type="button" onclick="copyMarketingLinkBlock()" class="text-xs border border-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-50">Copy Outreach Link Block</button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <% for (const field of ['release_kit_url','audio_download_url','promo_assets_folder_url','cover_art_url','lyrics_url']) { %>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-sm">
+              <% for (const field of ['smart_link','spotify_url','apple_music_url','youtube_music_url','youtube_video_url','artist_website_url','instagram_url','tiktok_url','contact_email']) { %>
               <label class="block">
                 <span class="text-xs text-zinc-500"><%= linkLabels[field] %></span>
-                <input name="<%= field %>" value="<%= mLinks[field] || '' %>" type="text" inputmode="url" spellcheck="false" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm">
+                <input name="<%= field %>" value="<%= mLinks[field] || '' %>" type="<%= field === 'contact_email' ? 'email' : 'url' %>" class="mt-1 w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm">
               </label>
-              <% } %>
-            </div>
-            <div class="mt-2 text-[11px] text-zinc-500">App-relative paths like <span class="font-mono">/media/...</span> and <span class="font-mono">/release-kit/...</span> are valid here. Leave these blank in phase 1 if you are not hosting anything externally.</div>
-          </section>
-
-          <section class="border border-zinc-200 rounded-xl p-4">
-            <h3 class="font-semibold text-sm text-zinc-700 mb-3">Validation Summary</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 text-xs">
-              <% const checklist = [ ['Has smart link', !!mLinks.smart_link, 'Complete'], ['Has generated release assets', !!(mAssets.generated_at || mAssets.square_post_url || mAssets.vertical_post_url || mAssets.portrait_post_url || mAssets.outreach_banner_url || mAssets.cover_safe_promo_url || mAssets.no_text_variation_url), 'Complete'], ['Has at least one streaming link', !!(mLinks.smart_link || mLinks.spotify_url || mLinks.apple_music_url || mLinks.youtube_music_url || mLinks.youtube_video_url), 'Complete'], ['Has social profile links', !!(mLinks.instagram_url || mLinks.tiktok_url), 'Recommended'], ['Has contact email', !!mLinks.contact_email, 'Complete'], ['Has base image or fallback image', !!(mAssets.base_image_url || mAssets.fallback_image_url), 'Complete'], ['Has optional release kit URL', !!mLinks.release_kit_url, 'Optional'], ['Has optional audio download', !!mLinks.audio_download_url, 'Optional'], ['Has optional promo assets folder', !!mLinks.promo_assets_folder_url, 'Optional'] ]; %>
-              <% for (const [label, ok, priority] of checklist) { %>
-              <div class="flex items-center justify-between border border-zinc-200 rounded-lg px-3 py-2">
-                <div><div class="text-zinc-700"><%= label %></div><div class="text-[10px] text-zinc-400"><%= priority %></div></div>
-                <span class="px-2 py-0.5 rounded-full <%= ok ? 'bg-emerald-100 text-emerald-700' : priority === 'Complete' ? 'bg-red-100 text-red-700' : priority === 'Optional' ? 'bg-zinc-100 text-zinc-500' : 'bg-amber-100 text-amber-700' %>"><%= ok ? 'Complete' : priority === 'Optional' ? 'Optional' : 'Missing' %></span>
-              </div>
-              <% } %>
-            </div>
-            <% if ((mValidation.errors || []).length || (mValidation.warnings || []).length || (mReady.warnings || []).length) { %>
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div class="rounded-lg border border-red-200 bg-red-50 p-3">
-                <div class="text-xs font-semibold text-red-700 mb-1">Validation</div>
-                <div class="space-y-1 text-[11px] text-red-700"><% for (const issue of (mValidation.errors || [])) { %><div><%= issue %></div><% } %><% if (!(mValidation.errors || []).length) { %><div>No blocking format errors.</div><% } %></div>
-              </div>
-              <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <div class="text-xs font-semibold text-amber-700 mb-1">Warnings</div>
-                <div class="space-y-1 text-[11px] text-amber-700"><% for (const issue of ([...(mValidation.warnings || []), ...(mReady.warnings || [])].slice(0, 6))) { %><div><%= issue %></div><% } %></div>
-              </div>
-            </div>
-            <% } %>
-          </section>
-
-          <section class="border border-zinc-200 rounded-xl p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-sm text-zinc-700">Generated Asset Previews</h3>
-              <div class="text-xs text-zinc-400">Links only in outreach; no automatic file attachments</div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              <% for (const [key, label, formatName] of assetCards) { const assetUrl = mAssets[key] || ''; const assetPreviewUrl = withAssetVersion(assetUrl); const approved = !!(mAssets.asset_approvals && mAssets.asset_approvals[key]); %>
-              <div class="border border-zinc-200 rounded-xl p-3">
-                <div class="flex items-center justify-between gap-2 mb-2">
-                  <div class="text-sm font-medium text-zinc-700"><%= label %></div>
-                  <span class="text-[10px] px-2 py-0.5 rounded-full <%= approved ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500' %>"><%= approved ? 'approved' : 'pending' %></span>
-                </div>
-                <% if (assetUrl) { %>
-                  <% if (assetUrl.endsWith('.mp4')) { %>
-                  <a href="<%= assetPreviewUrl %>" target="_blank" rel="noopener" class="block">
-                    <video controls class="w-full h-36 rounded-lg border border-zinc-200 bg-zinc-950"><source src="<%= assetPreviewUrl %>"></video>
-                  </a>
-                  <% } else { %>
-                  <a href="<%= assetPreviewUrl %>" target="_blank" rel="noopener" class="block">
-                    <img src="<%= assetPreviewUrl %>" alt="<%= label %>" class="w-full h-36 object-cover rounded-lg border border-zinc-200 hover:opacity-95">
-                  </a>
-                  <% } %>
-                <% } else { %>
-                <div class="w-full h-36 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center text-xs text-zinc-400">Missing</div>
-                <% } %>
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <% if (assetUrl) { %><a href="<%= assetPreviewUrl %>" target="_blank" rel="noopener" class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50">Open</a><% } %>
-                  <button type="button" class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50" onclick="copyText('<%= assetPreviewUrl %>')">Copy URL</button>
-                  <button type="button" class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50" onclick="buildPackWithFormats('<%= song.id %>', ['<%= formatName %>'])">Regenerate</button>
-                  <% if (assetUrl) { %><a href="<%= assetPreviewUrl %>" download class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50">Download</a><% } %>
-                  <button type="button" class="border border-zinc-200 rounded-lg px-2 py-1 text-xs hover:bg-zinc-50" onclick="approveMarketingAsset('<%= song.id %>', '<%= key %>')">Mark Approved</button>
-                </div>
-                <div class="mt-2 text-[11px] text-zinc-500">Canonical preview: <a href="<%= releaseKitPreviewUrl %>" target="_blank" class="underline hover:text-zinc-700">Release Kit</a></div>
-              </div>
               <% } %>
             </div>
           </section>
 
           <textarea id="marketing-link-block" class="hidden"><%= mk.outreach_link_block || '' %></textarea>
           <div class="sticky bottom-4 flex justify-end gap-3">
-            <a href="<%= releaseKitPreviewUrl %>" target="_blank" class="border border-zinc-200 rounded-lg px-4 py-2 text-sm hover:bg-zinc-50">Preview Release Kit</a>
-            <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Save Marketing Kit</button>
+            <button class="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Save Marketing</button>
           </div>
         </form>
       </section>
@@ -1059,6 +934,9 @@ window.distroKidAutomation = function(songId) {
     url: '',
     saving: false,
     commandMessage: '',
+    message: '',
+    link: '',
+    log: <%- JSON.stringify(distrokidRecentLog || []) %>,
     async copy(command) {
       this.commandMessage = command;
       try {
@@ -1095,28 +973,64 @@ window.distroKidAutomation = function(songId) {
       });
       const data = await response.json();
       if (!data.ok) return alert((data.errors || [data.error || 'Package command lookup failed']).join('\n'));
-      this.copy(data.commands?.build_package || ('npm run distrokid:package -- --song-id ' + songId));
+      this.copy(data.commands?.build_package || ('./bin/pancakerobot distrokid:package --song-id ' + songId));
     },
     async showDryRunCommand() {
       const response = await fetch('/api/distrokid/jobs/' + encodeURIComponent(songId));
       const data = await response.json();
       if (!data.ok) return alert((data.errors || [data.error || 'Dry-run command lookup failed']).join('\n'));
-      this.copy(data.commands?.upload_dry_run || ('npm run distrokid:upload -- --manifest output/release-packages/' + songId + '/manifest.json --dry-run'));
+      this.copy(data.commands?.upload_dry_run || ('./bin/pancakerobot distrokid:upload --manifest output/release-packages/' + songId + '/manifest.json --dry-run'));
     },
-    async markSubmitted() {
-      if (!this.url.trim()) return;
+    async runPreview() {
       this.saving = true;
-      const response = await fetch('/api/distrokid/jobs/' + encodeURIComponent(songId) + '/mark-submitted', {
+      this.message = 'Running automation preview...';
+      const response = await fetch('/api/distrokid/jobs/' + encodeURIComponent(songId) + '/automation-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ distrokid_url: this.url.trim() }),
       });
       const data = await response.json();
+      this.saving = false;
       if (!data.ok) {
-        this.saving = false;
-        return alert((data.errors || [data.error || 'Mark submitted failed']).join('\n'));
+        this.message = (data.errors || [data.error || 'Automation preview failed']).join('\n');
+        return;
       }
-      window.location.assign('/songs/' + encodeURIComponent(songId) + '?tab=marketing');
+      this.message = data.message || 'Automation preview finished.';
+      this.log = data.recent_log_summary || (data.result?.log || []).map(item => item.message || item);
+    },
+    async runLiveSubmit() {
+      if (!confirm('Run the live DistroKid submit for this release?')) return;
+      this.saving = true;
+      this.message = 'Running live submit...';
+      const response = await fetch('/api/distrokid/jobs/' + encodeURIComponent(songId) + '/live-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const data = await response.json();
+      this.saving = false;
+      if (!data.ok) {
+        this.message = (data.errors || [data.error || 'Live submit failed']).join('\n');
+        return;
+      }
+      this.message = data.message || 'Live submit finished.';
+      this.link = data.result?.hyperfollow?.url || data.result?.releaseUrl || '';
+      this.log = data.recent_log_summary || (data.result?.log || []).map(item => item.message || item);
+    },
+    async fetchHyperFollow() {
+      this.saving = true;
+      this.message = 'Checking HyperFollow...';
+      const response = await fetch('/api/distrokid/jobs/' + encodeURIComponent(songId) + '/hyperfollow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      this.saving = false;
+      if (!data.ok) {
+        this.message = (data.errors || [data.error || 'HyperFollow capture failed']).join('\n');
+        return;
+      }
+      this.message = data.message || 'HyperFollow check finished.';
+      this.link = data.hyperfollow?.url || this.link;
     },
   };
 };

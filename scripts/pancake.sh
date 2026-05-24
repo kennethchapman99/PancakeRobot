@@ -153,7 +153,7 @@ case "$cmd" in
     ;;
   cleanup|catalog:cleanup)
     ensure_deps
-    npm run catalog:cleanup
+    npm run catalog:cleanup -- "$@"
     ;;
   stack|dev:mobile)
     ensure_deps

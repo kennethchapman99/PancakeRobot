@@ -11,13 +11,14 @@ const RENAME_MAP = new Map([
   ['instagram/ig-reel-lyrics.mp4', 'instagram/instagram_reel_lyrics_1080x1920_15s.mp4'],
   ['instagram/ig-reel-character.mp4', 'instagram/instagram_reel_character_1080x1920_15s.mp4'],
   ['instagram/ig-story-new-song.mp4', 'instagram/instagram_story_new_song_1080x1920_15s.mp4'],
-  ['instagram/ig-feed-announcement-1080x1350.png', 'instagram/instagram_feed_announcement_1080x1350.png'],
-  ['instagram/ig-square-post-1080x1080.png', 'instagram/instagram_square_post_1080x1080.png'],
-  ['instagram/ig-reel-cover.jpg', 'instagram/instagram_reel_cover_1080x1920.jpg'],
+  ['instagram/instagram-square-1080x1080.png', 'instagram/instagram_square_1080x1080.png'],
+  ['instagram/instagram-vertical-1080x1920.png', 'instagram/instagram_vertical_1080x1920.png'],
+  ['spotify-cover-3000x3000.png', 'spotify/spotify_cover_3000x3000.png'],
+  ['youtube-thumbnail-1280x720.png', 'youtube/youtube_thumbnail_1280x720.png'],
+  ['facebook-post-1200x630.png', 'facebook/facebook_post_1200x630.png'],
   ['tiktok/tiktok-hook.mp4', 'tiktok/tiktok_hook_1080x1920_15s.mp4'],
   ['tiktok/tiktok-lyric-karaoke.mp4', 'tiktok/tiktok_lyric_karaoke_1080x1920_15s.mp4'],
   ['tiktok/tiktok-character-loop.mp4', 'tiktok/tiktok_character_loop_1080x1920_10s.mp4'],
-  ['tiktok/tiktok-cover.jpg', 'tiktok/tiktok_cover_1080x1920.jpg'],
 ]);
 
 const COPY_FILES = [
