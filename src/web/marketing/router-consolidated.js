@@ -52,9 +52,17 @@ import {
   startYoutubeAuth,
   handleYoutubeAuthCallback,
 } from './controllers/social-controller.js';
+import { removeSongsFromAlbum } from '../../shared/album-track-membership.js';
+import { buildReleaseCockpitViewModel } from '../../shared/release-cockpit.js';
+import { markReleaseAssetsStale } from '../../shared/song-release-assets-service.js';
 
 export function registerMarketingRouter(app) {
   const router = express.Router();
+
+  router.get('/api/releases/:type/:id/state', getReleaseCockpitStateApi);
+  router.get('/api/releases/:type/:id/assets/state', getReleaseCockpitAssetsStateApi);
+  router.get('/api/releases/:type/:id/distribution/state', getReleaseCockpitDistributionStateApi);
+  router.post('/albums/:id/tracks/remove', postRemoveAlbumTrack);
 
   router.get('/marketing', renderMarketingDashboard);
   router.post('/marketing/outreach-run', postOutreachRun);
@@ -112,4 +120,80 @@ export function registerMarketingRouter(app) {
   router.post('/api/social/posts/:postId/skip', postSkipSocialPost);
 
   app.use(router);
+}
+
+async function getReleaseCockpitStateApi(req, res) {
+  try {
+    const cockpit = await withTimeout('Release cockpit state', () => buildReleaseCockpitViewModel(req.params.type, req.params.id));
+    if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+    res.json({ ok: true, cockpit });
+  } catch (error) {
+    res.status(504).json({ ok: false, error: error.message });
+  }
+}
+
+async function getReleaseCockpitAssetsStateApi(req, res) {
+  try {
+    const cockpit = await withTimeout('Release assets state', () => buildReleaseCockpitViewModel(req.params.type, req.params.id));
+    if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+    res.json({
+      ok: true,
+      releaseType: cockpit.type,
+      releaseId: cockpit.id,
+      canonicalMediaOwner: cockpit.canonicalMediaOwner,
+      releaseAssetState: cockpit.releaseAssetState,
+      stages: cockpit.stages.filter(stage => stage.key === 'media'),
+    });
+  } catch (error) {
+    res.status(504).json({ ok: false, error: error.message });
+  }
+}
+
+async function getReleaseCockpitDistributionStateApi(req, res) {
+  try {
+    const cockpit = await withTimeout('Release distribution state', () => buildReleaseCockpitViewModel(req.params.type, req.params.id));
+    if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+    const distStageKeys = new Set(['package', 'distrokid_preview', 'distrokid_live_submit', 'hyperfollow', 'platform_links']);
+    res.json({
+      ok: true,
+      releaseType: cockpit.type,
+      releaseId: cockpit.id,
+      lifecycle: cockpit.lifecycle,
+      packageState: cockpit.packageState,
+      hyperfollow: cockpit.hyperfollow,
+      stages: cockpit.stages.filter(stage => distStageKeys.has(stage.key)),
+    });
+  } catch (error) {
+    res.status(504).json({ ok: false, error: error.message });
+  }
+}
+
+function postRemoveAlbumTrack(req, res) {
+  try {
+    const songIds = normalizeSongIdList(req.body?.song_id || req.body?.songId || req.body?.song_ids || req.body?.songIds);
+    removeSongsFromAlbum(req.params.id, songIds);
+    markReleaseAssetsStale('album', req.params.id);
+    res.redirect(303, `/albums/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    res.status(/not found/i.test(error.message) ? 404 : 400).send(error.message);
+  }
+}
+
+function normalizeSongIdList(input) {
+  const raw = Array.isArray(input) ? input : String(input || '').split(',');
+  return [...new Set(raw.map(id => String(id || '').trim()).filter(Boolean))];
+}
+
+async function withTimeout(label, work, timeoutMs = 10000) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(work),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
