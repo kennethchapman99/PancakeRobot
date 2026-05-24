@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
@@ -18,6 +18,10 @@ import {
   getDistroKidJob,
   markDistroKidJobStatus,
 } from './distrokid-jobs.js';
+import {
+  buildReleasePackageForCockpit,
+  getCanonicalReleaseManifestPath,
+} from './release-cockpit.js';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -110,12 +114,9 @@ export async function runDistroKidAlbumAutomation(albumId, options = {}) {
     return runStubAlbumAutomation(album, tracks, { mode, append, log, options });
   }
 
-  for (const track of tracks) {
-    await buildSongPackage(track.id);
-    append(`Package refreshed for track ${track.track_number || '?'}: ${track.id}`);
-  }
-  const albumManifestPath = writeAlbumManifest(album, tracks);
-  append('Album manifest built from track package metadata');
+  const packageResult = await buildReleasePackageForCockpit('album', albumId);
+  const albumManifestPath = getCanonicalReleaseManifestPath('album', albumId);
+  append(`Canonical album package ready: ${packageResult.manifestPath || albumManifestPath}`);
 
   const uploadArgs = [
     join(REPO_ROOT, 'scripts/distrokid/upload-release.mjs'),
@@ -195,41 +196,6 @@ async function buildSongPackage(songId) {
     '--song-id',
     songId,
   ]);
-}
-
-function writeAlbumManifest(album, tracks) {
-  const trackManifests = tracks.map((track, index) => {
-    const manifestPath = join(PACKAGE_ROOT, track.id, 'manifest.json');
-    const manifest = readJsonIfExists(manifestPath);
-    if (!manifest) throw new Error(`Missing track package manifest: ${track.id}`);
-    return {
-      ...manifest,
-      track_number: track.track_number || index + 1,
-      track_title: manifest.track_title || track.title,
-    };
-  });
-  const first = trackManifests[0];
-  const packageDir = join(PACKAGE_ROOT, album.id);
-  mkdirSync(packageDir, { recursive: true });
-  const albumManifest = {
-    ...first,
-    schema_version: 'distrokid-album-release-package-v1',
-    song_id: album.id,
-    album_id: album.id,
-    release_type: 'album',
-    release_title: album.album_title || first.release_title || album.album_theme || album.id,
-    track_title: undefined,
-    audio_file: undefined,
-    lyrics_file: undefined,
-    tracks: trackManifests,
-    readiness: {
-      ready_for_distrokid_dry_run: trackManifests.every(track => track.readiness?.ready_for_distrokid_dry_run),
-      blocking_missing_fields: trackManifests.flatMap(track => (track.readiness?.blocking_missing_fields || []).map(field => `${track.song_id}:${field}`)),
-    },
-  };
-  const manifestPath = join(packageDir, 'manifest.json');
-  writeFileSync(manifestPath, `${JSON.stringify(albumManifest, null, 2)}\n`, 'utf8');
-  return manifestPath;
 }
 
 async function runStubSongAutomation(songId, { mode, append, log, options }) {

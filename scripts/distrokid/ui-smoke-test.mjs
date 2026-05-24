@@ -28,21 +28,19 @@ assert(catalog.includes('toggleAll($event.target.checked)'), 'catalog has select
 assert(catalog.includes('songIds: [...this.selected]'), 'catalog bulk calls send songIds');
 assert(catalog.includes('distrokidJobLabel(song.distrokidJob)'), 'catalog renders DistroKid status pill');
 
-assert(detail.includes('DistroKid Automation'), 'detail has DistroKid Automation card');
-assert(detail.includes('Run Automation Preview'), 'detail has primary preview action');
-assert(detail.includes('Run Live Submit'), 'detail has primary live submit action');
-assert(detail.includes('Fetch HyperFollow Link'), 'detail has HyperFollow capture action');
-assert(detail.includes('Recent automation log'), 'detail shows recent automation log');
-assert(detail.includes('<summary class="cursor-pointer text-xs font-semibold text-zinc-600">Advanced</summary>'), 'advanced section contains debug actions');
-assert(detail.includes('Build Package'), 'detail keeps build package debug action');
-assert(detail.includes('Show Dry-Run Upload Command'), 'detail keeps dry-run command debug action');
-assert(detail.includes('./bin/pancakerobot distrokid:save-auth'), 'detail shows canonical save auth command');
-assert(detail.includes('./bin/pancakerobot distrokid:check-auth'), 'detail shows canonical check auth command');
-assert(detail.includes('./bin/pancakerobot distrokid:package --song-id'), 'detail shows canonical package command');
-assert(detail.includes('./bin/pancakerobot distrokid:upload --manifest'), 'detail shows canonical dry-run upload command');
-assert(detail.includes('./bin/pancakerobot distrokid:run-queued --limit 5 --dry-run'), 'detail shows canonical run queued command');
-assert(detail.indexOf('Build Package') > detail.indexOf('Advanced'), 'build package is under Advanced');
-assert(detail.indexOf('Show Dry-Run Upload Command') > detail.indexOf('Advanced'), 'dry-run command is under Advanced');
+assert(detail.includes('Release Status'), 'detail shows release status');
+assert(detail.includes('Open Release Cockpit'), 'detail links to Release Cockpit');
+assert(detail.includes('actions are managed in the Release Cockpit'), 'detail directs release execution to Cockpit');
+assert(!detail.includes('Run Automation Preview'), 'detail does not expose preview action');
+assert(!detail.includes('Run Live Submit'), 'detail does not expose live submit action');
+assert(!detail.includes('Fetch HyperFollow Link'), 'detail does not expose HyperFollow capture action');
+assert(!detail.includes('Build Package'), 'detail does not expose package action');
+assert(!detail.includes('Show Dry-Run Upload Command'), 'detail does not expose dry-run command action');
+assert(!detail.includes('./bin/pancakerobot distrokid:save-auth'), 'detail does not expose save-auth command');
+assert(!detail.includes('./bin/pancakerobot distrokid:check-auth'), 'detail does not expose check-auth command');
+assert(!detail.includes('./bin/pancakerobot distrokid:package --song-id'), 'detail does not expose package command');
+assert(!detail.includes('./bin/pancakerobot distrokid:upload --manifest'), 'detail does not expose dry-run upload command');
+assert(!detail.includes('./bin/pancakerobot distrokid:run-queued --limit 5 --dry-run'), 'detail does not expose run-queued command');
 
 for (const route of [
   "app.post('/api/distrokid/jobs/queue'",

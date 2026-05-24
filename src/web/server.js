@@ -108,6 +108,7 @@ import {
   buildReleasePackageForCockpit,
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
+  validateReleaseAction,
 } from '../shared/release-cockpit.js';
 import {
   createOutreachRun,
@@ -286,20 +287,23 @@ app.get('/releases/:type/:id', (req, res) => {
 app.post('/releases/:type/:id/actions/readiness', (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
-  logReleaseCockpitEvent(cockpit.type, cockpit.id, 'readiness_check', cockpit.canLiveSubmit ? 'complete' : 'blocked', cockpit.canLiveSubmit ? 'Readiness check passed.' : `Readiness check found ${cockpit.blockers.length} blocker(s).`, { blockers: cockpit.blockers });
-  respondReleaseAction(req, res, cockpit, 'Readiness check complete.');
+  const readiness = validateReleaseAction('readiness', cockpit);
+  const canAdvance = cockpit.blockers.length === 0;
+  logReleaseCockpitEvent(cockpit.type, cockpit.id, 'readiness_check', canAdvance ? 'complete' : 'blocked', canAdvance ? `Readiness passed; lifecycle can advance to ${cockpit.lifecycle.next}.` : `Readiness check found ${cockpit.blockers.length} blocker(s).`, { blockers: cockpit.blockers, lifecycle: cockpit.lifecycle, can_advance: canAdvance, readiness });
+  respondReleaseAction(req, res, cockpit, canAdvance ? 'Readiness check passed.' : 'Readiness check found blockers.');
 });
 
 app.post('/releases/:type/:id/actions/package', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
+    validateReleaseAction('package', cockpit);
     const result = await buildReleasePackageForCockpit(cockpit.type, cockpit.id);
-    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'build_package', 'complete', `Built release package for ${result.trackCount} track(s).`, result);
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'build_package', result.ok ? 'complete' : 'blocked', result.ok ? `Built canonical release package for ${result.trackCount} track(s).` : 'Release package built but is blocked.', result);
     respondReleaseAction(req, res, cockpit, 'Release package built.');
   } catch (error) {
-    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'build_package', 'failed', error.message);
-    if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'build_package', /blocked/i.test(error.message) ? 'blocked' : 'failed', error.message);
+    if (wantsJson(req)) return res.status(/blocked/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
     res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
   }
 });
@@ -308,6 +312,7 @@ app.post('/releases/:type/:id/actions/distrokid-preview', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
+    validateReleaseAction('preview', cockpit);
     const result = cockpit.type === 'album'
       ? await runDistroKidAlbumAutomation(cockpit.id, { mode: 'preview' })
       : await runDistroKidSongAutomation(cockpit.id, { mode: 'preview' });
@@ -325,7 +330,7 @@ app.post('/releases/:type/:id/actions/distrokid-live-submit', async (req, res) =
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
     assertReleaseLiveSubmitReady(cockpit.type, cockpit.id);
-    if (req.body?.confirm !== 'true' && req.body?.confirm !== true) throw new Error('Live DistroKid submit requires explicit confirmation.');
+    validateReleaseAction('live_submit', cockpit, { confirm: req.body?.confirm === 'true' || req.body?.confirm === true });
     const result = cockpit.type === 'album'
       ? await runDistroKidAlbumAutomation(cockpit.id, { mode: 'live', confirm: true })
       : await runDistroKidSongAutomation(cockpit.id, { mode: 'live', confirm: true });
@@ -342,6 +347,7 @@ app.post('/releases/:type/:id/actions/hyperfollow', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
+    validateReleaseAction('hyperfollow', cockpit);
     const url = req.body?.hyperfollow_url || req.body?.url;
     const results = [];
     for (const track of cockpit.tracks) results.push(await captureHyperFollowLink(track.id, { hyperfollowUrl: url }));
@@ -359,6 +365,8 @@ app.post('/releases/:type/:id/actions/outreach', (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
+    const draftOnly = req.body?.draft_only === 'true' || req.body?.draft_only === true || !cockpit.hyperfollow?.url;
+    validateReleaseAction('outreach', cockpit, { draftOnly });
     const outlets = getCanonicalEmailOutletsForSelection().slice(0, 25);
     if (!outlets.length) throw new Error('No approved email outreach outlets are available.');
     const result = createOutreachRun({
@@ -366,9 +374,10 @@ app.post('/releases/:type/:id/actions/outreach', (req, res) => {
       outlet_ids: outlets.map(outlet => outlet.id),
       mode: cockpit.type === 'album' ? 'bundle' : 'single_release',
       dry_run: true,
+      notes: draftOnly ? 'Cockpit pre-HyperFollow draft-only outreach run.' : 'Cockpit HyperFollow-ready draft outreach run.',
       allow_same_release: false,
     });
-    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'outreach_campaign', 'complete', 'Draft outreach campaign built.', result);
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'outreach_campaign', draftOnly ? 'draft_only' : 'complete', draftOnly ? 'Pre-HyperFollow draft-only outreach campaign built.' : 'Draft outreach campaign built.', { ...result, draft_only: draftOnly });
     respondReleaseAction(req, res, cockpit, 'Draft outreach campaign built.');
   } catch (error) {
     logReleaseCockpitEvent(cockpit.type, cockpit.id, 'outreach_campaign', 'blocked', error.message);
@@ -972,11 +981,12 @@ app.post('/api/songs/:id/generate', (req, res) => {
   if (!song) return res.status(404).json({ error: 'Song not found' });
 
   const jobId = `pipe_${Date.now().toString(36)}`;
-  const topic = song.topic || song.title || `${BRAND_PROFILE.music.default_style} song`;
+  const generationProfile = resolveSongBrandProfile(song);
+  const topic = song.topic || song.title || `${generationProfile.profile.music.default_style} song`;
   const pipelineMode = String(req.body?.pipelineMode || 'standard').trim().toLowerCase() === 'magic' ? 'magic' : 'standard';
   const pipelineFlag = pipelineMode === 'magic' ? '--magic' : '--new';
 
-  const spawnedProfileId = getActiveProfileId();
+  const spawnedProfileId = generationProfile.id;
   pipelineJobs.set(jobId, {
     status: 'running',
     logs: [],
@@ -1047,7 +1057,13 @@ app.post('/api/songs/:id/generate', (req, res) => {
       job.status = 'done';
       job.logs.push('✅ Pipeline complete!');
       if (job.spawnedProfileId) {
-        try { upsertSong({ id: job.songId, brand_profile_id: job.spawnedProfileId }); } catch {}
+        try {
+          const completedSong = getSong(job.songId);
+          upsertSong({
+            id: job.songId,
+            brand_profile_id: completedSong?.brand_profile_id || job.spawnedProfileId,
+          });
+        } catch {}
       }
     } else {
       job.status = 'error';
@@ -1235,12 +1251,17 @@ app.get('/songs/:id', (req, res) => {
   const songDir = join(__dirname, '../../output/songs', song.id);
   const fsAssets = scanSongDir(songDir);
 
-  // Read file contents for tabs
-  const readFile = (p) => { try { return p && fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null; } catch { return null; } };
-  const lyricsContent    = readFile(fsAssets.lyrics);
-  const audioPromptContent = readFile(fsAssets.audioPrompt);
-  const metadataContent  = fsAssets.metadata ? readFile(fsAssets.metadata) : null;
-  const brandReviewContent = fsAssets.brandReview ? readFile(fsAssets.brandReview) : null;
+  const songBrand = resolveSongBrandProfile(song);
+
+  // Read canonical song files first, then fall back to the legacy output scan.
+  const lyricsFile = readSongDetailFile(song.lyrics_path, fsAssets.lyrics);
+  const audioPromptFile = readSongDetailFile(song.audio_prompt_path, fsAssets.audioPrompt);
+  const metadataFile = readSongDetailFile(song.metadata_path, fsAssets.metadata);
+  const brandReviewFile = readSongDetailFile(null, fsAssets.brandReview);
+  const lyricsContent = lyricsFile.content;
+  const audioPromptContent = audioPromptFile.content;
+  const metadataContent = metadataFile.content;
+  const brandReviewContent = brandReviewFile.content;
   const metadataParsed   = metadataContent ? (() => { try { return JSON.parse(metadataContent); } catch { return null; } })() : null;
   const brandParsed      = brandReviewContent ? (() => { try { return JSON.parse(brandReviewContent); } catch { return null; } })() : null;
 
@@ -1277,8 +1298,21 @@ app.get('/songs/:id', (req, res) => {
 
   res.render('songs/detail', {
     song, idea, assets, checklist, progress, links, snapshots, fsAssets,
+    lyricsSourcePath: lyricsFile.path,
+    audioPromptSourcePath: audioPromptFile.path,
+    metadataSourcePath: metadataFile.path,
     lyricsContent, audioPromptContent, metadataParsed, brandParsed,
     marketingPack, baseImage, releaseAssetState, releaseOutreachRows, marketingKit, releaseMarketing,
+    songBrandProfile: songBrand.profile,
+    songBrandProfileId: songBrand.id,
+    songBrandLabel: songBrand.label,
+    brandProfile: songBrand.profile,
+    brandName: songBrand.profile.brand_name,
+    appTitle: songBrand.profile.app_title || songBrand.profile.brand_name,
+    logoPath: songBrand.profile.ui?.logo_path || '/logo.png',
+    sidebarSubtitle: songBrand.profile.ui?.sidebar_subtitle || 'Music Studio',
+    defaultDistributor: songBrand.profile.distribution?.default_distributor || DEFAULT_DISTRIBUTOR,
+    distributorUrl: songBrand.profile.distribution?.research_default_url || DISTRIBUTOR_URL,
     albumContext,
     distrokidJob,
     distrokidRecentLog: summarizeDistroKidRunLog(song.id),
@@ -2153,6 +2187,34 @@ function normalizeProfileId(value) {
   return raw || DEFAULT_PROFILE_ID;
 }
 
+function resolveSongBrandProfile(song) {
+  const requestedId = normalizeProfileId(song?.brand_profile_id || getActiveProfileId());
+  try {
+    const profile = loadBrandProfileById(requestedId);
+    return {
+      id: requestedId,
+      profile,
+      label: profile.brand_name || requestedId,
+    };
+  } catch (error) {
+    const fallbackId = getActiveProfileId();
+    try {
+      const profile = loadBrandProfileById(fallbackId);
+      return {
+        id: fallbackId,
+        profile,
+        label: `${profile.brand_name || fallbackId} (fallback for missing ${requestedId})`,
+      };
+    } catch {
+      return {
+        id: DEFAULT_PROFILE_ID,
+        profile: BRAND_PROFILE,
+        label: BRAND_NAME,
+      };
+    }
+  }
+}
+
 // ── 404 ────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).render('404', { message: `Page not found: ${req.path}` });
@@ -2291,6 +2353,19 @@ function readTextFile(filePath) {
   } catch {
     return '';
   }
+}
+
+function readSongDetailFile(primaryPath, fallbackPath) {
+  for (const candidate of [primaryPath, fallbackPath]) {
+    const filePath = String(candidate || '').trim();
+    if (!filePath) continue;
+    try {
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        return { path: filePath, content: fs.readFileSync(filePath, 'utf8') };
+      }
+    } catch {}
+  }
+  return { path: null, content: null };
 }
 
 function readSongMetadata(songDir) {

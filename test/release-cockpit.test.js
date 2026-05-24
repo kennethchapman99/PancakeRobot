@@ -9,6 +9,7 @@ import {
 } from '../src/shared/test-db-artifacts.js';
 
 process.env.PIPELINE_APP_SLUG = prepareTestDbSlug('test-release-cockpit').slug;
+process.env.PANCAKE_DISTROKID_AUTOMATION_STUB = '1';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const albumIds = new Set();
@@ -31,13 +32,33 @@ const {
 } = await import('../src/shared/db.js');
 const {
   assertReleaseLiveSubmitReady,
+  buildReleasePackageForCockpit,
   buildReleaseCockpitViewModel,
+  getCanonicalReleaseManifest,
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
+  validateReleaseAction,
 } = await import('../src/shared/release-cockpit.js');
 const {
   getReleaseAssetOwner,
 } = await import('../src/shared/song-release-assets-service.js');
+const {
+  captureHyperFollowLink,
+  runDistroKidAlbumAutomation,
+  runDistroKidSongAutomation,
+} = await import('../src/shared/distrokid-automation.js');
+const {
+  getDistroKidJob,
+} = await import('../src/shared/distrokid-jobs.js');
+const {
+  upsertMarketingTarget,
+} = await import('../src/shared/marketing-db.js');
+const {
+  createOutreachRun,
+} = await import('../src/agents/marketing-outreach-run-agent.js');
+const {
+  getActiveProfileId,
+} = await import('../src/shared/brand-profile.js');
 
 function uniqueId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -49,7 +70,7 @@ function createSong(title, overrides = {}) {
   upsertSong({
     id,
     title,
-    brand_profile_id: 'release-cockpit-brand',
+    brand_profile_id: 'default',
     release_date: '2026-06-12',
     is_test: true,
     ...overrides,
@@ -69,6 +90,81 @@ function writeAlbumImage(albumId) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, 'not-a-real-image-but-good-enough-for-state');
   return filePath;
+}
+
+function writeReadySongFiles(songId) {
+  writeSongAsset(songId, 'audio.mp3', 'fake-audio');
+  writeSongAsset(songId, 'reference/base-image.png', 'fake-primary-image');
+  writeSongAsset(songId, 'metadata.json', JSON.stringify({
+    artist: 'Pancake Robot',
+    title: `Title ${songId}`,
+    primary_genre: "Children's Music",
+    made_for_kids: true,
+  }));
+  writeSongAsset(songId, 'lyrics.md', 'la la test');
+  const marketingDir = path.join(repoRoot, 'output', 'marketing-ready', songId);
+  fs.mkdirSync(marketingDir, { recursive: true });
+  fs.writeFileSync(path.join(marketingDir, 'no-text-variation.png'), 'fake-cover');
+  fs.writeFileSync(path.join(marketingDir, 'metadata.json'), JSON.stringify({
+    primary_image_fingerprint: 'test',
+    generated_assets: [
+      'spotify-cover-3000x3000.png',
+      'youtube-thumbnail-1280x720.png',
+      'instagram-square-1080x1080.png',
+      'instagram-vertical-1080x1920.png',
+      'facebook-post-1200x630.png',
+    ].map(name => ({ name, format: name, path: path.join(marketingDir, name), publicUrl: `/media/marketing-ready/${songId}/${name}` })),
+  }));
+}
+
+function writeReadyAlbumFiles(albumId, songIds) {
+  writeAlbumImage(albumId);
+  const albumAssetsDir = path.join(repoRoot, 'output', 'albums', albumId, 'assets');
+  fs.mkdirSync(albumAssetsDir, { recursive: true });
+  fs.writeFileSync(path.join(albumAssetsDir, 'metadata.json'), JSON.stringify({
+    primary_image_fingerprint: 'test',
+    generated_assets: [
+      'spotify-cover-3000x3000.png',
+      'youtube-thumbnail-1280x720.png',
+      'instagram-square-1080x1080.png',
+      'instagram-vertical-1080x1920.png',
+      'facebook-post-1200x630.png',
+    ].map(name => ({ name, format: name, path: path.join(albumAssetsDir, name), publicUrl: `/media/albums/${albumId}/assets/${name}` })),
+  }));
+  for (const songId of songIds) {
+    writeSongAsset(songId, 'audio.mp3', 'fake-audio');
+    writeSongAsset(songId, 'metadata.json', JSON.stringify({
+      artist: 'Pancake Robot',
+      title: `Title ${songId}`,
+      primary_genre: "Children's Music",
+      made_for_kids: true,
+    }));
+    writeSongAsset(songId, 'lyrics.md', 'la la album');
+  }
+}
+
+function seedEmailOutlet(id) {
+  const sourcePath = path.join(repoRoot, 'output', 'test-marketing-outlets-source.json');
+  fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
+  fs.writeFileSync(sourcePath, JSON.stringify({ outlet_targets: [] }));
+  process.env.MARKETING_OUTLETS_SOURCE_PATH = sourcePath;
+  upsertMarketingTarget({
+    id,
+    brand_profile_id: getActiveProfileId(),
+    name: `Cockpit Acceptance Outlet ${id}`,
+    type: 'playlist',
+    platform: 'email',
+    source_url: `https://cockpit-outlet.local/${id}`,
+    contact_email: 'editor@cockpit-outlet.local',
+    public_email: 'editor@cockpit-outlet.local',
+    status: 'approved',
+    ai_policy: 'allowed',
+    fit_score: 95,
+    contactability: { status: 'contactable', free_contact_method_found: true, best_channel: 'email', contact_methods: [{ type: 'email', value: 'editor@cockpit-outlet.local' }] },
+    cost_policy: { requires_payment: false, cost_type: 'free' },
+    outreach_eligibility: { eligible: true, reason_codes: [] },
+  });
+  return id;
 }
 
 test('album cockpit includes ordered tracks', () => {
@@ -127,7 +223,7 @@ test('singles have their own cockpit and appear as single releases', () => {
   assert.ok(entries.some(entry => entry.type === 'single' && entry.id === songId));
 });
 
-test('missing metadata and audio block live submit but keep preview and readiness available', () => {
+test('missing metadata and audio block package, preview, and live submit but keep readiness available', () => {
   const songId = createSong('Blocked Cockpit Single');
   const cockpit = buildReleaseCockpitViewModel('single', songId);
 
@@ -135,8 +231,10 @@ test('missing metadata and audio block live submit but keep preview and readines
   assert.ok(cockpit.blockers.some(blocker => /audio file is missing/i.test(blocker)));
   assert.ok(cockpit.blockers.some(blocker => /metadata\.json is missing/i.test(blocker)));
   assert.ok(cockpit.nextActions.find(action => action.key === 'readiness')?.enabled);
-  assert.ok(cockpit.nextActions.find(action => action.key === 'preview')?.enabled);
+  assert.equal(cockpit.nextActions.find(action => action.key === 'package')?.enabled, false);
+  assert.equal(cockpit.nextActions.find(action => action.key === 'preview')?.enabled, false);
   assert.equal(cockpit.nextActions.find(action => action.key === 'live_submit')?.enabled, false);
+  assert.throws(() => validateReleaseAction('package', cockpit), /Package blocked/);
   assert.throws(() => assertReleaseLiveSubmitReady('single', songId), /Live submit blocked/);
 });
 
@@ -169,8 +267,92 @@ test('cockpit templates avoid duplicate competing controls for album-owned songs
 
   assert.match(songDetail, /href="\/releases\/<%= albumReleaseContext \? 'album' : 'single' %>/);
   assert.match(songDetail, /This track is submitted as part of its album/);
-  assert.match(songDetail, /<% } else { %>\s*<section class="mb-6 rounded-2xl border border-fuchsia-200 bg-white p-5 shadow-sm" x-data="distroKidAutomation/);
+  assert.match(songDetail, /Packaging, DistroKid preview, live submit, HyperFollow, and outreach actions are managed in the Release Cockpit/);
+  assert.doesNotMatch(songDetail, /Run Automation Preview/);
+  assert.doesNotMatch(songDetail, /Build Package/);
   assert.match(releaseDetail, /Run DistroKid live submit/);
   assert.match(releaseModel, /ByteSeed video publishing/);
   assert.match(releaseModel, /Meta publishing/);
+});
+
+test('mocked release cockpit acceptance covers single lifecycle actions', async () => {
+  const songId = createSong('Acceptance Cockpit Single');
+  writeReadySongFiles(songId);
+  const outletId = seedEmailOutlet(uniqueId('COCKPIT_OUTLET'));
+
+  let cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(validateReleaseAction('readiness', cockpit).ok, true);
+  assert.throws(() => validateReleaseAction('preview', cockpit), /DistroKid preview blocked/);
+
+  const pkg = await buildReleasePackageForCockpit('single', songId);
+  assert.equal(pkg.ok, true);
+  cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.lifecycle.current, 'approved_for_distribution');
+  assert.equal(cockpit.packageState.ready, true);
+
+  assert.throws(() => validateReleaseAction('live_submit', cockpit), /DistroKid preview has not been completed/);
+  const preview = await runDistroKidSongAutomation(songId, { mode: 'preview' });
+  assert.equal(preview.ok, true);
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'complete', 'Acceptance preview complete.', preview);
+  cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.lifecycle.current, 'distrokid_previewed');
+  assert.throws(() => validateReleaseAction('live_submit', cockpit), /explicit confirmation/);
+
+  const live = await runDistroKidSongAutomation(songId, {
+    mode: 'live',
+    confirm: true,
+    releaseUrl: 'https://distrokid.com/release/cockpit-single',
+  });
+  assert.equal(live.ok, true);
+  cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.lifecycle.current, 'submitted_to_distrokid');
+  assert.equal(getDistroKidJob(songId).status, 'submitted_pending_hyperfollow');
+
+  const hyperfollow = await captureHyperFollowLink(songId, {
+    hyperfollowUrl: 'https://distrokid.com/hyperfollow/pancakerobot/cockpit-single',
+  });
+  assert.equal(hyperfollow.status, 'captured');
+  cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.lifecycle.current, 'hyperfollow_ready');
+
+  const outreach = createOutreachRun({
+    song_ids: [songId],
+    outlet_ids: [outletId],
+    dry_run: true,
+  });
+  assert.equal(outreach.campaign_count, 1);
+});
+
+test('mocked release cockpit acceptance covers canonical album package and logs', async () => {
+  const first = createSong('Acceptance Album One');
+  const second = createSong('Acceptance Album Two');
+  const albumId = createAlbum({
+    id: uniqueId('COCKPIT_ALBUM_ACCEPT'),
+    album_title: 'Acceptance Album',
+    release_date: '2026-07-10',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  albumIds.add(albumId);
+  assignSongsToAlbum(albumId, [first, second]);
+  writeReadyAlbumFiles(albumId, [first, second]);
+
+  let cockpit = buildReleaseCockpitViewModel('album', albumId);
+  assert.equal(validateReleaseAction('readiness', cockpit).ok, true);
+  const pkg = await buildReleasePackageForCockpit('album', albumId);
+  assert.equal(pkg.ok, true);
+  const manifest = getCanonicalReleaseManifest('album', albumId);
+  assert.equal(manifest.schema_version, 'distrokid-album-release-package-v1');
+  assert.deepEqual(manifest.readiness.ordered_tracks, [first, second]);
+  assert.equal(manifest.tracks.length, 2);
+  assert.equal(manifest.canonical_distrokid_upload_payload.tracks.length, 2);
+  assert.ok(manifest.inherited_album_media.primary_image);
+
+  cockpit = buildReleaseCockpitViewModel('album', albumId);
+  assert.equal(cockpit.packageState.ready, true);
+  const preview = await runDistroKidAlbumAutomation(albumId, { mode: 'preview' });
+  assert.equal(preview.ok, true);
+  logReleaseCockpitEvent('album', albumId, 'distrokid_preview', 'complete', 'Acceptance preview complete.', preview);
+  assert.equal(buildReleaseCockpitViewModel('album', albumId).logs[0].action, 'distrokid_preview');
 });

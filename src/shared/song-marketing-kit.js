@@ -1,5 +1,5 @@
 import path from 'path';
-import { loadBrandProfile } from './brand-profile.js';
+import { DEFAULT_PROFILE_ID, loadBrandProfile, loadBrandProfileById } from './brand-profile.js';
 import { getReleaseLinks, getSong, upsertSong } from './db.js';
 import { resolveDefaultBaseImage, scanMarketingPack, scanSongBaseImage } from './song-catalog-marketing.js';
 import { getOutreachEvents } from './marketing-outreach-db.js';
@@ -51,7 +51,8 @@ export function getSongMarketingKit(songOrId, options = {}) {
   const releaseLinks = options.releaseLinks || getReleaseLinks(song.id);
   const baseImage = options.baseImage || scanSongBaseImage(song.id);
   const marketingPack = options.marketingPack || scanMarketingPack(song.id);
-  const defaults = getBrandMarketingDefaults();
+  const brandProfile = loadSongBrandProfile(song);
+  const defaults = getBrandMarketingDefaults(brandProfile);
 
   const marketing_links = normalizeMarketingLinks({
     ...deriveLinksFromSong(song, releaseLinks),
@@ -91,6 +92,8 @@ export function getSongMarketingKit(songOrId, options = {}) {
     last_outreach,
     next_action,
     defaults,
+    brandProfileId: song.brand_profile_id || DEFAULT_PROFILE_ID,
+    brandName: brandProfile.brand_name || '',
     image_source: imageSelection,
     validation: validateMarketingKit({ links: marketing_links, assets: marketing_assets }),
     outreach_link_block: buildOutreachLinkBlock({ links: marketing_links }),
@@ -261,6 +264,7 @@ export function buildOutreachLinkBlock({ links = {}, outreachType = 'general', a
 export function buildReleaseKitViewModel(songOrId) {
   const song = typeof songOrId === 'string' ? getSong(songOrId) : songOrId;
   if (!song) return null;
+  const brandProfile = loadSongBrandProfile(song);
   const kit = getSongMarketingKit(song);
   const releaseLinks = getReleaseLinks(song.id);
   const marketingPack = scanMarketingPack(song.id);
@@ -271,7 +275,7 @@ export function buildReleaseKitViewModel(songOrId) {
   return {
     song,
     title: song.title || song.topic || song.id,
-    artistName: BRAND_PROFILE.distribution?.default_artist || BRAND_PROFILE.brand_name,
+    artistName: brandProfile.distribution?.default_artist || brandProfile.brand_name,
     releaseDate: song.release_date || null,
     shortDescription: song.topic || song.concept || '',
     longDescription: song.notes || song.concept || '',
@@ -392,9 +396,18 @@ function normalizeLastOutreach(value = {}, songId) {
   };
 }
 
-function getBrandMarketingDefaults() {
-  const social = BRAND_PROFILE.social || {};
-  const marketing = BRAND_PROFILE.marketing || {};
+function loadSongBrandProfile(song) {
+  const profileId = song?.brand_profile_id || DEFAULT_PROFILE_ID;
+  try {
+    return loadBrandProfileById(profileId);
+  } catch {
+    return BRAND_PROFILE;
+  }
+}
+
+function getBrandMarketingDefaults(profile = BRAND_PROFILE) {
+  const social = profile.social || {};
+  const marketing = profile.marketing || {};
   return {
     marketing_links: {
       smart_link: '',
@@ -409,12 +422,13 @@ function getBrandMarketingDefaults() {
       lyrics_url: '',
       instagram_url: social.instagram_url || '',
       tiktok_url: social.tiktok_url || '',
-      artist_website_url: social.website_url || BRAND_PROFILE.website_url || '',
+      artist_website_url: social.website_url || profile.website_url || '',
       contact_email: marketing.contact_email || social.contact_email || social.email_contact || DEFAULT_CONTACT_EMAIL,
     },
     marketing_assets: {
       base_image_url: '',
       fallback_image_url: marketing.default_marketing_image_url || '',
+      brand_logo_url: publicLogoUrl(profile),
       square_post_url: '',
       vertical_post_url: '',
       portrait_post_url: '',
@@ -431,7 +445,7 @@ function resolveMarketingImageSelection(assets = {}, links = {}, defaults = {}, 
   const releaseBaseImageUrl = cleanString(assets.base_image_url || baseImage?.url || '');
   const coverArtUrl = cleanString(links.cover_art_url || '');
   const brandDefaultImageUrl = cleanString(defaults.marketing_assets?.fallback_image_url || '');
-  const brandLogoUrl = cleanString(publicLogoUrl());
+  const brandLogoUrl = cleanString(defaults.marketing_assets?.brand_logo_url || publicLogoUrl());
   const defaultBaseImageUrl = cleanString(resolveDefaultBaseImage(songId || baseImage?.songId || '')?.url || '');
 
   if (releaseBaseImageUrl) {
@@ -531,8 +545,8 @@ function pathToMediaUrl(relativePath) {
   return normalized.startsWith('output/') ? `/media/${normalized.slice('output/'.length)}` : normalized.startsWith('/media/') ? normalized : null;
 }
 
-function publicLogoUrl() {
-  const logo = BRAND_PROFILE.marketing?.logo_url || BRAND_PROFILE.ui?.logo_url || BRAND_PROFILE.ui?.logo_path || '/logo.png';
+function publicLogoUrl(profile = BRAND_PROFILE) {
+  const logo = profile.marketing?.logo_url || profile.ui?.logo_url || profile.ui?.logo_path || '/logo.png';
   return logo.startsWith('http://') || logo.startsWith('https://') ? logo : logo.startsWith('/') ? logo : `/${logo}`;
 }
 

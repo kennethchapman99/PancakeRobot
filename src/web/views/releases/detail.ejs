@@ -21,6 +21,8 @@
         <span><%= cockpit.tracks.length %> track<%= cockpit.tracks.length === 1 ? '' : 's' %></span>
         <span>·</span>
         <span>Release date <%= cockpit.releaseDate || '—' %></span>
+        <span>·</span>
+        <span>Lifecycle <%= cockpit.lifecycle.current.replace(/_/g, ' ') %></span>
         <% if (cockpit.brandProfileId) { %><span>·</span><span>Brand profile <%= cockpit.brandProfileId %></span><% } %>
       </div>
     </div>

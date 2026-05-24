@@ -41,14 +41,16 @@ test('song catalog template exposes clean catalog filters and removes stale A&R 
 test('album detail exposes clean album release actions and track ordering', () => {
   const source = fs.readFileSync(path.join(repoRoot, 'src/web/views/album-batch/detail.ejs'), 'utf8');
 
-  assert.match(source, /Run Automation Preview/);
-  assert.match(source, /Run Live Submit/);
-  assert.match(source, /Fetch HyperFollow Link/);
+  assert.match(source, /Open Release Cockpit/);
+  assert.match(source, /Package, preview, live submit, HyperFollow, and outreach execution are managed in the Release Cockpit/);
+  assert.doesNotMatch(source, /Run Automation Preview/);
+  assert.doesNotMatch(source, /Run Live Submit/);
+  assert.doesNotMatch(source, /Fetch HyperFollow Link/);
   assert.match(source, /Album Tracks/);
   assert.match(source, /Save Track Order/);
   assert.match(source, /<summary class="cursor-pointer text-xs font-semibold text-zinc-600">Advanced<\/summary>/);
 
-  const normalCard = source.slice(source.indexOf('DistroKid Automation'), source.indexOf('Album Release Assets'));
+  const normalCard = source.slice(source.indexOf('Release Status'), source.indexOf('Album Release Assets'));
   assert.doesNotMatch(normalCard, /Build Package/);
   assert.doesNotMatch(normalCard, /mark-submitted/);
   assert.doesNotMatch(normalCard, /Show Dry-Run Upload Command/);

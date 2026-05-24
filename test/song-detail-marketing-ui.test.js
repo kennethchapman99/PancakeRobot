@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { marketingPack } from '../src/web/public/song-detail-marketing.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { deleteSong, upsertSong } from '../src/shared/db.js';
+import { getSongMarketingKit, buildReleaseKitViewModel } from '../src/shared/song-marketing-kit.js';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 
@@ -156,4 +158,28 @@ test('song detail makes album inheritance explicit and removes competing song re
   assert.match(source, /inherits release media, DistroKid submission, HyperFollow, social readiness, and campaign context from the album/);
   assert.match(source, /This track uses album media\. Change or rebuild it on the album page\./);
   assert.match(source, /This track is submitted as part of its album/);
+});
+
+test('song detail and marketing kit use the song brand profile instead of the active default brand', t => {
+  const songId = `SONG_REGGAE_PROFILE_${Date.now()}`;
+  upsertSong({
+    id: songId,
+    title: 'Reggae Profile Check',
+    status: 'draft',
+    brand_profile_id: 'sunstone-signal-modern-roots-reggae',
+  });
+  t.after(() => deleteSong(songId));
+
+  const kit = getSongMarketingKit(songId);
+  const releaseKit = buildReleaseKitViewModel(songId);
+  const detailSource = fs.readFileSync(path.join(repoRoot, 'src/web/views/songs/detail.ejs'), 'utf8');
+  const serverSource = fs.readFileSync(path.join(repoRoot, 'src/web/server.js'), 'utf8');
+
+  assert.equal(kit.brandName, 'Sunstone Signal [Modern Roots Reggae]');
+  assert.equal(releaseKit.artistName, 'Sunstone Signal [Modern Roots Reggae]');
+  assert.match(detailSource, /Brand profile:/);
+  assert.match(detailSource, /Brand fit:/);
+  assert.match(detailSource, /lyricsSourcePath/);
+  assert.match(serverSource, /resolveSongBrandProfile\(song\)/);
+  assert.match(serverSource, /readSongDetailFile\(song\.lyrics_path, fsAssets\.lyrics\)/);
 });
