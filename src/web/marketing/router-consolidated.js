@@ -52,9 +52,13 @@ import {
   startYoutubeAuth,
   handleYoutubeAuthCallback,
 } from './controllers/social-controller.js';
+import { removeSongsFromAlbum } from '../../shared/album-track-membership.js';
+import { markReleaseAssetsStale } from '../../shared/song-release-assets-service.js';
 
 export function registerMarketingRouter(app) {
   const router = express.Router();
+
+  router.post('/albums/:id/tracks/remove', postRemoveAlbumTrack);
 
   router.get('/marketing', renderMarketingDashboard);
   router.post('/marketing/outreach-run', postOutreachRun);
@@ -112,4 +116,20 @@ export function registerMarketingRouter(app) {
   router.post('/api/social/posts/:postId/skip', postSkipSocialPost);
 
   app.use(router);
+}
+
+function postRemoveAlbumTrack(req, res) {
+  try {
+    const songIds = normalizeSongIdList(req.body?.song_id || req.body?.songId || req.body?.song_ids || req.body?.songIds);
+    removeSongsFromAlbum(req.params.id, songIds);
+    markReleaseAssetsStale('album', req.params.id);
+    res.redirect(303, `/albums/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    res.status(/not found/i.test(error.message) ? 404 : 400).send(error.message);
+  }
+}
+
+function normalizeSongIdList(input) {
+  const raw = Array.isArray(input) ? input : String(input || '').split(',');
+  return [...new Set(raw.map(id => String(id || '').trim()).filter(Boolean))];
 }
