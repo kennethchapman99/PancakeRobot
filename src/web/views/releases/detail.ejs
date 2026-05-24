@@ -9,80 +9,226 @@
     pending: 'badge-yellow',
     failed: 'badge-red',
   }[status] || 'badge-gray');
+
+  const stageByKey = Object.fromEntries((cockpit.stages || []).map(stage => [stage.key, stage]));
+  const actionByKey = Object.fromEntries((cockpit.nextActions || []).map(action => [action.key, action]));
+  const packageStage = stageByKey.package || { status: 'not_started', issues: cockpit.packageState?.blockers || [] };
+  const previewStage = stageByKey.distrokid_preview || { status: 'not_started', issues: [] };
+  const liveStage = stageByKey.distrokid_live_submit || { status: 'not_started', issues: [] };
+  const liveAction = actionByKey.live_submit || {};
+  const hyperfollowAction = actionByKey.hyperfollow || {};
+  const canLiveSubmitNow = liveAction.enabled === true;
+
+  const summarizeIssues = (issues = []) => {
+    const clean = [...new Set((issues || []).filter(Boolean))];
+    if (!clean.length) return 'Ready for the next handoff.';
+    const audioFileIssues = clean.filter(issue => /:audio_file\b/.test(issue));
+    if (audioFileIssues.length === clean.length && clean.length > 3) {
+      return `${clean.length} tracks are missing package audio_file fields. The distribution agent should rebuild or repair the canonical release package from the song audio files.`;
+    }
+    const metadataIssues = clean.filter(issue => /metadata/i.test(issue));
+    if (metadataIssues.length === clean.length && clean.length > 3) {
+      return `${clean.length} tracks need metadata repair before the agent can package this release.`;
+    }
+    if (clean.length > 3) return `${clean.length} issues: ${clean.slice(0, 3).join('; ')}…`;
+    return clean.join('; ');
+  };
+
+  const blockerText = summarizeIssues([
+    ...(cockpit.blockers || []),
+    ...((cockpit.packageState && cockpit.packageState.ready === false) ? (cockpit.packageState.blockers || []) : []),
+  ]);
+
+  const primaryAction = ['package', 'preview', 'live_submit', 'hyperfollow', 'outreach', 'readiness']
+    .map(key => actionByKey[key])
+    .find(action => action && action.enabled && !action.placeholder);
+
+  let currentGate = {
+    label: 'Inspect release readiness',
+    tone: 'amber',
+    headline: 'Release needs inspection',
+    detail: blockerText,
+  };
+
+  if (canLiveSubmitNow) {
+    currentGate = {
+      label: 'Human approval gate',
+      tone: 'green',
+      headline: 'Ready for live DistroKid submit',
+      detail: 'Package and preview are complete. Human approval is required before external submission.',
+    };
+  } else if (!cockpit.packageState?.ready) {
+    currentGate = {
+      label: 'Agent work needed',
+      tone: 'amber',
+      headline: 'Canonical package needs repair',
+      detail: summarizeIssues(packageStage.issues?.length ? packageStage.issues : cockpit.packageState?.blockers),
+    };
+  } else if (previewStage.status !== 'complete') {
+    currentGate = {
+      label: 'Agent preview gate',
+      tone: 'blue',
+      headline: 'Ready for DistroKid preview',
+      detail: 'The package is ready. Run the browser automation preview before live submit is allowed.',
+    };
+  } else if (liveStage.status !== 'complete') {
+    currentGate = {
+      label: 'Human approval gate',
+      tone: 'amber',
+      headline: 'Preview complete; live submit still needs approval',
+      detail: 'Inspect the release, then explicitly approve live submission.',
+    };
+  } else if (!cockpit.hyperfollow?.url) {
+    currentGate = {
+      label: 'Post-submit handoff',
+      tone: 'amber',
+      headline: 'Waiting for HyperFollow URL',
+      detail: 'Paste or fetch the HyperFollow URL so marketing automation can continue.',
+    };
+  } else {
+    currentGate = {
+      label: 'Marketing assembly',
+      tone: 'blue',
+      headline: 'Distribution link captured',
+      detail: 'Build outreach, social, video, and post-release platform link updates from here.',
+    };
+  }
+
+  const toneClasses = {
+    green: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    amber: 'border-amber-200 bg-amber-50 text-amber-950',
+    blue: 'border-sky-200 bg-sky-50 text-sky-950',
+    red: 'border-rose-200 bg-rose-50 text-rose-950',
+  };
+
+  const assemblyRows = [
+    { key: 'metadata', step: '1', owner: 'Agent', label: 'Metadata inspection', description: 'Title, release date, track metadata, brand profile.' },
+    { key: 'audio', step: '2', owner: 'Agent', label: 'Audio inspection', description: 'Confirms every track has audio available.' },
+    { key: 'media', step: '3', owner: 'Creative agent', label: 'Release media', description: 'Album or single artwork and platform derivatives.' },
+    { key: 'package', step: '4', owner: 'Distribution agent', label: 'Canonical package', description: 'Builds the DistroKid-ready release package.' },
+    { key: 'distrokid_preview', step: '5', owner: 'Browser agent', label: 'DistroKid preview', description: 'Dry-run UI automation before any external submit.' },
+    { key: 'distrokid_live_submit', step: '6', owner: 'You approve', label: 'Live submit', description: 'External submission requires explicit human approval.' },
+    { key: 'hyperfollow', step: '7', owner: 'Agent + platform', label: 'HyperFollow capture', description: 'Stores the smart link once DistroKid makes it available.' },
+    { key: 'youtube', step: '8', owner: 'Media agent', label: 'YouTube schedule', description: 'Schedules or publishes the release video.' },
+    { key: 'meta', step: '9', owner: 'Media agent', label: 'Meta schedule', description: 'Instagram/Facebook publishing state.' },
+    { key: 'outreach', step: '10', owner: 'Outreach agent', label: 'Outreach campaign', description: 'Builds emails and channel outreach from canonical links.' },
+    { key: 'platform_links', step: '11', owner: 'Agent', label: 'Post-release links', description: 'Captures Spotify, Apple, YouTube Music, and other store links.' },
+  ].map(row => ({ ...row, stage: stageByKey[row.key] || { status: 'placeholder', issues: ['Not wired yet'] } }));
 %>
+
 <div class="p-8 max-w-7xl">
   <a href="/releases" class="mb-4 inline-flex text-sm text-zinc-500 hover:text-zinc-700">← Release Cockpit</a>
 
-  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-    <div>
-      <div class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500"><%= cockpit.type === 'album' ? 'Album Release' : 'Single Release' %></div>
-      <h1 class="mt-1 text-3xl font-black tracking-tight text-zinc-900"><%= cockpit.title %></h1>
-      <div class="mt-2 flex flex-wrap gap-2 text-sm text-zinc-600">
-        <span><%= cockpit.tracks.length %> track<%= cockpit.tracks.length === 1 ? '' : 's' %></span>
-        <span>·</span>
-        <span>Release date <%= cockpit.releaseDate || '—' %></span>
-        <span>·</span>
-        <span>Lifecycle <%= cockpit.lifecycle.current.replace(/_/g, ' ') %></span>
-        <% if (cockpit.brandProfileId) { %><span>·</span><span>Brand profile <%= cockpit.brandProfileId %></span><% } %>
+  <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500"><%= cockpit.type === 'album' ? 'Album Release' : 'Single Release' %></div>
+        <h1 class="mt-1 text-3xl font-black tracking-tight text-zinc-900"><%= cockpit.title %></h1>
+        <div class="mt-2 flex flex-wrap gap-2 text-sm text-zinc-600">
+          <span><%= cockpit.tracks.length %> track<%= cockpit.tracks.length === 1 ? '' : 's' %></span>
+          <span>·</span>
+          <span>Release date <%= cockpit.releaseDate || '—' %></span>
+          <span>·</span>
+          <span>Lifecycle <%= cockpit.lifecycle.current.replace(/_/g, ' ') %></span>
+          <% if (cockpit.brandProfileId) { %><span>·</span><span>Brand profile <%= cockpit.brandProfileId %></span><% } %>
+        </div>
       </div>
-    </div>
-    <div class="rounded-xl border <%= cockpit.canLiveSubmit ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' %> px-4 py-3 text-sm">
-      <div class="font-bold <%= cockpit.canLiveSubmit ? 'text-emerald-800' : 'text-amber-900' %>"><%= cockpit.canLiveSubmit ? 'Live submit unblocked' : 'Live submit blocked' %></div>
-      <div class="mt-1 text-xs <%= cockpit.canLiveSubmit ? 'text-emerald-700' : 'text-amber-800' %>"><%= cockpit.blockers.length ? cockpit.blockers.join('; ') : 'Metadata, audio, and release media are ready.' %></div>
+      <div class="rounded-xl border px-4 py-3 text-sm <%= toneClasses[currentGate.tone] %>">
+        <div class="text-xs font-semibold uppercase tracking-wide opacity-75"><%= currentGate.label %></div>
+        <div class="mt-1 font-black"><%= currentGate.headline %></div>
+        <div class="mt-1 max-w-md text-xs leading-5 opacity-90"><%= currentGate.detail %></div>
+      </div>
     </div>
   </div>
 
-  <section class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+  <section class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
     <div class="rounded-xl border border-zinc-200 bg-white p-4">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-lg font-bold">Release Readiness</h2>
-        <form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/readiness">
-          <button class="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold hover:bg-zinc-50">Run Readiness Check</button>
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold">Supervised Assembly Line</h2>
+          <p class="mt-1 text-sm text-zinc-600">Agents do the work. You inspect gates, approve live submit, and keep the release moving.</p>
+        </div>
+        <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/readiness">
+          <button data-submit-label="Checking…" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold hover:bg-zinc-50">Refresh Inspection</button>
         </form>
       </div>
-      <div class="mt-4 divide-y divide-zinc-100">
-        <% cockpit.stages.forEach(stage => { %>
-          <div class="grid gap-3 py-3 md:grid-cols-[220px_120px_minmax(0,1fr)] md:items-start">
-            <div class="font-semibold text-sm text-zinc-900"><%= stage.label %></div>
-            <div><span class="<%= statusClass(stage.status) %>"><%= stage.status.replace(/_/g, ' ') %></span></div>
-            <div class="text-sm text-zinc-600">
-              <% if (stage.issues.length) { %>
-                <%= stage.issues.join('; ') %>
-              <% } else { %>
-                Ready
-              <% } %>
+
+      <div class="mt-4 space-y-3">
+        <% assemblyRows.forEach(row => { %>
+          <div class="grid gap-3 rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3 md:grid-cols-[44px_minmax(0,1fr)_120px_120px] md:items-start">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-black text-zinc-500 ring-1 ring-zinc-200"><%= row.step %></div>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="font-semibold text-zinc-900"><%= row.label %></div>
+                <span class="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-zinc-500"><%= row.owner %></span>
+              </div>
+              <div class="mt-1 text-xs text-zinc-500"><%= row.description %></div>
+              <div class="mt-2 text-sm text-zinc-700"><%= summarizeIssues(row.stage.issues || []) %></div>
             </div>
+            <div><span class="<%= statusClass(row.stage.status) %>"><%= row.stage.status.replace(/_/g, ' ') %></span></div>
+            <div class="text-xs text-zinc-500"><%= row.stage.status === 'complete' ? 'Passed' : row.stage.status === 'blocked' ? 'Needs agent work' : row.stage.status === 'placeholder' ? 'Future automation' : 'Waiting' %></div>
           </div>
         <% }) %>
       </div>
     </div>
 
-    <aside class="rounded-xl border border-zinc-200 bg-white p-4">
-      <h2 class="text-lg font-bold">Next Actions</h2>
-      <div class="mt-1 text-xs text-zinc-500">Run DistroKid live submit requires explicit confirmation before any external submission.</div>
-      <div class="mt-4 space-y-2">
-        <% cockpit.nextActions.forEach(action => { %>
-          <% if (action.placeholder) { %>
-            <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2">
-              <div class="text-sm font-semibold text-zinc-600"><%= action.label %></div>
-              <div class="mt-0.5 text-xs text-zinc-500"><%= action.disabledReason %></div>
-            </div>
-          <% } else { %>
-            <form method="POST" action="<%= action.url %>" onsubmit="<%= action.confirmation ? `return confirm('${action.confirmation.replace(/'/g, "\\'")}')` : 'return true' %>">
-              <% if (action.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
-              <button <%= action.enabled ? '' : 'disabled' %> class="<%= action.key === 'live_submit' ? 'bg-zinc-900 text-white hover:bg-zinc-700' : 'border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50' %> w-full rounded-lg px-3 py-2 text-left text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">
-                <%= action.label %>
-              </button>
-              <% if (action.disabledReason) { %><div class="mt-1 text-xs text-amber-700"><%= action.disabledReason %></div><% } %>
-            </form>
-          <% } %>
-        <% }) %>
+    <aside class="space-y-4">
+      <div class="rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 class="text-lg font-bold">Control Panel</h2>
+        <p class="mt-1 text-xs text-zinc-500">Only the current useful action is promoted. Everything else stays in advanced controls.</p>
+
+        <% if (primaryAction) { %>
+          <form data-action-form method="POST" action="<%= primaryAction.url %>" data-confirm="<%= primaryAction.confirmation || '' %>" class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+            <% if (primaryAction.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
+            <div class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Recommended next action</div>
+            <button data-submit-label="Agent running…" class="mt-2 w-full rounded-xl bg-zinc-900 px-4 py-3 text-left text-sm font-bold text-white hover:bg-zinc-700 disabled:cursor-wait disabled:opacity-70">
+              <%= primaryAction.label %>
+            </button>
+            <div data-action-status class="mt-2 hidden rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">Starting… this page will refresh when the action finishes.</div>
+            <% if (primaryAction.disabledReason) { %><div class="mt-2 text-xs text-amber-700"><%= primaryAction.disabledReason %></div><% } %>
+          </form>
+        <% } else { %>
+          <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div class="font-bold">No action is currently runnable</div>
+            <div class="mt-1 text-xs"><%= blockerText %></div>
+          </div>
+        <% } %>
+
+        <details class="mt-4 rounded-xl border border-zinc-200 bg-white p-3">
+          <summary class="cursor-pointer text-sm font-semibold text-zinc-700">Advanced controls</summary>
+          <div class="mt-3 space-y-2">
+            <% cockpit.nextActions.forEach(action => { %>
+              <% if (action.placeholder) { %>
+                <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2">
+                  <div class="text-sm font-semibold text-zinc-600"><%= action.label %></div>
+                  <div class="mt-0.5 text-xs text-zinc-500"><%= action.disabledReason %></div>
+                </div>
+              <% } else { %>
+                <form data-action-form method="POST" action="<%= action.url %>" data-confirm="<%= action.confirmation || '' %>">
+                  <% if (action.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
+                  <button data-submit-label="Running…" <%= action.enabled ? '' : 'disabled' %> class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm font-semibold text-zinc-800 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45">
+                    <%= action.label %>
+                  </button>
+                  <% if (action.disabledReason) { %><div class="mt-1 text-xs text-amber-700"><%= action.disabledReason %></div><% } %>
+                  <div data-action-status class="mt-1 hidden text-xs text-sky-700">Running…</div>
+                </form>
+              <% } %>
+            <% }) %>
+          </div>
+        </details>
       </div>
-      <form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/hyperfollow" class="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-        <label class="text-xs font-semibold text-zinc-600" for="hyperfollow-url">HyperFollow URL</label>
-        <input id="hyperfollow-url" name="hyperfollow_url" value="<%= cockpit.hyperfollow?.url || '' %>" placeholder="https://distrokid.com/hyperfollow/..." class="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs">
-        <button class="mt-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-zinc-50">Save / Refresh</button>
-      </form>
+
+      <div class="rounded-xl border border-zinc-200 bg-white p-4">
+        <h2 class="text-lg font-bold">Human Handoff</h2>
+        <p class="mt-1 text-xs text-zinc-500">HyperFollow usually appears after DistroKid submit. Paste it here when available.</p>
+        <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/hyperfollow" class="mt-3">
+          <label class="text-xs font-semibold text-zinc-600" for="hyperfollow-url">HyperFollow URL</label>
+          <input id="hyperfollow-url" name="hyperfollow_url" value="<%= cockpit.hyperfollow?.url || '' %>" placeholder="https://distrokid.com/hyperfollow/..." class="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs">
+          <button data-submit-label="Saving…" <%= hyperfollowAction.enabled || cockpit.hyperfollow?.url ? '' : 'disabled' %> class="mt-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45">Save HyperFollow</button>
+          <% if (!hyperfollowAction.enabled && !cockpit.hyperfollow?.url) { %><div class="mt-2 text-xs text-amber-700"><%= hyperfollowAction.disabledReason || 'Available after DistroKid live submit.' %></div><% } %>
+          <div data-action-status class="mt-2 hidden rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">Saving…</div>
+        </form>
+      </div>
     </aside>
   </section>
 
@@ -126,3 +272,23 @@
     <% } %>
   </section>
 </div>
+
+<script>
+  document.querySelectorAll('[data-action-form]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const confirmMessage = form.getAttribute('data-confirm');
+      if (confirmMessage && !window.confirm(confirmMessage)) {
+        event.preventDefault();
+        return;
+      }
+      const button = form.querySelector('button[type="submit"], button:not([type])');
+      const status = form.querySelector('[data-action-status]');
+      if (button) {
+        button.dataset.originalText = button.textContent.trim();
+        button.textContent = button.getAttribute('data-submit-label') || 'Running…';
+        button.disabled = true;
+      }
+      if (status) status.classList.remove('hidden');
+    });
+  });
+</script>
