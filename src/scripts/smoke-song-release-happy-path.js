@@ -73,10 +73,11 @@ const pack = await buildMarketingReleasePack(songId, { renderVideos: false });
 assert.ok(pack.outputDir);
 assert.ok(fs.existsSync(path.join(pack.outputDir, 'metadata.json')));
 assert.ok(fs.existsSync(path.join(pack.outputDir, 'index.html')));
-assert.ok(fs.existsSync(path.join(pack.outputDir, 'instagram', 'ig-square-post-1080x1080.png')));
-assert.ok(fs.existsSync(path.join(pack.outputDir, 'instagram', 'ig-feed-announcement-1080x1350.png')));
-assert.ok(fs.existsSync(path.join(pack.outputDir, 'instagram', 'ig-reel-cover.jpg')));
-assert.ok(fs.existsSync(path.join(pack.outputDir, 'tiktok', 'tiktok-cover.jpg')));
+assert.ok(fs.existsSync(path.join(pack.outputDir, 'spotify-cover-3000x3000.png')));
+assert.ok(fs.existsSync(path.join(pack.outputDir, 'youtube-thumbnail-1280x720.png')));
+assert.ok(fs.existsSync(path.join(pack.outputDir, 'instagram', 'instagram-square-1080x1080.png')));
+assert.ok(fs.existsSync(path.join(pack.outputDir, 'instagram', 'instagram-vertical-1080x1920.png')));
+assert.ok(fs.existsSync(path.join(pack.outputDir, 'facebook-post-1200x630.png')));
 push('build marketing pack', pack.outputDir);
 
 kit = getSongMarketingKit(songId);

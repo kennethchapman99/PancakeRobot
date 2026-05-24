@@ -137,6 +137,13 @@ async function drawFullBleed(ctx, imagePath, w, h, alpha = 1.0) {
   } catch { return false; }
 }
 
+async function drawReleaseSafeImage(ctx, baseImagePath, w, h) {
+  const drew = await drawFullBleed(ctx, baseImagePath, w, h, 1.0);
+  if (drew) return;
+  ctx.fillStyle = BACKGROUND;
+  ctx.fillRect(0, 0, w, h);
+}
+
 function drawHandlePill(ctx, assets, w, h, safeFraction = 0.08) {
   const fh = h * 0.052, fw = w * 0.72, fx = (w - fw) / 2;
   const fy = h - h * safeFraction - fh;
@@ -256,7 +263,8 @@ async function poster({ assets, outputPath, width, height, headline, subhead, ly
   console.log(`[RENDERER] ${assetName}: rendering with ${baseImagePath || '(no base image)'}`);
 
   if (baseImagePath && layout && layout !== 'default') {
-    if (layout === 'fullBleedHero') await drawFullBleedHero(ctx, assets, baseImagePath, width, height, headline, subhead);
+    if (layout === 'releaseSafe') await drawReleaseSafeImage(ctx, baseImagePath, width, height);
+    else if (layout === 'fullBleedHero') await drawFullBleedHero(ctx, assets, baseImagePath, width, height, headline, subhead);
     else if (layout === 'lyricsCard') await drawLyricsCard(ctx, assets, baseImagePath, width, height, headline, lyricText);
     else if (layout === 'characterHero') await drawCharacterHero(ctx, assets, baseImagePath, width, height, headline);
     else if (layout === 'storyCTA') await drawStoryCTA(ctx, assets, baseImagePath, width, height, headline, subhead);
@@ -408,12 +416,11 @@ export async function renderMarketingAssets(assets, hook) {
     ['tiktokHook',  join(work, 'tiktok-hook-base.jpg'),       1080, 1920, ['NEW SONG', 'OUT NOW'],     'listen now',        null,  'tiktok',    'fullBleedHero'],
     ['tiktokLyrics',join(work, 'tiktok-lyrics-base.jpg'),    1080, 1920, [assets.title],              'new release',       lyric, 'tiktok',    'lyricsCard'],
     ['tiktokLoop',  join(work, 'tiktok-loop-base.jpg'),       1080, 1920, profileHeadline,             'official sound',    null,  'tiktok',    'characterHero'],
-    ['ig-feed-announcement-1080x1350.png', join(assets.dirs.instagramDir, 'ig-feed-announcement-1080x1350.png'), 1080, 1350, ['NEW SONG', 'OUT NOW'], 'Listen everywhere', null, 'instagram', 'fullBleedHero'],
-    ['ig-square-post-1080x1080.png',       join(assets.dirs.instagramDir, 'ig-square-post-1080x1080.png'),       1080, 1080, profileHeadline,         null,                null, 'instagram', 'characterHero'],
-    ['outreach-hero-1600x900.png',         join(assets.outputDir, 'outreach-hero-1600x900.png'),                 1600, 900, [assets.artist],           assets.title,        null, 'press',     'fullBleedHero'],
-    ['no-text-variation.png',              join(assets.outputDir, 'no-text-variation.png'),                      1080, 1080, [],                       null,                null, 'press',     'fullBleedHero'],
-    ['ig-reel-cover.jpg',                  join(assets.dirs.instagramDir, 'ig-reel-cover.jpg'),                  1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'instagram', 'storyCTA'],
-    ['tiktok-cover.jpg',                   join(assets.dirs.tiktokDir,    'tiktok-cover.jpg'),                   1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'tiktok',    'storyCTA'],
+    ['spotify-cover-3000x3000.png',        join(assets.outputDir, 'spotify-cover-3000x3000.png'),                3000, 3000, [],                       null,                null, 'spotify',   'releaseSafe'],
+    ['youtube-thumbnail-1280x720.png',     join(assets.outputDir, 'youtube-thumbnail-1280x720.png'),             1280, 720,  [],                       null,                null, 'youtube',   'releaseSafe'],
+    ['instagram-square-1080x1080.png',     join(assets.dirs.instagramDir, 'instagram-square-1080x1080.png'),     1080, 1080, profileHeadline,         null,                null, 'instagram', 'characterHero'],
+    ['instagram-vertical-1080x1920.png',   join(assets.dirs.instagramDir, 'instagram-vertical-1080x1920.png'),   1080, 1920, ['NEW SONG', 'OUT NOW'], 'Link in bio',       null, 'instagram', 'storyCTA'],
+    ['facebook-post-1200x630.png',         join(assets.outputDir, 'facebook-post-1200x630.png'),                 1200, 630,  [assets.artist],          assets.title,        null, 'facebook',  'fullBleedHero'],
   ];
   const requestedFormats = new Set((assets.requestedFormats || []).map(value => String(value).trim()).filter(Boolean));
   const filteredJobs = requestedFormats.size

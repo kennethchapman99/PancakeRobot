@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { loadBrandProfile } from './brand-profile.js';
 import { SONG_STATUSES, normalizeSongStatus } from './song-status.js';
+import { isRealSongCatalogRow } from './song-catalog-cleanup.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_SLUG = process.env.PIPELINE_APP_SLUG || 'music-pipeline';
@@ -625,7 +626,8 @@ export function getAllSongs(options = {}) {
   const sql = includeTests
     ? 'SELECT * FROM songs ORDER BY created_at DESC'
     : 'SELECT * FROM songs WHERE COALESCE(is_test, 0) = 0 ORDER BY created_at DESC';
-  return getDb().prepare(sql).all().map(parseSong);
+  const songs = getDb().prepare(sql).all().map(parseSong);
+  return includeTests ? songs : songs.filter(isRealSongCatalogRow);
 }
 
 export function updateSongStatus(id, status) {

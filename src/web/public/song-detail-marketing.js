@@ -91,7 +91,7 @@ function setClearBaseImageState(songId, running) {
   const button = document.getElementById(`clear-base-image-button-${songId}`);
   const label = document.getElementById(`clear-base-image-label-${songId}`);
   if (button) button.disabled = !!running;
-  if (label) label.textContent = running ? 'Clearing…' : 'Clear Base Image';
+  if (label) label.textContent = running ? 'Clearing…' : 'Clear Primary Image';
 }
 
 function updatePackTerminal(songId, patch = {}) {
@@ -251,7 +251,7 @@ async function uploadBaseImage(songId, input, fetchImpl = fetch) {
 }
 
 async function clearBaseImage(songId, fetchImpl = fetch) {
-  if (typeof window.confirm === 'function' && !window.confirm('Remove base image?')) return null;
+  if (typeof window.confirm === 'function' && !window.confirm('Remove primary image?')) return null;
 
   setClearBaseImageState(songId, true);
   setBaseImageStatus(songId, 'info', 'Clearing release-specific base image…');
@@ -270,6 +270,34 @@ async function clearBaseImage(songId, fetchImpl = fetch) {
   }
 }
 
+async function generateOpenAIPrimaryImage(songId, fetchImpl = fetch) {
+  const prompt = typeof window.prompt === 'function'
+    ? window.prompt('Describe the cover art style or scene. Text will not be rendered in the image.', '')
+    : '';
+  if (prompt === null) return null;
+  setBaseImageStatus(songId, 'info', 'Generating primary image with OpenAI…');
+  const response = await fetchImpl(`/api/songs/${songId}/release-assets/generate-image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  const data = await parseJsonResponse(response, { actionLabel: 'OpenAI image generation' });
+  if (!data.ok) throw new Error(data.error || 'OpenAI image generation failed.');
+  setBaseImageStatus(songId, 'success', 'OpenAI primary image generated.');
+  setTimeout(() => reloadSongMarketingPane(songId, Date.now().toString()), 800);
+  return data;
+}
+
+async function selectDefaultPrimaryImage(songId, fetchImpl = fetch) {
+  setBaseImageStatus(songId, 'info', 'Selecting from base image library…');
+  const response = await fetchImpl(`/api/songs/${songId}/release-assets/select-default-image`, { method: 'POST' });
+  const data = await parseJsonResponse(response, { actionLabel: 'Base image selection' });
+  if (!data.ok) throw new Error(data.error || 'Base image selection failed.');
+  setBaseImageStatus(songId, 'success', 'Primary image selected from base library.');
+  setTimeout(() => reloadSongMarketingPane(songId, Date.now().toString()), 800);
+  return data;
+}
+
 if (typeof window !== 'undefined') {
   Object.assign(window, {
     marketingPack,
@@ -277,6 +305,8 @@ if (typeof window !== 'undefined') {
     buildPackAllFormats,
     uploadBaseImage,
     clearBaseImage,
+    generateOpenAIPrimaryImage,
+    selectDefaultPrimaryImage,
   });
 }
 
@@ -288,4 +318,6 @@ export {
   parseJsonResponse,
   runPackBuild,
   uploadBaseImage,
+  generateOpenAIPrimaryImage,
+  selectDefaultPrimaryImage,
 };

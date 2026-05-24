@@ -10,6 +10,7 @@ import {
   isValidSongId,
 } from '../src/shared/song-public-links.js';
 import { formatFinalResult } from '../src/inbound/telegram/magic-song-handler.js';
+import { cleanupTestOutputArtifacts } from '../src/shared/test-db-artifacts.js';
 
 const PUBLIC_URL_ENV_KEYS = [
   'PUBLIC_APP_BASE_URL',
@@ -66,6 +67,7 @@ test('buildSongPublicLinks prefers mastered audio and uses configured public bas
     assert.equal(links.releaseKitUrl, `https://example.ngrok-free.app/release-kit/${songId}?preview=1`);
   } finally {
     restorePublicUrlEnv(previousEnv);
+    cleanupTestOutputArtifacts({ songIds: [songId] });
   }
 });
 
@@ -83,6 +85,7 @@ test('buildSongPublicLinks falls back to original audio when mastered is missing
     assert.equal(links.audioUrl, `https://songs.example.com/media/songs/${songId}/media/source/original.mp3`);
   } finally {
     restorePublicUrlEnv(previousEnv);
+    cleanupTestOutputArtifacts({ songIds: [songId] });
   }
 });
 
@@ -116,5 +119,6 @@ test('Telegram final result includes MP3, song details, release kit, and no loca
     assert.doesNotMatch(message, /localhost/);
   } finally {
     restorePublicUrlEnv(previousEnv);
+    cleanupTestOutputArtifacts({ songIds: [songId] });
   }
 });

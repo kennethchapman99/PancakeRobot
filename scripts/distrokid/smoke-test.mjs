@@ -93,7 +93,7 @@ const distroKidGuidance = [
 ].map(path => readText(path)).join('\n');
 assert(readText('docs/distrokid-uploader.md').includes('npm run distrokid:upload -- --manifest output/release-packages/SONG_ID/manifest.json --dry-run'), 'DistroKid docs primary upload command uses npm script');
 assert(readText('docs/distrokid-uploader.md').includes('npm run distrokid:run-queued -- --limit 5 --dry-run'), 'DistroKid docs include queued runner command');
-assert(uploadSrc.includes('const DRY_RUN_ALWAYS = true'), 'upload dry-run forced true');
+assert(uploadSrc.includes("'live-submit'") && uploadSrc.includes("'confirm-live-submit'"), 'upload supports explicit live submit mode');
 assert(uploadSrc.includes('isDangerousAction'), 'upload has dangerous action helper');
 assert(uploadSrc.includes('installSafetyGuard'), 'upload installs safety guard');
 assert(uploadSrc.includes('waitForBrowserClose'), 'upload has waitForBrowserClose helper');
@@ -122,9 +122,8 @@ assert(uploadSrc.includes('getCertificationValue') && uploadSrc.includes('if (IM
 assert(uploadSrc.includes('isFillableElement') && uploadSrc.includes("['checkbox', 'radio', 'file'"), 'upload never fills checkbox/radio/file inputs');
 assert(uploadSrc.includes('isExactSelector') && uploadSrc.includes('multiple file inputs found'), 'upload blocks broad multi-candidate file upload');
 assert(uploadSrc.includes('allowHidden') && uploadSrc.includes('selector resolved to hidden'), 'upload skips hidden selectors by default');
-assert(!/getByRole\([^)]*Submit[^)]*\)\.click/.test(uploadSrc), 'upload has no submit click');
-assert(!uploadSrc.split(/\n/).some(line => /doneButton|Continue/.test(line) && /\.click\(/.test(line)), 'upload does not click Continue');
-assert(!uploadSrc.includes('#doneButton') || !uploadSrc.split(/\n/).some(line => line.includes('#doneButton') && /\.click\(/.test(line)), '#doneButton is not clicked');
+assert(uploadSrc.includes('submitRelease') && uploadSrc.includes('allowSubmit'), 'upload only submits through guarded live submit path');
+assert(!uploadSrc.split(/\n/).some(line => /Continue/.test(line) && /\.click\(/.test(line)), 'upload does not click Continue');
 assert(!/name=["']extras["']/.test(uploadSrc), 'upload does not target paid extras by name');
 assert(uploadSrc.includes('getOrderedFields') && uploadSrc.includes("fieldDef.strategy === 'inputFile'") && uploadSrc.includes('return 60'), 'field order puts file uploads last');
 assert(uploadSrc.includes('page.isClosed()') && uploadSrc.includes('DistroKid page closed before field loop completed'), 'upload detects page close before field loop completes');

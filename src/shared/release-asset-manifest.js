@@ -10,6 +10,11 @@ const HANDLE_URL_PATTERNS = [
 ];
 
 const ASSET_LABELS = {
+  'spotify-cover-3000x3000.png': 'Spotify / DSP Cover',
+  'youtube-thumbnail-1280x720.png': 'YouTube Thumbnail',
+  'instagram-square-1080x1080.png': 'Instagram Square Post',
+  'instagram-vertical-1080x1920.png': 'Instagram Story / Reel Asset',
+  'facebook-post-1200x630.png': 'Facebook Post Image',
   'ig-square-post-1080x1080.png': 'Square Instagram Post',
   'ig-feed-announcement-1080x1350.png': 'Portrait Instagram Feed',
   'tiktok-cover.jpg': 'Vertical TikTok / Reels Cover',

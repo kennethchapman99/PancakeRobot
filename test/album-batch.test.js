@@ -4,12 +4,25 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { prepareTestDbSlug } from '../src/shared/test-db-artifacts.js';
+import {
+  cleanupTestOutputArtifacts,
+  prepareTestDbSlug,
+} from '../src/shared/test-db-artifacts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
 
 process.env.PIPELINE_APP_SLUG = prepareTestDbSlug('test-album-batch').slug;
+
+const albumOutputIds = new Set();
+const songOutputIds = new Set();
+
+test.after(() => {
+  cleanupTestOutputArtifacts({
+    albumIds: [...albumOutputIds],
+    songIds: [...songOutputIds],
+  });
+});
 
 const {
   runAlbumBatch,
@@ -88,6 +101,8 @@ function buildPlanGenerator({ recordedCalls } = {}) {
 
 function makeTrackPipeline({ failOnTrack = null, costPerTrack = 0.02, recordedTracks } = {}) {
   return async function fakeTrackPipeline({ songId, albumId, track, plan }) {
+    albumOutputIds.add(albumId);
+    songOutputIds.add(songId);
     if (recordedTracks) recordedTracks.push({ songId, albumId, track_number: track.track_number });
     if (failOnTrack !== null && track.track_number === failOnTrack) {
       throw new Error(`Synthetic failure on track ${failOnTrack}`);
@@ -360,6 +375,7 @@ test('album repair creates planned track jobs when plan exists but songs are mis
     shared_orchestration: { plan_version: plan.plan_version, plan, orchestration_cost_usd: 0.072783 },
     is_test: true,
   });
+  albumOutputIds.add(albumId);
   recordCostEvent({
     id: `cost_${albumId}_shared_repair_test`,
     albumId,
@@ -401,6 +417,7 @@ test('album repair is idempotent and does not create duplicate track jobs', asyn
     shared_orchestration: { plan_version: plan.plan_version, plan },
     is_test: true,
   });
+  albumOutputIds.add(albumId);
 
   ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
   const firstIds = getSongsForAlbum(albumId).map(song => song.id);
@@ -425,6 +442,7 @@ test('album resume resumes only first incomplete track and skips completed track
     shared_orchestration: { plan_version: plan.plan_version, plan },
     is_test: true,
   });
+  albumOutputIds.add(albumId);
   updateAlbum(albumId, {
     shared_orchestration: {
       plan_version: plan.plan_version,
@@ -461,6 +479,7 @@ test('album repair finance shows shared thinking cost before tracks finish', asy
     shared_orchestration: { plan_version: plan.plan_version, plan },
     is_test: true,
   });
+  albumOutputIds.add(albumId);
   recordCostEvent({
     id: `cost_${albumId}_shared_before_tracks`,
     albumId,
@@ -501,6 +520,7 @@ test('album finance does not double-count orchestration marker when verified eve
     shared_orchestration: { plan_version: plan.plan_version, plan },
     is_test: true,
   });
+  albumOutputIds.add(albumId);
   recordCostEvent({
     id: `cost_${albumId}_orchestration_marker`,
     albumId,
@@ -549,6 +569,7 @@ test('album resume does not rerun orchestration and chooses the first failed or 
     shared_orchestration: { plan_version: plan.plan_version, plan },
     is_test: true,
   });
+  albumOutputIds.add(albumId);
   const songs = ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
   upsertSong({ id: songs[0].id, pipeline_stage: 'album_track_generated', total_cost_usd: 0.12 });
   upsertSong({ id: songs[1].id, pipeline_stage: 'album_track_failed', notes: 'previous failure' });
@@ -580,6 +601,7 @@ test('album resume persists provider auth/config errors in album latest event', 
     shared_orchestration: { plan_version: plan.plan_version, plan },
     is_test: true,
   });
+  albumOutputIds.add(albumId);
   const authError = 'Could not resolve authentication method for Anthropic';
 
   const result = await resumeAlbumBatch({

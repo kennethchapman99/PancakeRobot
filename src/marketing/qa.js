@@ -10,10 +10,11 @@ import { promisify } from 'util';
 const execFileAsync = promisify(execFile);
 
 const REQUIRED_IMAGES = [
-  'instagram/ig-feed-announcement-1080x1350.png',
-  'instagram/ig-square-post-1080x1080.png',
-  'instagram/ig-reel-cover.jpg',
-  'tiktok/tiktok-cover.jpg',
+  'spotify-cover-3000x3000.png',
+  'youtube-thumbnail-1280x720.png',
+  'instagram/instagram-square-1080x1080.png',
+  'instagram/instagram-vertical-1080x1920.png',
+  'facebook-post-1200x630.png',
 ];
 
 const EXPECTED_VIDEOS = [

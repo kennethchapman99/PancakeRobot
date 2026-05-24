@@ -8,6 +8,7 @@ import {
   upsertSong,
   updateChecklistItem,
 } from './db.js';
+import { saveSongMarketingKit } from './song-marketing-kit.js';
 import { DISTROKID_JOB_STATUSES, markDistroKidJobStatus } from './distrokid-jobs.js';
 import { SONG_STATUSES } from './song-status.js';
 
@@ -23,6 +24,7 @@ export function markSongSubmittedToDistroKid(songId, options = {}) {
   const submittedAt = options.submitted_at || options.submittedAt || nowIso;
   const submittedDate = new Date(submittedAt).toISOString().slice(0, 10);
   const distrokidUrl = String(options.distrokid_url || options.distrokidUrl || '').trim();
+  const hyperfollowUrl = String(options.hyperfollow_url || options.hyperfollowUrl || '').trim();
   const notes = String(options.notes || '').trim();
 
   updateSongStatus(songId, SONG_STATUSES.SUBMITTED_TO_DISTROKID);
@@ -37,10 +39,15 @@ export function markSongSubmittedToDistroKid(songId, options = {}) {
   if (distrokidUrl) {
     upsertReleaseLink(songId, 'DistroKid', distrokidUrl);
   }
+  if (hyperfollowUrl) {
+    upsertReleaseLink(songId, 'HyperFollow', hyperfollowUrl);
+    saveSongMarketingKit(songId, { marketing_links: { smart_link: hyperfollowUrl } });
+  }
 
   markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.SUBMITTED, {
     submitted_at: submittedAt,
     distrokid_url: distrokidUrl || null,
+    hyperfollow_url: hyperfollowUrl || null,
     notes: notes || null,
   });
 

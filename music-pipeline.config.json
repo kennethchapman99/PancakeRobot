@@ -1,15 +1,6 @@
 {
   "version": "1.0.0",
-  "agents": {
-    "researcher": {
-      "id": "agent_011p5octRzeaTsGvAMku6Fh4",
-      "version": 1,
-      "name": "Postal v2 Researcher",
-      "model": "claude-sonnet-4-6",
-      "definition_hash": "9ad86f944911102b1b05dec06f59092297a6b856b56992142fd2846f260cc4ff",
-      "created_at": "2026-05-22T21:44:25.246Z"
-    }
-  },
+  "agents": {},
   "environment": {
     "id": "env_01AcLMrrKDbi9CAJJX7HT5Z3",
     "name": "music-pipeline-env",
@@ -21,7 +12,7 @@
     "financial_report_interval_days": 7,
     "distribution_check_interval_days": 30
   },
-  "last_research": null,
+  "last_research": "2026-05-23T00:25:58.038Z",
   "last_financial_report": null,
   "songs": []
 }

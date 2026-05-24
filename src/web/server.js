@@ -1,6 +1,6 @@
 /**
  * Music Pipeline — Web UI Server
- * Run with: npm run web  (node src/web/server.js)
+ * Run with: ./bin/pancakerobot web
  */
 
 import { createRequire } from 'module';
@@ -19,6 +19,7 @@ import express from 'express';
 import expressLayouts from 'express-ejs-layouts';
 import fs from 'fs';
 import { spawn } from 'child_process';
+import archiver from 'archiver';
 import { createRequire as _cReq } from 'module';
 const _multer = _cReq(import.meta.url)('multer');
 
@@ -60,7 +61,12 @@ import {
   buildSongReleaseAssets,
   clearSongBaseImage,
   DEFAULT_RELEASE_ASSET_FORMATS,
+  ensureReleaseAssetDerivatives,
+  generatePrimaryImageWithOpenAI,
+  getReleaseAssetState,
   getSongReleaseAssetState,
+  markReleaseAssetsStale,
+  selectSongPrimaryImage,
 } from '../shared/song-release-assets-service.js';
 import { getOrCreateReleaseMarketing } from '../shared/marketing-releases.js';
 import {
@@ -72,6 +78,11 @@ import {
   isRecognizedSongStatusInput,
 } from '../shared/song-status.js';
 import { markSongSubmittedToDistroKid } from '../shared/distrokid-release.js';
+import {
+  captureHyperFollowLink,
+  runDistroKidAlbumAutomation,
+  runDistroKidSongAutomation,
+} from '../shared/distrokid-automation.js';
 import {
   clearDistroKidQueue,
   DISTROKID_JOB_STATUSES,
@@ -89,7 +100,7 @@ import {
   resumeAlbumBatch,
   runAlbumBatch,
 } from '../services/album-batch-service.js';
-import { getAllAlbums } from '../shared/db.js';
+import { getAllAlbums, getAlbum } from '../shared/db.js';
 
 // ── Base image upload config ───────────────────────────────────────
 const ALLOWED_IMG_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
@@ -104,6 +115,28 @@ const baseImageUpload = _multer({
     filename: (_req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase() || '.png';
       cb(null, `base-image${ext}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, ALLOWED_IMG_EXTS.has(ext));
+  },
+});
+
+const albumImageUpload = _multer({
+  storage: _multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const refDir = join(__dirname, '../../output/albums', req.params.id, 'reference');
+      fs.mkdirSync(refDir, { recursive: true });
+      for (const name of fs.readdirSync(refDir)) {
+        if (/^primary-image\.(png|jpe?g|webp)$/i.test(name)) fs.unlinkSync(join(refDir, name));
+      }
+      cb(null, refDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.png';
+      cb(null, `primary-image${ext}`);
     },
   }),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -353,7 +386,88 @@ app.get('/api/album-batch/jobs/:jobId', (req, res) => {
 app.get('/albums/:id', (req, res) => {
   const summary = getAlbumSummary(req.params.id);
   if (!summary) return res.status(404).render('404', { message: 'Album not found' });
-  res.render('album-batch/detail', { ...summary });
+  res.render('album-batch/detail', { ...summary, albumAssets: getAlbumAssetState(req.params.id) });
+});
+
+app.post('/api/albums/:id/primary-image', (req, res) => {
+  const album = getAlbum(req.params.id);
+  if (!album) return res.status(404).json({ ok: false, error: 'Album not found' });
+  albumImageUpload.single('base_image')(req, res, (err) => {
+    const wantsHtml = !String(req.headers.accept || '').includes('application/json');
+    if (err || !req.file) {
+      const error = err?.message || 'No valid image file provided (png/jpg/jpeg/webp)';
+      if (wantsHtml) return res.redirect(303, `/albums/${encodeURIComponent(album.id)}?error=${encodeURIComponent(error)}`);
+      return res.status(400).json({ ok: false, error });
+    }
+    markReleaseAssetsStale('album', album.id);
+    if (wantsHtml) return res.redirect(303, `/albums/${encodeURIComponent(album.id)}`);
+    return res.json({ ok: true, albumId: album.id, albumAssets: getAlbumAssetState(album.id) });
+  });
+});
+
+app.post('/api/albums/:id/release-assets/build', async (req, res) => {
+  const album = getAlbum(req.params.id);
+  if (!album) return res.status(404).json({ ok: false, error: 'Album not found' });
+  try {
+    const result = await ensureReleaseAssetDerivatives('album', album.id, { force: true });
+    if (!String(req.headers.accept || '').includes('application/json')) return res.redirect(303, `/albums/${encodeURIComponent(album.id)}`);
+    res.json({ ok: true, albumId: album.id, result, albumAssets: getAlbumAssetState(album.id) });
+  } catch (error) {
+    const status = /primary image/i.test(error.message) ? 400 : 500;
+    res.status(status).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/api/albums/:id/release-assets/generate-image', async (req, res) => {
+  try {
+    const result = await generatePrimaryImageWithOpenAI('album', req.params.id, {
+      entityType: 'album',
+      entityId: req.params.id,
+      brandProfileId: req.body?.brandProfileId || getActiveProfileId(),
+      title: req.body?.title,
+      artist: req.body?.artist,
+      prompt: req.body?.prompt,
+      styleGuardrails: req.body?.styleGuardrails,
+      outputKind: req.body?.outputKind || 'cover',
+    });
+    res.status(result.ok === false ? 503 : 200).json(result);
+  } catch (error) {
+    res.status(error.message.startsWith('Album not found:') ? 404 : 500).json({ ok: false, error: error.message });
+  }
+});
+
+app.get('/api/albums/:id/release-assets', (req, res) => {
+  const album = getAlbum(req.params.id);
+  if (!album) return res.status(404).json({ ok: false, error: 'Album not found' });
+  res.json({ ok: true, albumId: album.id, albumAssets: getAlbumAssetState(album.id) });
+});
+
+app.get('/api/albums/:id/release-assets/state', (req, res) => {
+  const album = getAlbum(req.params.id);
+  if (!album) return res.status(404).json({ ok: false, error: 'Album not found' });
+  res.json({ ok: true, albumId: album.id, albumAssets: getAlbumAssetState(album.id) });
+});
+
+app.get('/api/albums/:id/release-assets/preview', async (req, res) => {
+  const album = getAlbum(req.params.id);
+  if (!album) return res.status(404).json({ ok: false, error: 'Album not found' });
+  try {
+    const state = await ensureReleaseAssetDerivatives('album', album.id);
+    res.redirect(state.dashboardUrl);
+  } catch (error) {
+    res.status(/primary image/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
+  }
+});
+
+app.get('/api/albums/:id/release-assets/download', async (req, res) => {
+  const album = getAlbum(req.params.id);
+  if (!album) return res.status(404).json({ ok: false, error: 'Album not found' });
+  try {
+    await ensureReleaseAssetDerivatives('album', album.id);
+    sendAssetPackZip(res, join(__dirname, '../../output/albums', album.id, 'assets'), `album-${album.id}-release-assets.zip`);
+  } catch (error) {
+    res.status(/primary image/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
+  }
 });
 
 app.post('/albums/:id/repair', (req, res) => {
@@ -934,6 +1048,7 @@ app.get('/songs/:id', (req, res) => {
 
   const marketingPack = scanMarketingPack(song.id);
   const baseImage = scanSongBaseImage(song.id);
+  const releaseAssetState = getReleaseAssetState('song', song.id);
   const releaseOutreachRows = buildReleaseOutreachRows(song.id);
   const marketingKit = getSongMarketingKit(song, { releaseLinks: links, marketingPack, baseImage });
   if (
@@ -964,8 +1079,9 @@ app.get('/songs/:id', (req, res) => {
   res.render('songs/detail', {
     song, idea, assets, checklist, progress, links, snapshots, fsAssets,
     lyricsContent, audioPromptContent, metadataParsed, brandParsed,
-    marketingPack, baseImage, releaseOutreachRows, marketingKit, releaseMarketing,
+    marketingPack, baseImage, releaseAssetState, releaseOutreachRows, marketingKit, releaseMarketing,
     distrokidJob,
+    distrokidRecentLog: summarizeDistroKidRunLog(song.id),
     releaseSelectionSummary,
     nextAction: getSongNextAction(song, marketingKit),
     initialTab,
@@ -1011,9 +1127,13 @@ app.post('/songs/:id/marketing-kit', (req, res) => {
 
   const marketing_inputs_from_ar = {
     ...(song.marketing_inputs_from_ar || {}),
-    use_in_daily_social_push: req.body.use_in_daily_social_push === 'on',
-    prioritize_next_daily_campaign: req.body.prioritize_next_daily_campaign === 'on',
   };
+  if (Object.prototype.hasOwnProperty.call(req.body, 'use_in_daily_social_push')) {
+    marketing_inputs_from_ar.use_in_daily_social_push = req.body.use_in_daily_social_push === 'on';
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body, 'prioritize_next_daily_campaign')) {
+    marketing_inputs_from_ar.prioritize_next_daily_campaign = req.body.prioritize_next_daily_campaign === 'on';
+  }
 
   const saved = saveSongMarketingKit(song.id, { marketing_links, marketing_assets });
   upsertSong({ id: song.id, marketing_inputs_from_ar });
@@ -1029,6 +1149,10 @@ app.get('/release-kit/:id', (req, res) => {
 });
 
 app.post('/api/songs/:id/thumbnails', async (_req, res) => {
+  res.status(410).json({ error: 'Thumbnail generation has been retired. Use the base image and release asset builder instead.' });
+});
+
+app.get('/api/songs/:id/thumbnails', async (_req, res) => {
   res.status(410).json({ error: 'Thumbnail generation has been retired. Use the base image and release asset builder instead.' });
 });
 
@@ -1098,13 +1222,44 @@ app.get('/api/songs/thumbnails/stream/:jobId', (_req, res) => {
 app.post('/api/songs/:id/base-image', (req, res) => {
   const song = getSong(req.params.id);
   if (!song) return res.status(404).json({ error: 'Song not found' });
+  if (song.album_id) return res.status(409).json({ ok: false, error: 'This song inherits release assets from its album. Edit album assets instead.' });
 
   baseImageUpload.single('base_image')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No valid image file provided (png/jpg/jpeg/webp)' });
     saveSongMarketingKit(req.params.id, { marketing_assets: { base_image_url: scanSongBaseImage(req.params.id)?.url || '' } });
+    markReleaseAssetsStale('song', req.params.id);
     res.json(getSongReleaseAssetState(req.params.id));
   });
+});
+
+app.post('/api/songs/:id/release-assets/generate-image', async (req, res) => {
+  try {
+    const result = await generatePrimaryImageWithOpenAI('song', req.params.id, {
+      entityType: 'single',
+      entityId: req.params.id,
+      brandProfileId: req.body?.brandProfileId || getActiveProfileId(),
+      title: req.body?.title,
+      artist: req.body?.artist,
+      prompt: req.body?.prompt,
+      styleGuardrails: req.body?.styleGuardrails,
+      outputKind: req.body?.outputKind || 'cover',
+    });
+    res.status(result.ok === false ? 503 : 200).json(result);
+  } catch (error) {
+    res.status(error.message.startsWith('Song not found:') ? 404 : 500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/api/songs/:id/release-assets/select-default-image', (req, res) => {
+  try {
+    res.json(selectSongPrimaryImage(req.params.id, null, {
+      useDefaultBaseImage: true,
+      generationSource: 'default_base_image_pool',
+    }));
+  } catch (error) {
+    res.status(error.message.startsWith('Song not found:') ? 404 : 400).json({ ok: false, error: error.message });
+  }
 });
 
 app.post('/api/songs/:id/base-image/clear', (req, res) => {
@@ -1214,11 +1369,13 @@ app.post('/api/songs/:id/social-assets', (req, res) => {
 app.get('/api/songs/:id/release-assets', (req, res) => {
   const song = getSong(req.params.id);
   if (!song) return res.status(404).json({ ok: false, error: 'Song not found' });
+  const canonicalState = getReleaseAssetState('song', song.id);
   const marketingPack = scanMarketingPack(song.id);
   const marketingKit = getSongMarketingKit(song.id, { marketingPack });
   const summary = getSongCatalogMarketingSummary(song.id);
   res.json({
     ok: true,
+    releaseAssets: canonicalState,
     manifest: marketingPack.manifest,
     dashboardUrl: marketingPack.dashboardUrl,
     marketingKit,
@@ -1231,6 +1388,33 @@ app.get('/api/songs/:id/release-assets/state', (req, res) => {
     res.json(getSongReleaseAssetState(req.params.id));
   } catch (error) {
     res.status(error.message.startsWith('Song not found:') ? 404 : 500).json({ ok: false, error: error.message });
+  }
+});
+
+app.get('/api/songs/:id/release-assets/preview', async (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ ok: false, error: 'Song not found' });
+  try {
+    const state = await ensureReleaseAssetDerivatives('song', song.id);
+    res.redirect(state.dashboardUrl);
+  } catch (error) {
+    res.status(/primary image/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
+  }
+});
+
+app.get('/api/songs/:id/release-assets/download', async (req, res) => {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).json({ ok: false, error: 'Song not found' });
+  try {
+    const state = await ensureReleaseAssetDerivatives('song', song.id);
+    const ownerId = state.owner.id;
+    const dir = state.owner.type === 'album'
+      ? join(__dirname, '../../output/albums', ownerId, 'assets')
+      : join(__dirname, '../../output/marketing-ready', ownerId);
+    const prefix = state.owner.type === 'album' ? `album-${ownerId}` : `song-${ownerId}`;
+    sendAssetPackZip(res, dir, `${prefix}-release-assets.zip`);
+  } catch (error) {
+    res.status(/primary image/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
   }
 });
 
@@ -1502,12 +1686,12 @@ function readJsonIfExists(filePath) {
 function distrokidCommands(songId) {
   const manifestPath = `output/release-packages/${songId}/manifest.json`;
   return {
-    save_auth: 'npm run distrokid:save-auth',
-    check_auth: 'npm run distrokid:check-auth',
-    build_package: `npm run distrokid:package -- --song-id ${songId}`,
-    upload_dry_run: `npm run distrokid:upload -- --manifest ${manifestPath} --dry-run`,
-    run_queued: 'npm run distrokid:run-queued -- --limit 5 --dry-run',
-    mark_submitted: `npm run distrokid:mark-submitted -- --song-id ${songId} --distrokid-url "URL_FROM_DISTROKID"`,
+    save_auth: './bin/pancakerobot distrokid:save-auth',
+    check_auth: './bin/pancakerobot distrokid:check-auth',
+    build_package: `./bin/pancakerobot distrokid:package --song-id ${songId}`,
+    upload_dry_run: `./bin/pancakerobot distrokid:upload --manifest ${manifestPath} --dry-run`,
+    run_queued: './bin/pancakerobot distrokid:run-queued --limit 5 --dry-run',
+    mark_submitted: `./bin/pancakerobot distrokid:mark-submitted --song-id ${songId} --distrokid-url "URL_FROM_DISTROKID"`,
   };
 }
 
@@ -1546,7 +1730,20 @@ function distrokidJobPayload(songId) {
       manifest_path: manifest ? `output/release-packages/${songId}/manifest.json` : `output/release-packages/${songId}/manifest.json`,
     },
     commands: distrokidCommands(songId),
+    recent_log_summary: summarizeDistroKidRunLog(songId),
   };
+}
+
+function summarizeDistroKidRunLog(songId) {
+  const runLogPath = join(__dirname, '../../output/release-packages', songId, 'distrokid-run', 'run-log.json');
+  const log = readJsonIfExists(runLogPath);
+  if (!log) return [];
+  return [
+    `Started: ${log.started_at || 'unknown'}`,
+    `Finished: ${log.finished_at || 'unknown'}`,
+    `Filled ${log.filled_count || 0}; skipped ${log.skipped_count || 0}; errors ${log.error_count || 0}`,
+    log.stopped_before_submit === false ? 'Final submit was attempted' : 'Stopped before final submit',
+  ];
 }
 
 app.post('/api/distrokid/jobs/queue', (req, res) => {
@@ -1598,6 +1795,56 @@ app.post('/api/distrokid/jobs/:songId/package', (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ ok: false, message: 'DistroKid package command lookup failed.', job: null, errors: [error.message], error: error.message });
+  }
+});
+
+app.post('/api/distrokid/jobs/:songId/automation-preview', async (req, res) => {
+  try {
+    const result = await runDistroKidSongAutomation(req.params.songId, { mode: 'preview' });
+    res.json({ ok: true, message: 'Automation preview finished.', result, ...distrokidJobPayload(req.params.songId), errors: [] });
+  } catch (error) {
+    const status = /not found/i.test(error.message) ? 404 : 500;
+    res.status(status).json({ ok: false, message: 'Automation preview failed.', errors: [error.message], error: error.message, ...distrokidJobPayload(req.params.songId) });
+  }
+});
+
+app.post('/api/distrokid/jobs/:songId/live-submit', async (req, res) => {
+  try {
+    const result = await runDistroKidSongAutomation(req.params.songId, { mode: 'live', confirm: req.body?.confirm === true });
+    res.json({ ok: true, message: 'Live submit finished.', result, ...distrokidJobPayload(req.params.songId), errors: [] });
+  } catch (error) {
+    const status = /not found|confirmation/i.test(error.message) ? 400 : 500;
+    res.status(status).json({ ok: false, message: 'Live submit failed.', errors: [error.message], error: error.message, ...distrokidJobPayload(req.params.songId) });
+  }
+});
+
+app.post('/api/distrokid/jobs/:songId/hyperfollow', async (req, res) => {
+  try {
+    const hyperfollow = await captureHyperFollowLink(req.params.songId, { hyperfollowUrl: req.body?.hyperfollow_url || req.body?.url });
+    res.json({ ok: true, message: hyperfollow.url ? 'HyperFollow link saved.' : 'HyperFollow link is not available yet.', hyperfollow, ...distrokidJobPayload(req.params.songId), errors: [] });
+  } catch (error) {
+    const status = /not found/i.test(error.message) ? 404 : 500;
+    res.status(status).json({ ok: false, message: 'HyperFollow capture failed.', errors: [error.message], error: error.message });
+  }
+});
+
+app.post('/api/distrokid/albums/:albumId/automation-preview', async (req, res) => {
+  try {
+    const result = await runDistroKidAlbumAutomation(req.params.albumId, { mode: 'preview' });
+    res.json({ ok: true, message: 'Album automation preview finished.', result, errors: [] });
+  } catch (error) {
+    const status = /not found/i.test(error.message) ? 404 : 500;
+    res.status(status).json({ ok: false, message: 'Album automation preview failed.', errors: [error.message], error: error.message });
+  }
+});
+
+app.post('/api/distrokid/albums/:albumId/live-submit', async (req, res) => {
+  try {
+    const result = await runDistroKidAlbumAutomation(req.params.albumId, { mode: 'live', confirm: req.body?.confirm === true });
+    res.json({ ok: true, message: 'Album live submit finished.', result, errors: [] });
+  } catch (error) {
+    const status = /not found|confirmation/i.test(error.message) ? 400 : 500;
+    res.status(status).json({ ok: false, message: 'Album live submit failed.', errors: [error.message], error: error.message });
   }
 });
 
@@ -1993,6 +2240,23 @@ function hasGeneratedReleaseAssetPreviews(marketingAssets = {}) {
     || marketingAssets?.cover_safe_promo_url
     || marketingAssets?.no_text_variation_url
   );
+}
+
+function getAlbumAssetState(albumId) {
+  return getReleaseAssetState('album', albumId);
+}
+
+function sendAssetPackZip(res, dir, filename) {
+  if (!fs.existsSync(dir)) return res.status(404).json({ ok: false, error: 'Asset pack has not been generated yet.' });
+  res.attachment(filename);
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  archive.on('error', error => {
+    if (!res.headersSent) res.status(500);
+    res.end(error.message);
+  });
+  archive.pipe(res);
+  archive.directory(dir, false);
+  archive.finalize();
 }
 
 // ── START ───────────────────────────────────────────────────────

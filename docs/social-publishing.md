@@ -63,7 +63,7 @@ Meta / Instagram / Facebook
 2. Create OAuth client credentials for a web application.
 3. Add `http://localhost:3737/api/auth/youtube/callback` as an authorized redirect URI.
 4. Set `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REDIRECT_URI`.
-5. Run `npm run web`, open `/marketing/social`, and click `Connect YouTube`.
+5. Run `./bin/pancakerobot web`, open `/marketing/social`, and click `Connect YouTube`.
 6. The callback flow stores a refresh token at `YOUTUBE_TOKEN_PATH` and records the connected channel ID and title there.
 7. Keep `madeForKids` explicit on every post. The worker rejects ambiguous values.
 8. Install ffmpeg before generating YouTube assets:

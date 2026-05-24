@@ -19,10 +19,18 @@ const INVALID_ID_PREFIXES = [
 ];
 
 const INVALID_ENTITY_TERMS = [
+  'api clear base image',
+  'api upload base image',
+  'api openai missing',
+  'api build release assets',
+  'api status auto build',
+  'canonical song assets',
+  'clear base image test',
   'release kit',
   'release-kit',
   'marketing pack',
   'marketing-pack',
+  'fixture',
   'outreach draft',
   'outreach-draft',
   'brand profile',
@@ -30,6 +38,16 @@ const INVALID_ENTITY_TERMS = [
   'test artifact',
   'failed generation placeholder',
   'empty idea record',
+];
+
+const OBVIOUS_TEST_ID_PATTERNS = [
+  /(^|_)SMOKE(_|$)/i,
+  /(^|_)TEST(_|$)/i,
+  /(^|_)FIXTURE(_|$)/i,
+  /^API_/i,
+  /^CLEAR_BASE_IMAGE_/i,
+  /^SONG_CANONICAL_ASSETS_/i,
+  /^SONG_ALBUM_TRACK_/i,
 ];
 
 function parseJsonObject(value) {
@@ -81,8 +99,8 @@ export function getSongLatestActivityAt(song = {}) {
 export function isRealSongCatalogRow(song = {}) {
   const id = String(song.id || '').trim();
   if (!id) return false;
-  if (!id.startsWith(SONG_CATALOG_ENTITY_PREFIX)) return false;
   if (INVALID_ID_PREFIXES.some(prefix => id.startsWith(prefix))) return false;
+  if (OBVIOUS_TEST_ID_PATTERNS.some(pattern => pattern.test(id))) return false;
   if (Number(song.is_test || 0) === 1) return false;
 
   const identityText = [song.title, song.topic, song.concept]

@@ -35,6 +35,129 @@
     </form>
   </div>
 
+  <section class="mt-6 rounded-xl border border-fuchsia-200 bg-white p-4" x-data="albumDistroKidAutomation('<%= album.id %>')">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <h2 class="text-lg font-bold">DistroKid Automation</h2>
+        <p class="mt-1 text-xs text-zinc-500">Album fields are filled once, then track metadata is filled from the generated album songs.</p>
+        <div class="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+          <div class="font-semibold text-zinc-700">Status</div>
+          <div class="mt-1" x-text="message || 'Ready'"></div>
+          <template x-if="log.length">
+            <div class="mt-2 space-y-1">
+              <template x-for="line in log" :key="line"><div x-text="line"></div></template>
+            </div>
+          </template>
+        </div>
+      </div>
+      <div class="flex min-w-[240px] flex-col gap-2">
+        <button type="button" @click="runPreview()" :disabled="saving" class="rounded-xl bg-fuchsia-700 px-4 py-2 text-sm font-semibold text-white hover:bg-fuchsia-600 disabled:opacity-50">Run Automation Preview</button>
+        <button type="button" @click="runLiveSubmit()" :disabled="saving" class="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50">Run Live Submit</button>
+      </div>
+    </div>
+  </section>
+
+  <% const albumAssetsState = albumAssets || {}; %>
+  <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold">Album Release Assets</h2>
+        <p class="mt-1 text-xs text-zinc-500">Upload/select a primary album image, then derive Spotify, YouTube, Instagram, and Facebook assets.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <% if (albumAssetsState.primaryImage) { %><a href="<%= albumAssetsState.previewUrl %>" target="_blank" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50">Preview</a><% } %>
+        <a href="<%= albumAssetsState.downloadUrl %>" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50">Download Pack</a>
+      </div>
+    </div>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      <div class="rounded-lg border border-zinc-200 p-3">
+        <div class="text-xs font-semibold text-zinc-600">Primary image</div>
+        <% if (albumAssetsState.primaryImage) { %>
+          <img src="<%= albumAssetsState.primaryImage.url %>" alt="Album primary image" class="mt-2 h-44 w-full rounded-lg border border-zinc-200 object-cover">
+          <div class="mt-2 break-all text-[11px] text-zinc-500"><%= albumAssetsState.primaryImage.url %></div>
+        <% } else { %>
+          <div class="mt-2 flex h-44 items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-xs text-zinc-400">No primary album image</div>
+        <% } %>
+        <form class="mt-3" method="POST" enctype="multipart/form-data" action="/api/albums/<%= encodeURIComponent(album.id) %>/primary-image">
+          <input type="file" name="base_image" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-xs text-zinc-600 file:mr-2 file:rounded-md file:border file:border-zinc-200 file:bg-zinc-50 file:px-2 file:py-1 file:text-xs">
+          <button class="mt-2 rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-700">Upload / Replace Image</button>
+        </form>
+        <button type="button" onclick="generateAlbumOpenAIImage('<%= album.id %>')" class="mt-2 rounded-lg border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50">Generate with OpenAI</button>
+      </div>
+      <div class="rounded-lg border border-zinc-200 p-3">
+        <div class="flex items-center justify-between">
+          <div class="text-xs font-semibold text-zinc-600">Platform derivatives</div>
+          <form method="POST" action="/api/albums/<%= encodeURIComponent(album.id) %>/release-assets/build">
+            <button class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">Rebuild Derivatives</button>
+          </form>
+        </div>
+        <% if (albumAssetsState.derivativesStale && albumAssetsState.primaryImage) { %>
+          <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Derivatives will refresh automatically on preview or download.</div>
+        <% } %>
+        <div class="mt-3 space-y-2">
+          <% if ((albumAssetsState.assets || []).length) { %>
+            <% albumAssetsState.assets.forEach(asset => { %>
+              <div class="rounded-lg border border-zinc-100 px-3 py-2 text-xs">
+                <div class="font-semibold text-zinc-700"><%= asset.label || asset.name %> <span class="font-normal text-zinc-400"><%= asset.dimensions?.width %>x<%= asset.dimensions?.height %></span></div>
+                <div class="mt-1 break-all text-zinc-500"><%= asset.publicUrl || asset.filePath %></div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-xs text-zinc-500">No album asset pack generated yet.</div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </section>
+  <script>
+    function albumDistroKidAutomation(albumId) {
+      return {
+        saving: false,
+        message: '',
+        log: [],
+        async runPreview() {
+          this.saving = true;
+          this.message = 'Running album automation preview...';
+          const res = await fetch('/api/distrokid/albums/' + encodeURIComponent(albumId) + '/automation-preview', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+          const data = await res.json();
+          this.saving = false;
+          this.message = data.message || (data.ok ? 'Album automation preview finished.' : 'Album automation preview failed.');
+          this.log = (data.result?.log || []).map(item => item.message || item);
+        },
+        async runLiveSubmit() {
+          if (!confirm('Run the live DistroKid submit for this album?')) return;
+          this.saving = true;
+          this.message = 'Running album live submit...';
+          const res = await fetch('/api/distrokid/albums/' + encodeURIComponent(albumId) + '/live-submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ confirm: true })
+          });
+          const data = await res.json();
+          this.saving = false;
+          this.message = data.message || (data.ok ? 'Album live submit finished.' : 'Album live submit failed.');
+          this.log = (data.result?.log || []).map(item => item.message || item);
+        }
+      };
+    }
+
+    async function generateAlbumOpenAIImage(albumId) {
+      const prompt = window.prompt('Describe the album cover art style or scene. Text will not be rendered in the image.', '');
+      if (prompt === null) return;
+      const res = await fetch('/api/albums/' + encodeURIComponent(albumId) + '/release-assets/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) {
+        window.alert(data.error || 'OpenAI image generation failed.');
+        return;
+      }
+      window.location.reload();
+    }
+  </script>
+
   <% if (latestEvent || latestError) { %>
     <div class="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
       <div class="text-xs uppercase text-zinc-500">Latest job event</div>
