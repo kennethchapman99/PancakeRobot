@@ -155,6 +155,10 @@ case "$cmd" in
     ensure_deps
     npm run catalog:cleanup -- "$@"
     ;;
+  release-cockpit:cleanup-tests)
+    ensure_deps
+    npm run release-cockpit:cleanup-tests -- "$@"
+    ;;
   stack|dev:mobile)
     ensure_deps
     npm run dev:mobile
