@@ -19,6 +19,7 @@ import { DISTROKID_JOB_STATUSES, getDistroKidJob, markDistroKidJobStatus } from 
 import { getReleaseAssetState } from './song-release-assets-service.js';
 import { getMarketingCampaigns } from './marketing-db.js';
 import { DEFAULT_PROFILE_ID, getActiveProfileId, loadBrandProfileById } from './brand-profile.js';
+import { getSelectedReleaseAudio } from './song-audio-selection.js';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -114,13 +115,18 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const release = type === 'album' ? buildAlbumRelease(releaseId) : buildSingleRelease(releaseId);
   if (!release) return null;
 
-  const tracks = release.tracks.map((track, index) => ({
-    ...track,
-    track_number: track.track_number || index + 1,
-    fsAssets: scanSongOutput(track.id),
-    links: getReleaseLinks(track.id),
-    distrokidJob: getDistroKidJob(track.id),
-  }));
+  const tracks = release.tracks.map((track, index) => {
+    const fsAssets = scanSongOutput(track.id);
+    const releaseAudio = getSelectedReleaseAudio(track.id);
+    return {
+      ...track,
+      track_number: track.track_number || index + 1,
+      fsAssets,
+      releaseAudio,
+      links: getReleaseLinks(track.id),
+      distrokidJob: getDistroKidJob(track.id),
+    };
+  });
   const assetState = getReleaseAssetState(type === 'album' ? 'album' : 'song', release.id);
   const campaigns = findReleaseCampaigns(tracks.map(track => track.id));
   const social = summarizeSocialPosts(tracks.map(track => track.id));
@@ -301,9 +307,15 @@ function buildStages({ release, tracks, assetState, campaigns, social, hyperfoll
     if (!track.fsAssets.metadata && !track.metadata_path) metadataIssues.push(`${track.id}: metadata.json is missing`);
   }
 
-  const audioIssues = tracks
-    .filter(track => !(track.fsAssets.audioFiles || []).length)
-    .map(track => `${track.id}: audio file is missing`);
+  const audioIssues = tracks.flatMap(track => {
+    if (track.releaseAudio?.requiresSelection) {
+      return [`${track.id}: choose release audio master (${track.releaseAudio.candidates?.length || 0} candidates)`];
+    }
+    if (!track.releaseAudio?.selected && !(track.fsAssets.audioFiles || []).length) {
+      return [`${track.id}: audio file is missing`];
+    }
+    return [];
+  });
 
   const mediaIssues = [];
   if (!assetState.primaryImage?.path) mediaIssues.push('Primary release image is missing');
@@ -318,7 +330,7 @@ function buildStages({ release, tracks, assetState, campaigns, social, hyperfoll
 
   return [
     stage('metadata', 'Metadata ready', metadataIssues.length ? 'blocked' : 'complete', metadataIssues, true),
-    stage('audio', 'Audio present', audioIssues.length ? 'blocked' : 'complete', audioIssues, true),
+    stage('audio', 'Release audio selected', audioIssues.length ? 'blocked' : 'complete', audioIssues, true),
     stage('media', release.tracks?.length > 1 ? 'Album media ready' : 'Single media ready', mediaIssues.length ? 'needs_action' : 'complete', mediaIssues, true),
     stage('package', 'Canonical release package ready', packageState.ready ? 'complete' : packageState.exists ? 'blocked' : 'not_started', packageState.ready ? [] : packageState.blockers, false),
     stage('distrokid_preview', 'DistroKid preview complete', previewComplete ? 'complete' : 'not_started', previewComplete ? [] : ['Preview has not been run yet'], false),

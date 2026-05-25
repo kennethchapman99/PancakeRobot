@@ -12,19 +12,25 @@
 
   const stageByKey = Object.fromEntries((cockpit.stages || []).map(stage => [stage.key, stage]));
   const actionByKey = Object.fromEntries((cockpit.nextActions || []).map(action => [action.key, action]));
+  const audioStage = stageByKey.audio || { status: 'not_started', issues: [] };
   const packageStage = stageByKey.package || { status: 'not_started', issues: cockpit.packageState?.blockers || [] };
   const previewStage = stageByKey.distrokid_preview || { status: 'not_started', issues: [] };
   const liveStage = stageByKey.distrokid_live_submit || { status: 'not_started', issues: [] };
   const liveAction = actionByKey.live_submit || {};
   const hyperfollowAction = actionByKey.hyperfollow || {};
   const canLiveSubmitNow = liveAction.enabled === true;
+  const releaseReturnTo = `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`;
 
   const summarizeIssues = (issues = []) => {
     const clean = [...new Set((issues || []).filter(Boolean))];
     if (!clean.length) return 'Ready for the next handoff.';
+    const audioSelectionIssues = clean.filter(issue => /choose release audio master/i.test(issue));
+    if (audioSelectionIssues.length === clean.length && clean.length > 1) {
+      return `${clean.length} tracks have multiple audio files. Choose the release master for each track before packaging.`;
+    }
     const audioFileIssues = clean.filter(issue => /:audio_file\b/.test(issue));
     if (audioFileIssues.length === clean.length && clean.length > 3) {
-      return `${clean.length} tracks are missing package audio_file fields. The distribution agent should rebuild or repair the canonical release package from the song audio files.`;
+      return `${clean.length} tracks are missing package audio_file fields. The distribution agent should rebuild or repair the canonical release package from the selected release audio.`;
     }
     const metadataIssues = clean.filter(issue => /metadata/i.test(issue));
     if (metadataIssues.length === clean.length && clean.length > 3) {
@@ -39,7 +45,11 @@
     ...((cockpit.packageState && cockpit.packageState.ready === false) ? (cockpit.packageState.blockers || []) : []),
   ]);
 
-  const primaryAction = ['package', 'preview', 'live_submit', 'hyperfollow', 'outreach', 'readiness']
+  const hasReadinessBlockers = (cockpit.blockers || []).length > 0;
+  const actionPriority = hasReadinessBlockers
+    ? ['readiness']
+    : ['package', 'preview', 'live_submit', 'hyperfollow', 'outreach', 'readiness'];
+  const primaryAction = actionPriority
     .map(key => actionByKey[key])
     .find(action => action && action.enabled && !action.placeholder);
 
@@ -56,6 +66,13 @@
       tone: 'green',
       headline: 'Ready for live DistroKid submit',
       detail: 'Package and preview are complete. Human approval is required before external submission.',
+    };
+  } else if (audioStage.status === 'blocked') {
+    currentGate = {
+      label: 'Human selection needed',
+      tone: 'amber',
+      headline: 'Choose release audio masters',
+      detail: summarizeIssues(audioStage.issues),
     };
   } else if (!cockpit.packageState?.ready) {
     currentGate = {
@@ -103,7 +120,7 @@
 
   const assemblyRows = [
     { key: 'metadata', step: '1', owner: 'Agent', label: 'Metadata inspection', description: 'Title, release date, track metadata, brand profile.' },
-    { key: 'audio', step: '2', owner: 'Agent', label: 'Audio inspection', description: 'Confirms every track has audio available.' },
+    { key: 'audio', step: '2', owner: 'You inspect', label: 'Release audio master', description: 'Confirms every track has one selected release master audio file.' },
     { key: 'media', step: '3', owner: 'Creative agent', label: 'Release media', description: 'Album or single artwork and platform derivatives.' },
     { key: 'package', step: '4', owner: 'Distribution agent', label: 'Canonical package', description: 'Builds the DistroKid-ready release package.' },
     { key: 'distrokid_preview', step: '5', owner: 'Browser agent', label: 'DistroKid preview', description: 'Dry-run UI automation before any external submit.' },
@@ -166,7 +183,7 @@
               <div class="mt-2 text-sm text-zinc-700"><%= summarizeIssues(row.stage.issues || []) %></div>
             </div>
             <div><span class="<%= statusClass(row.stage.status) %>"><%= row.stage.status.replace(/_/g, ' ') %></span></div>
-            <div class="text-xs text-zinc-500"><%= row.stage.status === 'complete' ? 'Passed' : row.stage.status === 'blocked' ? 'Needs agent work' : row.stage.status === 'placeholder' ? 'Future automation' : 'Waiting' %></div>
+            <div class="text-xs text-zinc-500"><%= row.stage.status === 'complete' ? 'Passed' : row.stage.status === 'blocked' ? 'Needs attention' : row.stage.status === 'placeholder' ? 'Future automation' : 'Waiting' %></div>
           </div>
         <% }) %>
       </div>
@@ -175,7 +192,7 @@
     <aside class="space-y-4">
       <div class="rounded-xl border border-zinc-200 bg-white p-4">
         <h2 class="text-lg font-bold">Control Panel</h2>
-        <p class="mt-1 text-xs text-zinc-500">Only the current useful action is promoted. Everything else stays in advanced controls.</p>
+        <p class="mt-1 text-xs text-zinc-500">Only the current useful action is promoted. Audio-master choices happen on each track.</p>
 
         <% if (primaryAction) { %>
           <form data-action-form method="POST" action="<%= primaryAction.url %>" data-confirm="<%= primaryAction.confirmation || '' %>" class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
@@ -239,13 +256,30 @@
     </div>
     <div class="mt-4 divide-y divide-zinc-100">
       <% cockpit.tracks.forEach(track => { %>
-        <div class="grid gap-3 py-3 md:grid-cols-[70px_minmax(0,1fr)_160px_160px] md:items-center">
+        <%
+          const audioState = track.releaseAudio || {};
+          const selectedAudio = audioState.selected || null;
+          const candidateCount = (audioState.candidates || []).length;
+          const audioBadgeClass = audioState.requiresSelection ? 'badge-yellow' : selectedAudio ? 'badge-green' : 'badge-red';
+          const audioLabel = audioState.requiresSelection ? `Choose master (${candidateCount})` : selectedAudio ? (audioState.status === 'auto' ? 'Auto master' : 'Master selected') : 'Missing';
+        %>
+        <div class="grid gap-3 py-3 md:grid-cols-[70px_minmax(0,1fr)_220px_160px] md:items-center">
           <div class="text-sm font-bold text-zinc-500">#<%= track.track_number || 1 %></div>
           <div class="min-w-0">
             <a href="/songs/<%= encodeURIComponent(track.id) %>" class="truncate text-sm font-semibold text-indigo-700 hover:underline"><%= track.title || track.topic || track.id %></a>
             <div class="mt-0.5 text-xs text-zinc-500"><%= track.id %></div>
           </div>
-          <div><span class="<%= (track.fsAssets.audioFiles || []).length ? 'badge-green' : 'badge-red' %>">Audio <%= (track.fsAssets.audioFiles || []).length ? 'present' : 'missing' %></span></div>
+          <div>
+            <span class="<%= audioBadgeClass %>"><%= audioLabel %></span>
+            <% if (selectedAudio) { %>
+              <div class="mt-1 truncate text-xs text-zinc-500"><%= selectedAudio.name || selectedAudio.relativePath %></div>
+            <% } %>
+            <% if (audioState.requiresSelection) { %>
+              <a href="/songs/<%= encodeURIComponent(track.id) %>/release-audio?return_to=<%= encodeURIComponent(releaseReturnTo) %>" class="mt-1 inline-flex text-xs font-semibold text-amber-700 hover:underline">Choose release master</a>
+            <% } else if (candidateCount > 1) { %>
+              <a href="/songs/<%= encodeURIComponent(track.id) %>/release-audio?return_to=<%= encodeURIComponent(releaseReturnTo) %>" class="mt-1 inline-flex text-xs font-semibold text-indigo-700 hover:underline">Change master</a>
+            <% } %>
+          </div>
           <div><span class="<%= track.fsAssets.metadata || track.metadata_path ? 'badge-green' : 'badge-red' %>">Metadata <%= track.fsAssets.metadata || track.metadata_path ? 'ready' : 'missing' %></span></div>
         </div>
       <% }) %>

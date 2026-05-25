@@ -97,6 +97,29 @@
       if (node) node.remove();
     };
 
+    const addReleaseAudioShortcut = () => {
+      if (document.querySelector('[data-release-audio-shortcut]')) return;
+      const audioCard = document.querySelector('audio')?.closest('.bg-zinc-900');
+      if (!audioCard) return;
+      const songId = decodeURIComponent(window.location.pathname.split('/').filter(Boolean)[1] || '');
+      if (!songId) return;
+      const audioCount = audioCard.querySelectorAll('audio').length;
+      const href = `/songs/${encodeURIComponent(songId)}/release-audio?return_to=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      const panel = document.createElement('div');
+      panel.setAttribute('data-release-audio-shortcut', 'true');
+      panel.className = 'mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950';
+      panel.innerHTML = `
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div class="font-black">Release master audio</div>
+            <div class="mt-1 text-xs leading-5">${audioCount > 1 ? `${audioCount} audio files found. Choose the exact file used for album packaging and DistroKid.` : 'Confirm the audio file used for album packaging and DistroKid.'}</div>
+          </div>
+          <a href="${href}" class="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-3 py-2 text-xs font-bold text-white hover:bg-zinc-700">Choose release master</a>
+        </div>
+      `;
+      audioCard.prepend(panel);
+    };
+
     const run = () => {
       const detailRoot = document.querySelector('main > div[x-data="songDetail()"]');
       if (detailRoot) {
@@ -109,6 +132,7 @@
       const checklistHeading = Array.from(document.querySelectorAll('h2'))
         .find((heading) => heading.textContent?.trim() === 'Publishing Checklist');
       removeClosest(checklistHeading, 'section');
+      addReleaseAudioShortcut();
     };
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);

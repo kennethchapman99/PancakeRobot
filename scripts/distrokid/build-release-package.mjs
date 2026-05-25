@@ -5,6 +5,7 @@ import fs from 'fs';
 import { getSong, getAssetsForSong } from '../../src/shared/db.js';
 import { getActiveProfileId, loadBrandProfile, loadBrandProfileById } from '../../src/shared/brand-profile.js';
 import { DISTROKID_JOB_STATUSES, getDistroKidJob, markDistroKidJobStatus } from '../../src/shared/distrokid-jobs.js';
+import { getSelectedReleaseAudio } from '../../src/shared/song-audio-selection.js';
 import {
   OUTPUT_DIR,
   absoluteFromMaybeRelative,
@@ -222,7 +223,7 @@ function buildReleasePackage(songId) {
     manifest.audio_file = relativeToRepo(dest);
     fieldSources.audio_file = audio.source;
   } else {
-    fieldSources.audio_file = 'missing';
+    fieldSources.audio_file = audio.selectionRequired ? 'release_audio_selection_required' : 'missing';
   }
 
   if (cover.path) {
@@ -256,9 +257,10 @@ function buildReleasePackage(songId) {
 
   for (const [field, value, blocking] of checks) {
     if (!isPresent(value)) {
-      missingFields.push(field);
-      if (blocking) blockingMissingFields.push(field);
-      else warnings.push(field);
+      const missingField = field === 'audio_file' && audio.selectionRequired ? 'release_audio_selection' : field;
+      missingFields.push(missingField);
+      if (blocking) blockingMissingFields.push(missingField);
+      else warnings.push(missingField);
     }
   }
 
@@ -270,6 +272,8 @@ function buildReleasePackage(songId) {
     has_artist: Boolean(manifest.artist),
     has_genre: Boolean(manifest.primary_genre),
     has_lyrics: Boolean(manifest.lyrics_file),
+    release_audio_selection_required: Boolean(audio.selectionRequired),
+    release_audio_candidate_count: audio.candidateCount || 0,
     ready_for_distrokid_dry_run: blockingMissingFields.length === 0,
     blocking_missing_fields: blockingMissingFields,
   };
@@ -320,6 +324,26 @@ function loadMetadata(song, songId) {
 }
 
 function findAudio(songId, assets) {
+  const releaseAudio = getSelectedReleaseAudio(songId, { assets });
+  if (releaseAudio.selected?.path) {
+    return {
+      path: releaseAudio.selected.path,
+      source: releaseAudio.status === 'selected'
+        ? `release_audio:${releaseAudio.selected.relativePath}`
+        : `release_audio_auto:${releaseAudio.selected.relativePath}`,
+      selectionStatus: releaseAudio.status,
+      candidateCount: releaseAudio.candidates.length,
+    };
+  }
+  if (releaseAudio.requiresSelection) {
+    return {
+      selectionRequired: true,
+      selectionStatus: releaseAudio.status,
+      candidateCount: releaseAudio.candidates.length,
+      source: 'release_audio_selection_required',
+    };
+  }
+
   const candidates = [
     [join(OUTPUT_DIR, 'distribution-ready', songId, 'upload-this.wav'), 'distribution-ready/upload-this.wav'],
     [join(OUTPUT_DIR, 'distribution-ready', songId, 'upload-this.mp3'), 'distribution-ready/upload-this.mp3'],
@@ -490,7 +514,7 @@ function buildSummary({ songId, manifest, audio, cover, lyrics, blockingMissingF
     '',
     '## Source Files',
     '',
-    `- Audio source: ${audio.path ? relativeToRepo(audio.path) : 'missing'}`,
+    `- Audio source: ${audio.path ? relativeToRepo(audio.path) : audio.selectionRequired ? 'release audio selection required' : 'missing'}`,
     `- Package audio: ${manifest.audio_file || 'missing'}`,
     `- Cover source: ${cover.path ? relativeToRepo(cover.path) : 'missing'}`,
     `- Package cover: ${manifest.cover_art || 'missing'}`,

@@ -59,6 +59,10 @@ const {
 const {
   getActiveProfileId,
 } = await import('../src/shared/brand-profile.js');
+const {
+  getSelectedReleaseAudio,
+  selectReleaseAudio,
+} = await import('../src/shared/song-audio-selection.js');
 
 function uniqueId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -238,6 +242,72 @@ test('missing metadata and audio block package, preview, and live submit but kee
   assert.throws(() => assertReleaseLiveSubmitReady('single', songId), /Live submit blocked/);
 });
 
+test('multiple audio files block packaging until a release master is selected', async () => {
+  const songId = createSong('Multiple Audio Master Single');
+  writeReadySongFiles(songId);
+  writeSongAsset(songId, 'audio/rough.mp3', 'rough-candidate');
+  writeSongAsset(songId, 'audio/final.wav', 'final-candidate');
+
+  let releaseAudio = getSelectedReleaseAudio(songId);
+  assert.equal(releaseAudio.status, 'needs_selection');
+  assert.equal(releaseAudio.requiresSelection, true);
+  assert.ok(releaseAudio.candidates.length >= 3);
+
+  let cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.stages.find(stage => stage.key === 'audio')?.status, 'blocked');
+  assert.ok(cockpit.blockers.some(blocker => /choose release audio master/i.test(blocker)));
+  assert.equal(cockpit.nextActions.find(action => action.key === 'package')?.enabled, false);
+  assert.throws(() => validateReleaseAction('package', cockpit), /choose release audio master/i);
+
+  selectReleaseAudio(songId, `output/songs/${songId}/audio/final.wav`);
+  releaseAudio = getSelectedReleaseAudio(songId);
+  assert.equal(releaseAudio.status, 'selected');
+  assert.equal(releaseAudio.selected.name, 'final.wav');
+
+  cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.stages.find(stage => stage.key === 'audio')?.status, 'complete');
+  assert.equal(cockpit.nextActions.find(action => action.key === 'package')?.enabled, true);
+
+  const pkg = await buildReleasePackageForCockpit('single', songId);
+  assert.equal(pkg.ok, true);
+  const manifest = getCanonicalReleaseManifest('single', songId);
+  assert.match(manifest.audio_file, /audio\.wav$/);
+  assert.match(manifest.field_sources.audio_file, /release_audio:output\/songs\/.*\/audio\/final\.wav/);
+});
+
+test('album package uses each track release master instead of arbitrary audio candidates', async () => {
+  const first = createSong('Album Master One');
+  const second = createSong('Album Master Two');
+  const albumId = createAlbum({
+    id: uniqueId('COCKPIT_ALBUM_AUDIO_MASTER'),
+    album_title: 'Audio Master Album',
+    release_date: '2026-07-12',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  albumIds.add(albumId);
+  assignSongsToAlbum(albumId, [first, second]);
+  writeReadyAlbumFiles(albumId, [first, second]);
+  writeSongAsset(first, 'audio/demo.mp3', 'demo-candidate');
+  writeSongAsset(first, 'audio/final.wav', 'album-final-candidate');
+
+  let cockpit = buildReleaseCockpitViewModel('album', albumId);
+  assert.equal(cockpit.stages.find(stage => stage.key === 'audio')?.status, 'blocked');
+
+  selectReleaseAudio(first, `output/songs/${first}/audio/final.wav`);
+  cockpit = buildReleaseCockpitViewModel('album', albumId);
+  assert.equal(cockpit.stages.find(stage => stage.key === 'audio')?.status, 'complete');
+
+  const pkg = await buildReleasePackageForCockpit('album', albumId);
+  assert.equal(pkg.ok, true);
+  const manifest = getCanonicalReleaseManifest('album', albumId);
+  const firstTrack = manifest.tracks.find(track => track.song_id === first);
+  assert.ok(firstTrack);
+  assert.match(firstTrack.field_sources.audio_file, /release_audio:output\/songs\/.*\/audio\/final\.wav/);
+  assert.ok(manifest.canonical_distrokid_upload_payload.tracks.every(track => track.audio_file));
+});
+
 test('HyperFollow URL is persisted and reused in cockpit state', () => {
   const songId = createSong('HyperFollow Cockpit Single');
   upsertReleaseLink(songId, 'HyperFollow', 'https://distrokid.com/hyperfollow/example/hyperfollow-cockpit-single');
@@ -271,6 +341,7 @@ test('cockpit templates avoid duplicate competing controls for album-owned songs
   assert.doesNotMatch(songDetail, /Run Automation Preview/);
   assert.doesNotMatch(songDetail, /Build Package/);
   assert.match(releaseDetail, /Run DistroKid live submit/);
+  assert.match(releaseDetail, /Choose release master/);
   assert.match(releaseModel, /ByteSeed video publishing/);
   assert.match(releaseModel, /Meta publishing/);
 });

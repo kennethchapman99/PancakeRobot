@@ -52,8 +52,10 @@ import {
   startYoutubeAuth,
   handleYoutubeAuthCallback,
 } from './controllers/social-controller.js';
+import { getSong } from '../../shared/db.js';
 import { removeSongsFromAlbum } from '../../shared/album-track-membership.js';
 import { buildReleaseCockpitViewModel } from '../../shared/release-cockpit.js';
+import { getSelectedReleaseAudio, selectReleaseAudio } from '../../shared/song-audio-selection.js';
 import { markReleaseAssetsStale } from '../../shared/song-release-assets-service.js';
 
 export function registerMarketingRouter(app) {
@@ -63,6 +65,8 @@ export function registerMarketingRouter(app) {
   router.get('/api/releases/:type/:id/assets/state', getReleaseCockpitAssetsStateApi);
   router.get('/api/releases/:type/:id/distribution/state', getReleaseCockpitDistributionStateApi);
   router.post('/albums/:id/tracks/remove', postRemoveAlbumTrack);
+  router.get('/songs/:id/release-audio', renderReleaseAudioSelector);
+  router.post('/songs/:id/release-audio', postSelectReleaseAudio);
 
   router.get('/marketing', renderMarketingDashboard);
   router.post('/marketing/outreach-run', postOutreachRun);
@@ -177,6 +181,42 @@ function postRemoveAlbumTrack(req, res) {
   } catch (error) {
     res.status(/not found/i.test(error.message) ? 404 : 400).send(error.message);
   }
+}
+
+function renderReleaseAudioSelector(req, res) {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).render('404', { message: 'Song not found' });
+  const releaseAudio = getSelectedReleaseAudio(song.id);
+  const fallback = `/songs/${encodeURIComponent(song.id)}`;
+  res.render('songs/release-audio', {
+    song,
+    releaseAudio,
+    returnTo: safeReturnTo(req.query.return_to, fallback),
+  });
+}
+
+function postSelectReleaseAudio(req, res) {
+  try {
+    const song = getSong(req.params.id);
+    if (!song) return res.status(404).send('Song not found');
+    const filePath = String(req.body?.file_path || req.body?.filePath || '').trim();
+    if (!filePath) return res.status(400).send('file_path is required');
+
+    selectReleaseAudio(song.id, filePath);
+    markReleaseAssetsStale('song', song.id);
+    if (song.album_id) markReleaseAssetsStale('album', song.album_id);
+
+    const fallback = `/songs/${encodeURIComponent(song.id)}`;
+    res.redirect(303, safeReturnTo(req.body?.return_to, fallback));
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+}
+
+function safeReturnTo(value, fallback) {
+  const target = String(value || '').trim();
+  if (!target || !target.startsWith('/') || target.startsWith('//')) return fallback;
+  return target;
 }
 
 function normalizeSongIdList(input) {
