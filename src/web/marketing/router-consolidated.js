@@ -55,7 +55,7 @@ import {
 import { getSong } from '../../shared/db.js';
 import { removeSongsFromAlbum } from '../../shared/album-track-membership.js';
 import { buildReleaseCockpitViewModel } from '../../shared/release-cockpit.js';
-import { selectReleaseAudio } from '../../shared/song-audio-selection.js';
+import { getSelectedReleaseAudio, selectReleaseAudio } from '../../shared/song-audio-selection.js';
 import { markReleaseAssetsStale } from '../../shared/song-release-assets-service.js';
 
 export function registerMarketingRouter(app) {
@@ -65,6 +65,7 @@ export function registerMarketingRouter(app) {
   router.get('/api/releases/:type/:id/assets/state', getReleaseCockpitAssetsStateApi);
   router.get('/api/releases/:type/:id/distribution/state', getReleaseCockpitDistributionStateApi);
   router.post('/albums/:id/tracks/remove', postRemoveAlbumTrack);
+  router.get('/songs/:id/release-audio', renderReleaseAudioSelector);
   router.post('/songs/:id/release-audio', postSelectReleaseAudio);
 
   router.get('/marketing', renderMarketingDashboard);
@@ -180,6 +181,17 @@ function postRemoveAlbumTrack(req, res) {
   } catch (error) {
     res.status(/not found/i.test(error.message) ? 404 : 400).send(error.message);
   }
+}
+
+function renderReleaseAudioSelector(req, res) {
+  const song = getSong(req.params.id);
+  if (!song) return res.status(404).render('404', { message: 'Song not found' });
+  const releaseAudio = getSelectedReleaseAudio(song.id);
+  res.render('songs/release-audio', {
+    song,
+    releaseAudio,
+    returnTo: req.query.return_to || `/songs/${encodeURIComponent(song.id)}`,
+  });
 }
 
 function postSelectReleaseAudio(req, res) {
