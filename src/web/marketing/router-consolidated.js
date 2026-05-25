@@ -52,8 +52,10 @@ import {
   startYoutubeAuth,
   handleYoutubeAuthCallback,
 } from './controllers/social-controller.js';
+import { getSong } from '../../shared/db.js';
 import { removeSongsFromAlbum } from '../../shared/album-track-membership.js';
 import { buildReleaseCockpitViewModel } from '../../shared/release-cockpit.js';
+import { selectReleaseAudio } from '../../shared/song-audio-selection.js';
 import { markReleaseAssetsStale } from '../../shared/song-release-assets-service.js';
 
 export function registerMarketingRouter(app) {
@@ -63,6 +65,7 @@ export function registerMarketingRouter(app) {
   router.get('/api/releases/:type/:id/assets/state', getReleaseCockpitAssetsStateApi);
   router.get('/api/releases/:type/:id/distribution/state', getReleaseCockpitDistributionStateApi);
   router.post('/albums/:id/tracks/remove', postRemoveAlbumTrack);
+  router.post('/songs/:id/release-audio', postSelectReleaseAudio);
 
   router.get('/marketing', renderMarketingDashboard);
   router.post('/marketing/outreach-run', postOutreachRun);
@@ -176,6 +179,24 @@ function postRemoveAlbumTrack(req, res) {
     res.redirect(303, `/albums/${encodeURIComponent(req.params.id)}`);
   } catch (error) {
     res.status(/not found/i.test(error.message) ? 404 : 400).send(error.message);
+  }
+}
+
+function postSelectReleaseAudio(req, res) {
+  try {
+    const song = getSong(req.params.id);
+    if (!song) return res.status(404).send('Song not found');
+    const filePath = String(req.body?.file_path || req.body?.filePath || '').trim();
+    if (!filePath) return res.status(400).send('file_path is required');
+
+    selectReleaseAudio(song.id, filePath);
+    markReleaseAssetsStale('song', song.id);
+    if (song.album_id) markReleaseAssetsStale('album', song.album_id);
+
+    const back = String(req.body?.return_to || '').trim();
+    res.redirect(303, back || `/songs/${encodeURIComponent(song.id)}`);
+  } catch (error) {
+    res.status(400).send(error.message);
   }
 }
 
