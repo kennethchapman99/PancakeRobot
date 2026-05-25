@@ -187,10 +187,11 @@ function renderReleaseAudioSelector(req, res) {
   const song = getSong(req.params.id);
   if (!song) return res.status(404).render('404', { message: 'Song not found' });
   const releaseAudio = getSelectedReleaseAudio(song.id);
+  const fallback = `/songs/${encodeURIComponent(song.id)}`;
   res.render('songs/release-audio', {
     song,
     releaseAudio,
-    returnTo: req.query.return_to || `/songs/${encodeURIComponent(song.id)}`,
+    returnTo: safeReturnTo(req.query.return_to, fallback),
   });
 }
 
@@ -205,11 +206,17 @@ function postSelectReleaseAudio(req, res) {
     markReleaseAssetsStale('song', song.id);
     if (song.album_id) markReleaseAssetsStale('album', song.album_id);
 
-    const back = String(req.body?.return_to || '').trim();
-    res.redirect(303, back || `/songs/${encodeURIComponent(song.id)}`);
+    const fallback = `/songs/${encodeURIComponent(song.id)}`;
+    res.redirect(303, safeReturnTo(req.body?.return_to, fallback));
   } catch (error) {
     res.status(400).send(error.message);
   }
+}
+
+function safeReturnTo(value, fallback) {
+  const target = String(value || '').trim();
+  if (!target || !target.startsWith('/') || target.startsWith('//')) return fallback;
+  return target;
 }
 
 function normalizeSongIdList(input) {
