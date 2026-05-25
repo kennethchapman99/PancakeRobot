@@ -7,6 +7,7 @@ const REPO_ROOT = path.resolve(__dirname, '../..');
 const TEST_DB_ARTIFACT_DIR = path.join(REPO_ROOT, 'test', 'artifacts', 'db');
 const OUTPUT_DIR = path.join(REPO_ROOT, 'output');
 const DEFAULT_RETENTION_DAYS = 7;
+const registeredDbCleanups = new Set();
 
 export function prepareTestDbSlug(prefix, options = {}) {
   const retentionDays = Number.isFinite(Number(options.retentionDays))
@@ -16,8 +17,13 @@ export function prepareTestDbSlug(prefix, options = {}) {
   fs.mkdirSync(TEST_DB_ARTIFACT_DIR, { recursive: true });
   cleanupOldTestDbArtifacts({ retentionDays });
 
+  const slug = createTestDbSlug(prefix);
+  if (options.cleanupOnExit !== false) {
+    registerTestDbCleanupOnExit(slug);
+  }
+
   return {
-    slug: createTestDbSlug(prefix),
+    slug,
     artifactDir: TEST_DB_ARTIFACT_DIR,
   };
 }
@@ -58,6 +64,36 @@ export function cleanupOldTestDbArtifacts(options = {}) {
   }
 
   return { deleted };
+}
+
+export function cleanupTestDbArtifacts(options = {}) {
+  const slug = options.slug || options.dbSlug || '';
+  const dbPath = options.dbPath || (slug ? path.resolve(REPO_ROOT, `${slug}.db`) : '');
+  if (!dbPath) return { deleted: 0 };
+
+  const targets = [dbPath, `${dbPath}-wal`, `${dbPath}-shm`];
+  let deleted = 0;
+
+  for (const target of targets) {
+    const resolved = path.resolve(target);
+    const allowedRoot = path.resolve(TEST_DB_ARTIFACT_DIR);
+    if (!resolved.startsWith(`${allowedRoot}${path.sep}`)) continue;
+    if (!fs.existsSync(resolved)) continue;
+
+    fs.rmSync(resolved, { force: true });
+    deleted += 1;
+  }
+
+  return { deleted };
+}
+
+function registerTestDbCleanupOnExit(slug) {
+  if (!slug || registeredDbCleanups.has(slug)) return;
+  registeredDbCleanups.add(slug);
+
+  process.once('exit', () => {
+    cleanupTestDbArtifacts({ slug });
+  });
 }
 
 export function getTestDbArtifactDir() {
