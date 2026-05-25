@@ -7,12 +7,13 @@ import { purgeReleaseCockpitTestData } from '../src/shared/release-cockpit-test-
 
 const apply = process.argv.includes('--apply') || process.argv.includes('--yes');
 const dbPath = getDbPath();
-const db = getDb();
 
 if (!fs.existsSync(dbPath)) {
   console.error(`[release-cockpit-cleanup] Database not found: ${dbPath}`);
   process.exit(1);
 }
+
+const db = getDb();
 
 try {
   db.pragma('wal_checkpoint(FULL)');
