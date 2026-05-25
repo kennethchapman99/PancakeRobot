@@ -149,7 +149,7 @@ case "$cmd" in
     ;;
   test)
     ensure_deps
-    npm test
+    npm test -- "$@"
     ;;
   cleanup|catalog:cleanup)
     ensure_deps
