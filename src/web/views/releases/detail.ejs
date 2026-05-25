@@ -12,6 +12,7 @@
 
   const stageByKey = Object.fromEntries((cockpit.stages || []).map(stage => [stage.key, stage]));
   const actionByKey = Object.fromEntries((cockpit.nextActions || []).map(action => [action.key, action]));
+  const audioStage = stageByKey.audio || { status: 'not_started', issues: [] };
   const packageStage = stageByKey.package || { status: 'not_started', issues: cockpit.packageState?.blockers || [] };
   const previewStage = stageByKey.distrokid_preview || { status: 'not_started', issues: [] };
   const liveStage = stageByKey.distrokid_live_submit || { status: 'not_started', issues: [] };
@@ -22,9 +23,13 @@
   const summarizeIssues = (issues = []) => {
     const clean = [...new Set((issues || []).filter(Boolean))];
     if (!clean.length) return 'Ready for the next handoff.';
+    const releaseAudioSelection = clean.filter(issue => /release_audio_selection|choose release audio master/i.test(issue));
+    if (releaseAudioSelection.length === clean.length && clean.length > 1) {
+      return `${clean.length} tracks have multiple audio files. Open each song and choose the release master audio before packaging.`;
+    }
     const audioFileIssues = clean.filter(issue => /:audio_file\b/.test(issue));
     if (audioFileIssues.length === clean.length && clean.length > 3) {
-      return `${clean.length} tracks are missing package audio_file fields. The distribution agent should rebuild or repair the canonical release package from the song audio files.`;
+      return `${clean.length} tracks are missing package audio_file fields. Rebuild after release master audio is selected for each track.`;
     }
     const metadataIssues = clean.filter(issue => /metadata/i.test(issue));
     if (metadataIssues.length === clean.length && clean.length > 3) {
@@ -56,6 +61,13 @@
       tone: 'green',
       headline: 'Ready for live DistroKid submit',
       detail: 'Package and preview are complete. Human approval is required before external submission.',
+    };
+  } else if (audioStage.status === 'blocked' && (audioStage.issues || []).some(issue => /choose release audio master/i.test(issue))) {
+    currentGate = {
+      label: 'Human selection gate',
+      tone: 'amber',
+      headline: 'Choose release master audio',
+      detail: summarizeIssues(audioStage.issues),
     };
   } else if (!cockpit.packageState?.ready) {
     currentGate = {
@@ -101,11 +113,19 @@
     red: 'border-rose-200 bg-rose-50 text-rose-950',
   };
 
+  const audioStatusForTrack = (track) => {
+    const releaseAudio = track.releaseAudio || {};
+    if (releaseAudio.status === 'selected') return { cls: 'badge-green', label: 'Release master', detail: releaseAudio.selected?.name || 'Selected' };
+    if (releaseAudio.status === 'auto') return { cls: 'badge-green', label: 'Auto-selected', detail: releaseAudio.selected?.name || 'Only candidate' };
+    if (releaseAudio.status === 'needs_selection') return { cls: 'badge-yellow', label: 'Choose master', detail: `${releaseAudio.candidates?.length || 0} candidates` };
+    return { cls: 'badge-red', label: 'Missing audio', detail: 'No candidates' };
+  };
+
   const assemblyRows = [
     { key: 'metadata', step: '1', owner: 'Agent', label: 'Metadata inspection', description: 'Title, release date, track metadata, brand profile.' },
-    { key: 'audio', step: '2', owner: 'Agent', label: 'Audio inspection', description: 'Confirms every track has audio available.' },
+    { key: 'audio', step: '2', owner: 'You approve', label: 'Release audio selection', description: 'Confirms every track has exactly one release master audio file.' },
     { key: 'media', step: '3', owner: 'Creative agent', label: 'Release media', description: 'Album or single artwork and platform derivatives.' },
-    { key: 'package', step: '4', owner: 'Distribution agent', label: 'Canonical package', description: 'Builds the DistroKid-ready release package.' },
+    { key: 'package', step: '4', owner: 'Distribution agent', label: 'Canonical package', description: 'Builds the DistroKid-ready release package using selected release masters.' },
     { key: 'distrokid_preview', step: '5', owner: 'Browser agent', label: 'DistroKid preview', description: 'Dry-run UI automation before any external submit.' },
     { key: 'distrokid_live_submit', step: '6', owner: 'You approve', label: 'Live submit', description: 'External submission requires explicit human approval.' },
     { key: 'hyperfollow', step: '7', owner: 'Agent + platform', label: 'HyperFollow capture', description: 'Stores the smart link once DistroKid makes it available.' },
@@ -166,7 +186,7 @@
               <div class="mt-2 text-sm text-zinc-700"><%= summarizeIssues(row.stage.issues || []) %></div>
             </div>
             <div><span class="<%= statusClass(row.stage.status) %>"><%= row.stage.status.replace(/_/g, ' ') %></span></div>
-            <div class="text-xs text-zinc-500"><%= row.stage.status === 'complete' ? 'Passed' : row.stage.status === 'blocked' ? 'Needs agent work' : row.stage.status === 'placeholder' ? 'Future automation' : 'Waiting' %></div>
+            <div class="text-xs text-zinc-500"><%= row.stage.status === 'complete' ? 'Passed' : row.stage.status === 'blocked' ? 'Needs attention' : row.stage.status === 'placeholder' ? 'Future automation' : 'Waiting' %></div>
           </div>
         <% }) %>
       </div>
@@ -238,14 +258,17 @@
       <% if (cockpit.type === 'album') { %><a href="/albums/<%= encodeURIComponent(cockpit.id) %>" class="text-sm font-semibold text-indigo-700 hover:underline">Open album detail</a><% } %>
     </div>
     <div class="mt-4 divide-y divide-zinc-100">
-      <% cockpit.tracks.forEach(track => { %>
-        <div class="grid gap-3 py-3 md:grid-cols-[70px_minmax(0,1fr)_160px_160px] md:items-center">
+      <% cockpit.tracks.forEach(track => { const audioStatus = audioStatusForTrack(track); %>
+        <div class="grid gap-3 py-3 md:grid-cols-[70px_minmax(0,1fr)_190px_160px] md:items-center">
           <div class="text-sm font-bold text-zinc-500">#<%= track.track_number || 1 %></div>
           <div class="min-w-0">
             <a href="/songs/<%= encodeURIComponent(track.id) %>" class="truncate text-sm font-semibold text-indigo-700 hover:underline"><%= track.title || track.topic || track.id %></a>
             <div class="mt-0.5 text-xs text-zinc-500"><%= track.id %></div>
           </div>
-          <div><span class="<%= (track.fsAssets.audioFiles || []).length ? 'badge-green' : 'badge-red' %>">Audio <%= (track.fsAssets.audioFiles || []).length ? 'present' : 'missing' %></span></div>
+          <div>
+            <span class="<%= audioStatus.cls %>"><%= audioStatus.label %></span>
+            <div class="mt-1 truncate text-xs text-zinc-500"><%= audioStatus.detail %></div>
+          </div>
           <div><span class="<%= track.fsAssets.metadata || track.metadata_path ? 'badge-green' : 'badge-red' %>">Metadata <%= track.fsAssets.metadata || track.metadata_path ? 'ready' : 'missing' %></span></div>
         </div>
       <% }) %>
