@@ -14,6 +14,10 @@ const TEST_MARKETING_TARGET_ID_LIKE = [
   'COCKPIT_OUTLET_%',
 ];
 
+const TEST_MARKETING_TARGET_NAME_LIKE = [
+  'Cockpit Acceptance Outlet %',
+];
+
 const TEST_RELEASE_TITLE_LIKE = [
   '%Cockpit%',
 ];
@@ -31,7 +35,7 @@ export function buildReleaseCockpitTestDataCleanupPlan(db) {
   const marketingTargetIds = unique([
     ...selectIds(db, 'marketing_targets', 'id', [
       likeAny('id', TEST_MARKETING_TARGET_ID_LIKE),
-      titleLikeWhere('name'),
+      likeAny('name', TEST_MARKETING_TARGET_NAME_LIKE),
     ].join(' OR ')),
   ]);
 
@@ -41,7 +45,6 @@ export function buildReleaseCockpitTestDataCleanupPlan(db) {
 
   const marketingCampaignIds = unique([
     ...selectIdsWhereIn(db, 'marketing_campaigns', 'id', 'focus_song_id', songIds),
-    ...selectIds(db, 'marketing_campaigns', 'id', titleLikeWhere('name')),
   ]);
 
   return {
