@@ -152,6 +152,13 @@ function writeReadyAlbumFiles(albumId, songIds) {
   }
 }
 
+function writePackageManifest(releaseId, manifest) {
+  const filePath = path.join(repoRoot, 'output', 'release-packages', releaseId, 'manifest.json');
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(manifest, null, 2)}\n`);
+  return filePath;
+}
+
 function seedEmailOutlet(id) {
   const sourcePath = path.join(repoRoot, 'output', 'test-marketing-outlets-source.json');
   fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
@@ -313,6 +320,101 @@ test('album package uses each track release master instead of arbitrary audio ca
   assert.ok(manifest.canonical_distrokid_upload_payload.tracks.every(track => track.audio_file));
 });
 
+test('missing cover_art blocks canonical package readiness and disables DistroKid preview with row fix actions', async () => {
+  const first = createSong('Package Cover Block One');
+  const second = createSong('Package Cover Block Two');
+  const albumId = createAlbum({
+    id: uniqueId('COCKPIT_ALBUM_PACKAGE_COVER'),
+    album_title: 'Package Cover Block Album',
+    release_date: '2026-07-15',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  albumIds.add(albumId);
+  assignSongsToAlbum(albumId, [first, second]);
+  writeReadyAlbumFiles(albumId, [first, second]);
+  await buildReleasePackageForCockpit('album', albumId);
+
+  const manifest = getCanonicalReleaseManifest('album', albumId);
+  manifest.cover_art = null;
+  writePackageManifest(albumId, manifest);
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+  const packageStage = cockpit.stages.find(stage => stage.key === 'package');
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+
+  assert.equal(cockpit.packageState.ready, false);
+  assert.match(cockpit.packageState.summary, /missing cover art/i);
+  assert.equal(packageStage.status, 'blocked');
+  assert.ok(packageStage.validationIssues.some(issue => /missing cover_art/i.test(issue)));
+  assert.ok(packageStage.actions.some(action => action.label === 'Rebuild canonical package'));
+  assert.ok(packageStage.actions.some(action => action.label === 'Generate / rebuild release assets'));
+  assert.ok(packageStage.actions.some(action => action.label === 'Rerun package validation'));
+  assert.equal(previewStage.actions[0].enabled, false);
+  assert.match(previewStage.actions[0].disabledReason, /missing cover art/i);
+});
+
+test('missing tracks audio_file blocks canonical package readiness', async () => {
+  const first = createSong('Package Audio Block One');
+  const second = createSong('Package Audio Block Two');
+  const albumId = createAlbum({
+    id: uniqueId('COCKPIT_ALBUM_PACKAGE_AUDIO'),
+    album_title: 'Package Audio Block Album',
+    release_date: '2026-07-16',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  albumIds.add(albumId);
+  assignSongsToAlbum(albumId, [first, second]);
+  writeReadyAlbumFiles(albumId, [first, second]);
+  await buildReleasePackageForCockpit('album', albumId);
+
+  const manifest = getCanonicalReleaseManifest('album', albumId);
+  manifest.tracks[1].audio_file = null;
+  writePackageManifest(albumId, manifest);
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+
+  assert.equal(cockpit.packageState.ready, false);
+  assert.match(cockpit.packageState.summary, /missing 1 audio file/i);
+  assert.ok(cockpit.packageState.validation.issues.some(issue => issue.path === 'tracks[1].audio_file'));
+  assert.equal(cockpit.stages.find(stage => stage.key === 'distrokid_preview').actions[0].enabled, false);
+});
+
+test('non-existent cover_art path blocks canonical package readiness', async () => {
+  const songId = createSong('Missing Cover Path Single');
+  writeReadySongFiles(songId);
+  await buildReleasePackageForCockpit('single', songId);
+
+  const manifest = getCanonicalReleaseManifest('single', songId);
+  manifest.cover_art = 'output/release-packages/DOES_NOT_EXIST/cover-art.png';
+  writePackageManifest(songId, manifest);
+
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+
+  assert.equal(cockpit.packageState.ready, false);
+  assert.ok(cockpit.packageState.validation.issues.some(issue => issue.code === 'missing_cover_art_file'));
+  assert.match(cockpit.packageState.summary, /missing cover art/i);
+});
+
+test('non-existent audio_file path blocks canonical package readiness', async () => {
+  const songId = createSong('Missing Audio Path Single');
+  writeReadySongFiles(songId);
+  await buildReleasePackageForCockpit('single', songId);
+
+  const manifest = getCanonicalReleaseManifest('single', songId);
+  manifest.audio_file = 'output/release-packages/DOES_NOT_EXIST/audio.mp3';
+  writePackageManifest(songId, manifest);
+
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+
+  assert.equal(cockpit.packageState.ready, false);
+  assert.ok(cockpit.packageState.validation.issues.some(issue => issue.code === 'missing_track_audio_file_path'));
+  assert.match(cockpit.packageState.summary, /missing 1 audio file/i);
+});
+
 test('HyperFollow URL is persisted and reused in cockpit state', () => {
   const songId = createSong('HyperFollow Cockpit Single');
   upsertReleaseLink(songId, 'HyperFollow', 'https://distrokid.com/hyperfollow/example/hyperfollow-cockpit-single');
@@ -351,6 +453,7 @@ test('cockpit templates avoid duplicate competing controls for album-owned songs
   assert.match(releaseDetail, /Paste \/ save HyperFollow URL/);
   assert.match(releaseDetail, /Run history \/ logs/);
   assert.match(releaseDetail, /Generate metadata/);
+  assert.match(releaseDetail, /Exact missing inputs/);
   assert.match(releaseDetail, /Remove track/);
   assert.doesNotMatch(releaseDetail, /DistroKid Preview card/);
   assert.doesNotMatch(releaseDetail, /Release approval \+ HyperFollow/);
@@ -371,6 +474,8 @@ test('cockpit templates avoid duplicate competing controls for album-owned songs
   assert.match(releaseModel, /HyperFollow capture/);
   assert.match(releaseModel, /Approve live submit/);
   assert.match(releaseModel, /Generate \/ refresh release assets/);
+  assert.match(releaseModel, /Generate \/ rebuild release assets/);
+  assert.match(releaseModel, /Rerun package validation/);
 });
 
 test('blocked readiness stages expose inline fix actions', () => {
@@ -458,7 +563,7 @@ test('failed DistroKid preview is visible in readiness row and run history', () 
     runId: 'preview_test_run',
     command: 'node scripts/distrokid/upload-release.mjs --dry-run',
     latest_run_log_path: `output/release-packages/${songId}/distrokid-run/run-log.json`,
-    error: 'ReferenceError: Cannot access finished before initialization',
+    error: 'audio_file not found: (missing); cover_art not found: (missing)',
   });
 
   const cockpit = buildReleaseCockpitViewModel('single', songId);
@@ -466,10 +571,11 @@ test('failed DistroKid preview is visible in readiness row and run history', () 
 
   assert.ok(previewStage);
   assert.equal(previewStage.status, 'failed');
-  assert.match(previewStage.detail, /ReferenceError/);
+  assert.match(previewStage.detail, /audio_file not found/i);
+  assert.match(previewStage.detail, /cover_art not found/i);
   assert.equal(previewStage.latestRun?.runId, 'preview_test_run');
   assert.match(previewStage.latestRun?.logPath || '', /run-log\.json$/);
-  assert.ok(previewStage.actions.some(action => action.label === 'Run DistroKid preview automation'));
+  assert.ok(previewStage.actions.some(action => /DistroKid preview automation/.test(action.label)));
   assert.equal(cockpit.runHistory[0].runId, 'preview_test_run');
   assert.equal(cockpit.runHistory[0].status, 'failed');
 });
@@ -488,6 +594,7 @@ test('mocked release cockpit acceptance covers single lifecycle actions', async 
   cockpit = buildReleaseCockpitViewModel('single', songId);
   assert.equal(cockpit.lifecycle.current, 'approved_for_distribution');
   assert.equal(cockpit.packageState.ready, true);
+  assert.equal(cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.actions[0]?.enabled, true);
 
   assert.throws(() => validateReleaseAction('live_submit', cockpit), /DistroKid preview has not been completed/);
   const preview = await runDistroKidSongAutomation(songId, { mode: 'preview' });
@@ -543,10 +650,16 @@ test('mocked release cockpit acceptance covers canonical album package and logs'
   assert.equal(pkg.ok, true);
   const manifest = getCanonicalReleaseManifest('album', albumId);
   assert.equal(manifest.schema_version, 'distrokid-album-release-package-v1');
+  assert.equal(Object.hasOwn(manifest, 'song_id'), false);
+  assert.equal(manifest.album_id, albumId);
+  assert.equal(manifest.release_id, albumId);
   assert.deepEqual(manifest.readiness.ordered_tracks, [first, second]);
   assert.equal(manifest.tracks.length, 2);
   assert.equal(manifest.canonical_distrokid_upload_payload.tracks.length, 2);
   assert.ok(manifest.inherited_album_media.primary_image);
+  assert.ok(manifest.tracks.every(track => track.song_id));
+  assert.ok(manifest.tracks.every(track => track.audio_file));
+  assert.ok(manifest.cover_art);
 
   cockpit = buildReleaseCockpitViewModel('album', albumId);
   assert.equal(cockpit.packageState.ready, true);

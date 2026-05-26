@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import { join } from 'path';
+import { validateCanonicalReleasePackageManifest } from '../../src/shared/release-package-validation.js';
 import {
   DISTROKID_JOB_STATUSES,
   getDistroKidJob,
@@ -113,13 +114,13 @@ if (!exists(manifestPath)) {
 
 let manifest = readJson(manifestPath);
 manifest = normalizeDistroKidManifest(manifest);
-const songId = manifest.song_id;
-if (!songId) {
-  console.error('FAIL: manifest is missing song_id.');
+const manifestEntityId = resolveManifestEntityId(manifest);
+if (!manifestEntityId) {
+  console.error('FAIL: manifest is missing song_id/release_id/album_id.');
   process.exit(1);
 }
 
-const runDir = ensureDir(getDistrokidRunDir(songId));
+const runDir = ensureDir(getDistrokidRunDir(manifestEntityId));
 const filledFields = [];
 const skippedFields = [];
 const errors = [];
@@ -127,7 +128,8 @@ let fieldMap = { dangerous_paid_extras_never_autofill: [] };
 let finishedEarly = false;
 let finished = false;
 const runLog = {
-  song_id: songId,
+  song_id: manifest.song_id || null,
+  release_id: manifest.release_id || manifest.album_id || null,
   manifest_path: relativeToRepo(manifestPath),
   dry_run: dryRun,
   browser_mode: values['browser-mode'],
@@ -141,9 +143,16 @@ const runLog = {
   },
 };
 const manifestJobSongIds = collectManifestSongIds(manifest);
-
-validatePackageFile('audio_file', manifest.audio_file, errors);
-validatePackageFile('cover_art', manifest.cover_art, errors);
+const validation = validateCanonicalReleasePackageManifest(manifest, { releaseType: manifest.release_type });
+for (const issue of validation.issues) {
+  if (issue.code === 'missing_cover_art') errors.push({ field: 'cover_art', error: 'cover_art not found: (missing)' });
+  else if (issue.code === 'missing_cover_art_file') errors.push({ field: 'cover_art', error: issue.message.replace(/^Canonical package is missing cover_art\.$/, 'cover_art not found: (missing)') });
+  else if (issue.code === 'missing_track_audio_file') errors.push({ field: issue.path || 'audio_file', error: 'audio_file not found: (missing)' });
+  else if (issue.code === 'missing_track_audio_file_path') errors.push({ field: issue.path || 'audio_file', error: issue.message.replace(/^[^:]+: /, '') });
+  else if (issue.code === 'missing_tracks') errors.push({ field: 'tracks', error: 'tracks not found: (missing)' });
+  else if (issue.code === 'album_song_id_confusion') errors.push({ field: 'release_id', error: issue.message });
+  else if (issue.code === 'missing_manifest') errors.push({ field: 'manifest', error: issue.message });
+}
 if (manifest.lyrics_file && !exists(absoluteFromMaybeRelative(manifest.lyrics_file))) {
   skippedFields.push({ field: 'lyrics', reason: `lyrics file not found: ${manifest.lyrics_file}` });
 }
@@ -190,7 +199,7 @@ try {
   process.exit(1);
 }
 
-console.log(`DistroKid upload ${dryRun ? 'preview' : 'live submit'}: ${songId}`);
+console.log(`DistroKid upload ${dryRun ? 'preview' : 'live submit'}: ${manifestEntityId}`);
 if (dryRun) console.log('Safety: preview mode stops before final submit.');
 else console.log('LIVE SUBMIT: final DistroKid submission is enabled by explicit confirmation.');
 if (certifyImportantCheckboxes) {
@@ -951,7 +960,7 @@ async function finish(browser, skipBrowserClose) {
 
   console.log('');
   printUploadSummary();
-  console.log(`Package: output/release-packages/${songId}/`);
+  console.log(`Package: output/release-packages/${manifestEntityId}/`);
   console.log(`Screenshots/logs: ${relativeToRepo(runDir)}`);
   if (skippedFields.length) {
     console.log('Skipped fields:');
@@ -961,7 +970,7 @@ async function finish(browser, skipBrowserClose) {
     console.log('Live submit completed if DistroKid accepted the final click. Confirm the release URL in DistroKid.');
   } else {
     console.log('Manual next steps: review DistroKid, fill skipped fields, and submit manually only when ready.');
-    console.log(`After manual submission: bash scripts/pancake.sh distrokid:mark-submitted --song-id ${songId} --distrokid-url URL`);
+    console.log(`After manual submission: bash scripts/pancake.sh distrokid:mark-submitted --song-id ${manifestJobSongIds[0] || manifestEntityId} --distrokid-url URL`);
   }
 
   if (browser && pauseAtEnd && !skipBrowserClose) {
@@ -978,6 +987,10 @@ function collectManifestSongIds(manifest) {
     if (ids.length) return [...new Set(ids)];
   }
   return [String(manifest?.song_id || '').trim()].filter(Boolean);
+}
+
+function resolveManifestEntityId(manifest) {
+  return String(manifest?.release_id || manifest?.album_id || manifest?.song_id || manifest?.tracks?.[0]?.song_id || '').trim();
 }
 
 function markManifestJobs(status, fields = {}) {

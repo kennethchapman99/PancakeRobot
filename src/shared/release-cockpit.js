@@ -23,6 +23,7 @@ import { getSongFinanceSummary } from './finance-manager.js';
 import { getSelectedReleaseAudio } from './song-audio-selection.js';
 import { isRealSongCatalogRow } from './song-catalog-cleanup.js';
 import { summarizeMagicReleaseForCockpit } from './magic-release.js';
+import { validateCanonicalReleasePackageManifest } from './release-package-validation.js';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -254,14 +255,15 @@ export async function buildReleasePackageForCockpit(releaseType, releaseId) {
     };
   }
   const manifest = readJsonIfExists(releasePackageManifestPath(vm.type, vm.id));
+  const validation = validateCanonicalReleasePackageManifest(manifest, { releaseType: vm.type });
   return {
-    ok: Boolean(manifest?.readiness?.ready_for_distrokid_dry_run),
+    ok: validation.ready,
     releaseType: vm.type,
     releaseId: vm.id,
     trackCount: vm.tracks.length,
     packagePath: releasePackagePath(vm.type, vm.id),
     manifestPath: releasePackageManifestPath(vm.type, vm.id),
-    readiness: manifest?.readiness || null,
+    readiness: manifest?.readiness || { ready_for_distrokid_dry_run: validation.ready, blocking_missing_fields: validation.blocking_missing_fields },
     results,
   };
 }
@@ -380,11 +382,13 @@ function buildStages({ type, release, tracks, assetState, campaigns, social, hyp
   const postLinks = tracks.flatMap(track => track.links || []).filter(link => !/hyperfollow|distrokid/i.test(`${link.platform} ${link.url}`));
   const tracksMetadataUrl = `/releases/${type}/${encodeURIComponent(release.id)}?focus=metadata#tracks`;
   const tracksAudioUrl = `/releases/${type}/${encodeURIComponent(release.id)}?focus=audio#tracks`;
+  const needsPackageCoverArtFix = packageState.validation.missingCoverArtCount > 0;
+  const packageBuildLabel = packageState.exists ? 'Rebuild canonical package' : 'Build canonical package';
   const readyForPackage = !metadataIssues.length && !audioIssues.length && !mediaIssues.length;
   const readyForPreview = readyForPackage && packageState.ready;
   const readyForLiveSubmit = previewComplete && packageState.ready;
   const readyHyperfollowCapture = Boolean(magicRelease?.tasks?.some(task => task.task_key === 'hyperfollow_capture' && task.status === 'ready'));
-  const packageBlockedReason = readyForPackage ? (packageState.blockers[0] || 'Canonical package has not been built yet.') : `Blocked by ${[metadataIssues.length ? 'metadata' : '', audioIssues.length ? 'audio' : '', mediaIssues.length ? 'release assets' : ''].filter(Boolean).join(', ')}`;
+  const packageBlockedReason = readyForPackage ? packageState.summary : `Blocked by ${[metadataIssues.length ? 'metadata' : '', audioIssues.length ? 'audio' : '', mediaIssues.length ? 'release assets' : ''].filter(Boolean).join(', ')}`;
   const previewDetail = latestPreviewRun?.error
     || latestPreviewRun?.message
     || (previewComplete ? 'Preview automation completed.' : readyForPreview ? 'Ready to run the DistroKid preview automation.' : (packageState.ready ? 'Resolve release blockers before preview can run.' : 'Waiting for the canonical package to become ready.'));
@@ -430,19 +434,25 @@ function buildStages({ type, release, tracks, assetState, campaigns, social, hyp
         { label: assetState.primaryImage?.path ? 'Generate / refresh release assets' : 'Open album details', method: assetState.primaryImage?.path ? 'POST' : 'GET', url: assetState.primaryImage?.path ? `/releases/${type}/${encodeURIComponent(release.id)}/actions/release-assets/build` : (type === 'album' ? `/albums/${encodeURIComponent(release.id)}` : `/songs/${encodeURIComponent(tracks[0]?.id || release.id)}`), enabled: true },
       ],
     }),
-    stage('package', 'Canonical package', packageState.ready ? 'complete' : readyForPackage ? 'ready' : 'blocked', packageState.ready ? [] : [packageBlockedReason], false, {
+    stage('package', 'Canonical package', packageState.ready ? 'complete' : (packageState.exists ? 'blocked' : (readyForPackage ? 'ready' : 'blocked')), packageState.ready ? [] : [packageBlockedReason], false, {
       owner: 'Pipeline',
-      detail: packageState.ready ? 'Canonical package is ready for DistroKid.' : packageBlockedReason,
+      detail: packageState.ready ? 'Canonical package is ready for DistroKid.' : packageState.summary,
+      issues: packageState.validation.issues.map(issue => issue.message),
+      blockerCount: packageState.validation.issues.length || (packageState.ready ? 0 : 1),
       actions: [
-        { label: 'Build canonical package', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/package`, enabled: readyForPackage, disabledReason: readyForPackage ? '' : packageBlockedReason },
+        { label: packageBuildLabel, method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/package`, enabled: readyForPackage, disabledReason: readyForPackage ? '' : packageBlockedReason },
+        { label: 'Generate / rebuild release assets', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/release-assets/build`, enabled: needsPackageCoverArtFix, disabledReason: needsPackageCoverArtFix ? '' : 'Release assets only need rebuilding when cover art is missing from the canonical package.' },
+        { label: 'Rerun package validation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/package-validation`, enabled: true },
       ],
     }),
     stage('distrokid_preview', 'DistroKid preview', latestPreviewRun?.status === 'running' ? 'running' : latestPreviewRun?.status === 'failed' ? 'failed' : previewComplete ? 'complete' : readyForPreview ? 'ready' : 'blocked', latestPreviewRun?.status === 'failed' ? [latestPreviewRun.error || latestPreviewRun.message] : (previewComplete ? [] : [previewDetail]), false, {
       owner: 'Browsy automation',
-      detail: previewDetail,
+      detail: latestPreviewRun?.status === 'failed' ? previewDetail : (readyForPreview ? previewDetail : packageState.summary),
+      issues: !readyForPreview ? packageState.validation.issues.map(issue => issue.message) : [],
+      blockerCount: !readyForPreview && packageState.validation.issues.length ? packageState.validation.issues.length : 1,
       latestRun: latestPreviewRun,
       actions: [
-        { label: 'Run DistroKid preview automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview`, enabled: readyForPreview && latestPreviewRun?.status !== 'running', disabledReason: latestPreviewRun?.status === 'running' ? 'Preview automation is already running.' : (readyForPreview ? '' : previewDetail) },
+        { label: latestPreviewRun ? 'Rerun DistroKid preview automation' : 'Run DistroKid preview automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview`, enabled: readyForPreview && latestPreviewRun?.status !== 'running', disabledReason: latestPreviewRun?.status === 'running' ? 'Preview automation is already running.' : (readyForPreview ? '' : packageState.summary) },
       ],
     }),
     stage('distrokid_live_submit', 'Live submit', latestLiveSubmitRun?.status === 'running' ? 'running' : latestLiveSubmitRun?.status === 'failed' ? 'failed' : liveComplete ? 'complete' : readyForLiveSubmit && liveSubmitApproval?.approved ? 'ready' : 'blocked', latestLiveSubmitRun?.status === 'failed' ? [latestLiveSubmitRun.error || latestLiveSubmitRun.message] : (liveComplete ? [] : [liveSubmitDetail]), false, {
@@ -492,8 +502,9 @@ function stage(key, label, status, issues, blocksLiveSubmit, options = {}) {
     owner: options.owner || 'Pipeline',
     optional: options.optional === true,
     affectedTrackIds: options.affectedTrackIds || [],
-    blockerCount: (options.affectedTrackIds || []).length || issues.length,
+    blockerCount: options.blockerCount || (options.affectedTrackIds || []).length || issues.length,
     detail: options.detail || ((issues || []).length ? issues.join('; ') : 'Ready.'),
+    validationIssues: options.issues || [],
     latestRun: options.latestRun || null,
     actions: (options.actions || []).filter(action => action && action.label),
   };
@@ -561,13 +572,16 @@ function readReleasePackageState(type, releaseId, tracks) {
   const manifestPath = releasePackageManifestPath(type, releaseId);
   const manifest = readJsonIfExists(manifestPath);
   if (manifest) {
-    const blockers = manifest.readiness?.blocking_missing_fields || [];
+    const validation = validateCanonicalReleasePackageManifest(manifest, { releaseType: type });
+    const blockers = validation.issues.map(issue => issue.message);
     return {
       exists: true,
-      ready: Boolean(manifest.readiness?.ready_for_distrokid_dry_run),
+      ready: validation.ready,
       path: releasePackagePath(type, releaseId),
       manifestPath,
       blockers,
+      summary: validation.summary,
+      validation,
       manifest,
     };
   }
@@ -580,6 +594,8 @@ function readReleasePackageState(type, releaseId, tracks) {
       path: job?.package_path || releasePackagePath(type, releaseId),
       manifestPath,
       blockers: ready ? [] : ['Canonical release package has not been built'],
+      summary: ready ? 'Canonical package is valid.' : 'Canonical package manifest is missing.',
+      validation: validateCanonicalReleasePackageManifest(null, { releaseType: type }),
       manifest: null,
     };
   }
@@ -589,6 +605,8 @@ function readReleasePackageState(type, releaseId, tracks) {
     path: releasePackagePath(type, releaseId),
     manifestPath,
     blockers: ['Canonical album release package has not been built'],
+    summary: 'Canonical package manifest is missing.',
+    validation: validateCanonicalReleasePackageManifest(null, { releaseType: type }),
     manifest: null,
   };
 }
@@ -620,10 +638,6 @@ function writeCanonicalAlbumReleasePackage(vm) {
   const albumCover = vm.releaseAssetState?.primaryImage?.path
     ? copyAlbumCoverToPackage(vm.releaseAssetState.primaryImage.path, packageDir)
     : (first.cover_art || null);
-  const blocking = trackManifests.flatMap(track => (track.readiness?.blocking_missing_fields || [])
-    .filter(field => !(field === 'cover_art' && albumCover))
-    .map(field => `${track.song_id}:${field}`));
-  if (!albumCover) blocking.push('cover_art');
 
   const canonicalDistroKidUploadPayload = {
     release_type: 'album',
@@ -634,6 +648,7 @@ function writeCanonicalAlbumReleasePackage(vm) {
     secondary_genre: first.secondary_genre || null,
     cover_art: albumCover,
     tracks: trackManifests.map(track => ({
+      song_id: track.song_id,
       track_number: track.track_number,
       track_title: track.track_title,
       audio_file: track.audio_file,
@@ -649,14 +664,17 @@ function writeCanonicalAlbumReleasePackage(vm) {
   const manifest = {
     ...first,
     schema_version: 'distrokid-album-release-package-v1',
-    song_id: vm.id,
+    song_id: undefined,
     album_id: vm.id,
+    release_id: vm.id,
     release_type: 'album',
     brand_profile_id: profileId,
     release_title: vm.title,
     track_title: undefined,
     audio_file: undefined,
+    cover_art: albumCover,
     lyrics_file: undefined,
+    track_number: undefined,
     album_metadata: {
       id: vm.id,
       title: vm.title,
@@ -679,24 +697,36 @@ function writeCanonicalAlbumReleasePackage(vm) {
     },
     canonical_distrokid_upload_payload: canonicalDistroKidUploadPayload,
     tracks: trackManifests,
-    readiness: {
-      ready_for_distrokid_dry_run: blocking.length === 0 && trackManifests.length > 0,
-      blocking_missing_fields: [...new Set(blocking)],
-      track_count: trackManifests.length,
-      ordered_tracks: trackManifests.map(track => track.song_id),
-    },
+  };
+  manifest.field_sources = {
+    ...(manifest.field_sources || {}),
+    album_id: 'derived',
+    release_id: 'derived',
+    cover_art: albumCover ? 'release_assets' : 'missing',
+  };
+  delete manifest.field_sources.song_id;
+  delete manifest.field_sources.audio_file;
+  delete manifest.field_sources.track_title;
+
+  const validation = validateCanonicalReleasePackageManifest(manifest, { releaseType: 'album' });
+  manifest.readiness = {
+    ready_for_distrokid_dry_run: validation.ready,
+    blocking_missing_fields: validation.blocking_missing_fields,
+    track_count: trackManifests.length,
+    ordered_tracks: trackManifests.map(track => track.song_id),
+    validation_summary: validation.summary,
   };
 
   fs.writeFileSync(path.join(packageDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   fs.writeFileSync(path.join(packageDir, 'missing-fields.json'), `${JSON.stringify({
-    blocking_missing_fields: manifest.readiness.blocking_missing_fields,
+    blocking_missing_fields: validation.blocking_missing_fields,
     warning_missing_fields: [],
-    all_missing_fields: manifest.readiness.blocking_missing_fields,
+    all_missing_fields: validation.blocking_missing_fields,
   }, null, 2)}\n`, 'utf8');
   for (const track of vm.tracks) {
-    markDistroKidJobStatus(track.id, manifest.readiness.ready_for_distrokid_dry_run ? DISTROKID_JOB_STATUSES.PACKAGE_BUILT : DISTROKID_JOB_STATUSES.BLOCKED_MISSING_FIELDS, {
+    markDistroKidJobStatus(track.id, validation.ready ? DISTROKID_JOB_STATUSES.PACKAGE_BUILT : DISTROKID_JOB_STATUSES.BLOCKED_MISSING_FIELDS, {
       package_path: releasePackagePath('album', vm.id),
-      latest_error_json: manifest.readiness.blocking_missing_fields.length ? { blocking_missing_fields: manifest.readiness.blocking_missing_fields } : null,
+      latest_error_json: validation.blocking_missing_fields.length ? { blocking_missing_fields: validation.blocking_missing_fields } : null,
     });
   }
   return manifest;

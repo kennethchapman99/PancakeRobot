@@ -343,6 +343,27 @@ app.post('/releases/:type/:id/actions/release-assets/build', async (req, res) =>
   }
 });
 
+app.post('/releases/:type/:id/actions/package-validation', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  const validation = cockpit.packageState?.validation;
+  const ok = Boolean(validation?.ready);
+  const message = validation?.summary || 'Canonical package manifest is missing.';
+  logReleaseCockpitEvent(
+    cockpit.type,
+    cockpit.id,
+    'package_validation',
+    ok ? 'complete' : 'blocked',
+    message,
+    {
+      package_path: cockpit.packageState?.path || null,
+      manifest_path: cockpit.packageState?.manifestPath || null,
+      validation,
+    },
+  );
+  respondReleaseAction(req, res, cockpit, message, { level: ok ? 'success' : 'warning' });
+});
+
 app.post('/releases/:type/:id/actions/generate-metadata', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
