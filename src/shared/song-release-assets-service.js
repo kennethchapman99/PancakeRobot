@@ -6,7 +6,7 @@ import { buildMarketingReleasePack } from '../marketing/release-agent.js';
 import { getSongBaseImageDir, resolveDefaultBaseImage, scanMarketingPack, scanSongBaseImage } from './song-catalog-marketing.js';
 import { getSongMarketingKit, saveSongMarketingKit, syncSongMarketingKitFromPack } from './song-marketing-kit.js';
 import { generateSocialImage } from '../visuals/image-provider.js';
-import { loadBrandProfile, loadBrandProfileById } from './brand-profile.js';
+import { findBrandProfileDefaultImage, getActiveProfileId, loadBrandProfile, loadBrandProfileById } from './brand-profile.js';
 import { buildReleaseDerivatives, RELEASE_ASSET_TARGETS } from './release-asset-derivatives.js';
 
 const GENERATED_ASSET_FIELDS = [
@@ -99,6 +99,8 @@ function findAlbumPrimaryImage(albumId) {
     path: path.join(refDir, primaryFile),
     url: mediaUrl(path.join(refDir, primaryFile)),
     name: primaryFile,
+    source: 'album_media',
+    source_label: 'Album media',
   } : null;
 }
 
@@ -161,7 +163,29 @@ function ownerOutputDir(owner) {
 }
 
 function ownerPrimaryImage(owner) {
-  return owner.type === ENTITY_TYPE_ALBUM ? findAlbumPrimaryImage(owner.id) : scanSongBaseImage(owner.id);
+  if (owner.type === ENTITY_TYPE_ALBUM) {
+    const albumImage = findAlbumPrimaryImage(owner.id);
+    if (albumImage) return albumImage;
+    const album = requireAlbum(owner.id);
+    return localBrandDefaultImage(album.brand_profile_id || getActiveProfileId());
+  }
+
+  const songImage = scanSongBaseImage(owner.id);
+  if (songImage) return { ...songImage, source: 'song_media', source_label: 'Song media' };
+  const song = requireSong(owner.id);
+  return localBrandDefaultImage(song.brand_profile_id || getActiveProfileId());
+}
+
+function localBrandDefaultImage(profileId) {
+  const image = findBrandProfileDefaultImage(profileId);
+  if (!image?.path || !fs.existsSync(image.path)) return null;
+  return {
+    ...image,
+    inherited: true,
+    inheritedFrom: { type: 'brand', id: profileId, title: image.profileName || profileId },
+    source: 'brand_media',
+    source_label: image.source_label || image.sourceLabel || `Brand default image: ${image.profileName || profileId}`,
+  };
 }
 
 function ownerMetadata(owner) {
@@ -230,7 +254,7 @@ export function getReleaseAssetState(entityType, entityId) {
 export async function ensureReleaseAssetDerivatives(entityType, entityId, options = {}) {
   const owner = getReleaseAssetOwner(entityType, entityId);
   const before = getReleaseAssetState(entityType, entityId);
-  if (!before.primaryImage?.path) throw new Error('Upload/select a primary image first.');
+  if (!before.primaryImage?.path) throw new Error('Upload/select a primary image first, or set a brand default image on the Brand Bible.');
   if (!options.force && !before.derivativesStale) return before;
 
   const result = await buildReleaseDerivatives({
@@ -439,8 +463,8 @@ export function getSongReleaseAssetState(songId, options = {}) {
       marketingAssets: {},
       imageSource: {
         active_image_url: canonicalState.primaryImage?.url || '',
-        source_label: `Inherited from album: ${canonicalState.inheritedFrom?.title || canonicalState.owner.id}`,
-        generation_source: 'album_inherited',
+        source_label: canonicalState.primaryImage?.source_label || `Inherited from album: ${canonicalState.inheritedFrom?.title || canonicalState.owner.id}`,
+        generation_source: canonicalState.primaryImage?.generation_source || 'album_inherited',
       },
       qaWarnings: [],
       qaFailures: [],
@@ -521,7 +545,7 @@ export async function buildSongReleaseAssets(songId, options = {}) {
       dashboardUrl: state.dashboardUrl,
       generatedAssets: {},
       marketingAssets: {},
-      imageSource: { active_image_url: state.primaryImage?.url || '', source_label: `Inherited from album: ${state.inheritedFrom?.title || owner.id}` },
+      imageSource: { active_image_url: state.primaryImage?.url || '', source_label: state.primaryImage?.source_label || `Inherited from album: ${state.inheritedFrom?.title || owner.id}` },
       qaWarnings: [],
       qaFailures: [],
     };
