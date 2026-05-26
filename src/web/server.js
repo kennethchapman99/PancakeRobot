@@ -111,6 +111,14 @@ import {
   validateReleaseAction,
 } from '../shared/release-cockpit.js';
 import {
+  createMagicReleaseCampaign,
+  getMagicReleaseState,
+  ingestBrowsyResult,
+  refreshMagicReleasePlan,
+  runMagicReleaseTask,
+  runNextMagicReleaseTask,
+} from '../shared/magic-release.js';
+import {
   createOutreachRun,
   getCanonicalEmailOutletsForSelection,
 } from '../agents/marketing-outreach-run-agent.js';
@@ -384,6 +392,85 @@ app.post('/releases/:type/:id/actions/outreach', (req, res) => {
     if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
     res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
   }
+});
+
+app.post('/releases/:type/:id/magic-release/create', (req, res) => {
+  try {
+    const state = createMagicReleaseCampaign({ releaseType: req.params.type, releaseId: req.params.id });
+    if (wantsJson(req)) return res.json({ ok: true, state });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/plan', (req, res) => {
+  try {
+    const state = refreshMagicReleasePlan({ releaseType: req.params.type, releaseId: req.params.id });
+    if (wantsJson(req)) return res.json({ ok: true, state });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/run-next', async (req, res) => {
+  try {
+    const result = await runNextMagicReleaseTask({
+      releaseType: req.params.type,
+      releaseId: req.params.id,
+      dryRun: req.body?.dry_run !== 'false',
+    });
+    if (wantsJson(req)) return res.json({ ok: true, result });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/browsy-dry-run', async (req, res) => {
+  try {
+    const state = getMagicReleaseState(req.params.type, req.params.id) || createMagicReleaseCampaign({ releaseType: req.params.type, releaseId: req.params.id });
+    const task = state.tasks.find(item => item.owner === 'browsy' && item.status === 'ready');
+    if (!task) throw new Error('No ready Browsy task is available.');
+    const result = await runMagicReleaseTask({ campaignId: state.campaign.id, taskKey: task.task_key, dryRun: true });
+    if (wantsJson(req)) return res.json({ ok: true, result });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/tasks/:taskKey/run', async (req, res) => {
+  try {
+    const state = getMagicReleaseState(req.params.type, req.params.id) || createMagicReleaseCampaign({ releaseType: req.params.type, releaseId: req.params.id });
+    const result = await runMagicReleaseTask({
+      campaignId: state.campaign.id,
+      taskKey: req.params.taskKey,
+      dryRun: req.body?.dry_run !== 'false',
+    });
+    if (wantsJson(req)) return res.json({ ok: true, result });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/ingest-result', (req, res) => {
+  ingestBrowsyResult({
+    resultPath: req.body?.result_path || req.body?.resultPath,
+  }).then(result => {
+    if (wantsJson(req)) return res.json({ ok: true, result });
+    return res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }).catch(error => {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  });
 });
 
 app.get('/magic-song', (req, res) => {

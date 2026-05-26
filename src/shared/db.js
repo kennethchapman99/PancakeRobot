@@ -282,6 +282,103 @@ function initSchema(db) {
       payload_json TEXT,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS release_campaigns (
+      id TEXT PRIMARY KEY,
+      release_type TEXT NOT NULL,
+      release_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      release_date TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      lifecycle_state TEXT NOT NULL DEFAULT 'planned',
+      current_gate TEXT,
+      campaign_plan_json TEXT,
+      context_json TEXT,
+      links_json TEXT,
+      asset_selection_json TEXT,
+      run_summary_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(release_type, release_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS release_campaign_tasks (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      task_key TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      owner TEXT NOT NULL DEFAULT 'agent',
+      status TEXT NOT NULL DEFAULT 'pending',
+      due_date TEXT,
+      offset_days INTEGER,
+      depends_on_json TEXT,
+      blocking INTEGER NOT NULL DEFAULT 0,
+      action_url TEXT,
+      result_json TEXT,
+      result_path TEXT,
+      source_workflow_id TEXT,
+      source_run_id TEXT,
+      next_follow_up_date TEXT,
+      related_item_id TEXT,
+      reason TEXT,
+      suggested_action TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      completed_at TEXT,
+      FOREIGN KEY (campaign_id) REFERENCES release_campaigns(id),
+      UNIQUE(campaign_id, task_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS release_campaign_runs (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      task_id TEXT,
+      workflow_id TEXT,
+      run_id TEXT,
+      status TEXT NOT NULL,
+      package_path TEXT,
+      result_path TEXT,
+      stdout_path TEXT,
+      stderr_path TEXT,
+      log_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (campaign_id) REFERENCES release_campaigns(id),
+      FOREIGN KEY (task_id) REFERENCES release_campaign_tasks(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS visual_library_assets (
+      id TEXT PRIMARY KEY,
+      file_path TEXT NOT NULL,
+      asset_type TEXT NOT NULL,
+      aspect_ratio TEXT,
+      duration_seconds REAL,
+      character_tags_json TEXT,
+      scene_tags_json TEXT,
+      mood_tags_json TEXT,
+      album_tags_json TEXT,
+      song_tags_json TEXT,
+      loopable INTEGER DEFAULT 0,
+      safe_for_kids INTEGER DEFAULT 1,
+      source TEXT NOT NULL DEFAULT 'manual',
+      rights_status TEXT NOT NULL DEFAULT 'owned_generated',
+      metadata_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS visual_library_usage (
+      id TEXT PRIMARY KEY,
+      asset_id TEXT NOT NULL,
+      release_type TEXT NOT NULL,
+      release_id TEXT NOT NULL,
+      song_id TEXT,
+      platform TEXT,
+      usage_context TEXT,
+      used_at TEXT NOT NULL,
+      FOREIGN KEY (asset_id) REFERENCES visual_library_assets(id)
+    );
   `);
 
   // Migrate existing songs table — add new columns if they don't exist yet
@@ -315,6 +412,9 @@ function initSchema(db) {
     ['track_number', 'INTEGER'],
     ['album_role', 'TEXT'],
     ['inherited_album_plan_version', 'TEXT'],
+    ['single_priority', 'INTEGER'],
+    ['single_visual_asset_id', 'TEXT'],
+    ['single_custom_video_requested', 'INTEGER DEFAULT 0'],
   ];
   for (const [col, type] of newSongCols) {
     if (!songCols.includes(col)) {
@@ -459,12 +559,13 @@ export function upsertSong(song) {
       'release_recommendation_history_json', 'marketing_inputs_from_ar_json', 'marketing_links_json',
       'marketing_assets_json', 'marketing_readiness_json', 'last_outreach_json', 'is_test',
       'album_id', 'track_number', 'album_role', 'inherited_album_plan_version',
+      'single_priority', 'single_visual_asset_id', 'single_custom_video_requested',
     ];
     for (const key of patchable) {
       if (song[key] !== undefined && song[key] !== null) {
         updates[key] = key === 'status'
           ? normalizedStatus
-          : (key === 'is_test' ? (song[key] ? 1 : 0) : song[key]);
+          : (key === 'is_test' || key === 'single_custom_video_requested' ? (song[key] ? 1 : 0) : song[key]);
       }
     }
     if (song.marketing_links !== undefined) updates.marketing_links_json = stringifyOptionalJson(song.marketing_links);
@@ -487,9 +588,10 @@ export function upsertSong(song) {
          music_service, distribution_status, brand_score, total_cost_usd, brand_profile_id,
          is_test, pipeline_stage, release_recommendation_json, release_recommendation_history_json,
          marketing_inputs_from_ar_json, marketing_links_json, marketing_assets_json, marketing_readiness_json, last_outreach_json,
-         album_id, track_number, album_role, inherited_album_plan_version)
+         album_id, track_number, album_role, inherited_album_plan_version,
+         single_priority, single_visual_asset_id, single_custom_video_requested)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       song.id,
       song.created_at || now,
@@ -532,6 +634,9 @@ export function upsertSong(song) {
       song.track_number == null ? null : Number(song.track_number),
       song.album_role || null,
       song.inherited_album_plan_version || null,
+      song.single_priority == null ? null : Number(song.single_priority),
+      song.single_visual_asset_id || null,
+      song.single_custom_video_requested ? 1 : 0,
     );
   }
 }
@@ -643,6 +748,58 @@ export function assignSongsToAlbum(albumId, songIds, { startTrackNumber = 1 } = 
   return getSongsForAlbum(albumId);
 }
 
+export function assignAlbumSingles(albumId, singles = []) {
+  const db = getDb();
+  const album = getAlbum(albumId);
+  if (!album) throw new Error(`Album not found: ${albumId}`);
+  const normalized = (Array.isArray(singles) ? singles : [singles])
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        return {
+          songId: item,
+          priority: index + 1,
+          visualAssetId: null,
+          customVideoRequested: false,
+        };
+      }
+      return {
+        songId: String(item?.songId || item?.song_id || '').trim(),
+        priority: item?.priority == null ? index + 1 : Number(item.priority),
+        visualAssetId: item?.visualAssetId || item?.visual_asset_id || null,
+        customVideoRequested: Boolean(item?.customVideoRequested || item?.custom_video_requested),
+      };
+    })
+    .filter(item => item.songId);
+  const albumSongIds = new Set(getSongsForAlbum(albumId).map(song => song.id));
+  const now = new Date().toISOString();
+  const tx = db.transaction(() => {
+    db.prepare(`
+      UPDATE songs
+      SET album_role = CASE WHEN COALESCE(album_role, 'track') = 'single' THEN 'track' ELSE COALESCE(album_role, 'track') END,
+          single_priority = NULL,
+          single_visual_asset_id = NULL,
+          single_custom_video_requested = 0,
+          updated_at = ?
+      WHERE album_id = ?
+    `).run(now, albumId);
+    const update = db.prepare(`
+      UPDATE songs
+      SET album_role = 'single',
+          single_priority = ?,
+          single_visual_asset_id = ?,
+          single_custom_video_requested = ?,
+          updated_at = ?
+      WHERE id = ? AND album_id = ?
+    `);
+    for (const single of normalized) {
+      if (!albumSongIds.has(single.songId)) continue;
+      update.run(single.priority, single.visualAssetId, single.customVideoRequested ? 1 : 0, now, single.songId, albumId);
+    }
+  });
+  tx();
+  return getSongsForAlbum(albumId);
+}
+
 export function reorderAlbumTracks(albumId, orderedSongIds) {
   const db = getDb();
   const album = getAlbum(albumId);
@@ -715,6 +872,8 @@ function parseSong(s) {
     marketing_readiness: parseJsonObject(s.marketing_readiness_json),
     last_outreach: parseJsonObject(s.last_outreach_json),
     is_test: Boolean(s.is_test),
+    single_priority: s.single_priority == null ? null : Number(s.single_priority),
+    single_custom_video_requested: Boolean(s.single_custom_video_requested),
   };
 }
 
@@ -975,6 +1134,287 @@ export function getReleaseCockpitLogs(releaseType, releaseId, { limit = 50 } = {
   }));
 }
 
+// ─────────────────────────────────────────────
+// RELEASE CAMPAIGNS
+// ─────────────────────────────────────────────
+
+export function upsertReleaseCampaign(input = {}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const existing = input.id
+    ? getReleaseCampaignById(input.id)
+    : getReleaseCampaignByRelease(input.release_type, input.release_id);
+  const record = {
+    id: existing?.id || input.id || `RCAMP_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    release_type: normalizeReleaseCockpitType(input.release_type),
+    release_id: String(input.release_id || existing?.release_id || ''),
+    title: input.title || existing?.title || input.release_id || 'Release campaign',
+    release_date: input.release_date ?? existing?.release_date ?? null,
+    status: input.status || existing?.status || 'draft',
+    lifecycle_state: input.lifecycle_state || existing?.lifecycle_state || 'planned',
+    current_gate: input.current_gate ?? existing?.current_gate ?? null,
+    campaign_plan_json: stringifyOptionalJson(input.campaign_plan ?? existing?.campaign_plan ?? {}),
+    context_json: stringifyOptionalJson(input.context ?? existing?.context ?? {}),
+    links_json: stringifyOptionalJson(input.links ?? existing?.links ?? {}),
+    asset_selection_json: stringifyOptionalJson(input.asset_selection ?? existing?.asset_selection ?? {}),
+    run_summary_json: stringifyOptionalJson(input.run_summary ?? existing?.run_summary ?? {}),
+    created_at: existing?.created_at || now,
+    updated_at: now,
+  };
+  db.prepare(`
+    INSERT INTO release_campaigns
+      (id, release_type, release_id, title, release_date, status, lifecycle_state, current_gate,
+       campaign_plan_json, context_json, links_json, asset_selection_json, run_summary_json, created_at, updated_at)
+    VALUES
+      (@id, @release_type, @release_id, @title, @release_date, @status, @lifecycle_state, @current_gate,
+       @campaign_plan_json, @context_json, @links_json, @asset_selection_json, @run_summary_json, @created_at, @updated_at)
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      release_date = excluded.release_date,
+      status = excluded.status,
+      lifecycle_state = excluded.lifecycle_state,
+      current_gate = excluded.current_gate,
+      campaign_plan_json = excluded.campaign_plan_json,
+      context_json = excluded.context_json,
+      links_json = excluded.links_json,
+      asset_selection_json = excluded.asset_selection_json,
+      run_summary_json = excluded.run_summary_json,
+      updated_at = excluded.updated_at
+  `).run(record);
+  return getReleaseCampaignById(record.id);
+}
+
+export function getReleaseCampaignById(id) {
+  return parseReleaseCampaign(getDb().prepare('SELECT * FROM release_campaigns WHERE id = ?').get(id));
+}
+
+export function getReleaseCampaignByRelease(releaseType, releaseId) {
+  return parseReleaseCampaign(getDb().prepare('SELECT * FROM release_campaigns WHERE release_type = ? AND release_id = ?').get(
+    normalizeReleaseCockpitType(releaseType),
+    String(releaseId || ''),
+  ));
+}
+
+export function listReleaseCampaigns() {
+  return getDb().prepare('SELECT * FROM release_campaigns ORDER BY updated_at DESC, created_at DESC').all().map(parseReleaseCampaign);
+}
+
+export function upsertReleaseCampaignTask(input = {}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const existing = input.id
+    ? getReleaseCampaignTaskById(input.id)
+    : getReleaseCampaignTaskByKey(input.campaign_id, input.task_key);
+  const status = input.status || existing?.status || 'pending';
+  const record = {
+    id: existing?.id || input.id || `RCTASK_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    campaign_id: String(input.campaign_id || existing?.campaign_id || ''),
+    task_key: String(input.task_key || existing?.task_key || ''),
+    title: input.title || existing?.title || input.task_key || 'Release task',
+    description: input.description ?? existing?.description ?? null,
+    owner: input.owner || existing?.owner || 'agent',
+    status,
+    due_date: input.due_date ?? existing?.due_date ?? null,
+    offset_days: input.offset_days == null ? (existing?.offset_days ?? null) : Number(input.offset_days),
+    depends_on_json: JSON.stringify(input.depends_on ?? existing?.depends_on ?? []),
+    blocking: input.blocking == null ? (existing?.blocking ? 1 : 0) : (input.blocking ? 1 : 0),
+    action_url: input.action_url ?? existing?.action_url ?? null,
+    result_json: stringifyOptionalJson(input.result ?? existing?.result ?? {}),
+    result_path: input.result_path ?? existing?.result_path ?? null,
+    source_workflow_id: input.source_workflow_id ?? existing?.source_workflow_id ?? null,
+    source_run_id: input.source_run_id ?? existing?.source_run_id ?? null,
+    next_follow_up_date: input.next_follow_up_date ?? existing?.next_follow_up_date ?? null,
+    related_item_id: input.related_item_id ?? existing?.related_item_id ?? null,
+    reason: input.reason ?? existing?.reason ?? null,
+    suggested_action: input.suggested_action ?? existing?.suggested_action ?? null,
+    created_at: existing?.created_at || now,
+    updated_at: now,
+    completed_at: input.completed_at ?? (status === 'complete' ? (existing?.completed_at || now) : null),
+  };
+  db.prepare(`
+    INSERT INTO release_campaign_tasks
+      (id, campaign_id, task_key, title, description, owner, status, due_date, offset_days, depends_on_json,
+       blocking, action_url, result_json, result_path, source_workflow_id, source_run_id, next_follow_up_date,
+       related_item_id, reason, suggested_action, created_at, updated_at, completed_at)
+    VALUES
+      (@id, @campaign_id, @task_key, @title, @description, @owner, @status, @due_date, @offset_days, @depends_on_json,
+       @blocking, @action_url, @result_json, @result_path, @source_workflow_id, @source_run_id, @next_follow_up_date,
+       @related_item_id, @reason, @suggested_action, @created_at, @updated_at, @completed_at)
+    ON CONFLICT(campaign_id, task_key) DO UPDATE SET
+      title = excluded.title,
+      description = excluded.description,
+      owner = excluded.owner,
+      status = excluded.status,
+      due_date = excluded.due_date,
+      offset_days = excluded.offset_days,
+      depends_on_json = excluded.depends_on_json,
+      blocking = excluded.blocking,
+      action_url = excluded.action_url,
+      result_json = excluded.result_json,
+      result_path = excluded.result_path,
+      source_workflow_id = excluded.source_workflow_id,
+      source_run_id = excluded.source_run_id,
+      next_follow_up_date = excluded.next_follow_up_date,
+      related_item_id = excluded.related_item_id,
+      reason = excluded.reason,
+      suggested_action = excluded.suggested_action,
+      updated_at = excluded.updated_at,
+      completed_at = excluded.completed_at
+  `).run(record);
+  return getReleaseCampaignTaskById(record.id);
+}
+
+export function getReleaseCampaignTaskById(id) {
+  return parseReleaseCampaignTask(getDb().prepare('SELECT * FROM release_campaign_tasks WHERE id = ?').get(id));
+}
+
+export function getReleaseCampaignTaskByKey(campaignId, taskKey) {
+  return parseReleaseCampaignTask(getDb().prepare('SELECT * FROM release_campaign_tasks WHERE campaign_id = ? AND task_key = ?').get(
+    String(campaignId || ''),
+    String(taskKey || ''),
+  ));
+}
+
+export function listReleaseCampaignTasks(campaignId) {
+  return getDb()
+    .prepare('SELECT * FROM release_campaign_tasks WHERE campaign_id = ? ORDER BY COALESCE(due_date, created_at) ASC, created_at ASC')
+    .all(String(campaignId || ''))
+    .map(parseReleaseCampaignTask);
+}
+
+export function getReadyReleaseCampaignTasks({ nowIso = new Date().toISOString() } = {}) {
+  return getDb()
+    .prepare(`
+      SELECT * FROM release_campaign_tasks
+      WHERE status IN ('ready', 'needs_ken')
+         OR (status = 'pending' AND (due_date IS NULL OR due_date <= ?))
+      ORDER BY COALESCE(due_date, created_at) ASC, created_at ASC
+    `)
+    .all(nowIso)
+    .map(parseReleaseCampaignTask);
+}
+
+export function addReleaseCampaignRun(input = {}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const id = input.id || `RCRUN_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  db.prepare(`
+    INSERT INTO release_campaign_runs
+      (id, campaign_id, task_id, workflow_id, run_id, status, package_path, result_path, stdout_path, stderr_path, log_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    String(input.campaign_id || ''),
+    input.task_id || null,
+    input.workflow_id || null,
+    input.run_id || null,
+    input.status || 'running',
+    input.package_path || null,
+    input.result_path || null,
+    input.stdout_path || null,
+    input.stderr_path || null,
+    stringifyOptionalJson(input.log || {}),
+    now,
+    now,
+  );
+  return getReleaseCampaignRunById(id);
+}
+
+export function updateReleaseCampaignRun(id, patch = {}) {
+  const existing = getReleaseCampaignRunById(id);
+  if (!existing) throw new Error(`Release campaign run not found: ${id}`);
+  getDb().prepare(`
+    UPDATE release_campaign_runs
+    SET workflow_id = ?, run_id = ?, status = ?, package_path = ?, result_path = ?, stdout_path = ?, stderr_path = ?, log_json = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    patch.workflow_id ?? existing.workflow_id,
+    patch.run_id ?? existing.run_id,
+    patch.status ?? existing.status,
+    patch.package_path ?? existing.package_path,
+    patch.result_path ?? existing.result_path,
+    patch.stdout_path ?? existing.stdout_path,
+    patch.stderr_path ?? existing.stderr_path,
+    stringifyOptionalJson(patch.log ?? existing.log ?? {}),
+    new Date().toISOString(),
+    id,
+  );
+  return getReleaseCampaignRunById(id);
+}
+
+export function getReleaseCampaignRunById(id) {
+  return parseReleaseCampaignRun(getDb().prepare('SELECT * FROM release_campaign_runs WHERE id = ?').get(id));
+}
+
+export function listReleaseCampaignRuns(campaignId) {
+  return getDb()
+    .prepare('SELECT * FROM release_campaign_runs WHERE campaign_id = ? ORDER BY created_at DESC')
+    .all(String(campaignId || ''))
+    .map(parseReleaseCampaignRun);
+}
+
+// ─────────────────────────────────────────────
+// VISUAL LIBRARY
+// ─────────────────────────────────────────────
+
+export function createVisualLibraryAsset(input = {}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const id = input.id || `VIS_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  db.prepare(`
+    INSERT INTO visual_library_assets
+      (id, file_path, asset_type, aspect_ratio, duration_seconds, character_tags_json, scene_tags_json, mood_tags_json,
+       album_tags_json, song_tags_json, loopable, safe_for_kids, source, rights_status, metadata_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    String(input.file_path || ''),
+    input.asset_type || 'image',
+    input.aspect_ratio || null,
+    input.duration_seconds == null ? null : Number(input.duration_seconds),
+    JSON.stringify(input.character_tags || []),
+    JSON.stringify(input.scene_tags || []),
+    JSON.stringify(input.mood_tags || []),
+    JSON.stringify(input.album_tags || []),
+    JSON.stringify(input.song_tags || []),
+    input.loopable ? 1 : 0,
+    input.safe_for_kids !== false ? 1 : 0,
+    input.source || 'manual',
+    input.rights_status || 'owned_generated',
+    stringifyOptionalJson(input.metadata || {}),
+    now,
+    now,
+  );
+  return getVisualLibraryAsset(id);
+}
+
+export function getVisualLibraryAsset(id) {
+  return parseVisualLibraryAsset(getDb().prepare('SELECT * FROM visual_library_assets WHERE id = ?').get(id));
+}
+
+export function listVisualLibraryAssets() {
+  return getDb().prepare('SELECT * FROM visual_library_assets ORDER BY created_at DESC').all().map(parseVisualLibraryAsset);
+}
+
+export function recordVisualLibraryUsage(input = {}) {
+  const id = input.id || `VISUSE_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  getDb().prepare(`
+    INSERT INTO visual_library_usage
+      (id, asset_id, release_type, release_id, song_id, platform, usage_context, used_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    String(input.asset_id || ''),
+    normalizeReleaseCockpitType(input.release_type),
+    String(input.release_id || ''),
+    input.song_id || null,
+    input.platform || null,
+    input.usage_context || null,
+    input.used_at || new Date().toISOString(),
+  );
+  return getDb().prepare('SELECT * FROM visual_library_usage WHERE id = ?').get(id);
+}
+
 function normalizeReleaseCockpitType(value) {
   return String(value || '').toLowerCase() === 'album' ? 'album' : 'single';
 }
@@ -1099,6 +1539,52 @@ export function getDashboardStats() {
 // ─────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────
+
+function parseReleaseCampaign(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    campaign_plan: parseJsonObject(row.campaign_plan_json),
+    context: parseJsonObject(row.context_json),
+    links: parseJsonObject(row.links_json),
+    asset_selection: parseJsonObject(row.asset_selection_json),
+    run_summary: parseJsonObject(row.run_summary_json),
+  };
+}
+
+function parseReleaseCampaignTask(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    depends_on: parseJsonArray(row.depends_on_json),
+    blocking: Boolean(row.blocking),
+    result: parseJsonObject(row.result_json),
+  };
+}
+
+function parseReleaseCampaignRun(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    log: parseJsonObject(row.log_json),
+  };
+}
+
+function parseVisualLibraryAsset(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    duration_seconds: row.duration_seconds == null ? null : Number(row.duration_seconds),
+    character_tags: parseJsonArray(row.character_tags_json),
+    scene_tags: parseJsonArray(row.scene_tags_json),
+    mood_tags: parseJsonArray(row.mood_tags_json),
+    album_tags: parseJsonArray(row.album_tags_json),
+    song_tags: parseJsonArray(row.song_tags_json),
+    loopable: Boolean(row.loopable),
+    safe_for_kids: Boolean(row.safe_for_kids),
+    metadata: parseJsonObject(row.metadata_json),
+  };
+}
 
 function parseJsonArray(val) {
   if (!val) return [];

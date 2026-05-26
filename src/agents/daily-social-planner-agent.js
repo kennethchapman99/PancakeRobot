@@ -3,6 +3,7 @@ import { getSongMarketingKit } from '../shared/song-marketing-kit.js';
 import { getReleaseMarketingBySongId, getOrCreateReleaseMarketing } from '../shared/marketing-releases.js';
 import {
   createDailySocialCampaign,
+  getDailySocialCampaignById,
   getDailySocialCampaignForDate,
   getSocialPostsBySongId,
   upsertSocialPost,
@@ -223,4 +224,85 @@ export function createOrRefreshDailySocialCampaign({ date, platforms, force = fa
     rationale: selection?.rationale || campaign.rationale,
   });
   return { campaign, song, marketingKit: kit, posts };
+}
+
+export function createOrRefreshReleaseSocialCampaign({
+  releaseType,
+  releaseId,
+  campaignId = null,
+  date,
+  platform,
+  campaignMoment,
+  songId = null,
+  visualAssetId = null,
+  dryRun = true,
+} = {}) {
+  const env = getSocialEnv();
+  const targetSongId = String(songId || releaseId || '').trim();
+  const selection = selectSpecificSongForDailySocial(targetSongId);
+  const campaignDate = date || selection.song.release_date || nowInTimezoneDate(env.dailySocialTimezone);
+  const effectivePlatform = String(platform || 'instagram').trim().toLowerCase();
+  let campaign = campaignId ? getDailySocialCampaignById(campaignId) : null;
+
+  if (!campaign) {
+    campaign = createDailySocialCampaign({
+      date: campaignDate,
+      timezone: env.dailySocialTimezone,
+      brand: 'Pancake Robot',
+      status: 'draft',
+      selected_song_id: selection.song.id,
+      selected_release_id: releaseId || null,
+      campaign_type: String(campaignMoment || 'release_day'),
+      rationale: `Release-campaign social draft for ${releaseType || 'single'} ${releaseId || selection.song.id}`,
+      requires_approval: true,
+    });
+  } else {
+    campaign = updateDailySocialCampaign(campaign.id, {
+      selected_release_id: releaseId || campaign.selected_release_id || null,
+      campaign_type: campaignMoment || campaign.campaign_type,
+      rationale: `Release-campaign social draft for ${releaseType || 'single'} ${releaseId || selection.song.id}`,
+    });
+  }
+
+  const kit = selection.kit;
+  const asset = resolvePlatformAsset(effectivePlatform, kit);
+  const copy = generateSocialCopy({
+    platform: effectivePlatform,
+    song: selection.song,
+    marketingKit: kit,
+    campaignType: campaignMoment || 'release_day',
+    assetType: asset.assetType,
+    madeForKids: effectivePlatform === 'youtube' ? false : null,
+  });
+  upsertSocialPost({
+    campaign_id: campaign.id,
+    release_id: campaign.selected_release_id,
+    song_id: selection.song.id,
+    platform: effectivePlatform,
+    status: dryRun ? 'draft' : 'approved',
+    asset_type: asset.assetType,
+    asset_url: asset.assetUrl,
+    public_asset_url: buildPublicAssetUrl(asset.assetUrl, env.publicBaseUrl),
+    title: copy.title,
+    caption: copy.caption,
+    description: copy.description,
+    hashtags: copy.hashtags,
+    scheduled_at: zonedDateTimeToUtcIso(campaign.date, getPlatformScheduleTime(effectivePlatform), campaign.timezone),
+    made_for_kids: copy.madeForKids,
+    contains_synthetic_media: true,
+    ai_generated: true,
+    validation_warnings: visualAssetId ? [`Selected visual asset: ${visualAssetId}`] : [],
+    idempotency_key: buildSocialIdempotencyKey({
+      date: campaign.date,
+      platform: effectivePlatform,
+      songId: selection.song.id,
+      campaignType: String(campaignMoment || 'release_day'),
+    }),
+  });
+  return {
+    campaign: getDailySocialCampaignById(campaign.id),
+    song: selection.song,
+    marketingKit: kit,
+    posts: getSocialPostsByCampaignId(campaign.id),
+  };
 }

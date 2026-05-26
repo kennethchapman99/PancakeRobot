@@ -121,6 +121,7 @@ export function cleanupTestOutputArtifacts(options = {}) {
   }
   for (const packageId of packageIds) {
     deleted += removeOutputDir('release-packages', packageId);
+    deleted += removeOutputDir('release-workflows', packageId);
   }
 
   return { deleted };

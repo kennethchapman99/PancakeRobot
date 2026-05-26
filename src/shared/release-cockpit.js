@@ -20,6 +20,7 @@ import { getReleaseAssetState } from './song-release-assets-service.js';
 import { getMarketingCampaigns } from './marketing-db.js';
 import { DEFAULT_PROFILE_ID, getActiveProfileId, loadBrandProfileById } from './brand-profile.js';
 import { getSelectedReleaseAudio } from './song-audio-selection.js';
+import { summarizeMagicReleaseForCockpit } from './magic-release.js';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -133,6 +134,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const hyperfollow = findHyperFollow(tracks);
   const packageState = readReleasePackageState(type, release.id, tracks);
   const logs = getReleaseCockpitLogs(type, release.id, { limit: 50 });
+  const magicRelease = summarizeMagicReleaseForCockpit(type, release.id);
   const stages = buildStages({ release, tracks, assetState, campaigns, social, hyperfollow, packageState, logs });
   const blockers = stages.filter(stage => stage.blocksLiveSubmit && stage.status !== 'complete').flatMap(stage => stage.issues);
   const lifecycle = determineReleaseLifecycle({ tracks, stages, blockers, hyperfollow, campaigns, packageState });
@@ -157,6 +159,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     campaigns,
     social,
     logs,
+    magicRelease,
     nextActions,
     updatedAt: release.updatedAt,
   };
