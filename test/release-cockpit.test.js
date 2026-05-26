@@ -40,6 +40,7 @@ const {
   getCanonicalReleaseManifest,
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
+  resolveDistroKidArtwork,
   validateReleaseAction,
 } = await import('../src/shared/release-cockpit.js');
 const {
@@ -944,4 +945,107 @@ test('mocked release cockpit acceptance covers canonical album package and logs'
   assert.equal(preview.ok, true);
   logReleaseCockpitEvent('album', albumId, 'distrokid_preview', 'complete', 'Acceptance preview complete.', preview);
   assert.equal(buildReleaseCockpitViewModel('album', albumId).logs[0].action, 'distrokid_preview');
+});
+
+test('distrokidArtwork uses album primary image when present', () => {
+  const songId = createSong('Artwork Album Primary Song');
+  const albumId = uniqueId('COCKPIT_ALBUM_ARTWORK_PRIMARY');
+  albumIds.add(albumId);
+  createAlbum({
+    id: albumId,
+    album_title: 'Artwork Primary Album',
+    release_date: '2026-08-01',
+    number_of_songs: 1,
+    status: 'assembled',
+    is_test: true,
+  });
+  assignSongsToAlbum(albumId, [songId]);
+  writeAlbumImage(albumId);
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+  assert.equal(cockpit.distrokidArtwork.blocked, false);
+  assert.equal(cockpit.distrokidArtwork.source, 'album_media');
+  assert.ok(cockpit.distrokidArtwork.path);
+  assert.ok(fs.existsSync(cockpit.distrokidArtwork.path));
+  assert.ok(cockpit.distrokidArtwork.ext);
+});
+
+test('distrokidArtwork uses brand default image when album art missing', () => {
+  const songId = createSong('Artwork Brand Fallback Song', { brand_profile_id: 'test-artwork-brand-fallback' });
+  const albumId = uniqueId('COCKPIT_ALBUM_ARTWORK_BRAND');
+  albumIds.add(albumId);
+  createAlbum({
+    id: albumId,
+    album_title: 'Brand Fallback Artwork Album',
+    release_date: '2026-08-02',
+    brand_profile_id: 'test-artwork-brand-fallback',
+    number_of_songs: 1,
+    status: 'assembled',
+    is_test: true,
+  });
+  assignSongsToAlbum(albumId, [songId]);
+
+  const brandMediaDir = path.join(repoRoot, 'config', 'brand-media', 'test-artwork-brand-fallback');
+  const brandDefaultPath = path.join(brandMediaDir, 'default-image.png');
+  fs.mkdirSync(brandMediaDir, { recursive: true });
+  fs.writeFileSync(brandDefaultPath, 'fake-brand-default-image');
+  try {
+    const cockpit = buildReleaseCockpitViewModel('album', albumId);
+    assert.equal(cockpit.distrokidArtwork.blocked, false);
+    assert.equal(cockpit.distrokidArtwork.source, 'brand_media');
+    assert.ok(cockpit.distrokidArtwork.path);
+  } finally {
+    fs.rmSync(brandMediaDir, { recursive: true, force: true });
+  }
+});
+
+test('distrokidArtwork is blocked when no album image and no brand default', () => {
+  const songId = createSong('Artwork Blocked Song', { brand_profile_id: 'test-artwork-no-brand' });
+  const albumId = uniqueId('COCKPIT_ALBUM_ARTWORK_BLOCKED');
+  albumIds.add(albumId);
+  createAlbum({
+    id: albumId,
+    album_title: 'No Artwork Album',
+    release_date: '2026-08-03',
+    brand_profile_id: 'test-artwork-no-brand',
+    number_of_songs: 1,
+    status: 'assembled',
+    is_test: true,
+  });
+  assignSongsToAlbum(albumId, [songId]);
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+  assert.equal(cockpit.distrokidArtwork.blocked, true);
+  assert.equal(cockpit.distrokidArtwork.path, null);
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+  assert.ok(previewStage.issues.some(issue => /artwork not resolved/i.test(issue)));
+});
+
+test('distrokidArtwork is blocked when resolved path does not exist on disk', () => {
+  const artwork = resolveDistroKidArtwork({
+    primaryImage: { path: '/nonexistent/path/does-not-exist.png', source: 'album_media' },
+  });
+  assert.equal(artwork.blocked, true);
+  assert.equal(artwork.path, null);
+});
+
+test('distrokid artwork download route returns deterministic filename', async t => {
+  const songId = createSong('Artwork Download Single', { brand_profile_id: 'test-artwork-download-brand' });
+
+  const server = await startServer();
+  t.after(() => server.close());
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  const blockedRes = await fetch(`${baseUrl}/releases/single/${songId}/assets/distrokid-artwork/download`);
+  assert.equal(blockedRes.status, 409);
+
+  const artworkPath = path.join(repoRoot, 'output', 'songs', songId, 'reference', 'base-image.png');
+  fs.mkdirSync(path.dirname(artworkPath), { recursive: true });
+  fs.writeFileSync(artworkPath, 'fake-artwork-for-download');
+
+  const res = await fetch(`${baseUrl}/releases/single/${songId}/assets/distrokid-artwork/download`);
+  assert.equal(res.status, 200);
+  const disposition = res.headers.get('content-disposition');
+  assert.ok(disposition, 'content-disposition header should be present');
+  assert.match(disposition, new RegExp(`${songId}-distrokid-artwork\\.png`));
 });

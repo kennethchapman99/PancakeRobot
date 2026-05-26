@@ -158,6 +158,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     };
   });
   const assetState = getReleaseAssetState(type === 'album' ? 'album' : 'song', release.id);
+  const distrokidArtwork = resolveDistroKidArtwork(assetState);
   const campaigns = findReleaseCampaigns(tracks.map(track => track.id));
   const social = summarizeSocialPosts(tracks.map(track => track.id));
   const hyperfollow = findHyperFollow(tracks);
@@ -171,6 +172,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     release,
     tracks,
     assetState,
+    distrokidArtwork,
     campaigns,
     social,
     hyperfollow,
@@ -197,6 +199,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     brandProfileId: release.brandProfileId,
     canonicalMediaOwner: assetState.owner,
     releaseAssetState: assetState,
+    distrokidArtwork,
     tracks,
     lifecycle,
     packageState,
@@ -330,6 +333,15 @@ export function getCanonicalReleaseManifest(releaseType, releaseId) {
   return readJsonIfExists(getCanonicalReleaseManifestPath(releaseType, releaseId));
 }
 
+export function resolveDistroKidArtwork(assetState) {
+  const img = assetState?.primaryImage;
+  if (!img?.path || !fs.existsSync(img.path)) {
+    return { path: null, ext: null, source: null, blocked: true };
+  }
+  const ext = path.extname(img.path).replace(/^\./, '').toLowerCase() || 'png';
+  return { path: img.path, ext, source: img.source || 'release_primary', blocked: false };
+}
+
 function buildAlbumRelease(albumId) {
   const album = getAlbum(albumId);
   if (!album) return null;
@@ -358,7 +370,7 @@ function buildSingleRelease(songId) {
   };
 }
 
-function buildStages({ type, release, tracks, assetState, campaigns, social, hyperfollow, packageState, logs = [], runHistory = [], liveSubmitApproval = null, magicRelease = null }) {
+function buildStages({ type, release, tracks, assetState, distrokidArtwork, campaigns, social, hyperfollow, packageState, logs = [], runHistory = [], liveSubmitApproval = null, magicRelease = null }) {
   const metadataIssues = [];
   const metadataTrackIds = [];
   if (!release.title) metadataIssues.push('Release title is missing');
@@ -407,8 +419,9 @@ function buildStages({ type, release, tracks, assetState, campaigns, social, hyp
   const tracksAudioUrl = `/releases/${type}/${encodeURIComponent(release.id)}?focus=audio#tracks`;
   const needsPackageCoverArtFix = packageState.validation.missingCoverArtCount > 0;
   const packageBuildLabel = packageState.exists ? 'Rebuild canonical package' : 'Build canonical package';
+  const artworkBlockerMsg = distrokidArtwork?.blocked ? 'DistroKid artwork not resolved: upload a release image or configure a brand default image.' : null;
   const readyForPackage = !metadataIssues.length && !audioIssues.length && !mediaIssues.length;
-  const readyForPreview = readyForPackage && packageState.ready;
+  const readyForPreview = readyForPackage && packageState.ready && !artworkBlockerMsg;
   const readyForApproval = previewPassed && packageState.ready && getPreviewApprovalBlockers({
     type,
     id: release.id,
@@ -424,7 +437,7 @@ function buildStages({ type, release, tracks, assetState, campaigns, social, hyp
   const previewDetail = previewAssessment.summary
     || latestPreviewRun?.error
     || latestPreviewRun?.message
-    || (readyForPreview ? 'Ready to run the DistroKid preview automation.' : (packageState.ready ? 'Resolve release blockers before preview can run.' : 'Waiting for the canonical package to become ready.'));
+    || (artworkBlockerMsg ? artworkBlockerMsg : readyForPreview ? 'Ready to run the DistroKid preview automation.' : (packageState.ready ? 'Resolve release blockers before preview can run.' : 'Waiting for the canonical package to become ready.'));
   const liveSubmitDetail = latestLiveSubmitRun?.error
     || latestLiveSubmitRun?.message
     || (liveComplete
@@ -492,9 +505,11 @@ function buildStages({ type, release, tracks, assetState, campaigns, social, hyp
               : readyForPreview
                 ? 'ready'
                 : 'blocked',
-      ['blocked', 'failed'].includes(latestPreviewRun?.status) || ['failed', 'incomplete'].includes(previewAssessment.outcome)
-        ? [previewAssessment.summary || latestPreviewRun?.error || latestPreviewRun?.message || previewDetail]
-        : (previewPassed ? [] : [previewDetail]), false, {
+      artworkBlockerMsg
+        ? [artworkBlockerMsg]
+        : (['blocked', 'failed'].includes(latestPreviewRun?.status) || ['failed', 'incomplete'].includes(previewAssessment.outcome)
+          ? [previewAssessment.summary || latestPreviewRun?.error || latestPreviewRun?.message || previewDetail]
+          : (previewPassed ? [] : [previewDetail])), false, {
       owner: 'Browsy automation',
       detail: readyForPreview || latestPreviewRun ? previewDetail : packageState.summary,
       issues: !readyForPreview ? packageState.validation.issues.map(issue => issue.message) : [],
