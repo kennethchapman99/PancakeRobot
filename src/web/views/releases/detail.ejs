@@ -1,376 +1,252 @@
 <% title = cockpit.title + ' Release Cockpit' %>
-<!-- Legacy acceptance marker: Run DistroKid live submit -->
 <%
+  const activeFocus = ['metadata', 'audio'].includes(String(focus || '').toLowerCase()) ? String(focus).toLowerCase() : 'all';
   const statusClass = (status) => ({
     complete: 'badge-green',
     blocked: 'badge-red',
-    needs_action: 'badge-yellow',
-    placeholder: 'badge-purple',
+    ready: 'badge-blue',
+    running: 'badge-blue',
     not_started: 'badge-gray',
-    pending: 'badge-yellow',
+    skipped: 'badge-gray',
     failed: 'badge-red',
   }[status] || 'badge-gray');
-
-  const stageByKey = Object.fromEntries((cockpit.stages || []).map(stage => [stage.key, stage]));
-  const actionByKey = Object.fromEntries((cockpit.nextActions || []).map(action => [action.key, action]));
-  const audioStage = stageByKey.audio || { status: 'not_started', issues: [] };
-  const packageStage = stageByKey.package || { status: 'not_started', issues: cockpit.packageState?.blockers || [] };
-  const previewStage = stageByKey.distrokid_preview || { status: 'not_started', issues: [] };
-  const liveStage = stageByKey.distrokid_live_submit || { status: 'not_started', issues: [] };
-  const liveAction = actionByKey.live_submit || {};
-  const hyperfollowAction = actionByKey.hyperfollow || {};
-  const canLiveSubmitNow = liveAction.enabled === true;
-  const releaseReturnTo = `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`;
-
-  const summarizeIssues = (issues = []) => {
-    const clean = [...new Set((issues || []).filter(Boolean))];
-    if (!clean.length) return 'Ready for the next handoff.';
-    const audioSelectionIssues = clean.filter(issue => /choose release audio master/i.test(issue));
-    if (audioSelectionIssues.length === clean.length && clean.length > 1) {
-      return `${clean.length} tracks have multiple audio files. Choose the release master for each track before packaging.`;
-    }
-    const audioFileIssues = clean.filter(issue => /:audio_file\b/.test(issue));
-    if (audioFileIssues.length === clean.length && clean.length > 3) {
-      return `${clean.length} tracks are missing package audio_file fields. The distribution agent should rebuild or repair the canonical release package from the selected release audio.`;
-    }
-    const metadataIssues = clean.filter(issue => /metadata/i.test(issue));
-    if (metadataIssues.length === clean.length && clean.length > 3) {
-      return `${clean.length} tracks need metadata repair before the agent can package this release.`;
-    }
-    if (clean.length > 3) return `${clean.length} issues: ${clean.slice(0, 3).join('; ')}…`;
-    return clean.join('; ');
+  const lifecycleClass = (status) => ({
+    draft: 'badge-gray',
+    editing: 'badge-yellow',
+    submitted_to_distrokid: 'badge-blue',
+    hyperfollow_ready: 'badge-blue',
+    pre_release_marketing_ready: 'badge-green',
+    archived: 'badge-gray',
+    post_release_complete: 'badge-green',
+  }[status] || 'badge-gray');
+  const buttonClass = (label, enabled) => {
+    if (!enabled) return 'border-zinc-200 bg-zinc-100 text-zinc-500';
+    if (/skip|remove|delete/i.test(label)) return 'border-rose-300 bg-rose-500 text-white';
+    if (/approve|paste|save/i.test(label)) return 'border-amber-300 bg-amber-500 text-white';
+    if (/build outreach|send outreach/i.test(label)) return 'border-emerald-300 bg-emerald-600 text-white';
+    return 'border-sky-300 bg-sky-600 text-white';
   };
-
-  const blockerText = summarizeIssues([
-    ...(cockpit.blockers || []),
-    ...((cockpit.packageState && cockpit.packageState.ready === false) ? (cockpit.packageState.blockers || []) : []),
-  ]);
-
-  const hasReadinessBlockers = (cockpit.blockers || []).length > 0;
-  const actionPriority = hasReadinessBlockers
-    ? ['readiness']
-    : ['package', 'preview', 'live_submit', 'hyperfollow', 'outreach', 'readiness'];
-  const primaryAction = actionPriority
-    .map(key => actionByKey[key])
-    .find(action => action && action.enabled && !action.placeholder);
-
-  let currentGate = {
-    label: 'Inspect release readiness',
-    tone: 'amber',
-    headline: 'Release needs inspection',
-    detail: blockerText,
-  };
-
-  if (canLiveSubmitNow) {
-    currentGate = {
-      label: 'Human approval gate',
-      tone: 'green',
-      headline: 'Ready for live DistroKid submit',
-      detail: 'Package and preview are complete. Human approval is required before external submission.',
-    };
-  } else if (audioStage.status === 'blocked') {
-    currentGate = {
-      label: 'Human selection needed',
-      tone: 'amber',
-      headline: 'Choose release audio masters',
-      detail: summarizeIssues(audioStage.issues),
-    };
-  } else if (!cockpit.packageState?.ready) {
-    currentGate = {
-      label: 'Agent work needed',
-      tone: 'amber',
-      headline: 'Canonical package needs repair',
-      detail: summarizeIssues(packageStage.issues?.length ? packageStage.issues : cockpit.packageState?.blockers),
-    };
-  } else if (previewStage.status !== 'complete') {
-    currentGate = {
-      label: 'Agent preview gate',
-      tone: 'blue',
-      headline: 'Ready for DistroKid preview',
-      detail: 'The package is ready. Run the browser automation preview before live submit is allowed.',
-    };
-  } else if (liveStage.status !== 'complete') {
-    currentGate = {
-      label: 'Human approval gate',
-      tone: 'amber',
-      headline: 'Preview complete; live submit still needs approval',
-      detail: 'Inspect the release, then explicitly approve live submission.',
-    };
-  } else if (!cockpit.hyperfollow?.url) {
-    currentGate = {
-      label: 'Post-submit handoff',
-      tone: 'amber',
-      headline: 'Waiting for HyperFollow URL',
-      detail: 'Paste or fetch the HyperFollow URL so marketing automation can continue.',
-    };
-  } else {
-    currentGate = {
-      label: 'Marketing assembly',
-      tone: 'blue',
-      headline: 'Distribution link captured',
-      detail: 'Build outreach, social, video, and post-release platform link updates from here.',
-    };
-  }
-
-  const toneClasses = {
-    green: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    amber: 'border-amber-200 bg-amber-50 text-amber-950',
-    blue: 'border-sky-200 bg-sky-50 text-sky-950',
-    red: 'border-rose-200 bg-rose-50 text-rose-950',
-  };
-
-  const assemblyRows = [
-    { key: 'metadata', step: '1', owner: 'Agent', label: 'Metadata inspection', description: 'Title, release date, track metadata, brand profile.' },
-    { key: 'audio', step: '2', owner: 'You inspect', label: 'Release audio master', description: 'Confirms every track has one selected release master audio file.' },
-    { key: 'media', step: '3', owner: 'Creative agent', label: 'Release media', description: 'Album or single artwork and platform derivatives.' },
-    { key: 'package', step: '4', owner: 'Distribution agent', label: 'Canonical package', description: 'Builds the DistroKid-ready release package.' },
-    { key: 'distrokid_preview', step: '5', owner: 'Browser agent', label: 'DistroKid preview', description: 'Dry-run UI automation before any external submit.' },
-    { key: 'distrokid_live_submit', step: '6', owner: 'You approve', label: 'Live submit', description: 'External submission requires explicit human approval.' },
-    { key: 'hyperfollow', step: '7', owner: 'Agent + platform', label: 'HyperFollow capture', description: 'Stores the smart link once DistroKid makes it available.' },
-    { key: 'youtube', step: '8', owner: 'Media agent', label: 'YouTube schedule', description: 'Schedules or publishes the release video.' },
-    { key: 'meta', step: '9', owner: 'Media agent', label: 'Meta schedule', description: 'Instagram/Facebook publishing state.' },
-    { key: 'outreach', step: '10', owner: 'Outreach agent', label: 'Outreach campaign', description: 'Builds emails and channel outreach from canonical links.' },
-    { key: 'platform_links', step: '11', owner: 'Agent', label: 'Post-release links', description: 'Captures Spotify, Apple, YouTube Music, and other store links.' },
-  ].map(row => ({ ...row, stage: stageByKey[row.key] || { status: 'placeholder', issues: ['Not wired yet'] } }));
+  const feedbackClass = (level) => ({
+    error: 'border-rose-200 bg-rose-50 text-rose-900',
+    warning: 'border-amber-200 bg-amber-50 text-amber-900',
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    info: 'border-sky-200 bg-sky-50 text-sky-900',
+  }[level] || 'border-sky-200 bg-sky-50 text-sky-900');
+  const manualHyperfollowFormAction = `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}/actions/hyperfollow`;
+  const runHistory = cockpit.runHistory || [];
 %>
 
 <div class="p-8 max-w-7xl">
   <a href="/releases" class="mb-4 inline-flex text-sm text-zinc-500 hover:text-zinc-700">← Release Cockpit</a>
 
-  <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div>
-        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500"><%= cockpit.type === 'album' ? 'Album Release' : 'Single Release' %></div>
-        <h1 class="mt-1 text-3xl font-black tracking-tight text-zinc-900"><%= cockpit.title %></h1>
-        <div class="mt-2 flex flex-wrap gap-2 text-sm text-zinc-600">
-          <span><%= cockpit.tracks.length %> track<%= cockpit.tracks.length === 1 ? '' : 's' %></span>
-          <span>·</span>
-          <span>Release date <%= cockpit.releaseDate || '—' %></span>
-          <span>·</span>
-          <span>Lifecycle <%= cockpit.lifecycle.current.replace(/_/g, ' ') %></span>
-          <% if (cockpit.brandProfileId) { %><span>·</span><span>Brand profile <%= cockpit.brandProfileId %></span><% } %>
-        </div>
-      </div>
-      <div class="rounded-xl border px-4 py-3 text-sm <%= toneClasses[currentGate.tone] %>">
-        <div class="text-xs font-semibold uppercase tracking-wide opacity-75"><%= currentGate.label %></div>
-        <div class="mt-1 font-black"><%= currentGate.headline %></div>
-        <div class="mt-1 max-w-md text-xs leading-5 opacity-90"><%= currentGate.detail %></div>
-      </div>
-    </div>
-  </div>
-
-  <section class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-    <div class="rounded-xl border border-zinc-200 bg-white p-4">
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold">Supervised Assembly Line</h2>
-          <p class="mt-1 text-sm text-zinc-600">Agents do the work. You inspect gates, approve live submit, and keep the release moving.</p>
-        </div>
-        <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/readiness">
-          <button data-submit-label="Checking…" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold hover:bg-zinc-50">Refresh Inspection</button>
-        </form>
-      </div>
-
-      <div class="mt-4 space-y-3">
-        <% assemblyRows.forEach(row => { %>
-          <div class="grid gap-3 rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3 md:grid-cols-[44px_minmax(0,1fr)_120px_120px] md:items-start">
-            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-black text-zinc-500 ring-1 ring-zinc-200"><%= row.step %></div>
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <div class="font-semibold text-zinc-900"><%= row.label %></div>
-                <span class="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-zinc-500"><%= row.owner %></span>
-              </div>
-              <div class="mt-1 text-xs text-zinc-500"><%= row.description %></div>
-              <div class="mt-2 text-sm text-zinc-700"><%= summarizeIssues(row.stage.issues || []) %></div>
-            </div>
-            <div><span class="<%= statusClass(row.stage.status) %>"><%= row.stage.status.replace(/_/g, ' ') %></span></div>
-            <div class="text-xs text-zinc-500"><%= row.stage.status === 'complete' ? 'Passed' : row.stage.status === 'blocked' ? 'Needs attention' : row.stage.status === 'placeholder' ? 'Future automation' : 'Waiting' %></div>
-          </div>
-        <% }) %>
-      </div>
-    </div>
-
-    <aside class="space-y-4">
-      <div class="rounded-xl border border-zinc-200 bg-white p-4">
-        <h2 class="text-lg font-bold">Control Panel</h2>
-        <p class="mt-1 text-xs text-zinc-500">Only the current useful action is promoted. Audio-master choices happen on each track.</p>
-
-        <% if (primaryAction) { %>
-          <form data-action-form method="POST" action="<%= primaryAction.url %>" data-confirm="<%= primaryAction.confirmation || '' %>" class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-            <% if (primaryAction.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
-            <div class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Recommended next action</div>
-            <button data-submit-label="Agent running…" class="mt-2 w-full rounded-xl bg-zinc-900 px-4 py-3 text-left text-sm font-bold text-white hover:bg-zinc-700 disabled:cursor-wait disabled:opacity-70">
-              <%= primaryAction.label %>
-            </button>
-            <div data-action-status class="mt-2 hidden rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">Starting… this page will refresh when the action finishes.</div>
-            <% if (primaryAction.disabledReason) { %><div class="mt-2 text-xs text-amber-700"><%= primaryAction.disabledReason %></div><% } %>
-          </form>
-        <% } else { %>
-          <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            <div class="font-bold">No action is currently runnable</div>
-            <div class="mt-1 text-xs"><%= blockerText %></div>
-          </div>
-        <% } %>
-
-        <details class="mt-4 rounded-xl border border-zinc-200 bg-white p-3">
-          <summary class="cursor-pointer text-sm font-semibold text-zinc-700">Advanced controls</summary>
-          <div class="mt-3 space-y-2">
-            <% cockpit.nextActions.forEach(action => { %>
-              <% if (action.placeholder) { %>
-                <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2">
-                  <div class="text-sm font-semibold text-zinc-600"><%= action.label %></div>
-                  <div class="mt-0.5 text-xs text-zinc-500"><%= action.disabledReason %></div>
-                </div>
-              <% } else { %>
-                <form data-action-form method="POST" action="<%= action.url %>" data-confirm="<%= action.confirmation || '' %>">
-                  <% if (action.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
-                  <button data-submit-label="Running…" <%= action.enabled ? '' : 'disabled' %> class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm font-semibold text-zinc-800 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45">
-                    <%= action.label %>
-                  </button>
-                  <% if (action.disabledReason) { %><div class="mt-1 text-xs text-amber-700"><%= action.disabledReason %></div><% } %>
-                  <div data-action-status class="mt-1 hidden text-xs text-sky-700">Running…</div>
-                </form>
-              <% } %>
-            <% }) %>
-          </div>
-        </details>
-      </div>
-
-      <div class="rounded-xl border border-zinc-200 bg-white p-4">
-        <h2 class="text-lg font-bold">Human Handoff</h2>
-        <p class="mt-1 text-xs text-zinc-500">HyperFollow usually appears after DistroKid submit. Paste it here when available.</p>
-        <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/actions/hyperfollow" class="mt-3">
-          <label class="text-xs font-semibold text-zinc-600" for="hyperfollow-url">HyperFollow URL</label>
-          <input id="hyperfollow-url" name="hyperfollow_url" value="<%= cockpit.hyperfollow?.url || '' %>" placeholder="https://distrokid.com/hyperfollow/..." class="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs">
-          <button data-submit-label="Saving…" <%= hyperfollowAction.enabled || cockpit.hyperfollow?.url ? '' : 'disabled' %> class="mt-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45">Save HyperFollow</button>
-          <% if (!hyperfollowAction.enabled && !cockpit.hyperfollow?.url) { %><div class="mt-2 text-xs text-amber-700"><%= hyperfollowAction.disabledReason || 'Available after DistroKid live submit.' %></div><% } %>
-          <div data-action-status class="mt-2 hidden rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">Saving…</div>
-        </form>
-      </div>
-
-      <div class="rounded-xl border border-zinc-200 bg-white p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-bold">Magic Release</h2>
-            <p class="mt-1 text-xs text-zinc-500">Release-campaign orchestration sits here. Browsy owns reusable workflow execution.</p>
-          </div>
-          <% if (cockpit.magicRelease) { %>
-            <span class="<%= statusClass(cockpit.magicRelease.blockedCount ? 'blocked' : cockpit.magicRelease.readyCount ? 'needs_action' : 'complete') %>">
-              <%= cockpit.magicRelease.blockedCount ? `${cockpit.magicRelease.blockedCount} blocked` : cockpit.magicRelease.readyCount ? `${cockpit.magicRelease.readyCount} ready` : 'planned' %>
-            </span>
-          <% } %>
-        </div>
-
-        <div class="mt-3 grid gap-2">
-          <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/magic-release/create">
-            <button data-submit-label="Starting…" class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm font-semibold hover:bg-zinc-50">Start Magic Release</button>
-          </form>
-          <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/magic-release/plan">
-            <button data-submit-label="Planning…" class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm font-semibold hover:bg-zinc-50">Generate / Refresh Release Plan</button>
-          </form>
-          <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/magic-release/run-next">
-            <button data-submit-label="Running…" class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm font-semibold hover:bg-zinc-50">Run Next Ready Task</button>
-          </form>
-          <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/magic-release/browsy-dry-run">
-            <button data-submit-label="Packaging…" class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm font-semibold hover:bg-zinc-50">Run Browsy Dry Run</button>
-          </form>
-        </div>
-
-        <% if (cockpit.magicRelease) { %>
-          <div class="mt-4 space-y-2 text-xs text-zinc-600">
-            <div>Lifecycle: <span class="font-semibold text-zinc-800"><%= cockpit.magicRelease.lifecycleState || 'planned' %></span></div>
-            <div>Gate: <span class="font-semibold text-zinc-800"><%= cockpit.magicRelease.currentGate || 'none' %></span></div>
-            <div>Needs-Ken: <span class="font-semibold text-zinc-800"><%= cockpit.magicRelease.needsKenCount %></span></div>
-            <% if (cockpit.magicRelease.nextTask) { %>
-              <div>Next task: <span class="font-semibold text-zinc-800"><%= cockpit.magicRelease.nextTask.title %></span></div>
-            <% } %>
-          </div>
-        <% } %>
-      </div>
-    </aside>
-  </section>
-
-  <% if (cockpit.magicRelease) { %>
-    <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-lg font-bold">Magic Release Tasks</h2>
-        <div class="text-xs text-zinc-500">Blocking needs-Ken tasks stop the affected branch until reviewed.</div>
-      </div>
-      <div class="mt-4 divide-y divide-zinc-100">
-        <% cockpit.magicRelease.tasks.forEach(task => { %>
-          <div class="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_100px_110px]">
-            <div>
-              <div class="font-semibold text-zinc-900"><%= task.title %></div>
-              <div class="mt-1 text-xs text-zinc-500">Due <%= task.due_date || '—' %> · owner <%= task.owner %> · key <%= task.task_key %></div>
-              <% if (task.reason) { %><div class="mt-1 text-sm text-amber-700"><%= task.reason %></div><% } %>
-              <% if (task.result_path) { %><div class="mt-1 text-xs text-zinc-500">Result: <%= task.result_path %></div><% } %>
-            </div>
-            <div><span class="<%= statusClass(task.status === 'ready' ? 'needs_action' : task.status) %>"><%= task.status.replace(/_/g, ' ') %></span></div>
-            <div class="text-right">
-              <form data-action-form method="POST" action="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>/magic-release/tasks/<%= encodeURIComponent(task.task_key) %>/run">
-                <button data-submit-label="Running…" class="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold hover:bg-zinc-50">Run</button>
-              </form>
-            </div>
-          </div>
-        <% }) %>
-      </div>
+  <% if (actionFeedback) { %>
+    <section class="mb-6 rounded-2xl border p-4 <%= feedbackClass(actionFeedback.level) %>">
+      <div class="text-sm font-semibold"><%= actionFeedback.message %></div>
     </section>
   <% } %>
 
-  <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
-    <div class="flex items-center justify-between gap-3">
-      <h2 class="text-lg font-bold">Tracks</h2>
-      <% if (cockpit.type === 'album') { %><a href="/albums/<%= encodeURIComponent(cockpit.id) %>" class="text-sm font-semibold text-indigo-700 hover:underline">Open album detail</a><% } %>
+  <section class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500"><%= cockpit.type === 'album' ? 'Album Release' : 'Single Release' %></div>
+        <h1 class="mt-1 text-3xl font-black tracking-tight text-zinc-900"><%= cockpit.title %></h1>
+        <div class="mt-3 flex flex-wrap items-center gap-2 text-sm text-zinc-600">
+          <span>ID <span class="font-semibold text-zinc-900"><%= cockpit.id %></span></span>
+          <span>·</span>
+          <span><%= cockpit.tracks.length %> track<%= cockpit.tracks.length === 1 ? '' : 's' %></span>
+          <span>·</span>
+          <span>Release date <span class="font-semibold text-zinc-900"><%= cockpit.releaseDate || '—' %></span></span>
+          <span>·</span>
+          <span>Brand profile <span class="font-semibold text-zinc-900"><%= cockpit.brandProfileId || '—' %></span></span>
+        </div>
+      </div>
+      <div>
+        <span class="<%= lifecycleClass(cockpit.lifecycle.current) %>"><%= cockpit.lifecycle.current.replace(/_/g, ' ') %></span>
+      </div>
     </div>
-    <div class="mt-4 divide-y divide-zinc-100">
-      <% cockpit.tracks.forEach(track => { %>
-        <%
-          const audioState = track.releaseAudio || {};
-          const selectedAudio = audioState.selected || null;
-          const candidateCount = (audioState.candidates || []).length;
-          const audioBadgeClass = audioState.requiresSelection ? 'badge-yellow' : selectedAudio ? 'badge-green' : 'badge-red';
-          const audioLabel = audioState.requiresSelection ? `Choose master (${candidateCount})` : selectedAudio ? (audioState.status === 'auto' ? 'Auto master' : 'Master selected') : 'Missing';
-        %>
-        <div class="grid gap-3 py-3 md:grid-cols-[70px_minmax(0,1fr)_220px_160px] md:items-center">
-          <div class="text-sm font-bold text-zinc-500">#<%= track.track_number || 1 %></div>
-          <div class="min-w-0">
-            <a href="/songs/<%= encodeURIComponent(track.id) %>" class="truncate text-sm font-semibold text-indigo-700 hover:underline"><%= track.title || track.topic || track.id %></a>
-            <div class="mt-0.5 text-xs text-zinc-500"><%= track.id %></div>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
+    <div class="mb-4 flex items-center justify-between gap-3">
+      <h2 class="text-lg font-bold text-zinc-900">Magic Release command bar</h2>
+      <div class="text-xs text-zinc-500">Disabled actions show the exact blocking reason.</div>
+    </div>
+    <div class="grid gap-3 lg:grid-cols-5">
+      <% cockpit.commandCenter.primaryActions.forEach(action => { %>
+        <form data-action-form method="POST" action="<%= action.url %>" data-confirm="<%= action.confirmation || '' %>">
+          <% if (action.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
+          <button data-submit-label="Running…" <%= action.enabled ? '' : 'disabled' %> class="flex h-full w-full flex-col justify-between rounded-2xl border px-4 py-4 text-left text-sm font-bold shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-100 <%= buttonClass(action.label, action.enabled) %>">
+            <span><%= action.label %></span>
+            <% if (action.disabledReason) { %><span class="mt-2 text-xs font-medium opacity-90"><%= action.disabledReason %></span><% } %>
+          </button>
+        </form>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
+    <div class="mb-4 flex items-center justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold text-zinc-900">Release Readiness</h2>
+        <p class="mt-1 text-sm text-zinc-600">This list is the source of truth for the release. Every row shows status, blocking reason or last result, and the next direct action.</p>
+      </div>
+      <div class="text-xs text-zinc-500">Statuses: complete, blocked, ready, running, not started, skipped, failed.</div>
+    </div>
+
+    <div class="space-y-3">
+      <% cockpit.stages.forEach((stage, index) => { %>
+        <div class="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4">
+          <div class="grid gap-4 lg:grid-cols-[64px_minmax(0,1fr)_160px]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-black text-zinc-500 ring-1 ring-zinc-200"><%= index + 1 %></div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="font-semibold text-zinc-900"><%= stage.label %></div>
+                <span class="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-zinc-500"><%= stage.owner %></span>
+              </div>
+              <div class="mt-2 text-sm text-zinc-700"><%= stage.detail %></div>
+
+              <% if (stage.latestRun) { %>
+                <div class="mt-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-xs text-zinc-600">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-semibold text-zinc-900">Run <%= stage.latestRun.runId %></span>
+                    <span>·</span>
+                    <span><%= formatDateTime(stage.latestRun.latestAt) %></span>
+                    <% if (stage.latestRun.command) { %><span>·</span><span class="break-all"><%= stage.latestRun.command %></span><% } %>
+                  </div>
+                  <% if (stage.latestRun.error) { %><div class="mt-2 text-rose-700"><%= stage.latestRun.error %></div><% } %>
+                  <% if (stage.latestRun.logUrl) { %><div class="mt-2"><a href="<%= stage.latestRun.logUrl %>" target="_blank" class="font-semibold text-sky-700 hover:underline">Open log output</a></div><% } %>
+                </div>
+              <% } %>
+
+              <% if (stage.key === 'hyperfollow') { %>
+                <form data-action-form method="POST" action="<%= manualHyperfollowFormAction %>" class="mt-3 rounded-xl border border-zinc-200 bg-white p-3">
+                  <label class="text-xs font-semibold text-zinc-600" for="hyperfollow-url">Paste / save HyperFollow URL</label>
+                  <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <input id="hyperfollow-url" name="hyperfollow_url" value="<%= cockpit.hyperfollow?.url || '' %>" placeholder="https://distrokid.com/hyperfollow/..." class="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm">
+                    <button data-submit-label="Saving…" <%= stage.actions.some(action => action.label === 'Save HyperFollow' && action.enabled) || cockpit.hyperfollow?.url ? '' : 'disabled' %> class="rounded-xl border px-4 py-2 text-sm font-bold <%= buttonClass('Save HyperFollow', stage.actions.some(action => action.label === 'Save HyperFollow' && action.enabled) || Boolean(cockpit.hyperfollow?.url)) %>">Save HyperFollow</button>
+                  </div>
+                  <% if (!stage.actions.some(action => action.label === 'Save HyperFollow' && action.enabled) && !cockpit.hyperfollow?.url) { %>
+                    <div class="mt-2 text-xs text-amber-700">Available after live submit.</div>
+                  <% } %>
+                </form>
+              <% } %>
+
+              <% if ((stage.actions || []).length) { %>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <% stage.actions.forEach(action => { %>
+                    <% if (stage.key === 'hyperfollow' && action.label === 'Save HyperFollow') { return; } %>
+                    <% if (stage.key === 'hyperfollow' && action.label === 'Paste HyperFollow URL') { return; } %>
+                    <% if (action.method === 'GET') { %>
+                      <a href="<%= action.url %>" class="rounded-xl border px-3 py-2 text-xs font-bold <%= buttonClass(action.label, action.enabled) %> <%= action.enabled ? '' : 'pointer-events-none opacity-100' %>"><%= action.label %></a>
+                    <% } else { %>
+                      <form data-action-form method="POST" action="<%= action.url %>" data-confirm="<%= action.confirmation || '' %>">
+                        <% if (action.label === 'Run live submit automation') { %><input type="hidden" name="confirm" value="true"><% } %>
+                        <button data-submit-label="Running…" <%= action.enabled ? '' : 'disabled' %> class="rounded-xl border px-3 py-2 text-xs font-bold shadow-sm <%= buttonClass(action.label, action.enabled) %>"><%= action.label %></button>
+                      </form>
+                    <% } %>
+                    <% if (!action.enabled && action.disabledReason) { %><div class="basis-full text-xs text-zinc-500"><%= action.disabledReason %></div><% } %>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+            <div class="space-y-2">
+              <div><span class="<%= statusClass(stage.status) %>"><%= stage.displayStatus %></span></div>
+              <div class="text-xs text-zinc-500"><%= stage.blockerCount %> item<%= stage.blockerCount === 1 ? '' : 's' %></div>
+            </div>
           </div>
-          <div>
-            <span class="<%= audioBadgeClass %>"><%= audioLabel %></span>
-            <% if (selectedAudio) { %>
-              <div class="mt-1 truncate text-xs text-zinc-500"><%= selectedAudio.name || selectedAudio.relativePath %></div>
-            <% } %>
-            <% if (audioState.requiresSelection) { %>
-              <a href="/songs/<%= encodeURIComponent(track.id) %>/release-audio?return_to=<%= encodeURIComponent(releaseReturnTo) %>" class="mt-1 inline-flex text-xs font-semibold text-amber-700 hover:underline">Choose release master</a>
-            <% } else if (candidateCount > 1) { %>
-              <a href="/songs/<%= encodeURIComponent(track.id) %>/release-audio?return_to=<%= encodeURIComponent(releaseReturnTo) %>" class="mt-1 inline-flex text-xs font-semibold text-indigo-700 hover:underline">Change master</a>
-            <% } %>
-          </div>
-          <div><span class="<%= track.fsAssets.metadata || track.metadata_path ? 'badge-green' : 'badge-red' %>">Metadata <%= track.fsAssets.metadata || track.metadata_path ? 'ready' : 'missing' %></span></div>
         </div>
       <% }) %>
     </div>
   </section>
 
-  <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
-    <h2 class="text-lg font-bold">Execution Log</h2>
-    <% if (cockpit.logs.length) { %>
-      <div class="mt-4 space-y-2">
-        <% cockpit.logs.forEach(log => { %>
-          <div class="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-sm">
+  <section id="tracks" class="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h2 class="text-lg font-bold text-zinc-900">Track table / album details</h2>
+        <p class="mt-1 text-sm text-zinc-600">Track order, files, readiness pills, cost visibility, and safe remove-from-release controls live here.</p>
+      </div>
+      <div class="flex flex-wrap gap-2 text-xs">
+        <a href="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>#tracks" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 font-semibold hover:bg-zinc-50">All tracks</a>
+        <a href="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>?focus=metadata#tracks" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 font-semibold hover:bg-zinc-50">Metadata blockers</a>
+        <a href="/releases/<%= cockpit.type %>/<%= encodeURIComponent(cockpit.id) %>?focus=audio#tracks" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 font-semibold hover:bg-zinc-50">Audio blockers</a>
+      </div>
+    </div>
+
+    <div class="mt-4 overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="text-left text-xs uppercase tracking-wide text-zinc-500">
+          <tr>
+            <th class="pb-3 pr-3">Order</th>
+            <th class="pb-3 pr-3">Title</th>
+            <th class="pb-3 pr-3">File name</th>
+            <th class="pb-3 pr-3">Song ID</th>
+            <th class="pb-3 pr-3">Metadata</th>
+            <th class="pb-3 pr-3">Audio</th>
+            <th class="pb-3 pr-3">Cost</th>
+            <th class="pb-3 pr-3">Release status</th>
+            <th class="pb-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100">
+          <% cockpit.trackTable.rows.forEach(track => { %>
+            <% const visible = activeFocus === 'all' || track.affected[activeFocus]; %>
+            <% if (visible) { %>
+              <tr class="<%= track.affected.metadata || track.affected.audio ? 'bg-amber-50/50' : '' %>">
+                <td class="py-3 pr-3 font-semibold text-zinc-600">#<%= track.track_number %></td>
+                <td class="py-3 pr-3 font-semibold text-zinc-900"><%= track.title || track.topic || track.id %></td>
+                <td class="py-3 pr-3 text-xs text-zinc-600"><%= track.audioStatus.fileName || '—' %></td>
+                <td class="py-3 pr-3 text-xs text-zinc-500"><%= track.id %></td>
+                <td class="py-3 pr-3"><span class="<%= statusClass(track.metadataStatus.status) %>"><%= track.metadataStatus.label %></span></td>
+                <td class="py-3 pr-3"><span class="<%= statusClass(track.audioStatus.status) %>"><%= track.audioStatus.label %></span></td>
+                <td class="py-3 pr-3 text-xs text-zinc-600"><%= track.costDisplay %></td>
+                <td class="py-3 pr-3"><span class="<%= lifecycleClass(track.lifecycleLabel) %>"><%= track.lifecycleLabel %></span></td>
+                <td class="py-3">
+                  <div class="flex flex-wrap gap-2">
+                    <a href="<%= track.actions.openSong %>" class="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-zinc-50">Open song</a>
+                    <a href="<%= track.actions.fixMetadata %>" class="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-zinc-50">Fix metadata</a>
+                    <form data-action-form method="POST" action="<%= track.actions.generateMetadata %>">
+                      <button data-submit-label="Generating…" class="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-zinc-50">Generate metadata</button>
+                    </form>
+                    <a href="<%= track.actions.chooseMaster %>" class="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-zinc-50"><%= track.releaseAudio?.requiresSelection ? 'Choose master' : 'Choose / change master' %></a>
+                    <a href="<%= track.actions.generateMaster %>" class="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-zinc-50">Generate master</a>
+                    <% if (track.actions.removeTrack) { %>
+                      <form data-action-form method="POST" action="<%= track.actions.removeTrack %>" data-confirm="Remove this track from the album release? The song stays in the catalog.">
+                        <button data-submit-label="Removing…" class="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100">Remove track</button>
+                      </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+            <% } %>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
+    <h2 class="text-lg font-bold text-zinc-900">Run history / logs</h2>
+    <% if (runHistory.length) { %>
+      <div class="mt-4 space-y-3">
+        <% runHistory.forEach(run => { %>
+          <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="<%= statusClass(log.status) %>"><%= log.status %></span>
-              <span class="font-semibold text-zinc-900"><%= log.action %></span>
-              <span class="text-xs text-zinc-500"><%= formatDateTime(log.created_at) %></span>
+              <span class="<%= statusClass(run.status) %>"><%= run.status.replace(/_/g, ' ') %></span>
+              <span class="font-semibold text-zinc-900"><%= run.action %></span>
+              <span class="text-xs text-zinc-500"><%= formatDateTime(run.latestAt) %></span>
             </div>
-            <div class="mt-1 text-zinc-600"><%= log.message || '—' %></div>
+            <div class="mt-2 text-xs text-zinc-600">Run ID <span class="font-semibold text-zinc-900"><%= run.runId %></span></div>
+            <% if (run.command) { %><div class="mt-1 break-all text-xs text-zinc-600"><%= run.command %></div><% } %>
+            <% if (run.error) { %><div class="mt-2 text-sm text-rose-700"><%= run.error %></div><% } %>
+            <div class="mt-2 flex flex-wrap gap-3 text-xs">
+              <% if (run.logUrl) { %><a href="<%= run.logUrl %>" target="_blank" class="font-semibold text-sky-700 hover:underline">Open log output</a><% } %>
+              <% if (run.logPath) { %><span class="text-zinc-500"><%= run.logPath %></span><% } %>
+            </div>
           </div>
         <% }) %>
       </div>
     <% } else { %>
-      <div class="mt-3 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-500">No cockpit actions have run yet.</div>
+      <div class="mt-3 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-500">No release automation runs recorded yet.</div>
     <% } %>
   </section>
 </div>
@@ -384,13 +260,11 @@
         return;
       }
       const button = form.querySelector('button[type="submit"], button:not([type])');
-      const status = form.querySelector('[data-action-status]');
       if (button) {
         button.dataset.originalText = button.textContent.trim();
         button.textContent = button.getAttribute('data-submit-label') || 'Running…';
         button.disabled = true;
       }
-      if (status) status.classList.remove('hidden');
     });
   });
 </script>

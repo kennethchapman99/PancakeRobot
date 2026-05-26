@@ -123,6 +123,9 @@ const runDir = ensureDir(getDistrokidRunDir(songId));
 const filledFields = [];
 const skippedFields = [];
 const errors = [];
+let fieldMap = { dangerous_paid_extras_never_autofill: [] };
+let finishedEarly = false;
+let finished = false;
 const runLog = {
   song_id: songId,
   manifest_path: relativeToRepo(manifestPath),
@@ -137,6 +140,7 @@ const runLog = {
     discovery_files: [],
   },
 };
+const manifestJobSongIds = collectManifestSongIds(manifest);
 
 validatePackageFile('audio_file', manifest.audio_file, errors);
 validatePackageFile('cover_art', manifest.cover_art, errors);
@@ -150,7 +154,7 @@ if (errors.length) {
 
 if (!exists(DISTROKID_AUTH_PATH)) {
   errors.push({ field: 'auth', error: '.auth/distrokid.json is missing. Run bash scripts/pancake.sh distrokid:save-auth.' });
-  markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
+  markManifestJobs(DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
   await finish(null, true);
   process.exit(1);
 }
@@ -159,7 +163,7 @@ const auth = readJson(DISTROKID_AUTH_PATH);
 console.log(`Cookie domains: ${getCookieDomains(auth).join(', ') || '(none)'}`);
 if (!hasDistrokidCookies(auth)) {
   errors.push({ field: 'auth', error: '.auth/distrokid.json has no DistroKid cookies.' });
-  markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
+  markManifestJobs(DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
   await finish(null, true);
   process.exit(1);
 }
@@ -173,7 +177,7 @@ if (!exists(fieldMapPath)) {
   process.exit(1);
 }
 
-const fieldMap = readJson(fieldMapPath);
+fieldMap = readJson(fieldMapPath);
 runLog.field_map = relativeToRepo(fieldMapPath);
 const dangerousNames = [...new Set([...DANGEROUS_BUTTON_NAMES, ...(fieldMap.dangerous_buttons_never_click || [])])];
 
@@ -194,18 +198,15 @@ if (certifyImportantCheckboxes) {
 }
 console.log(`Field map: ${relativeToRepo(fieldMapPath)}`);
 
-const existingJob = getDistroKidJob(songId);
-markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.UPLOAD_STARTED, {
+const existingJob = manifestJobSongIds.map(id => getDistroKidJob(id)).find(Boolean) || null;
+markManifestJobs(DISTROKID_JOB_STATUSES.UPLOAD_STARTED, {
   attempt_count: (existingJob?.attempt_count || 0) + 1,
   last_attempt_at: runLog.started_at,
   latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
   latest_error_json: null,
 });
-
 let browser;
 let page;
-let finishedEarly = false;
-let finished = false;
 try {
   browser = await chromium.launch({
     channel: 'chrome',
@@ -940,8 +941,7 @@ async function finish(browser, skipBrowserClose) {
   writeJson(join(runDir, 'skipped-fields.json'), skippedFields);
   writeJson(join(runDir, 'errors.json'), errors);
   const authError = errors.some(item => item.field === 'auth');
-  markDistroKidJobStatus(
-    songId,
+  markManifestJobs(
     authError ? DISTROKID_JOB_STATUSES.AUTH_NEEDED : errors.length ? DISTROKID_JOB_STATUSES.FAILED : liveSubmit ? DISTROKID_JOB_STATUSES.SUBMITTED : DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW,
     {
       latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
@@ -969,6 +969,24 @@ async function finish(browser, skipBrowserClose) {
     await waitForBrowserClose(browser, page);
   } else if (browser) {
     await browser.close().catch(() => {});
+  }
+}
+
+function collectManifestSongIds(manifest) {
+  if (Array.isArray(manifest?.tracks) && manifest.tracks.length) {
+    const ids = manifest.tracks.map(track => String(track?.song_id || track?.track_metadata?.id || '').trim()).filter(Boolean);
+    if (ids.length) return [...new Set(ids)];
+  }
+  return [String(manifest?.song_id || '').trim()].filter(Boolean);
+}
+
+function markManifestJobs(status, fields = {}) {
+  for (const id of manifestJobSongIds) {
+    try {
+      markDistroKidJobStatus(id, status, fields);
+    } catch (error) {
+      if (!/Song not found/i.test(error.message)) throw error;
+    }
   }
 }
 

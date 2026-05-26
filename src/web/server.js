@@ -33,6 +33,7 @@ import {
   getReleaseLinks, upsertReleaseLink,
   getPerformanceSnapshots,
   getDashboardStats,
+  upsertReleaseCampaignTask,
 } from '../shared/db.js';
 import { getMarketingTargets } from '../shared/marketing-db.js';
 import { getOutreachHistoryByTargetIds, normalizeOutletForApp } from '../shared/marketing-outlets.js';
@@ -93,6 +94,7 @@ import {
 } from '../shared/distrokid-jobs.js';
 import { getSongNextAction } from '../shared/song-workflow.js';
 import { analyzeRecentDraftSongsForReleaseSelection, analyzeSongForReleaseSelection } from '../agents/release-selection-agent.js';
+import { generateMetadata } from '../agents/product-manager.js';
 import { PIPELINE_STAGES } from '../lib/release-selection/constants.js';
 import {
   ALBUM_COST_MODES,
@@ -102,6 +104,7 @@ import {
   runAlbumBatch,
 } from '../services/album-batch-service.js';
 import { getAllAlbums, getAlbum, getSongsForAlbum } from '../shared/db.js';
+import { removeSongsFromAlbum } from '../shared/album-track-membership.js';
 import {
   assertReleaseLiveSubmitReady,
   buildReleaseCockpitViewModel,
@@ -289,7 +292,13 @@ app.get('/releases', (req, res) => {
 app.get('/releases/:type/:id', (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).render('404', { message: 'Release not found' });
-  res.render('releases/detail', { cockpit });
+  const feedbackMessage = String(req.query.notice || req.query.error || '').trim();
+  const feedbackLevel = String(req.query.level || (req.query.error ? 'error' : 'info')).trim().toLowerCase();
+  res.render('releases/detail', {
+    cockpit,
+    focus: String(req.query.focus || 'all'),
+    actionFeedback: feedbackMessage ? { level: feedbackLevel, message: feedbackMessage } : null,
+  });
 });
 
 app.post('/releases/:type/:id/actions/readiness', (req, res) => {
@@ -316,20 +325,77 @@ app.post('/releases/:type/:id/actions/package', async (req, res) => {
   }
 });
 
+app.post('/releases/:type/:id/actions/release-assets/build', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const result = await ensureReleaseAssetDerivatives(cockpit.type === 'album' ? 'album' : 'song', cockpit.id, { force: true });
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'release_assets_build', 'complete', 'Release assets generated or refreshed.', {
+      entityType: cockpit.type,
+      releaseId: cockpit.id,
+      previewUrl: result.previewUrl,
+    });
+    respondReleaseAction(req, res, cockpit, 'Release assets generated.');
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'release_assets_build', /primary image/i.test(error.message) ? 'blocked' : 'failed', error.message);
+    if (wantsJson(req)) return res.status(/primary image/i.test(error.message) ? 400 : 500).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}#release-assets`);
+  }
+});
+
+app.post('/releases/:type/:id/actions/generate-metadata', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const targets = cockpit.trackTable.rows.filter(row => row.affected.metadata);
+    if (!targets.length) throw new Error('No tracks are missing metadata.');
+    const results = [];
+    for (const row of targets) {
+      results.push(await generateMetadataForCockpitTrack(row.id));
+    }
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'generate_metadata', 'complete', `Generated metadata for ${results.length} track(s).`, {
+      songIds: results.map(result => result.songId),
+    });
+    respondReleaseAction(req, res, cockpit, `Generated metadata for ${results.length} track(s).`);
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'generate_metadata', 'failed', error.message);
+    if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}?focus=metadata#tracks`);
+  }
+});
+
 app.post('/releases/:type/:id/actions/distrokid-preview', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
     validateReleaseAction('preview', cockpit);
-    const result = cockpit.type === 'album'
-      ? await runDistroKidAlbumAutomation(cockpit.id, { mode: 'preview' })
-      : await runDistroKidSongAutomation(cockpit.id, { mode: 'preview' });
-    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_preview', 'complete', 'DistroKid automation preview finished.', result);
-    respondReleaseAction(req, res, cockpit, 'DistroKid preview finished.');
+    if (cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.status === 'running') {
+      return respondReleaseAction(req, res, cockpit, 'DistroKid preview automation is already running.', { level: 'warning' });
+    }
+    const runId = `preview_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const command = buildDistroKidPreviewCommand(cockpit);
+    const runningLog = logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_preview', 'running', 'DistroKid preview automation started.', {
+      runId,
+      command,
+      script: 'scripts/distrokid/upload-release.mjs',
+      entityType: cockpit.type,
+      releaseId: cockpit.id,
+    });
+    runReleaseAutomationInBackground({
+      cockpit,
+      action: 'distrokid_preview',
+      runId,
+      command,
+      runner: () => cockpit.type === 'album'
+        ? runDistroKidAlbumAutomation(cockpit.id, { mode: 'preview' })
+        : runDistroKidSongAutomation(cockpit.id, { mode: 'preview' }),
+      runningLog,
+    });
+    respondReleaseAction(req, res, cockpit, `DistroKid preview automation started. Run ID ${runId}.`, { level: 'info' });
   } catch (error) {
     logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_preview', 'failed', error.message);
     if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
-    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+    res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, { error: error.message, level: 'error' }));
   }
 });
 
@@ -346,6 +412,34 @@ app.post('/releases/:type/:id/actions/distrokid-live-submit', async (req, res) =
     respondReleaseAction(req, res, cockpit, 'DistroKid live submit finished.');
   } catch (error) {
     logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_live_submit', 'blocked', error.message);
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/actions/approve-live-submit', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    validateReleaseAction('preview', cockpit);
+    const state = getMagicReleaseState(cockpit.type, cockpit.id) || createMagicReleaseCampaign({ releaseType: cockpit.type, releaseId: cockpit.id });
+    const reason = String(req.body?.reason || '').trim() || 'Approved from Release Cockpit.';
+    upsertReleaseCampaignTask({
+      campaign_id: state.campaign.id,
+      task_key: 'distrokid_final_submit_approval',
+      title: 'Ken approval gate for DistroKid final submit',
+      owner: 'ken',
+      status: 'complete',
+      blocking: true,
+      due_date: state.tasks.find(task => task.task_key === 'distrokid_final_submit_approval')?.due_date || null,
+      action_url: `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`,
+      reason,
+      completed_at: new Date().toISOString(),
+    });
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'approve_live_submit', 'complete', 'Live submit approved for external submission.', { reason });
+    respondReleaseAction(req, res, cockpit, 'Live submit approved.');
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'approve_live_submit', 'blocked', error.message);
     if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
     res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
   }
@@ -458,6 +552,56 @@ app.post('/releases/:type/:id/magic-release/tasks/:taskKey/run', async (req, res
   } catch (error) {
     if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
     res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/tasks/:taskKey/skip', async (req, res) => {
+  try {
+    const state = getMagicReleaseState(req.params.type, req.params.id) || createMagicReleaseCampaign({ releaseType: req.params.type, releaseId: req.params.id });
+    const task = state.tasks.find(item => item.task_key === req.params.taskKey);
+    if (!task) throw new Error('Magic Release task not found.');
+    if (task.blocking) throw new Error('Required release steps cannot be skipped.');
+    const reason = String(req.body?.reason || '').trim();
+    if (!reason) throw new Error('A skip reason is required.');
+    upsertReleaseCampaignTask({
+      id: task.id,
+      campaign_id: state.campaign.id,
+      task_key: task.task_key,
+      status: 'skipped',
+      reason,
+      completed_at: new Date().toISOString(),
+    });
+    logReleaseCockpitEvent(req.params.type, req.params.id, 'magic_release_skip', 'complete', `Skipped optional Magic Release task ${task.task_key}.`, {
+      taskKey: task.task_key,
+      reason,
+    });
+    if (wantsJson(req)) return res.json({ ok: true });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+  }
+});
+
+app.post('/releases/:type/:id/tracks/:songId/metadata/generate', async (req, res) => {
+  try {
+    await generateMetadataForCockpitTrack(req.params.songId);
+    const returnTo = `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}?focus=metadata#tracks`;
+    res.redirect(303, returnTo);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+app.post('/releases/:type/:id/tracks/:songId/remove', (req, res) => {
+  try {
+    if (String(req.params.type || '').toLowerCase() !== 'album') throw new Error('Tracks can only be removed from album releases.');
+    removeSongsFromAlbum(req.params.id, [req.params.songId]);
+    markReleaseAssetsStale('album', req.params.id);
+    logReleaseCockpitEvent('album', req.params.id, 'remove_track', 'complete', `Removed ${req.params.songId} from album release.`, { songId: req.params.songId });
+    res.redirect(303, `/releases/album/${encodeURIComponent(req.params.id)}`);
+  } catch (error) {
+    res.status(/not found/i.test(error.message) ? 404 : 400).send(error.message);
   }
 });
 
@@ -2382,15 +2526,81 @@ function wantsJson(req) {
   return String(req.headers.accept || '').includes('application/json') || req.xhr;
 }
 
-function respondReleaseAction(req, res, cockpit, message) {
+function respondReleaseAction(req, res, cockpit, message, options = {}) {
   if (wantsJson(req)) {
     return res.json({
       ok: true,
       message,
+      level: options.level || 'info',
       cockpit: buildReleaseCockpitViewModel(cockpit.type, cockpit.id),
     });
   }
-  return res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  return res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, {
+    notice: message,
+    level: options.level || 'info',
+    anchor: options.anchor || '',
+  }));
+}
+
+function buildReleaseDetailUrl(type, id, options = {}) {
+  const params = new URLSearchParams();
+  if (options.notice) params.set('notice', options.notice);
+  if (options.error) params.set('error', options.error);
+  if (options.level) params.set('level', options.level);
+  if (options.focus) params.set('focus', options.focus);
+  const query = params.toString();
+  const anchor = options.anchor ? `#${String(options.anchor).replace(/^#/, '')}` : '';
+  return `/releases/${encodeURIComponent(type)}/${encodeURIComponent(id)}${query ? `?${query}` : ''}${anchor}`;
+}
+
+function buildDistroKidPreviewCommand(cockpit) {
+  const modeArgs = cockpit.type === 'album'
+    ? `--manifest output/release-packages/${cockpit.id}/manifest.json --no-pause --dry-run`
+    : `--manifest output/release-packages/${cockpit.id}/manifest.json --no-pause --dry-run`;
+  return `${process.execPath} scripts/distrokid/upload-release.mjs ${modeArgs}`;
+}
+
+function runReleaseAutomationInBackground({ cockpit, action, runId, command, runner }) {
+  void Promise.resolve()
+    .then(async () => {
+      const result = await runner();
+      const logPath = findReleaseAutomationLogPath(cockpit, result);
+      logReleaseCockpitEvent(cockpit.type, cockpit.id, action, 'complete', `${humanizeReleaseAction(action)} finished.`, {
+        runId,
+        command,
+        script: 'scripts/distrokid/upload-release.mjs',
+        latest_run_log_path: logPath,
+        result,
+      });
+    })
+    .catch(error => {
+      const logPath = error.runLogPath || findReleaseAutomationLogPath(cockpit, null);
+      logReleaseCockpitEvent(cockpit.type, cockpit.id, action, 'failed', error.message, {
+        runId,
+        command,
+        script: 'scripts/distrokid/upload-release.mjs',
+        latest_run_log_path: logPath,
+        error: error.message,
+        details: error.details || [],
+      });
+    });
+}
+
+function findReleaseAutomationLogPath(cockpit, result) {
+  const explicit = result?.job?.latest_run_log_path
+    || result?.latest_run_log_path
+    || result?.latestRunLogPath;
+  if (explicit) return explicit;
+  return `output/release-packages/${cockpit.id}/distrokid-run/run-log.json`;
+}
+
+function humanizeReleaseAction(action) {
+  return {
+    distrokid_preview: 'DistroKid preview automation',
+    distrokid_live_submit: 'DistroKid live submit automation',
+    hyperfollow: 'HyperFollow capture',
+    outreach_campaign: 'Outreach build',
+  }[action] || action;
 }
 
 function scanSongDir(songDir) {
@@ -2453,6 +2663,26 @@ function readSongDetailFile(primaryPath, fallbackPath) {
     } catch {}
   }
   return { path: null, content: null };
+}
+
+async function generateMetadataForCockpitTrack(songId) {
+  const song = getSong(songId);
+  if (!song) throw new Error(`Song not found: ${songId}`);
+  const songDir = join(__dirname, '../../output/songs', song.id);
+  const fsAssets = scanSongDir(songDir);
+  const lyrics = readSongDetailFile(song.lyrics_path, fsAssets.lyrics).content || '';
+  const result = await generateMetadata({
+    songId: song.id,
+    title: song.title || song.topic || song.id,
+    topic: song.topic || song.title || song.id,
+    lyrics,
+    bpm: null,
+    researchReport: null,
+  });
+  return {
+    songId: song.id,
+    metadataPath: result.metadataPath,
+  };
 }
 
 function readSongMetadata(songDir) {

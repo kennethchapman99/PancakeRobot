@@ -68,7 +68,9 @@ export async function runDistroKidSongAutomation(songId, options = {}) {
   else uploadArgs.push('--dry-run');
 
   append(mode === 'live' ? 'Running Playwright upload and live submit' : 'Running Playwright preview upload');
-  const upload = await execNode(uploadArgs);
+  const upload = await execNode(uploadArgs).catch(error => {
+    throw enrichAutomationError(songId, error);
+  });
   append(trimOutput(upload.stdout) || 'Playwright upload finished');
 
   const job = getDistroKidJob(songId);
@@ -127,7 +129,9 @@ export async function runDistroKidAlbumAutomation(albumId, options = {}) {
   if (mode === 'live') uploadArgs.push('--live-submit', '--confirm-live-submit');
   else uploadArgs.push('--dry-run');
 
-  const upload = await execNode(uploadArgs);
+  const upload = await execNode(uploadArgs).catch(error => {
+    throw enrichAutomationError(albumId, error);
+  });
   append(trimOutput(upload.stdout) || 'Album Playwright upload finished');
 
   const capturedReleaseUrl = extractFirstUrl(`${upload.stdout}\n${upload.stderr}`);
@@ -297,4 +301,21 @@ function trimOutput(value) {
 
 function extractFirstUrl(value) {
   return String(value || '').match(/https?:\/\/[^\s"'<>]+/i)?.[0] || null;
+}
+
+function enrichAutomationError(releaseId, error) {
+  const runDir = join(PACKAGE_ROOT, releaseId, 'distrokid-run');
+  const runLogPath = join(runDir, 'run-log.json');
+  const errorsPath = join(runDir, 'errors.json');
+  const runLog = readJsonIfExists(runLogPath);
+  const errors = readJsonIfExists(errorsPath);
+  const details = Array.isArray(errors)
+    ? errors.map(item => item?.error || item?.message || '').filter(Boolean)
+    : [];
+  const detailText = details.length ? ` ${details.join('; ')}` : '';
+  const enriched = new Error(`${error.message || 'DistroKid automation failed.'}${detailText}`.trim());
+  enriched.runLogPath = existsSync(runLogPath) ? `output/release-packages/${releaseId}/distrokid-run/run-log.json` : null;
+  enriched.runLog = runLog || null;
+  enriched.details = details;
+  return enriched;
 }
