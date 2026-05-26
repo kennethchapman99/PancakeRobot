@@ -8,6 +8,8 @@ import {
   getCookieDomains,
   hasDistrokidCookies,
   readJson,
+  setDistrokidAuthVerification,
+  writeJson,
   writeText,
 } from './lib.mjs';
 
@@ -95,11 +97,24 @@ try {
 }
 
 if (!ok) {
+  writeJson(DISTROKID_AUTH_PATH, setDistrokidAuthVerification(storage, {
+    status: 'fail',
+    checked_at: new Date().toISOString(),
+    reason,
+    url: page?.url?.() || null,
+  }));
   console.error(`FAIL: ${reason}`);
   console.error('Artifacts: output/release-packages/auth-check.png and auth-check-page-text.txt');
   console.error('Run: bash scripts/pancake.sh distrokid:save-auth');
   process.exit(1);
 }
 
+writeJson(DISTROKID_AUTH_PATH, setDistrokidAuthVerification(storage, {
+  status: 'pass',
+  checked_at: new Date().toISOString(),
+  verified_at: new Date().toISOString(),
+  reason,
+  url: 'https://distrokid.com/new/',
+}));
 console.log(`PASS: saved auth reaches DistroKid. ${reason}`);
 console.log('Artifacts: output/release-packages/auth-check.png, auth-check-page-text.txt, and auth-check.html');

@@ -22,7 +22,7 @@ import {
   buildReleasePackageForCockpit,
   getCanonicalReleaseManifestPath,
 } from './release-cockpit.js';
-import { DISTROKID_AUTH_PATH, hasDistrokidCookies } from '../../scripts/distrokid/lib.mjs';
+import { DISTROKID_AUTH_PATH, hasVerifiedDistrokidAuth } from '../../scripts/distrokid/lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -33,7 +33,7 @@ export function hasConfirmedDistroKidAuth() {
   try {
     if (!existsSync(DISTROKID_AUTH_PATH)) return false;
     const auth = JSON.parse(readFileSync(DISTROKID_AUTH_PATH, 'utf8'));
-    return hasDistrokidCookies(auth);
+    return hasVerifiedDistrokidAuth(auth);
   } catch {
     return false;
   }

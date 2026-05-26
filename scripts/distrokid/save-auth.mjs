@@ -157,3 +157,4 @@ if (!hasDistrokidCookies(saved)) {
 
 console.log('PASS: DistroKid auth saved to .auth/distrokid.json.');
 console.log('Next: bash scripts/pancake.sh distrokid:check-auth');
+console.log('The release cockpit will only auto-resume preview after check-auth passes.');

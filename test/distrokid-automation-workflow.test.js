@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   cleanupTestOutputArtifacts,
   prepareTestDbSlug,
@@ -19,9 +21,11 @@ const { getDistroKidJob } = await import('../src/shared/distrokid-jobs.js');
 const {
   buildDistroKidUploadInvocation,
   captureHyperFollowLink,
+  hasConfirmedDistroKidAuth,
   runDistroKidAlbumAutomation,
   runDistroKidSongAutomation,
 } = await import('../src/shared/distrokid-automation.js');
+const { DISTROKID_AUTH_PATH } = await import('../scripts/distrokid/lib.mjs');
 
 test('preview mode builds package and runs automation without submitting', async t => {
   const songId = `SONG_DK_PREVIEW_${Date.now()}`;
@@ -109,4 +113,38 @@ test('interactive preview invocation omits --no-pause until auth is confirmed', 
 
   assert.equal(blocked.args.includes('--no-pause'), false);
   assert.equal(confirmed.args.includes('--no-pause'), true);
+});
+
+test('saved auth requires a recent successful verification before preview is auto-confirmed', async t => {
+  const authDir = path.dirname(DISTROKID_AUTH_PATH);
+  const original = fs.existsSync(DISTROKID_AUTH_PATH) ? fs.readFileSync(DISTROKID_AUTH_PATH, 'utf8') : null;
+  t.after(() => {
+    if (original === null) {
+      fs.rmSync(DISTROKID_AUTH_PATH, { force: true });
+      return;
+    }
+    fs.mkdirSync(authDir, { recursive: true });
+    fs.writeFileSync(DISTROKID_AUTH_PATH, original, 'utf8');
+  });
+
+  fs.mkdirSync(authDir, { recursive: true });
+  fs.writeFileSync(DISTROKID_AUTH_PATH, JSON.stringify({
+    cookies: [
+      { name: 'cfid', value: '123', domain: 'distrokid.com', path: '/', expires: -1 },
+    ],
+  }, null, 2));
+  assert.equal(hasConfirmedDistroKidAuth(), false);
+
+  fs.writeFileSync(DISTROKID_AUTH_PATH, JSON.stringify({
+    cookies: [
+      { name: 'cfid', value: '123', domain: 'distrokid.com', path: '/', expires: -1 },
+    ],
+    pancake_robot: {
+      distrokid_auth_verification: {
+        status: 'pass',
+        verified_at: new Date().toISOString(),
+      },
+    },
+  }, null, 2));
+  assert.equal(hasConfirmedDistroKidAuth(), true);
 });

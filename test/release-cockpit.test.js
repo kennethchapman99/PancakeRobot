@@ -622,10 +622,24 @@ test('process-complete preview with zero filled fields and errors renders as fai
     status: 'assembled',
     is_test: true,
   });
+  const failedLogPath = writePreviewRunArtifacts(albumId, {
+    releaseType: 'album',
+    filledCount: 0,
+    skippedCount: 334,
+    errorCount: 215,
+    errors: [
+      { field: 'language', error: 'language not found: (missing)' },
+      { field: 'track_title_track_1', error: 'track 1 title not found: (missing)' },
+      { field: 'cover_art', error: 'file input not found: #artwork' },
+      { field: 'audio_file_track_1', error: 'file input not found: #js-track-upload-1' },
+      { field: 'ai_generated_gate', error: 'ai disclosure not found: (missing)' },
+      { field: 'not_explicit_track_1', error: 'not explicit certification not found: (missing)' },
+    ],
+  });
   logReleaseCockpitEvent('album', albumId, 'distrokid_preview', 'complete', 'Automation process complete.', {
     runId: 'fixture_preview_run',
     command: 'node scripts/distrokid/upload-release.mjs --dry-run',
-    latest_run_log_path: `output/release-packages/${albumId}/distrokid-run/run-log.json`,
+    latest_run_log_path: failedLogPath,
     entityType: 'album',
     releaseId: albumId,
   });

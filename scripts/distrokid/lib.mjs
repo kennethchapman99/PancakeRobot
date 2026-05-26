@@ -13,6 +13,7 @@ export const DISTROKID_CONFIG_DIR = join(REPO_ROOT, 'config', 'distrokid');
 export const FIELD_MAP_EXAMPLE_PATH = join(DISTROKID_CONFIG_DIR, 'field-map.example.json');
 export const FIELD_MAP_LOCAL_PATH = join(DISTROKID_CONFIG_DIR, 'field-map.local.json');
 export const DISTROKID_RUN_EVENT_PREFIX = 'PANCAKE_DISTROKID_EVENT ';
+export const DISTROKID_AUTH_VERIFICATION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export const DANGEROUS_BUTTON_NAMES = Object.freeze([
   'Submit',
@@ -98,6 +99,29 @@ export function getDistrokidRunDir(songId) {
 export function hasDistrokidCookies(storageState) {
   return Array.isArray(storageState?.cookies)
     && storageState.cookies.some(cookie => String(cookie.domain || '').includes('distrokid.com'));
+}
+
+export function getDistrokidAuthVerification(storageState) {
+  return storageState?.pancake_robot?.distrokid_auth_verification || null;
+}
+
+export function hasVerifiedDistrokidAuth(storageState, options = {}) {
+  const maxAgeMs = Number(options.maxAgeMs) > 0 ? Number(options.maxAgeMs) : DISTROKID_AUTH_VERIFICATION_MAX_AGE_MS;
+  const verification = getDistrokidAuthVerification(storageState);
+  if (!hasDistrokidCookies(storageState) || !verification?.verified_at || verification?.status !== 'pass') return false;
+  const verifiedAtMs = Date.parse(verification.verified_at);
+  if (!Number.isFinite(verifiedAtMs)) return false;
+  return (Date.now() - verifiedAtMs) <= maxAgeMs;
+}
+
+export function setDistrokidAuthVerification(storageState, verification) {
+  return {
+    ...(storageState || {}),
+    pancake_robot: {
+      ...(storageState?.pancake_robot || {}),
+      distrokid_auth_verification: verification || null,
+    },
+  };
 }
 
 export function hasSavedDistrokidAuth() {
