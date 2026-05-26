@@ -8,14 +8,17 @@
 
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { basename, dirname, extname, join, resolve } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_PROFILE_PATH = join(__dirname, '../../config/brand-profile.json');
-const BRAND_PROFILES_DIR = join(__dirname, '../../config/brand-profiles');
-const ACTIVE_PROFILE_PATH = join(__dirname, '../../config/active-profile.json');
+const ROOT_DIR = join(__dirname, '../..');
+const DEFAULT_PROFILE_PATH = join(ROOT_DIR, 'config/brand-profile.json');
+const BRAND_PROFILES_DIR = join(ROOT_DIR, 'config/brand-profiles');
+const BRAND_MEDIA_DIR = join(ROOT_DIR, 'config/brand-media');
+const ACTIVE_PROFILE_PATH = join(ROOT_DIR, 'config/active-profile.json');
 export const DEFAULT_PROFILE_ID = 'default';
 const SAFE_PROFILE_ID = /^[a-zA-Z0-9._-]+$/;
+const ALLOWED_BRAND_DEFAULT_IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 
 const FALLBACK_PROFILE = {
   brand_name: 'Default Music Brand',
@@ -60,6 +63,10 @@ const FALLBACK_PROFILE = {
     negative_prompt: 'text, words, letters, photorealistic, dark colors, scary, violent, blurry',
     text_overlay_style: 'bold rounded font, white fill with thick dark red outline, drop shadow',
   },
+  media: {
+    default_image_url: '',
+    default_image_path: '',
+  },
   distribution: {
     default_distributor: 'none',
     legacy_distributor: 'none',
@@ -88,6 +95,10 @@ export function getDefaultBrandProfilePath() {
 
 export function getBrandProfilesDir() {
   return BRAND_PROFILES_DIR;
+}
+
+export function getBrandProfileMediaDir(profileId = DEFAULT_PROFILE_ID) {
+  return join(BRAND_MEDIA_DIR, normalizeSafeProfileId(profileId));
 }
 
 export function listBrandProfiles() {
@@ -130,18 +141,8 @@ export function listBrandProfiles() {
 }
 
 export function resolveBrandProfilePath(profileId = DEFAULT_PROFILE_ID) {
-  const raw = String(profileId || '').trim();
-  if (!raw || raw === DEFAULT_PROFILE_ID) return DEFAULT_PROFILE_PATH;
-
-  if (
-    raw.includes('/') ||
-    raw.includes('\\') ||
-    raw.includes('..') ||
-    !SAFE_PROFILE_ID.test(raw)
-  ) {
-    throw new Error(`Unsafe brand profile id: ${raw}`);
-  }
-
+  const raw = normalizeSafeProfileId(profileId);
+  if (raw === DEFAULT_PROFILE_ID) return DEFAULT_PROFILE_PATH;
   return join(BRAND_PROFILES_DIR, `${raw}.json`);
 }
 
@@ -207,6 +208,81 @@ export function setActiveProfileId(profileId) {
   resolveBrandProfilePath(profileId); // throws if unsafe id
   loadBrandProfileById(profileId);    // throws if file missing or invalid
   fs.writeFileSync(ACTIVE_PROFILE_PATH, JSON.stringify({ activeProfileId: profileId }, null, 2) + '\n');
+}
+
+export function findBrandProfileDefaultImage(profileId = DEFAULT_PROFILE_ID, profile = null) {
+  const safeProfileId = normalizeSafeProfileId(profileId);
+  const loadedProfile = profile || safeLoadBrandProfileById(safeProfileId);
+  const media = loadedProfile?.media || {};
+  const configuredUrl = cleanString(media.default_image_url || loadedProfile?.visuals?.default_image_url || '');
+  const configuredPath = cleanString(media.default_image_path || '');
+
+  const resolvedConfiguredPath = resolveConfiguredBrandImagePath(configuredPath, configuredUrl);
+  if (resolvedConfiguredPath && fs.existsSync(resolvedConfiguredPath)) {
+    return buildBrandDefaultImageResult(safeProfileId, loadedProfile, resolvedConfiguredPath, configuredUrl);
+  }
+
+  if (configuredUrl && /^https?:\/\//i.test(configuredUrl)) {
+    return {
+      path: null,
+      url: configuredUrl,
+      name: configuredUrl.split('/').pop() || 'brand-default-image',
+      profileId: safeProfileId,
+      profileName: loadedProfile?.brand_name || safeProfileId,
+      source: 'brand_profile_default',
+      sourceLabel: `Brand default image: ${loadedProfile?.brand_name || safeProfileId}`,
+      generation_source: 'brand_default_image',
+    };
+  }
+
+  const mediaDir = getBrandProfileMediaDir(safeProfileId);
+  const fileName = fs.existsSync(mediaDir)
+    ? fs.readdirSync(mediaDir).find(name => /^default-image\.(png|jpe?g|webp)$/i.test(name))
+    : null;
+  if (!fileName) return null;
+  return buildBrandDefaultImageResult(safeProfileId, loadedProfile, join(mediaDir, fileName), brandMediaUrl(safeProfileId, fileName));
+}
+
+export function setBrandProfileDefaultImageFile(profileId, fileName) {
+  const safeProfileId = normalizeSafeProfileId(profileId);
+  const safeFileName = assertSafeBrandImageFileName(fileName);
+  const imagePath = join(getBrandProfileMediaDir(safeProfileId), safeFileName);
+  if (!fs.existsSync(imagePath)) throw new Error(`Brand default image file does not exist: ${safeFileName}`);
+
+  const profile = loadBrandProfileById(safeProfileId);
+  const defaultImage = buildBrandDefaultImageResult(safeProfileId, profile, imagePath, brandMediaUrl(safeProfileId, safeFileName));
+  const nextProfile = {
+    ...profile,
+    media: {
+      ...(profile.media || {}),
+      default_image_url: defaultImage.url,
+      default_image_path: '',
+    },
+  };
+  saveBrandProfileById(safeProfileId, nextProfile);
+  return { profile: nextProfile, defaultImage };
+}
+
+export function clearBrandProfileDefaultImage(profileId = DEFAULT_PROFILE_ID) {
+  const safeProfileId = normalizeSafeProfileId(profileId);
+  const mediaDir = getBrandProfileMediaDir(safeProfileId);
+  if (fs.existsSync(mediaDir)) {
+    for (const name of fs.readdirSync(mediaDir)) {
+      if (/^default-image\.(png|jpe?g|webp)$/i.test(name)) fs.unlinkSync(join(mediaDir, name));
+    }
+  }
+
+  const profile = loadBrandProfileById(safeProfileId);
+  const nextProfile = {
+    ...profile,
+    media: {
+      ...(profile.media || {}),
+      default_image_url: '',
+      default_image_path: '',
+    },
+  };
+  saveBrandProfileById(safeProfileId, nextProfile);
+  return { profile: nextProfile, defaultImage: null };
 }
 
 export function validateBrandProfile(profile, profilePath = 'brand profile') {
@@ -279,6 +355,88 @@ function validateSongwriting(songwriting, profilePath) {
       }
     }
   }
+}
+
+function normalizeSafeProfileId(profileId = DEFAULT_PROFILE_ID) {
+  const raw = String(profileId || '').trim() || DEFAULT_PROFILE_ID;
+  if (
+    raw.includes('/') ||
+    raw.includes('\\') ||
+    raw.includes('..') ||
+    !SAFE_PROFILE_ID.test(raw)
+  ) {
+    throw new Error(`Unsafe brand profile id: ${raw}`);
+  }
+  return raw;
+}
+
+function safeLoadBrandProfileById(profileId) {
+  try {
+    return loadBrandProfileById(profileId);
+  } catch {
+    return null;
+  }
+}
+
+function resolveConfiguredBrandImagePath(configuredPath, configuredUrl) {
+  const pathCandidate = resolveConfiguredImagePathValue(configuredPath);
+  if (pathCandidate) return pathCandidate;
+  return resolveConfiguredImagePathValue(configuredUrl);
+}
+
+function resolveConfiguredImagePathValue(value) {
+  const raw = cleanString(value);
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return null;
+  if (raw.startsWith('/brand-media/')) {
+    const parts = raw.split('/').filter(Boolean).map(part => decodeURIComponent(part));
+    if (parts.length !== 3) return null;
+    const [, profileId, fileName] = parts;
+    return join(getBrandProfileMediaDir(profileId), assertSafeBrandImageFileName(fileName));
+  }
+  if (raw.startsWith('/base-images/')) {
+    const fileName = decodeURIComponent(raw.replace(/^\/base-images\//, ''));
+    return join(ROOT_DIR, 'base images', assertSafeBrandImageFileName(fileName));
+  }
+  if (raw.startsWith('/media/')) {
+    const relativePath = decodeURIComponent(raw.replace(/^\/media\//, ''));
+    if (relativePath.includes('..')) return null;
+    return resolve(ROOT_DIR, 'output', relativePath);
+  }
+  if (fs.existsSync(raw)) return raw;
+  return null;
+}
+
+function buildBrandDefaultImageResult(profileId, profile, imagePath, url = '') {
+  const fileName = basename(imagePath);
+  return {
+    path: imagePath,
+    url: url || brandMediaUrl(profileId, fileName),
+    name: fileName,
+    profileId,
+    profileName: profile?.brand_name || profileId,
+    source: 'brand_profile_default',
+    sourceLabel: `Brand default image: ${profile?.brand_name || profileId}`,
+    source_label: `Brand default image: ${profile?.brand_name || profileId}`,
+    generation_source: 'brand_default_image',
+  };
+}
+
+function brandMediaUrl(profileId, fileName) {
+  return `/brand-media/${encodeURIComponent(normalizeSafeProfileId(profileId))}/${encodeURIComponent(assertSafeBrandImageFileName(fileName))}`;
+}
+
+function assertSafeBrandImageFileName(fileName) {
+  const raw = String(fileName || '').trim();
+  const safe = basename(raw);
+  if (!safe || safe !== raw) throw new Error(`Unsafe brand image file name: ${raw}`);
+  const ext = extname(safe).toLowerCase();
+  if (!ALLOWED_BRAND_DEFAULT_IMAGE_EXTS.has(ext)) throw new Error(`Unsupported brand image extension: ${ext || '(none)'}`);
+  return safe;
+}
+
+function cleanString(value) {
+  return String(value || '').trim();
 }
 
 function validateStringArray(value, label) {
