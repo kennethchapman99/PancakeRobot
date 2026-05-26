@@ -119,6 +119,7 @@ import {
   getCanonicalReleaseManifestPath,
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
+  resolveDistroKidArtwork,
   validateReleaseAction,
 } from '../shared/release-cockpit.js';
 import {
@@ -449,6 +450,16 @@ app.post('/releases/:type/:id/actions/distrokid-preview', async (req, res) => {
     if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
     res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, { error: error.message, level: 'error' }));
   }
+});
+
+app.get('/releases/:type/:id/assets/distrokid-artwork/download', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  const artwork = resolveDistroKidArtwork(cockpit.releaseAssetState);
+  if (artwork.blocked || !artwork.path) return res.status(409).json({ ok: false, error: 'No resolved DistroKid artwork available for this release.' });
+  const filename = `${cockpit.id}-distrokid-artwork.${artwork.ext}`;
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.sendFile(artwork.path);
 });
 
 app.post('/releases/:type/:id/actions/distrokid-preview/stop', (req, res) => {
