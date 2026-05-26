@@ -1,7 +1,7 @@
 import path from 'path';
-import { DEFAULT_PROFILE_ID, loadBrandProfile, loadBrandProfileById } from './brand-profile.js';
+import { DEFAULT_PROFILE_ID, findBrandProfileDefaultImage, loadBrandProfile, loadBrandProfileById } from './brand-profile.js';
 import { getReleaseLinks, getSong, upsertSong } from './db.js';
-import { resolveDefaultBaseImage, scanMarketingPack, scanSongBaseImage } from './song-catalog-marketing.js';
+import { scanMarketingPack, scanSongBaseImage } from './song-catalog-marketing.js';
 import { getOutreachEvents } from './marketing-outreach-db.js';
 import { getSongNextAction } from './song-workflow.js';
 import { appendCacheBust, normalizeReleaseAssetManifest, resolveCanonicalSocialHandle } from './release-asset-manifest.js';
@@ -52,7 +52,7 @@ export function getSongMarketingKit(songOrId, options = {}) {
   const baseImage = options.baseImage || scanSongBaseImage(song.id);
   const marketingPack = options.marketingPack || scanMarketingPack(song.id);
   const brandProfile = loadSongBrandProfile(song);
-  const defaults = getBrandMarketingDefaults(brandProfile);
+  const defaults = getBrandMarketingDefaults(brandProfile, song.brand_profile_id || DEFAULT_PROFILE_ID);
 
   const marketing_links = normalizeMarketingLinks({
     ...deriveLinksFromSong(song, releaseLinks),
@@ -196,7 +196,7 @@ export function computeMarketingReadiness({ links = {}, assets = {}, lastOutreac
   if (!links.instagram_url && !links.tiktok_url) { score -= 10; missing_recommended_fields.push('social_links'); }
   if (!links.contact_email) { score -= 10; missing_required_fields.push('contact_email'); }
   if (!hasAnyStreamingLink(links)) { missing_required_fields.push('streaming_link'); warnings.push('No streaming links captured yet.'); }
-  if (!hasVisualSource(assets)) { score -= 10; missing_required_fields.push('base_or_fallback_image'); warnings.push('No base image or brand logo available'); }
+  if (!hasVisualSource(assets)) { score -= 10; missing_required_fields.push('base_album_or_brand_image'); warnings.push('No song, album, or brand default image available'); }
   if (!hasGeneratedVisual(assets)) missing_required_fields.push('social_asset_set');
 
   if (!hasGeneratedVisual(assets)) warnings.push('Phase 1 outreach requires generated release assets.');
@@ -405,9 +405,11 @@ function loadSongBrandProfile(song) {
   }
 }
 
-function getBrandMarketingDefaults(profile = BRAND_PROFILE) {
+function getBrandMarketingDefaults(profile = BRAND_PROFILE, profileId = DEFAULT_PROFILE_ID) {
   const social = profile.social || {};
   const marketing = profile.marketing || {};
+  const brandDefaultImage = findBrandProfileDefaultImage(profileId, profile);
+  const brandDefaultImageUrl = brandDefaultImage?.url || marketing.default_marketing_image_url || profile.media?.default_image_url || profile.visuals?.default_image_url || '';
   return {
     marketing_links: {
       smart_link: '',
@@ -427,8 +429,8 @@ function getBrandMarketingDefaults(profile = BRAND_PROFILE) {
     },
     marketing_assets: {
       base_image_url: '',
-      fallback_image_url: marketing.default_marketing_image_url || '',
-      brand_logo_url: publicLogoUrl(profile),
+      fallback_image_url: brandDefaultImageUrl,
+      brand_default_image_url: brandDefaultImageUrl,
       square_post_url: '',
       vertical_post_url: '',
       portrait_post_url: '',
@@ -444,16 +446,14 @@ function getBrandMarketingDefaults(profile = BRAND_PROFILE) {
 function resolveMarketingImageSelection(assets = {}, links = {}, defaults = {}, baseImage = null, songId = '') {
   const releaseBaseImageUrl = cleanString(assets.base_image_url || baseImage?.url || '');
   const coverArtUrl = cleanString(links.cover_art_url || '');
-  const brandDefaultImageUrl = cleanString(defaults.marketing_assets?.fallback_image_url || '');
-  const brandLogoUrl = cleanString(defaults.marketing_assets?.brand_logo_url || publicLogoUrl());
-  const defaultBaseImageUrl = cleanString(resolveDefaultBaseImage(songId || baseImage?.songId || '')?.url || '');
+  const brandDefaultImageUrl = cleanString(defaults.marketing_assets?.brand_default_image_url || defaults.marketing_assets?.fallback_image_url || '');
 
   if (releaseBaseImageUrl) {
     return {
       active_image_url: releaseBaseImageUrl,
-      fallback_image_url: coverArtUrl || defaultBaseImageUrl || brandDefaultImageUrl || brandLogoUrl || '',
+      fallback_image_url: coverArtUrl || brandDefaultImageUrl || '',
       generation_source: 'release_base_image',
-      source_label: 'Release base image',
+      source_label: 'Song media',
       warning: '',
     };
   }
@@ -466,30 +466,12 @@ function resolveMarketingImageSelection(assets = {}, links = {}, defaults = {}, 
       warning: '',
     };
   }
-  if (defaultBaseImageUrl) {
-    return {
-      active_image_url: defaultBaseImageUrl,
-      fallback_image_url: defaultBaseImageUrl,
-      generation_source: 'default_base_image_pool',
-      source_label: 'Default base image library',
-      warning: 'Using default base image library because no release-specific base image was supplied.',
-    };
-  }
   if (brandDefaultImageUrl) {
     return {
       active_image_url: brandDefaultImageUrl,
       fallback_image_url: brandDefaultImageUrl,
-      generation_source: 'brand_default',
-      source_label: 'Brand default marketing image',
-      warning: '',
-    };
-  }
-  if (brandLogoUrl) {
-    return {
-      active_image_url: brandLogoUrl,
-      fallback_image_url: brandLogoUrl,
-      generation_source: 'brand_logo',
-      source_label: 'Brand logo fallback',
+      generation_source: 'brand_default_image',
+      source_label: 'Brand default image',
       warning: '',
     };
   }
@@ -498,7 +480,7 @@ function resolveMarketingImageSelection(assets = {}, links = {}, defaults = {}, 
     fallback_image_url: '',
     generation_source: null,
     source_label: 'Missing',
-    warning: 'No base image or brand logo available',
+    warning: 'No song, album, or brand default image available',
   };
 }
 
@@ -517,7 +499,7 @@ function hasGeneratedVisual(assets = {}) {
 function validateUrlValue(value) {
   if (String(value).startsWith('/')) {
     const warnings = [];
-    if (!String(value).startsWith('/release-kit/') && !String(value).startsWith('/media/') && !String(value).startsWith('/logo')) {
+    if (!String(value).startsWith('/release-kit/') && !String(value).startsWith('/media/') && !String(value).startsWith('/brand-media/') && !String(value).startsWith('/logo')) {
       warnings.push('relative URL may not be public-facing outside this app');
     }
     return { warnings };
@@ -537,12 +519,6 @@ function validateUrlValue(value) {
 
 function buildReleaseKitPath(songId) {
   return `/release-kit/${encodeURIComponent(songId)}`;
-}
-
-function pathToMediaUrl(relativePath) {
-  if (!relativePath) return null;
-  const normalized = String(relativePath).replace(/\\/g, '/').replace(/^\/+/, '');
-  return normalized.startsWith('output/') ? `/media/${normalized.slice('output/'.length)}` : normalized.startsWith('/media/') ? normalized : null;
 }
 
 function publicLogoUrl(profile = BRAND_PROFILE) {
