@@ -71,7 +71,7 @@ test('readiness scoring treats missing marketing fields as warnings instead of b
   assert.equal(readiness.score, 50);
   assert.ok(readiness.missing_required_fields.includes('smart_link'));
   assert.ok(readiness.missing_required_fields.includes('contact_email'));
-  assert.ok(readiness.missing_required_fields.includes('base_or_fallback_image'));
+  assert.ok(readiness.missing_required_fields.includes('base_album_or_brand_image'));
   assert.ok(readiness.missing_required_fields.includes('social_asset_set'));
   assert.ok(readiness.missing_recommended_fields.includes('social_links'));
   assert.ok(readiness.warnings.some(w => /release kit/i.test(w)));
@@ -117,7 +117,7 @@ test('release-level marketing fields can be explicitly cleared without falling b
   }
 });
 
-test('marketing kit falls back to the default base-image library when no release-specific image exists', () => {
+test('marketing kit leaves image fallback empty when no song, album, or brand default image exists', () => {
   const slug = `song-marketing-kit-default-image-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -128,8 +128,8 @@ test('marketing kit falls back to the default base-image library when no release
 
       upsertSong({ id: 'KIT_DEFAULT_IMAGE', title: 'Default Image Test' });
       const saved = getSongMarketingKit('KIT_DEFAULT_IMAGE');
-      assert.match(saved.marketing_assets.fallback_image_url, /^\\/base-images\\//);
-      assert.equal(saved.image_source.generation_source, 'default_base_image_pool');
+      assert.equal(saved.marketing_assets.fallback_image_url, '');
+      assert.equal(saved.image_source.generation_source, null);
       console.log('OK');
     `], {
       cwd: repoRoot,

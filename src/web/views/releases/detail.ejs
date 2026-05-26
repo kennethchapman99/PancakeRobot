@@ -8,6 +8,7 @@
     running: 'badge-blue',
     not_started: 'badge-gray',
     skipped: 'badge-gray',
+    cancelled: 'badge-gray',
     failed: 'badge-red',
   }[status] || 'badge-gray');
   const lifecycleClass = (status) => ({
@@ -21,6 +22,7 @@
   }[status] || 'badge-gray');
   const buttonClass = (label, enabled) => {
     if (!enabled) return 'border-zinc-200 bg-zinc-100 text-zinc-500';
+    if (/stop|cancel/i.test(label)) return 'border-rose-300 bg-rose-500 text-white';
     if (/skip|remove|delete/i.test(label)) return 'border-rose-300 bg-rose-500 text-white';
     if (/approve|paste|save/i.test(label)) return 'border-amber-300 bg-amber-500 text-white';
     if (/build outreach|send outreach/i.test(label)) return 'border-emerald-300 bg-emerald-600 text-white';
@@ -104,6 +106,17 @@
                 <span class="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-zinc-500"><%= stage.owner %></span>
               </div>
               <div class="mt-2 text-sm text-zinc-700"><%= stage.detail %></div>
+
+              <% if ((stage.validationIssues || []).length) { %>
+                <div class="mt-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-xs text-zinc-600">
+                  <div class="font-semibold text-zinc-900">Exact missing inputs</div>
+                  <ul class="mt-2 space-y-1">
+                    <% stage.validationIssues.forEach(issue => { %>
+                      <li>• <%= issue %></li>
+                    <% }) %>
+                  </ul>
+                </div>
+              <% } %>
 
               <% if (stage.latestRun) { %>
                 <div class="mt-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-xs text-zinc-600">

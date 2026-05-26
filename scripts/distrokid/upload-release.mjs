@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import { join } from 'path';
+import { validateCanonicalReleasePackageManifest } from '../../src/shared/release-package-validation.js';
 import {
   DISTROKID_JOB_STATUSES,
   getDistroKidJob,
@@ -10,6 +11,8 @@ import {
 import {
   DANGEROUS_BUTTON_NAMES,
   DISTROKID_AUTH_PATH,
+  DISTROKID_PLAYWRIGHT_PROFILE_DIR,
+  DISTROKID_RUN_EVENT_PREFIX,
   FIELD_MAP_EXAMPLE_PATH,
   FIELD_MAP_LOCAL_PATH,
   absoluteFromMaybeRelative,
@@ -66,6 +69,8 @@ const IMPORTANT_CERTIFICATION_CHECKBOXES = new Set([
   '#areyousureotherartist',
   '#areyousuretandc',
 ]);
+const BLOCKED_LOGIN_EXIT_CODE = 21;
+const CANCELLED_EXIT_CODE = 130;
 const CONDITIONAL_CERTIFICATION_CHECKBOXES = new Set([
   '#areyousureticktokcml',
   '#areyousuresnap',
@@ -113,21 +118,26 @@ if (!exists(manifestPath)) {
 
 let manifest = readJson(manifestPath);
 manifest = normalizeDistroKidManifest(manifest);
-const songId = manifest.song_id;
-if (!songId) {
-  console.error('FAIL: manifest is missing song_id.');
+const manifestEntityId = resolveManifestEntityId(manifest);
+if (!manifestEntityId) {
+  console.error('FAIL: manifest is missing song_id/release_id/album_id.');
   process.exit(1);
 }
 
-const runDir = ensureDir(getDistrokidRunDir(songId));
+const runDir = ensureDir(getDistrokidRunDir(manifestEntityId));
 const filledFields = [];
 const skippedFields = [];
 const errors = [];
 let fieldMap = { dangerous_paid_extras_never_autofill: [] };
 let finishedEarly = false;
 let finished = false;
+let finalStatus = 'pending';
+let finalCode = '';
+let finalMessage = '';
+let exitCode = 0;
 const runLog = {
-  song_id: songId,
+  song_id: manifest.song_id || null,
+  release_id: manifest.release_id || manifest.album_id || null,
   manifest_path: relativeToRepo(manifestPath),
   dry_run: dryRun,
   browser_mode: values['browser-mode'],
@@ -139,11 +149,21 @@ const runLog = {
     skipped_fields: [],
     discovery_files: [],
   },
+  final_status: null,
+  final_code: null,
+  final_message: null,
 };
 const manifestJobSongIds = collectManifestSongIds(manifest);
-
-validatePackageFile('audio_file', manifest.audio_file, errors);
-validatePackageFile('cover_art', manifest.cover_art, errors);
+const validation = validateCanonicalReleasePackageManifest(manifest, { releaseType: manifest.release_type });
+for (const issue of validation.issues) {
+  if (issue.code === 'missing_cover_art') errors.push({ field: 'cover_art', error: 'cover_art not found: (missing)' });
+  else if (issue.code === 'missing_cover_art_file') errors.push({ field: 'cover_art', error: issue.message.replace(/^Canonical package is missing cover_art\.$/, 'cover_art not found: (missing)') });
+  else if (issue.code === 'missing_track_audio_file') errors.push({ field: issue.path || 'audio_file', error: 'audio_file not found: (missing)' });
+  else if (issue.code === 'missing_track_audio_file_path') errors.push({ field: issue.path || 'audio_file', error: issue.message.replace(/^[^:]+: /, '') });
+  else if (issue.code === 'missing_tracks') errors.push({ field: 'tracks', error: 'tracks not found: (missing)' });
+  else if (issue.code === 'album_song_id_confusion') errors.push({ field: 'release_id', error: issue.message });
+  else if (issue.code === 'missing_manifest') errors.push({ field: 'manifest', error: issue.message });
+}
 if (manifest.lyrics_file && !exists(absoluteFromMaybeRelative(manifest.lyrics_file))) {
   skippedFields.push({ field: 'lyrics', reason: `lyrics file not found: ${manifest.lyrics_file}` });
 }
@@ -152,21 +172,8 @@ if (errors.length) {
   process.exit(1);
 }
 
-if (!exists(DISTROKID_AUTH_PATH)) {
-  errors.push({ field: 'auth', error: '.auth/distrokid.json is missing. Run bash scripts/pancake.sh distrokid:save-auth.' });
-  markManifestJobs(DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
-  await finish(null, true);
-  process.exit(1);
-}
-
-const auth = readJson(DISTROKID_AUTH_PATH);
+const auth = exists(DISTROKID_AUTH_PATH) ? readJson(DISTROKID_AUTH_PATH) : null;
 console.log(`Cookie domains: ${getCookieDomains(auth).join(', ') || '(none)'}`);
-if (!hasDistrokidCookies(auth)) {
-  errors.push({ field: 'auth', error: '.auth/distrokid.json has no DistroKid cookies.' });
-  markManifestJobs(DISTROKID_JOB_STATUSES.AUTH_NEEDED, { latest_error_json: errors[errors.length - 1] });
-  await finish(null, true);
-  process.exit(1);
-}
 
 const fieldMapPath = values['field-map']
   ? absoluteFromMaybeRelative(values['field-map'])
@@ -190,7 +197,7 @@ try {
   process.exit(1);
 }
 
-console.log(`DistroKid upload ${dryRun ? 'preview' : 'live submit'}: ${songId}`);
+console.log(`DistroKid upload ${dryRun ? 'preview' : 'live submit'}: ${manifestEntityId}`);
 if (dryRun) console.log('Safety: preview mode stops before final submit.');
 else console.log('LIVE SUBMIT: final DistroKid submission is enabled by explicit confirmation.');
 if (certifyImportantCheckboxes) {
@@ -205,10 +212,10 @@ markManifestJobs(DISTROKID_JOB_STATUSES.UPLOAD_STARTED, {
   latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
   latest_error_json: null,
 });
-let browser;
+let context;
 let page;
 try {
-  browser = await chromium.launch({
+  context = await chromium.launchPersistentContext(ensureDir(DISTROKID_PLAYWRIGHT_PROFILE_DIR), {
     channel: 'chrome',
     headless: !headed,
     slowMo,
@@ -216,7 +223,7 @@ try {
     args: ['--disable-blink-features=AutomationControlled', '--disable-infobars'],
   });
 } catch {
-  browser = await chromium.launch({
+  context = await chromium.launchPersistentContext(ensureDir(DISTROKID_PLAYWRIGHT_PROFILE_DIR), {
     headless: !headed,
     slowMo,
     ignoreDefaultArgs: ['--enable-automation'],
@@ -225,11 +232,12 @@ try {
 }
 
 try {
-  const context = await browser.newContext({ storageState: DISTROKID_AUTH_PATH });
+  await seedPersistentContext(context, auth);
   await context.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
   });
-  page = await context.newPage();
+  page = context.pages()[0] || await context.newPage();
+  installAuthPersistence(context, page);
   await installSafetyGuard(page, dangerousNames, { allowSubmit: liveSubmit });
 
   await page.goto(fieldMap.upload_url || 'https://distrokid.com/new/', {
@@ -237,6 +245,10 @@ try {
     timeout: 45000,
   });
   await page.waitForTimeout(2000);
+  if (await detectAuthRequired(page)) {
+    await blockForLogin(context, page, 'DistroKid login required. Complete login in the browser, then resume.');
+    finishedEarly = true;
+  }
   await saveScreenshot(page, 'screenshot-start.png');
   await auditDangerousButtons(page, dangerousNames);
 
@@ -248,7 +260,7 @@ try {
     console.log(`Discovery written: ${relativeToRepo(join(runDir, 'discovered-fields.md'))}`);
     await savePageSnapshot(page);
     await saveScreenshot(page, 'screenshot-final-review.png');
-    await finish(browser, false);
+    await finish(context, false);
     finishedEarly = true;
   }
 
@@ -257,6 +269,11 @@ try {
       if (page.isClosed()) {
         const message = 'DistroKid page closed before field loop completed';
         errors.push({ field: 'browser', error: message });
+        break;
+      }
+      if (await detectAuthRequired(page)) {
+        await blockForLogin(context, page, 'DistroKid login required. Complete login in the browser, then resume.');
+        finishedEarly = true;
         break;
       }
       if (isAlbumManifest(manifest) && isTrackLevelField(fieldName, fieldDef)) {
@@ -288,7 +305,7 @@ try {
 } catch (error) {
   errors.push({ field: 'browser', error: error.message });
 } finally {
-  if (!finishedEarly) await finish(browser, false);
+  if (!finishedEarly) await finish(context, false);
 }
 
 async function runFieldForManifest(page, fieldName, fieldDef, sourceManifest) {
@@ -929,13 +946,34 @@ async function savePageSnapshot(page) {
   writeText(join(runDir, 'html-snapshot.html'), html);
 }
 
-async function finish(browser, skipBrowserClose) {
+async function finish(context, skipBrowserClose) {
   if (finished) return;
   finished = true;
+  if (finalStatus === 'pending') {
+    if (errors.some(item => item.field === 'auth')) {
+      finalStatus = 'blocked';
+      finalCode = 'distrokid_login_required';
+      finalMessage = 'DistroKid login required. Complete login in the browser, then resume.';
+      exitCode = BLOCKED_LOGIN_EXIT_CODE;
+    } else if (errors.length) {
+      finalStatus = 'failed';
+      finalCode = 'distrokid_automation_failed';
+      finalMessage = errors[0]?.error || 'DistroKid automation failed.';
+      exitCode = 1;
+    } else {
+      finalStatus = liveSubmit ? 'complete' : 'complete';
+      finalCode = liveSubmit ? 'distrokid_live_submit_complete' : 'distrokid_preview_ready';
+      finalMessage = liveSubmit ? 'DistroKid live submit finished.' : 'DistroKid preview finished.';
+      exitCode = 0;
+    }
+  }
   runLog.finished_at = new Date().toISOString();
   runLog.filled_count = filledFields.length;
   runLog.skipped_count = skippedFields.length;
   runLog.error_count = errors.length;
+  runLog.final_status = finalStatus;
+  runLog.final_code = finalCode;
+  runLog.final_message = finalMessage;
   writeJson(join(runDir, 'run-log.json'), runLog);
   writeJson(join(runDir, 'filled-fields.json'), filledFields);
   writeJson(join(runDir, 'skipped-fields.json'), skippedFields);
@@ -948,10 +986,11 @@ async function finish(browser, skipBrowserClose) {
       latest_error_json: errors.length ? { errors } : null,
     }
   );
+  process.exitCode = exitCode;
 
   console.log('');
   printUploadSummary();
-  console.log(`Package: output/release-packages/${songId}/`);
+  console.log(`Package: output/release-packages/${manifestEntityId}/`);
   console.log(`Screenshots/logs: ${relativeToRepo(runDir)}`);
   if (skippedFields.length) {
     console.log('Skipped fields:');
@@ -961,15 +1000,83 @@ async function finish(browser, skipBrowserClose) {
     console.log('Live submit completed if DistroKid accepted the final click. Confirm the release URL in DistroKid.');
   } else {
     console.log('Manual next steps: review DistroKid, fill skipped fields, and submit manually only when ready.');
-    console.log(`After manual submission: bash scripts/pancake.sh distrokid:mark-submitted --song-id ${songId} --distrokid-url URL`);
+    console.log(`After manual submission: bash scripts/pancake.sh distrokid:mark-submitted --song-id ${manifestJobSongIds[0] || manifestEntityId} --distrokid-url URL`);
   }
 
-  if (browser && pauseAtEnd && !skipBrowserClose) {
+  if (context && pauseAtEnd && !skipBrowserClose) {
     console.log('Browser remains open for manual review. Close it when done.');
-    await waitForBrowserClose(browser, page);
-  } else if (browser) {
-    await browser.close().catch(() => {});
+    await waitForBrowserClose(context, page);
+  } else if (context) {
+    await context.close().catch(() => {});
   }
+}
+
+async function seedPersistentContext(context, storageState) {
+  if (!storageState?.cookies?.length) return;
+  try {
+    await context.addCookies(storageState.cookies);
+  } catch {}
+}
+
+function installAuthPersistence(context, page) {
+  const saver = async (trigger) => {
+    if (!page || page.isClosed()) return false;
+    if (!(await detectLoggedInDistroKidPage(page))) return false;
+    try {
+      await context.storageState({ path: DISTROKID_AUTH_PATH });
+      console.log(`[auth] Saved DistroKid session (${trigger})`);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  page.on('framenavigated', () => { void saver('framenavigated'); });
+  page.on('load', () => { void saver('load'); });
+}
+
+async function detectAuthRequired(page) {
+  const url = String(page?.url?.() || '').toLowerCase();
+  if (url.includes('/signin') || url.includes('/sign-in') || url.includes('accounts.google.com')) return true;
+  const text = String(await page.locator('body').innerText().catch(() => '')).toLowerCase();
+  return text.includes('sign in with google')
+    || text.includes("couldn't sign you in")
+    || text.includes('log in')
+    || text.includes('sign in');
+}
+
+async function detectLoggedInDistroKidPage(page) {
+  const url = String(page?.url?.() || '').toLowerCase();
+  if (!url.includes('distrokid.com') || url.includes('/signin') || url.includes('/sign-in')) return false;
+  const text = String(await page.locator('body').innerText().catch(() => '')).toLowerCase();
+  return url.includes('/new')
+    || text.includes('upload')
+    || text.includes('my music');
+}
+
+async function blockForLogin(context, page, message) {
+  const error = { field: 'auth', error: message, code: 'distrokid_login_required' };
+  errors.push(error);
+  finalStatus = 'blocked';
+  finalCode = 'distrokid_login_required';
+  finalMessage = message;
+  exitCode = BLOCKED_LOGIN_EXIT_CODE;
+  markManifestJobs(DISTROKID_JOB_STATUSES.AUTH_NEEDED, {
+    latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+    latest_error_json: error,
+  });
+  await saveScreenshot(page, 'screenshot-auth-required.png');
+  await savePageSnapshot(page);
+  emitRunEvent({
+    status: 'blocked',
+    code: finalCode,
+    message,
+    latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+  });
+  await finish(context, !headed);
+}
+
+function emitRunEvent(payload) {
+  console.log(`${DISTROKID_RUN_EVENT_PREFIX}${JSON.stringify(payload)}`);
 }
 
 function collectManifestSongIds(manifest) {
@@ -978,6 +1085,10 @@ function collectManifestSongIds(manifest) {
     if (ids.length) return [...new Set(ids)];
   }
   return [String(manifest?.song_id || '').trim()].filter(Boolean);
+}
+
+function resolveManifestEntityId(manifest) {
+  return String(manifest?.release_id || manifest?.album_id || manifest?.song_id || manifest?.tracks?.[0]?.song_id || '').trim();
 }
 
 function markManifestJobs(status, fields = {}) {
@@ -1028,9 +1139,10 @@ function printAiDisclosureSummary() {
   console.log(`- ai_part_audio: ${checked(disclosure.part_audio_performed_by_ai_and_humans)}`);
 }
 
-async function waitForBrowserClose(browser, page) {
+async function waitForBrowserClose(context, page) {
+  const browser = context?.browser?.() || null;
   const isBrowserClosed = await Promise.resolve(browser?.isConnected?.() === false).catch(() => true);
-  if (!browser || isBrowserClosed) return;
+  if (!context || isBrowserClosed) return;
   if (page?.isClosed?.()) return;
 
   await new Promise(resolve => {
@@ -1041,12 +1153,14 @@ async function waitForBrowserClose(browser, page) {
       resolve();
     };
 
-    try { browser.on('disconnected', done); } catch {}
+    try { browser?.on('disconnected', done); } catch {}
+    try { context.on('close', done); } catch {}
     try { page?.on('close', done); } catch {}
 
     process.once('SIGINT', done);
     process.once('SIGTERM', done);
   });
+  await context.close().catch(() => {});
 }
 
 function addSkipped(item) {

@@ -35,6 +35,7 @@ const {
   getSong,
   getSongsForAlbum,
   listReleaseCampaignTasks,
+  upsertReleaseCampaignTask,
   upsertSong,
 } = await import('../src/shared/db.js');
 const {
@@ -229,6 +230,34 @@ test('scheduled worker does not cross human gates', async () => {
   assert.ok(workerResult.processed.some(item => item.campaignId === created.campaign.id));
   assert.equal(state.tasks.find(task => task.task_key === 'distrokid_final_submit_approval')?.status, 'ready');
   assert.notEqual(state.tasks.find(task => task.task_key === 'youtube_teaser_schedule')?.status, 'complete');
+});
+
+test('skipped optional tasks persist and do not block downstream readiness', () => {
+  const songId = seedSong(uniqueId('MAGIC_SKIP_SINGLE'));
+  packageIds.add(songId);
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+
+  upsertReleaseCampaignTask({
+    campaign_id: created.campaign.id,
+    task_key: 'select_visual_assets',
+    status: 'complete',
+    completed_at: new Date().toISOString(),
+  });
+  upsertReleaseCampaignTask({
+    campaign_id: created.campaign.id,
+    task_key: 'youtube_teaser_schedule',
+    status: 'skipped',
+    reason: 'Skipping optional YouTube teaser for this release.',
+    completed_at: new Date().toISOString(),
+  });
+
+  const state = getMagicReleaseState('single', songId);
+  const skippedTask = state.tasks.find(task => task.task_key === 'youtube_teaser_schedule');
+  const dependentTask = state.tasks.find(task => task.task_key === 'short_form_schedule');
+
+  assert.equal(skippedTask?.status, 'skipped');
+  assert.ok(['ready', 'pending', 'complete', 'skipped'].includes(dependentTask?.status));
+  assert.equal(state.blockedTasks.some(task => task.task_key === 'youtube_teaser_schedule'), false);
 });
 
 test('Release Cockpit view model exposes Magic Release state', () => {

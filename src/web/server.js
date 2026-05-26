@@ -39,11 +39,15 @@ import { getMarketingTargets } from '../shared/marketing-db.js';
 import { getOutreachHistoryByTargetIds, normalizeOutletForApp } from '../shared/marketing-outlets.js';
 import { pickSuggestedTopicFromSuggestions, runSuggestPipeline } from '../shared/suggest.js';
 import {
+  clearBrandProfileDefaultImage,
   DEFAULT_PROFILE_ID,
+  findBrandProfileDefaultImage,
+  getBrandProfileMediaDir,
   listBrandProfiles,
   loadBrandProfile,
   loadBrandProfileById,
   saveBrandProfileById,
+  setBrandProfileDefaultImageFile,
   getActiveProfileId,
   setActiveProfileId,
   resolveBrandProfilePath,
@@ -81,10 +85,13 @@ import {
 } from '../shared/song-status.js';
 import { markSongSubmittedToDistroKid } from '../shared/distrokid-release.js';
 import {
+  buildDistroKidUploadInvocation,
+  hasConfirmedDistroKidAuth,
   captureHyperFollowLink,
   runDistroKidAlbumAutomation,
   runDistroKidSongAutomation,
 } from '../shared/distrokid-automation.js';
+import { createReleaseAutomationSupervisor } from '../shared/release-automation-supervisor.js';
 import {
   clearDistroKidQueue,
   DISTROKID_JOB_STATUSES,
@@ -179,11 +186,34 @@ const albumCreateImageUpload = _multer({
   },
 });
 
+const brandDefaultImageUpload = _multer({
+  storage: _multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const mediaDir = getBrandProfileMediaDir(normalizeProfileId(req.params.profileId));
+      fs.mkdirSync(mediaDir, { recursive: true });
+      for (const name of fs.readdirSync(mediaDir)) {
+        if (/^default-image\.(png|jpe?g|webp)$/i.test(name)) fs.unlinkSync(join(mediaDir, name));
+      }
+      cb(null, mediaDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.png';
+      cb(null, `default-image${ext}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, ALLOWED_IMG_EXTS.has(ext));
+  },
+});
+
 // ── In-memory job store for suggest runs ──────────────────────────
 const suggestJobs = new Map(); // jobId → { status, logs, results, error }
 
 // In-memory job store for full song pipeline runs
 const pipelineJobs = new Map(); // jobId → { status, logs, songId, error, startedAt }
+const activeReleaseAutomationRuns = new Map(); // releaseType:releaseId:action -> { runId, cancel, state }
 
 const app = express();
 const PORT = process.env.WEB_PORT || 3737;
@@ -201,6 +231,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
 // Serve generated output files under /media/
 app.use('/media', express.static(join(__dirname, '../../output')));
+app.use('/brand-media', express.static(join(__dirname, '../../config/brand-media')));
 app.use('/base-images', express.static(join(__dirname, '../../base images')));
 app.set('view engine', 'ejs');
 app.set('views', join(__dirname, 'views'));
@@ -343,6 +374,27 @@ app.post('/releases/:type/:id/actions/release-assets/build', async (req, res) =>
   }
 });
 
+app.post('/releases/:type/:id/actions/package-validation', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  const validation = cockpit.packageState?.validation;
+  const ok = Boolean(validation?.ready);
+  const message = validation?.summary || 'Canonical package manifest is missing.';
+  logReleaseCockpitEvent(
+    cockpit.type,
+    cockpit.id,
+    'package_validation',
+    ok ? 'complete' : 'blocked',
+    message,
+    {
+      package_path: cockpit.packageState?.path || null,
+      manifest_path: cockpit.packageState?.manifestPath || null,
+      validation,
+    },
+  );
+  respondReleaseAction(req, res, cockpit, message, { level: ok ? 'success' : 'warning' });
+});
+
 app.post('/releases/:type/:id/actions/generate-metadata', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
@@ -369,26 +421,25 @@ app.post('/releases/:type/:id/actions/distrokid-preview', async (req, res) => {
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
     validateReleaseAction('preview', cockpit);
-    if (cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.status === 'running') {
+    if (isReleaseAutomationActive(cockpit.type, cockpit.id, 'distrokid_preview')) {
       return respondReleaseAction(req, res, cockpit, 'DistroKid preview automation is already running.', { level: 'warning' });
     }
     const runId = `preview_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-    const command = buildDistroKidPreviewCommand(cockpit);
+    const previewInvocation = buildDistroKidPreviewCommand(cockpit);
     const runningLog = logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_preview', 'running', 'DistroKid preview automation started.', {
       runId,
-      command,
+      command: previewInvocation.command,
       script: 'scripts/distrokid/upload-release.mjs',
       entityType: cockpit.type,
       releaseId: cockpit.id,
+      auth_confirmed: previewInvocation.authConfirmed,
     });
-    runReleaseAutomationInBackground({
+    startReleaseAutomationChild({
       cockpit,
       action: 'distrokid_preview',
       runId,
-      command,
-      runner: () => cockpit.type === 'album'
-        ? runDistroKidAlbumAutomation(cockpit.id, { mode: 'preview' })
-        : runDistroKidSongAutomation(cockpit.id, { mode: 'preview' }),
+      command: previewInvocation.command,
+      args: previewInvocation.args,
       runningLog,
     });
     respondReleaseAction(req, res, cockpit, `DistroKid preview automation started. Run ID ${runId}.`, { level: 'info' });
@@ -397,6 +448,18 @@ app.post('/releases/:type/:id/actions/distrokid-preview', async (req, res) => {
     if (wantsJson(req)) return res.status(500).json({ ok: false, error: error.message });
     res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, { error: error.message, level: 'error' }));
   }
+});
+
+app.post('/releases/:type/:id/actions/distrokid-preview/stop', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  const active = getActiveReleaseAutomation(cockpit.type, cockpit.id, 'distrokid_preview');
+  if (!active) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: 'No active DistroKid preview automation is running.' });
+    return res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, { error: 'No active DistroKid preview automation is running.', level: 'warning' }));
+  }
+  active.cancel();
+  respondReleaseAction(req, res, cockpit, `Stopping DistroKid preview automation. Run ID ${active.runId}.`, { level: 'warning' });
 });
 
 app.post('/releases/:type/:id/actions/distrokid-live-submit', async (req, res) => {
@@ -2383,12 +2446,14 @@ app.get('/brand', (req, res) => {
   const activeProfileId = req.query.profile ? normalizeProfileId(req.query.profile) : activeForGenerationId;
   const profiles = listBrandProfiles();
   const profile = loadBrandProfileById(activeProfileId);
+  const defaultImage = findBrandProfileDefaultImage(activeProfileId, profile);
 
   res.render('brand/edit', {
     profileJson: JSON.stringify(profile, null, 2),
     profiles,
     activeProfileId,
     activeForGenerationId,
+    defaultImage,
   });
 });
 
@@ -2410,6 +2475,33 @@ app.post('/api/brand/activate', express.json(), (req, res) => {
     res.json({ ok: true, profileId });
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/brand/:profileId/default-image', (req, res) => {
+  const profileId = normalizeProfileId(req.params.profileId);
+  loadBrandProfileById(profileId);
+
+  brandDefaultImageUpload.single('default_image')(req, res, (err) => {
+    if (err) return res.status(400).json({ ok: false, error: err.message });
+    if (!req.file) return res.status(400).json({ ok: false, error: 'No valid image file provided (png/jpg/jpeg/webp)' });
+
+    try {
+      const result = setBrandProfileDefaultImageFile(profileId, req.file.filename);
+      res.json({ ok: true, profileId, defaultImage: result.defaultImage, profile: result.profile });
+    } catch (error) {
+      res.status(400).json({ ok: false, error: error.message });
+    }
+  });
+});
+
+app.post('/api/brand/:profileId/default-image/clear', (req, res) => {
+  try {
+    const profileId = normalizeProfileId(req.params.profileId);
+    const result = clearBrandProfileDefaultImage(profileId);
+    res.json({ ok: true, profileId, defaultImage: result.defaultImage, profile: result.profile });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
   }
 });
 
@@ -2554,36 +2646,57 @@ function buildReleaseDetailUrl(type, id, options = {}) {
 }
 
 function buildDistroKidPreviewCommand(cockpit) {
-  const modeArgs = cockpit.type === 'album'
-    ? `--manifest output/release-packages/${cockpit.id}/manifest.json --no-pause --dry-run`
-    : `--manifest output/release-packages/${cockpit.id}/manifest.json --no-pause --dry-run`;
-  return `${process.execPath} scripts/distrokid/upload-release.mjs ${modeArgs}`;
+  const manifestPath = getCanonicalReleaseManifestPath(cockpit.type, cockpit.id);
+  return buildDistroKidUploadInvocation({
+    manifestPath,
+    mode: 'preview',
+    interactivePreview: true,
+    authConfirmed: hasConfirmedDistroKidAuth(),
+  });
 }
 
-function runReleaseAutomationInBackground({ cockpit, action, runId, command, runner }) {
-  void Promise.resolve()
-    .then(async () => {
-      const result = await runner();
-      const logPath = findReleaseAutomationLogPath(cockpit, result);
-      logReleaseCockpitEvent(cockpit.type, cockpit.id, action, 'complete', `${humanizeReleaseAction(action)} finished.`, {
-        runId,
-        command,
-        script: 'scripts/distrokid/upload-release.mjs',
-        latest_run_log_path: logPath,
-        result,
-      });
-    })
-    .catch(error => {
-      const logPath = error.runLogPath || findReleaseAutomationLogPath(cockpit, null);
-      logReleaseCockpitEvent(cockpit.type, cockpit.id, action, 'failed', error.message, {
-        runId,
-        command,
-        script: 'scripts/distrokid/upload-release.mjs',
-        latest_run_log_path: logPath,
-        error: error.message,
-        details: error.details || [],
-      });
-    });
+function startReleaseAutomationChild({ cockpit, action, runId, command, args }) {
+  const child = spawn(process.execPath, args, {
+    cwd: join(__dirname, '../..'),
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const key = releaseAutomationKey(cockpit.type, cockpit.id, action);
+  const supervisor = createReleaseAutomationSupervisor({
+    child,
+    runId,
+    action,
+    command,
+    script: 'scripts/distrokid/upload-release.mjs',
+    releaseType: cockpit.type,
+    releaseId: cockpit.id,
+    logPath: findReleaseAutomationLogPath(cockpit, null),
+    logEvent: (status, message, payload) => {
+      logReleaseCockpitEvent(cockpit.type, cockpit.id, action, status, message, payload);
+    },
+    onFinalized: () => {
+      const active = activeReleaseAutomationRuns.get(key);
+      if (active?.runId === runId) activeReleaseAutomationRuns.delete(key);
+    },
+  });
+  activeReleaseAutomationRuns.set(key, {
+    runId,
+    cancel: () => supervisor.cancel(),
+    state: supervisor.state,
+  });
+}
+
+function releaseAutomationKey(type, id, action) {
+  return `${type}:${id}:${action}`;
+}
+
+function getActiveReleaseAutomation(type, id, action) {
+  return activeReleaseAutomationRuns.get(releaseAutomationKey(type, id, action)) || null;
+}
+
+function isReleaseAutomationActive(type, id, action) {
+  const active = getActiveReleaseAutomation(type, id, action);
+  return Boolean(active && !active.state.finalized);
 }
 
 function findReleaseAutomationLogPath(cockpit, result) {

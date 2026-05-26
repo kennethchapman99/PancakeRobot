@@ -90,6 +90,42 @@ test('Release Cockpit index entries are DB-first lightweight summaries', () => {
   assert.equal(albumEntry.blockerCount, 0);
 });
 
+test('Release Cockpit hides orphan zero-track albums but keeps active planned generations', () => {
+  const hiddenAlbumId = createAlbum({
+    id: uniqueId('LIGHT_COCKPIT_ALBUM'),
+    album_title: 'Hidden Zero Track Album',
+    number_of_songs: 4,
+    status: 'completed_with_failures',
+    brand_profile_id: 'default',
+    is_test: false,
+  });
+  albumIds.add(hiddenAlbumId);
+
+  const visibleAlbumId = createAlbum({
+    id: uniqueId('LIGHT_COCKPIT_ALBUM'),
+    album_title: 'Planned Zero Track Album',
+    number_of_songs: 3,
+    status: 'generating_tracks',
+    brand_profile_id: 'default',
+    is_test: false,
+    shared_orchestration: {
+      plan: {
+        tracks: [{ title: 'One' }, { title: 'Two' }, { title: 'Three' }],
+      },
+    },
+  });
+  albumIds.add(visibleAlbumId);
+
+  const entries = listReleaseCockpitEntries();
+  const hidden = entries.find(entry => entry.id === hiddenAlbumId);
+  const visible = entries.find(entry => entry.id === visibleAlbumId);
+
+  assert.equal(hidden, undefined);
+  assert.ok(visible);
+  assert.equal(visible.stageSummary, '3 planned tracks');
+  assert.equal(visible.trackCount, 3);
+});
+
 test('removeSongsFromAlbum detaches songs, keeps catalog rows, renumbers remaining tracks, and updates album count', () => {
   const first = createSong('Keep Track One');
   const second = createSong('Remove Track Two');

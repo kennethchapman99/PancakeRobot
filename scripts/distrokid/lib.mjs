@@ -8,9 +8,11 @@ export const OUTPUT_DIR = join(REPO_ROOT, 'output');
 export const RELEASE_PACKAGES_DIR = join(OUTPUT_DIR, 'release-packages');
 export const AUTH_DIR = join(REPO_ROOT, '.auth');
 export const DISTROKID_AUTH_PATH = join(AUTH_DIR, 'distrokid.json');
+export const DISTROKID_PLAYWRIGHT_PROFILE_DIR = join(AUTH_DIR, 'distrokid-playwright-profile');
 export const DISTROKID_CONFIG_DIR = join(REPO_ROOT, 'config', 'distrokid');
 export const FIELD_MAP_EXAMPLE_PATH = join(DISTROKID_CONFIG_DIR, 'field-map.example.json');
 export const FIELD_MAP_LOCAL_PATH = join(DISTROKID_CONFIG_DIR, 'field-map.local.json');
+export const DISTROKID_RUN_EVENT_PREFIX = 'PANCAKE_DISTROKID_EVENT ';
 
 export const DANGEROUS_BUTTON_NAMES = Object.freeze([
   'Submit',
@@ -96,6 +98,10 @@ export function getDistrokidRunDir(songId) {
 export function hasDistrokidCookies(storageState) {
   return Array.isArray(storageState?.cookies)
     && storageState.cookies.some(cookie => String(cookie.domain || '').includes('distrokid.com'));
+}
+
+export function hasSavedDistrokidAuth() {
+  return exists(DISTROKID_AUTH_PATH) && hasDistrokidCookies(safeReadJson(DISTROKID_AUTH_PATH, null));
 }
 
 export function getCookieDomains(storageState) {

@@ -17,6 +17,7 @@ const {
 } = await import('../src/shared/db.js');
 const { getDistroKidJob } = await import('../src/shared/distrokid-jobs.js');
 const {
+  buildDistroKidUploadInvocation,
   captureHyperFollowLink,
   runDistroKidAlbumAutomation,
   runDistroKidSongAutomation,
@@ -88,4 +89,24 @@ test('album automation loops over tracks without requiring song-level manual ass
   assert.deepEqual(getSongsForAlbum(albumId).map(song => song.status), ['draft', 'draft']);
   assert.ok(result.log.some(item => /Track 1 filled from package metadata/i.test(item.message)));
   assert.ok(result.log.some(item => /Track 2 filled from package metadata/i.test(item.message)));
+});
+
+test('interactive preview invocation omits --no-pause until auth is confirmed', () => {
+  const manifestPath = '/tmp/distrokid-manifest.json';
+
+  const blocked = buildDistroKidUploadInvocation({
+    manifestPath,
+    mode: 'preview',
+    interactivePreview: true,
+    authConfirmed: false,
+  });
+  const confirmed = buildDistroKidUploadInvocation({
+    manifestPath,
+    mode: 'preview',
+    interactivePreview: true,
+    authConfirmed: true,
+  });
+
+  assert.equal(blocked.args.includes('--no-pause'), false);
+  assert.equal(confirmed.args.includes('--no-pause'), true);
 });
