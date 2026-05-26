@@ -167,7 +167,7 @@ function writePackageManifest(releaseId, manifest) {
   return filePath;
 }
 
-function writePreviewRunArtifacts(releaseId, { releaseType = 'single', filledCount = 12, skippedCount = 0, errorCount = 0, dryRun = true, stoppedBeforeSubmit = true, errors = [], skippedFields = [] } = {}) {
+function writePreviewRunArtifacts(releaseId, { releaseType = 'single', filledCount = 12, skippedCount = 0, errorCount = 0, dryRun = true, stoppedBeforeSubmit = true, errors = [], skippedFields = [], finalStatus = errorCount > 0 ? 'failed' : 'complete', trackCountValidation = null } = {}) {
   const runDir = path.join(repoRoot, 'output', 'release-packages', releaseId, 'distrokid-run');
   fs.mkdirSync(runDir, { recursive: true });
   const runLog = {
@@ -181,10 +181,19 @@ function writePreviewRunArtifacts(releaseId, { releaseType = 'single', filledCou
     filled_count: filledCount,
     skipped_count: skippedCount,
     error_count: errorCount,
+    final_status: finalStatus,
+    diagnostics: {
+      track_count_validation: trackCountValidation,
+    },
   };
   fs.writeFileSync(path.join(runDir, 'run-log.json'), `${JSON.stringify(runLog, null, 2)}\n`);
   fs.writeFileSync(path.join(runDir, 'errors.json'), `${JSON.stringify(errors, null, 2)}\n`);
   fs.writeFileSync(path.join(runDir, 'skipped-fields.json'), `${JSON.stringify(skippedFields, null, 2)}\n`);
+  fs.writeFileSync(path.join(runDir, 'filled-fields.json'), '[]\n');
+  fs.writeFileSync(path.join(runDir, 'screenshot-after-fill.png'), 'fake-png');
+  fs.writeFileSync(path.join(runDir, 'screenshot-final-review.png'), 'fake-png');
+  fs.writeFileSync(path.join(runDir, 'html-snapshot.html'), '<html><body>test</body></html>');
+  fs.writeFileSync(path.join(runDir, 'page-text-snapshot.txt'), 'test page');
   return `output/release-packages/${releaseId}/distrokid-run/run-log.json`;
 }
 
@@ -609,6 +618,69 @@ test('failed DistroKid preview is visible in readiness row and run history', () 
   assert.ok(previewStage.actions.some(action => /DistroKid preview automation/.test(action.label)));
   assert.equal(cockpit.runHistory[0].runId, 'preview_test_run');
   assert.equal(cockpit.runHistory[0].status, 'failed');
+});
+
+test('running preview with a finished run-log is coerced out of running status', () => {
+  const songId = createSong('Preview Running Coercion Single');
+  const logPath = writePreviewRunArtifacts(songId, {
+    filledCount: 0,
+    skippedCount: 2,
+    errorCount: 1,
+    finalStatus: 'failed',
+    errors: [
+      { field: 'number_of_songs', error: 'Number of songs dropdown does not contain required option: 21 songs' },
+    ],
+  });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'running', 'DistroKid preview automation started.', {
+    runId: 'preview_running_coercion',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: logPath,
+    active: false,
+  });
+
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+
+  assert.equal(previewStage.latestRun?.status, 'failed');
+  assert.notEqual(previewStage.status, 'running');
+});
+
+test('preview diagnostics expose artifact links and selected/rendered track counts', () => {
+  const songId = createSong('Preview Artifact Links Single');
+  const logPath = writePreviewRunArtifacts(songId, {
+    filledCount: 12,
+    skippedCount: 0,
+    errorCount: 0,
+    finalStatus: 'complete',
+    trackCountValidation: {
+      requestedTrackCount: 21,
+      selectedOption: '21 songs',
+      renderedTrackCount: 21,
+      ok: true,
+    },
+  });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'complete', 'Automation process complete.', {
+    runId: 'preview_artifacts_run',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: logPath,
+  });
+
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+  const labels = previewStage.diagnostics?.artifacts?.map(item => item.label) || [];
+
+  assert.equal(previewStage.diagnostics?.trackCountValidation?.selectedOption, '21 songs');
+  assert.equal(previewStage.diagnostics?.trackCountValidation?.renderedTrackCount, 21);
+  assert.deepEqual(labels, [
+    'Final review screenshot',
+    'After fill screenshot',
+    'Errors JSON',
+    'Filled fields JSON',
+    'Skipped fields JSON',
+    'Run log JSON',
+    'HTML snapshot',
+    'Page text snapshot',
+  ]);
 });
 
 test('process-complete preview with zero filled fields and errors renders as failed and blocks approval', () => {

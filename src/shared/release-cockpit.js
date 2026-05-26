@@ -1085,12 +1085,14 @@ function normalizeRunStatus(status) {
 
 function enrichRunRecord(record) {
   const diagnostics = loadRunDiagnostics(record.logPath);
+  const status = coerceRunStatusFromDiagnostics(record.status, diagnostics.runLog);
   return {
     ...record,
+    status,
     diagnostics,
-    processStatus: record.status,
-    processStatusLabel: humanizeProcessStatus(record.status),
-    displayStatus: humanizeRunDisplayStatus(record),
+    processStatus: status,
+    processStatusLabel: humanizeProcessStatus(status),
+    displayStatus: humanizeRunDisplayStatus({ ...record, status, diagnostics }),
   };
 }
 
@@ -1134,13 +1136,14 @@ function extractRunLogPath(log) {
 
 function loadRunDiagnostics(logPath) {
   const resolved = resolveOutputPath(logPath);
-  if (!resolved) return { runLog: null, errors: [], skippedFields: [] };
+  if (!resolved) return { runLog: null, errors: [], skippedFields: [], artifacts: [] };
   const runLog = readJsonIfExists(resolved);
   const runDir = path.dirname(resolved);
   return {
     runLog,
     errors: readJsonIfExists(path.join(runDir, 'errors.json')) || [],
     skippedFields: readJsonIfExists(path.join(runDir, 'skipped-fields.json')) || runLog?.diagnostics?.skipped_fields || [],
+    artifacts: collectRunArtifacts(runDir),
   };
 }
 
@@ -1153,6 +1156,39 @@ function resolveOutputPath(filePath) {
 function toOutputMediaUrl(filePath) {
   const relativePath = String(filePath || '').trim().replace(/^output\//, '');
   return relativePath ? `/media/${relativePath}` : '';
+}
+
+function collectRunArtifacts(runDir) {
+  const files = [
+    ['Final review screenshot', 'screenshot-final-review.png'],
+    ['After fill screenshot', 'screenshot-after-fill.png'],
+    ['Errors JSON', 'errors.json'],
+    ['Filled fields JSON', 'filled-fields.json'],
+    ['Skipped fields JSON', 'skipped-fields.json'],
+    ['Run log JSON', 'run-log.json'],
+    ['HTML snapshot', 'html-snapshot.html'],
+    ['Page text snapshot', 'page-text-snapshot.txt'],
+  ];
+  return files
+    .map(([label, filename]) => {
+      const absolutePath = path.join(runDir, filename);
+      if (!fs.existsSync(absolutePath)) return null;
+      const relativePath = path.relative(REPO_ROOT, absolutePath).replace(/\\/g, '/');
+      return {
+        label,
+        filename,
+        path: relativePath,
+        url: toOutputMediaUrl(relativePath),
+      };
+    })
+    .filter(Boolean);
+}
+
+function coerceRunStatusFromDiagnostics(status, runLog) {
+  if (status !== 'running' || !runLog?.finished_at) return status;
+  if (runLog.final_status) return normalizeRunStatus(runLog.final_status);
+  if (Number(runLog.error_count || 0) > 0) return 'failed';
+  return 'complete';
 }
 
 function shouldReplaceRunRecord(record, log, normalizedStatus) {
@@ -1248,12 +1284,20 @@ function summarizeDistroKidDiagnostics(run) {
   if (!runLog) return null;
   const grouped = groupDistroKidMissingFields(run);
   const requiredMissingCount = grouped.reduce((sum, group) => sum + group.items.length, 0);
+  const trackCountValidation = runLog?.diagnostics?.track_count_validation || null;
   return {
     filledCount: Number(runLog.filled_count || 0),
     skippedCount: Number(runLog.skipped_count || 0),
     errorCount: Number(runLog.error_count || 0),
     requiredMissingCount,
     missingGroups: grouped,
+    artifacts: run?.diagnostics?.artifacts || [],
+    trackCountValidation: trackCountValidation ? {
+      requestedTrackCount: Number(trackCountValidation.requestedTrackCount || 0) || 0,
+      selectedOption: trackCountValidation.selectedOption || '',
+      renderedTrackCount: Number(trackCountValidation.renderedTrackCount || 0) || 0,
+      ok: trackCountValidation.ok === true,
+    } : null,
   };
 }
 

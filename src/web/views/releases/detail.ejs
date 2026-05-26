@@ -150,6 +150,13 @@
                           <span><strong><%= stage.diagnostics.skippedCount %></strong> skipped</span>
                           <span><strong><%= stage.diagnostics.errorCount %></strong> errors</span>
                         </div>
+                        <% if (stage.diagnostics.trackCountValidation) { %>
+                          <div class="mt-2 flex flex-wrap gap-3 text-zinc-700">
+                            <span><strong><%= stage.diagnostics.trackCountValidation.requestedTrackCount %></strong> requested tracks</span>
+                            <span><strong><%= stage.diagnostics.trackCountValidation.selectedOption || 'n/a' %></strong> selected</span>
+                            <span><strong><%= stage.diagnostics.trackCountValidation.renderedTrackCount %></strong> rendered tracks</span>
+                          </div>
+                        <% } %>
                         <% if ((stage.diagnostics.missingGroups || []).length) { %>
                           <div class="mt-3 space-y-2">
                             <% stage.diagnostics.missingGroups.forEach(group => { %>
@@ -161,6 +168,13 @@
                                   <% }) %>
                                 </ul>
                               </div>
+                            <% }) %>
+                          </div>
+                        <% } %>
+                        <% if ((stage.diagnostics.artifacts || []).length) { %>
+                          <div class="mt-3 flex flex-wrap gap-3">
+                            <% stage.diagnostics.artifacts.forEach(artifact => { %>
+                              <a href="<%= artifact.url %>" target="_blank" class="font-semibold text-sky-700 hover:underline"><%= artifact.label %></a>
                             <% }) %>
                           </div>
                         <% } %>

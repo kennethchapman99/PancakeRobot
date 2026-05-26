@@ -28,6 +28,13 @@ import {
   writeJson,
   writeText,
 } from './lib.mjs';
+import {
+  BLOCKED_UPLOAD_VALIDATION_CODE,
+  BLOCKED_UPLOAD_VALIDATION_EXIT_CODE,
+  createTrackCountValidationError,
+  ensureDistroKidTrackCount,
+  fillReleaseFields,
+} from './upload-release-helpers.mjs';
 
 const { values } = parseArgs({
   manifest: { type: 'string' },
@@ -148,6 +155,7 @@ const runLog = {
   diagnostics: {
     skipped_fields: [],
     discovery_files: [],
+    track_count_validation: null,
   },
   final_status: null,
   final_code: null,
@@ -265,40 +273,68 @@ try {
   }
 
   if (!finishedEarly) {
-    for (const [fieldName, fieldDef] of getOrderedFields(fieldMap.fields || {})) {
-      if (page.isClosed()) {
-        const message = 'DistroKid page closed before field loop completed';
-        errors.push({ field: 'browser', error: message });
-        break;
-      }
-      if (await detectAuthRequired(page)) {
-        await blockForLogin(context, page, 'DistroKid login required. Complete login in the browser, then resume.');
-        finishedEarly = true;
-        break;
-      }
-      if (isAlbumManifest(manifest) && isTrackLevelField(fieldName, fieldDef)) {
-        for (const [trackIndex, trackManifest] of manifest.tracks.entries()) {
-          const trackFieldDef = fieldDefForTrack(fieldDef, trackIndex + 1);
-          await runFieldForManifest(page, `${fieldName}_track_${trackIndex + 1}`, trackFieldDef, trackManifest);
+    const fillResult = await fillReleaseFields({
+      page,
+      manifest,
+      fieldEntries: getOrderedFields(fieldMap.fields || {}),
+      ensureTrackCount: async () => {
+        const trackCount = Array.isArray(manifest.tracks) ? manifest.tracks.length : 1;
+        const result = await ensureDistroKidTrackCount(page, trackCount, runDir);
+        runLog.diagnostics.track_count_validation = result;
+        return result;
+      },
+      runFieldForManifest: async (...args) => {
+        if (page.isClosed()) {
+          const message = 'DistroKid page closed before field loop completed';
+          errors.push({ field: 'browser', error: message });
+          return;
         }
-        continue;
-      }
-      await runFieldForManifest(page, fieldName, fieldDef, manifest);
+        if (await detectAuthRequired(page)) {
+          await blockForLogin(context, page, 'DistroKid login required. Complete login in the browser, then resume.');
+          finishedEarly = true;
+          return;
+        }
+        if (!finishedEarly) await runFieldForManifest(...args);
+      },
+    });
+
+    if (!fillResult.ok) {
+      const trackCountError = createTrackCountValidationError(fillResult.trackCountCheck);
+      errors.push(trackCountError);
+      finalStatus = 'blocked';
+      finalCode = BLOCKED_UPLOAD_VALIDATION_CODE;
+      finalMessage = trackCountError.error;
+      exitCode = BLOCKED_UPLOAD_VALIDATION_EXIT_CODE;
+      markManifestJobs(DISTROKID_JOB_STATUSES.BLOCKED_UPLOAD_VALIDATION, {
+        latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+        latest_error_json: trackCountError,
+      });
+      await saveScreenshot(page, 'screenshot-track-count-validation.png');
+      await savePageSnapshot(page);
+      emitRunEvent({
+        status: 'blocked',
+        code: finalCode,
+        message: finalMessage,
+        latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+      });
+      finishedEarly = true;
     }
 
-    await page.waitForTimeout(1000);
-    await saveScreenshot(page, 'screenshot-after-fill.png');
-    await auditDangerousButtons(page, dangerousNames);
-    await saveScreenshot(page, 'screenshot-final-review.png');
-    await savePageSnapshot(page);
-    if (liveSubmit) {
-      const submitResult = await submitRelease(page, fieldMap);
-      runLog.submission = submitResult;
-      if (submitResult.ok) {
-        runLog.stopped_before_submit = false;
-        console.log(`DistroKid submit clicked: ${submitResult.selector || submitResult.text}`);
-      } else {
-        errors.push({ field: 'submit', error: submitResult.reason });
+    if (!finishedEarly) {
+      await page.waitForTimeout(1000);
+      await saveScreenshot(page, 'screenshot-after-fill.png');
+      await auditDangerousButtons(page, dangerousNames);
+      await saveScreenshot(page, 'screenshot-final-review.png');
+      await savePageSnapshot(page);
+      if (liveSubmit) {
+        const submitResult = await submitRelease(page, fieldMap);
+        runLog.submission = submitResult;
+        if (submitResult.ok) {
+          runLog.stopped_before_submit = false;
+          console.log(`DistroKid submit clicked: ${submitResult.selector || submitResult.text}`);
+        } else {
+          errors.push({ field: 'submit', error: submitResult.reason });
+        }
       }
     }
   }
@@ -772,50 +808,6 @@ function fieldOrder(fieldName, fieldDef = {}) {
   return 10;
 }
 
-function isAlbumManifest(manifest) {
-  return Array.isArray(manifest.tracks) && manifest.tracks.length > 0;
-}
-
-function isTrackLevelField(fieldName, fieldDef = {}) {
-  const key = fieldDef.manifest_key || fieldName;
-  return [
-    'audio_file',
-    'track_title',
-    'lyrics_file',
-    'explicit',
-    'clean_always',
-    'contains_lyrics',
-    'instrumental',
-    'songwriter_real_name.role',
-    'songwriter_real_name.first',
-    'songwriter_real_name.middle',
-    'songwriter_real_name.last',
-    'apple_music_credits.performer.role',
-    'apple_music_credits.performer.name',
-    'apple_music_credits.producer.role',
-    'apple_music_credits.producer.name',
-  ].includes(key);
-}
-
-function fieldDefForTrack(fieldDef, trackNumber) {
-  const replaceTrack = value => String(value)
-    .replaceAll('{{track}}', String(trackNumber))
-    .replaceAll('{{trackIndex}}', String(trackNumber))
-    .replaceAll('Track 1', `Track ${trackNumber}`)
-    .replaceAll('track-1-', `track-${trackNumber}-`)
-    .replaceAll('title_1', `title_${trackNumber}`)
-    .replaceAll('js-track-upload-1', `js-track-upload-${trackNumber}`)
-    .replaceAll('radio-button-1', `radio-button-${trackNumber}`)
-    .replaceAll('songwriter_real_name_first1', `songwriter_real_name_first${trackNumber}`)
-    .replaceAll('songwriter_real_name_middle1', `songwriter_real_name_middle${trackNumber}`)
-    .replaceAll('songwriter_real_name_last1', `songwriter_real_name_last${trackNumber}`);
-  const next = { ...fieldDef, track_number: trackNumber };
-  for (const key of ['selector', 'name_prefix', 'labelText', 'label_text']) {
-    if (next[key]) next[key] = replaceTrack(next[key]);
-  }
-  return next;
-}
-
 async function findVisibleInputByNamePrefixAndLabel(page, type, namePrefix, labelText) {
   return page.evaluate(({ type, namePrefix, labelText }) => {
     const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -955,6 +947,11 @@ async function finish(context, skipBrowserClose) {
       finalCode = 'distrokid_login_required';
       finalMessage = 'DistroKid login required. Complete login in the browser, then resume.';
       exitCode = BLOCKED_LOGIN_EXIT_CODE;
+    } else if (errors.some(item => item.code === BLOCKED_UPLOAD_VALIDATION_CODE)) {
+      finalStatus = 'blocked';
+      finalCode = BLOCKED_UPLOAD_VALIDATION_CODE;
+      finalMessage = errors.find(item => item.code === BLOCKED_UPLOAD_VALIDATION_CODE)?.error || 'DistroKid upload blocked by Number of songs validation.';
+      exitCode = BLOCKED_UPLOAD_VALIDATION_EXIT_CODE;
     } else if (errors.length) {
       finalStatus = 'failed';
       finalCode = 'distrokid_automation_failed';
@@ -979,8 +976,17 @@ async function finish(context, skipBrowserClose) {
   writeJson(join(runDir, 'skipped-fields.json'), skippedFields);
   writeJson(join(runDir, 'errors.json'), errors);
   const authError = errors.some(item => item.field === 'auth');
+  const validationBlocked = errors.some(item => item.code === BLOCKED_UPLOAD_VALIDATION_CODE) || finalCode === BLOCKED_UPLOAD_VALIDATION_CODE;
   markManifestJobs(
-    authError ? DISTROKID_JOB_STATUSES.AUTH_NEEDED : errors.length ? DISTROKID_JOB_STATUSES.FAILED : liveSubmit ? DISTROKID_JOB_STATUSES.SUBMITTED : DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW,
+    authError
+      ? DISTROKID_JOB_STATUSES.AUTH_NEEDED
+      : validationBlocked
+        ? DISTROKID_JOB_STATUSES.BLOCKED_UPLOAD_VALIDATION
+        : errors.length
+          ? DISTROKID_JOB_STATUSES.FAILED
+          : liveSubmit
+            ? DISTROKID_JOB_STATUSES.SUBMITTED
+            : DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW,
     {
       latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
       latest_error_json: errors.length ? { errors } : null,

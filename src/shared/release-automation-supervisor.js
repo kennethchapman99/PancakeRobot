@@ -1,7 +1,5 @@
 import { DISTROKID_RUN_EVENT_PREFIX } from '../../scripts/distrokid/lib.mjs';
 
-const BLOCKED_EXIT_CODE = 21;
-
 export function createReleaseAutomationSupervisor({
   child,
   runId,
@@ -104,7 +102,7 @@ export function createReleaseAutomationSupervisor({
       return;
     }
 
-    if (state.blocked && code === BLOCKED_EXIT_CODE) {
+    if (state.blocked) {
       finalize('blocked', state.blockedMessage || 'Automation blocked.', {
         exitCode: code,
         signal,

@@ -47,6 +47,35 @@ test('login-required event marks run blocked without finalizing immediately', ()
   assert.deepEqual(child.killCalls, []);
 });
 
+test('blocked upload validation finalizes blocked even with non-login exit code', () => {
+  const child = createFakeChild();
+  const events = [];
+  createReleaseAutomationSupervisor({
+    child,
+    runId: 'run_blocked_validation',
+    action: 'distrokid_preview',
+    command: 'node upload-release.mjs --dry-run',
+    script: 'scripts/distrokid/upload-release.mjs',
+    releaseType: 'album',
+    releaseId: 'ALBUM_BLOCKED',
+    logPath: 'output/release-packages/ALBUM_BLOCKED/distrokid-run/run-log.json',
+    logEvent: (status, message, payload) => events.push({ status, message, payload }),
+  });
+
+  child.stdout.write(`${DISTROKID_RUN_EVENT_PREFIX}${JSON.stringify({
+    status: 'blocked',
+    code: 'blocked_upload_validation',
+    message: 'Number of songs dropdown does not contain required option: 21 songs',
+    latest_run_log_path: 'output/release-packages/ALBUM_BLOCKED/distrokid-run/run-log.json',
+  })}\n`);
+  child.emit('exit', 22, null);
+  child.emit('close', 22, null);
+
+  assert.equal(events.at(-1).status, 'blocked');
+  assert.equal(events.at(-1).payload.code, 'blocked_upload_validation');
+  assert.equal(events.at(-1).payload.active, false);
+});
+
 test('unexpected child close becomes failed instead of remaining running', () => {
   const child = createFakeChild();
   const events = [];

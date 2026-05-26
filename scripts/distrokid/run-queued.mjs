@@ -22,6 +22,7 @@ import {
   writeJson,
   writeText,
 } from './lib.mjs';
+import { BLOCKED_UPLOAD_VALIDATION_EXIT_CODE } from './upload-release-helpers.mjs';
 
 const { values } = parseArgs({
   limit: { type: 'string', default: '5' },
@@ -127,10 +128,17 @@ for (const job of jobs) {
     result.status = DISTROKID_JOB_STATUSES.AWAITING_MANUAL_REVIEW;
   } catch (error) {
     result.error = error.message;
-    result.status = DISTROKID_JOB_STATUSES.FAILED;
-    markDistroKidJobStatus(job.song_id, DISTROKID_JOB_STATUSES.FAILED, {
-      latest_error_json: { message: error.message },
-    });
+    if (error.status === BLOCKED_UPLOAD_VALIDATION_EXIT_CODE) {
+      result.status = DISTROKID_JOB_STATUSES.BLOCKED_UPLOAD_VALIDATION;
+      markDistroKidJobStatus(job.song_id, DISTROKID_JOB_STATUSES.BLOCKED_UPLOAD_VALIDATION, {
+        latest_error_json: { message: error.message },
+      });
+    } else {
+      result.status = DISTROKID_JOB_STATUSES.FAILED;
+      markDistroKidJobStatus(job.song_id, DISTROKID_JOB_STATUSES.FAILED, {
+        latest_error_json: { message: error.message },
+      });
+    }
   }
 }
 
