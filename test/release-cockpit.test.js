@@ -36,6 +36,7 @@ const {
   assertReleaseLiveSubmitReady,
   buildReleasePackageForCockpit,
   buildReleaseCockpitViewModel,
+  getCanonicalReleaseManifestPath,
   getCanonicalReleaseManifest,
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
@@ -68,9 +69,16 @@ const {
   getSelectedReleaseAudio,
   selectReleaseAudio,
 } = await import('../src/shared/song-audio-selection.js');
+const { app } = await import('../src/web/server.js');
 
 function uniqueId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function startServer() {
+  return new Promise(resolve => {
+    const server = app.listen(0, () => resolve(server));
+  });
 }
 
 function createSong(title, overrides = {}) {
@@ -157,6 +165,27 @@ function writePackageManifest(releaseId, manifest) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(manifest, null, 2)}\n`);
   return filePath;
+}
+
+function writePreviewRunArtifacts(releaseId, { releaseType = 'single', filledCount = 12, skippedCount = 0, errorCount = 0, dryRun = true, stoppedBeforeSubmit = true, errors = [], skippedFields = [] } = {}) {
+  const runDir = path.join(repoRoot, 'output', 'release-packages', releaseId, 'distrokid-run');
+  fs.mkdirSync(runDir, { recursive: true });
+  const runLog = {
+    song_id: releaseType === 'single' ? releaseId : null,
+    release_id: releaseId,
+    manifest_path: `output/release-packages/${releaseId}/manifest.json`,
+    dry_run: dryRun,
+    stopped_before_submit: stoppedBeforeSubmit,
+    started_at: new Date().toISOString(),
+    finished_at: new Date().toISOString(),
+    filled_count: filledCount,
+    skipped_count: skippedCount,
+    error_count: errorCount,
+  };
+  fs.writeFileSync(path.join(runDir, 'run-log.json'), `${JSON.stringify(runLog, null, 2)}\n`);
+  fs.writeFileSync(path.join(runDir, 'errors.json'), `${JSON.stringify(errors, null, 2)}\n`);
+  fs.writeFileSync(path.join(runDir, 'skipped-fields.json'), `${JSON.stringify(skippedFields, null, 2)}\n`);
+  return `output/release-packages/${releaseId}/distrokid-run/run-log.json`;
 }
 
 function seedEmailOutlet(id) {
@@ -582,6 +611,135 @@ test('failed DistroKid preview is visible in readiness row and run history', () 
   assert.equal(cockpit.runHistory[0].status, 'failed');
 });
 
+test('process-complete preview with zero filled fields and errors renders as failed and blocks approval', () => {
+  const albumId = 'ALBUM_MPK9H71S_RTCM';
+  albumIds.add(albumId);
+  createAlbum({
+    id: albumId,
+    album_title: 'Fixture Album',
+    release_date: '2026-06-20',
+    number_of_songs: 21,
+    status: 'assembled',
+    is_test: true,
+  });
+  logReleaseCockpitEvent('album', albumId, 'distrokid_preview', 'complete', 'Automation process complete.', {
+    runId: 'fixture_preview_run',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: `output/release-packages/${albumId}/distrokid-run/run-log.json`,
+    entityType: 'album',
+    releaseId: albumId,
+  });
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+  const approveAction = cockpit.nextActions.find(action => action.key === 'approve_live_submit');
+
+  assert.ok(previewStage);
+  assert.equal(previewStage.status, 'failed');
+  assert.equal(previewStage.outcome, 'failed');
+  assert.match(previewStage.detail, /did not stage the release/i);
+  assert.match(previewStage.detail, /0 fields filled\. 215 errors\. 334 skipped\./i);
+  assert.match(previewStage.detail, /Required DistroKid controls\/files were not found\./i);
+  assert.equal(previewStage.latestRun?.processStatusLabel, 'process complete');
+  assert.deepEqual(previewStage.diagnostics?.missingGroups.map(group => group.key), [
+    'album_metadata',
+    'tracks',
+    'audio_uploads',
+    'artwork',
+    'ai_disclosure',
+    'certifications',
+  ]);
+  assert.equal(approveAction?.enabled, false);
+  assert.match(approveAction?.disabledReason || '', /did not stage the release|failed|filled 0 fields|required DistroKid uploads or controls are still missing/i);
+});
+
+test('approve live submit stays disabled until a true successful dry run exists', async () => {
+  const songId = createSong('Strict Preview Gate Single');
+  writeReadySongFiles(songId);
+  await buildReleasePackageForCockpit('single', songId);
+
+  const failedLogPath = writePreviewRunArtifacts(songId, {
+    filledCount: 0,
+    skippedCount: 5,
+    errorCount: 2,
+    errors: [
+      { field: 'cover_art', error: 'file input not found: #artwork' },
+      { field: 'audio_file_track_1', error: 'file input not found: #js-track-upload-1' },
+    ],
+  });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'complete', 'Automation process complete.', {
+    runId: 'failed_preview_gate',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: failedLogPath,
+    entityType: 'single',
+    releaseId: songId,
+  });
+
+  let cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.outcome, 'failed');
+  assert.equal(cockpit.nextActions.find(action => action.key === 'approve_live_submit')?.enabled, false);
+
+  const passedLogPath = writePreviewRunArtifacts(songId, {
+    filledCount: 12,
+    skippedCount: 0,
+    errorCount: 0,
+  });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'complete', 'Automation process complete.', {
+    runId: 'passed_preview_gate',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: passedLogPath,
+    entityType: 'single',
+    releaseId: songId,
+  });
+
+  cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.status, 'complete');
+  assert.equal(cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.outcome, 'passed');
+  assert.equal(cockpit.nextActions.find(action => action.key === 'approve_live_submit')?.enabled, true);
+  assert.match(cockpit.runHistory[0].displayStatus || '', /process complete/i);
+  assert.doesNotMatch(cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.detail || '', /preview automation finished/i);
+});
+
+test('DistroKid preview route uses the canonical album manifest resolver without throwing', async t => {
+  const fixtureAlbumId = 'ALBUM_MPK9H71S_RTCM';
+  const albumId = uniqueId(fixtureAlbumId);
+  const first = createSong('Preview Route Album One');
+  const second = createSong('Preview Route Album Two');
+  albumIds.add(albumId);
+
+  createAlbum({
+    id: albumId,
+    album_title: 'Preview Route Album',
+    release_date: '2026-08-21',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  assignSongsToAlbum(albumId, [first, second]);
+  writeReadyAlbumFiles(albumId, [first, second]);
+  await buildReleasePackageForCockpit('album', albumId);
+
+  assert.equal(
+    getCanonicalReleaseManifestPath('album', fixtureAlbumId),
+    path.join(repoRoot, 'output', 'release-packages', fixtureAlbumId, 'manifest.json'),
+  );
+
+  const server = await startServer();
+  t.after(() => server.close());
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/releases/album/${albumId}/actions/distrokid-preview`, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+    },
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.ok, true);
+  assert.match(body.message || '', /DistroKid preview automation started/i);
+});
+
 test('blocked DistroKid preview exposes resume guidance and stop action while browser session remains active', () => {
   const songId = createSong('Blocked Preview Visibility Single');
   writeReadySongFiles(songId);
@@ -629,7 +787,7 @@ test('mocked release cockpit acceptance covers single lifecycle actions', async 
   assert.equal(cockpit.packageState.ready, true);
   assert.equal(cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.actions[0]?.enabled, true);
 
-  assert.throws(() => validateReleaseAction('live_submit', cockpit), /DistroKid preview has not been completed/);
+  assert.throws(() => validateReleaseAction('live_submit', cockpit), /No latest DistroKid preview run exists|Latest DistroKid preview has not passed/);
   const preview = await runDistroKidSongAutomation(songId, { mode: 'preview' });
   assert.equal(preview.ok, true);
   logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'complete', 'Acceptance preview complete.', preview);

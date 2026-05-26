@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
@@ -171,6 +171,7 @@ export async function runDistroKidAlbumAutomation(albumId, options = {}) {
     trackCount: tracks.length,
     releaseUrl: capturedReleaseUrl,
     hyperfollow,
+    latest_run_log_path: `output/release-packages/${albumId}/distrokid-run/run-log.json`,
     log,
   };
 }
@@ -218,6 +219,7 @@ async function buildSongPackage(songId) {
 }
 
 async function runStubSongAutomation(songId, { mode, append, log, options }) {
+  writeStubRunArtifacts(songId, { mode });
   markDistroKidJobStatus(songId, DISTROKID_JOB_STATUSES.PACKAGE_BUILT, {
     package_path: relativePackagePath(songId),
     latest_run_log_path: `output/release-packages/${songId}/distrokid-run/run-log.json`,
@@ -247,6 +249,7 @@ async function runStubSongAutomation(songId, { mode, append, log, options }) {
 }
 
 function runStubAlbumAutomation(album, tracks, { mode, append, log, options }) {
+  writeStubRunArtifacts(album.id, { mode, releaseId: album.id, songId: null });
   append(`Album-level fields filled once for ${album.album_title || album.id}`);
   for (const track of tracks) append(`Track ${track.track_number || '?'} filled from package metadata: ${track.id}`);
   if (mode === 'live') {
@@ -267,6 +270,7 @@ function runStubAlbumAutomation(album, tracks, { mode, append, log, options }) {
     trackCount: tracks.length,
     releaseUrl: options.releaseUrl || null,
     hyperfollow: options.hyperfollowUrl ? { status: 'captured', url: options.hyperfollowUrl } : { status: 'submitted_pending_hyperfollow', url: null },
+    latest_run_log_path: `output/release-packages/${album.id}/distrokid-run/run-log.json`,
     log,
   };
 }
@@ -333,4 +337,26 @@ function enrichAutomationError(releaseId, error) {
   enriched.runLog = runLog || null;
   enriched.details = details;
   return enriched;
+}
+
+function writeStubRunArtifacts(releaseId, { mode, releaseId: explicitReleaseId = releaseId, songId = releaseId } = {}) {
+  const runDir = join(PACKAGE_ROOT, releaseId, 'distrokid-run');
+  mkdirSync(runDir, { recursive: true });
+  const dryRun = mode !== 'live';
+  const startedAt = new Date().toISOString();
+  const runLog = {
+    song_id: songId,
+    release_id: explicitReleaseId,
+    manifest_path: `output/release-packages/${releaseId}/manifest.json`,
+    dry_run: dryRun,
+    stopped_before_submit: dryRun,
+    started_at: startedAt,
+    finished_at: startedAt,
+    filled_count: dryRun ? 12 : 14,
+    skipped_count: 0,
+    error_count: 0,
+  };
+  writeFileSync(join(runDir, 'run-log.json'), `${JSON.stringify(runLog, null, 2)}\n`, 'utf8');
+  writeFileSync(join(runDir, 'errors.json'), '[]\n', 'utf8');
+  writeFileSync(join(runDir, 'skipped-fields.json'), '[]\n', 'utf8');
 }

@@ -116,6 +116,7 @@ import {
   assertReleaseLiveSubmitReady,
   buildReleaseCockpitViewModel,
   buildReleasePackageForCockpit,
+  getCanonicalReleaseManifestPath,
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
   validateReleaseAction,
@@ -484,7 +485,7 @@ app.post('/releases/:type/:id/actions/approve-live-submit', async (req, res) => 
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
-    validateReleaseAction('preview', cockpit);
+    validateReleaseAction('approve_live_submit', cockpit);
     const state = getMagicReleaseState(cockpit.type, cockpit.id) || createMagicReleaseCampaign({ releaseType: cockpit.type, releaseId: cockpit.id });
     const reason = String(req.body?.reason || '').trim() || 'Approved from Release Cockpit.';
     upsertReleaseCampaignTask({

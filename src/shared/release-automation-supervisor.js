@@ -114,7 +114,7 @@ export function createReleaseAutomationSupervisor({
     }
 
     if (code === 0) {
-      finalize('complete', 'Automation finished.', {
+      finalize('complete', 'Automation process complete.', {
         exitCode: code,
         signal,
       });
