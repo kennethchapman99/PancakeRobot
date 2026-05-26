@@ -6,6 +6,7 @@
 <script>
 window.brandEditor = function() {
   const p = JSON.parse(document.getElementById('profile-data').textContent);
+  const initialDefaultImage = <%- JSON.stringify(defaultImage || null) %>;
 
   function lines(text) {
     return String(text || '').split('\n').map(s => s.trim()).filter(Boolean);
@@ -17,8 +18,10 @@ window.brandEditor = function() {
   return {
     saving: false,
     saved: false,
+    mediaSaving: false,
     errorMsg: '',
     original: p,
+    defaultImage: initialDefaultImage,
 
     // Brand basics
     brand_name:          p.brand_name || '',
@@ -26,6 +29,8 @@ window.brandEditor = function() {
     audience_age_range:  p.audience?.age_range || '',
     audience_description:p.audience?.description || '',
     audience_guardrail:  p.audience?.guardrail || '',
+    media_default_image_url: p.media?.default_image_url || p.visuals?.default_image_url || '',
+    media_default_image_path: p.media?.default_image_path || '',
 
     // Character
     char_name:           p.character?.name || '',
@@ -77,6 +82,10 @@ window.brandEditor = function() {
         ...o,
         brand_name:        this.brand_name,
         brand_description: this.brand_description,
+        media: { ...(o.media || {}),
+          default_image_url: this.media_default_image_url,
+          default_image_path: this.media_default_image_path,
+        },
         audience: { ...o.audience,
           age_range:   this.audience_age_range,
           description: this.audience_description,
@@ -150,6 +159,54 @@ window.brandEditor = function() {
       } finally {
         this.saving = false;
       }
+    },
+
+    async uploadDefaultImage(fileInput) {
+      const file = fileInput?.files?.[0];
+      if (!file) return;
+      this.mediaSaving = true;
+      this.errorMsg = '';
+      try {
+        const profileId = document.getElementById('profileId').value;
+        const formData = new FormData();
+        formData.append('default_image', file);
+        const res = await fetch(`/api/brand/${encodeURIComponent(profileId)}/default-image`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Upload failed');
+        this.defaultImage = data.defaultImage || null;
+        this.media_default_image_url = data.profile?.media?.default_image_url || '';
+        this.media_default_image_path = data.profile?.media?.default_image_path || '';
+        this.original = data.profile || this.original;
+        fileInput.value = '';
+      } catch (err) {
+        this.errorMsg = err.message;
+      } finally {
+        this.mediaSaving = false;
+      }
+    },
+
+    async clearDefaultImage() {
+      this.mediaSaving = true;
+      this.errorMsg = '';
+      try {
+        const profileId = document.getElementById('profileId').value;
+        const res = await fetch(`/api/brand/${encodeURIComponent(profileId)}/default-image/clear`, {
+          method: 'POST',
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Clear failed');
+        this.defaultImage = null;
+        this.media_default_image_url = '';
+        this.media_default_image_path = '';
+        this.original = data.profile || this.original;
+      } catch (err) {
+        this.errorMsg = err.message;
+      } finally {
+        this.mediaSaving = false;
+      }
     }
   };
 };
@@ -215,6 +272,41 @@ window.brandEditor = function() {
     else alert('Failed to set active profile: ' + ((await res.json()).error || 'unknown error'));
   }
   </script>
+
+  <section class="bg-white border border-zinc-200 rounded-xl mb-5 overflow-hidden">
+    <div class="px-6 py-4 bg-zinc-50 border-b border-zinc-100">
+      <h2 class="font-bold text-zinc-800">Default Image</h2>
+      <p class="text-xs text-zinc-500 mt-0.5">Used when song and album media are missing. Saved under <code>config/brand-media/&lt;profileId&gt;/</code>.</p>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div class="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
+        <div>
+          <template x-if="defaultImage?.url">
+            <img :src="defaultImage.url" alt="Brand default image" class="h-52 w-full rounded-xl border border-zinc-200 object-cover">
+          </template>
+          <template x-if="!defaultImage?.url">
+            <div class="flex h-52 items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-400">No brand default image</div>
+          </template>
+        </div>
+        <div class="space-y-3">
+          <div class="text-sm text-zinc-600">
+            <span class="font-medium text-zinc-800">Current source:</span>
+            <span x-text="defaultImage?.name || 'Missing'"></span>
+          </div>
+          <label class="field-label">Upload Default Image</label>
+          <input type="file" accept=".png,.jpg,.jpeg,.webp" :disabled="mediaSaving" class="block w-full text-sm text-zinc-600 file:mr-3 file:rounded-lg file:border file:border-zinc-200 file:bg-zinc-50 file:px-3 file:py-2 file:text-sm" @change="uploadDefaultImage($event.target)">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" @click="clearDefaultImage()" :disabled="mediaSaving || !defaultImage" class="rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50">Clear Default Image</button>
+            <span x-show="mediaSaving" x-cloak class="text-sm text-zinc-500">Updating media…</span>
+          </div>
+          <p class="text-xs text-zinc-500">Fallback order: song media, album media, brand default image, then missing/placeholder.</p>
+          <template x-if="defaultImage?.url">
+            <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 break-all" x-text="defaultImage.url"></div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- ── BRAND BASICS ──────────────────────────────────────────── -->
   <section class="bg-white border border-zinc-200 rounded-xl mb-5 overflow-hidden">

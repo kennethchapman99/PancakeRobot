@@ -468,6 +468,8 @@ test('cockpit templates avoid duplicate competing controls for album-owned songs
   assert.match(releaseModel, /Generate \/ refresh release plan/);
   assert.match(releaseModel, /Run Browsy dry run/);
   assert.match(releaseModel, /Run DistroKid preview automation/);
+  assert.match(releaseModel, /Complete login in browser, then resume preview/);
+  assert.match(releaseModel, /Stop \/ cancel run/);
   assert.match(releaseModel, /Run live submit automation/);
   assert.match(releaseModel, /Build outreach campaign/);
   assert.match(releaseModel, /Send outreach \/ social tasks/);
@@ -578,6 +580,37 @@ test('failed DistroKid preview is visible in readiness row and run history', () 
   assert.ok(previewStage.actions.some(action => /DistroKid preview automation/.test(action.label)));
   assert.equal(cockpit.runHistory[0].runId, 'preview_test_run');
   assert.equal(cockpit.runHistory[0].status, 'failed');
+});
+
+test('blocked DistroKid preview exposes resume guidance and stop action while browser session remains active', () => {
+  const songId = createSong('Blocked Preview Visibility Single');
+  writeReadySongFiles(songId);
+  writePackageManifest(songId, {
+    song_id: songId,
+    audio_file: `output/songs/${songId}/audio.mp3`,
+    cover_art: `output/marketing-ready/${songId}/no-text-variation.png`,
+    readiness: {
+      ready_for_distrokid_dry_run: true,
+      blocking_missing_fields: [],
+    },
+  });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'blocked', 'DistroKid login required. Complete login in the browser, then resume.', {
+    runId: 'preview_blocked_run',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: `output/release-packages/${songId}/distrokid-run/run-log.json`,
+    code: 'distrokid_login_required',
+    active: true,
+  });
+
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+
+  assert.ok(previewStage);
+  assert.equal(previewStage.status, 'blocked');
+  assert.match(previewStage.detail, /Complete login in the browser, then resume/i);
+  assert.equal(previewStage.actions[0].label, 'Complete login in browser, then resume preview');
+  assert.equal(previewStage.actions[0].enabled, false);
+  assert.ok(previewStage.actions.some(action => action.label === 'Stop / cancel run' && action.enabled));
 });
 
 test('mocked release cockpit acceptance covers single lifecycle actions', async () => {

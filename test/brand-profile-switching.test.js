@@ -4,10 +4,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  clearBrandProfileDefaultImage,
   DEFAULT_PROFILE_ID,
+  findBrandProfileDefaultImage,
+  getBrandProfileMediaDir,
   listBrandProfiles,
   loadBrandProfileById,
   resolveBrandProfilePath,
+  saveBrandProfileById,
+  setBrandProfileDefaultImageFile,
 } from '../src/shared/brand-profile.js';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
@@ -63,4 +68,49 @@ test('unsafe profile ids are rejected', () => {
   assert.throws(() => resolveBrandProfilePath('/tmp/foo'));
   assert.throws(() => resolveBrandProfilePath('..'));
   assert.throws(() => resolveBrandProfilePath('nested/profile'));
+});
+
+test('brand default image helpers persist and clear profile media state', () => {
+  const profileId = `brand-default-image-test-${Date.now()}`;
+  const profilePath = resolveBrandProfilePath(profileId);
+  const mediaDir = getBrandProfileMediaDir(profileId);
+  const seedProfile = loadBrandProfileById(DEFAULT_PROFILE_ID);
+
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  saveBrandProfileById(profileId, {
+    ...seedProfile,
+    brand_name: 'Brand Default Image Test',
+    character: {
+      ...seedProfile.character,
+      name: 'Brand Default Image Test',
+    },
+    media: {
+      default_image_url: '',
+      default_image_path: '',
+    },
+  });
+
+  try {
+    fs.mkdirSync(mediaDir, { recursive: true });
+    fs.writeFileSync(path.join(mediaDir, 'default-image.png'), 'fake-image');
+
+    const saved = setBrandProfileDefaultImageFile(profileId, 'default-image.png');
+    assert.match(saved.profile.media.default_image_url, new RegExp(`^/brand-media/${profileId}/default-image\\.png$`));
+    assert.equal(saved.profile.media.default_image_path, '');
+
+    const found = findBrandProfileDefaultImage(profileId);
+    assert.ok(found);
+    assert.equal(found.name, 'default-image.png');
+    assert.equal(found.path, path.join(mediaDir, 'default-image.png'));
+
+    const cleared = clearBrandProfileDefaultImage(profileId);
+    assert.equal(cleared.defaultImage, null);
+    assert.equal(cleared.profile.media.default_image_url, '');
+    assert.equal(cleared.profile.media.default_image_path, '');
+    assert.equal(findBrandProfileDefaultImage(profileId), null);
+    assert.equal(fs.existsSync(path.join(mediaDir, 'default-image.png')), false);
+  } finally {
+    fs.rmSync(profilePath, { force: true });
+    fs.rmSync(mediaDir, { recursive: true, force: true });
+  }
 });

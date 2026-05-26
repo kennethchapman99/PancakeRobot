@@ -8,6 +8,7 @@
     running: 'badge-blue',
     not_started: 'badge-gray',
     skipped: 'badge-gray',
+    cancelled: 'badge-gray',
     failed: 'badge-red',
   }[status] || 'badge-gray');
   const lifecycleClass = (status) => ({
@@ -21,6 +22,7 @@
   }[status] || 'badge-gray');
   const buttonClass = (label, enabled) => {
     if (!enabled) return 'border-zinc-200 bg-zinc-100 text-zinc-500';
+    if (/stop|cancel/i.test(label)) return 'border-rose-300 bg-rose-500 text-white';
     if (/skip|remove|delete/i.test(label)) return 'border-rose-300 bg-rose-500 text-white';
     if (/approve|paste|save/i.test(label)) return 'border-amber-300 bg-amber-500 text-white';
     if (/build outreach|send outreach/i.test(label)) return 'border-emerald-300 bg-emerald-600 text-white';

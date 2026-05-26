@@ -445,14 +445,27 @@ function buildStages({ type, release, tracks, assetState, campaigns, social, hyp
         { label: 'Rerun package validation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/package-validation`, enabled: true },
       ],
     }),
-    stage('distrokid_preview', 'DistroKid preview', latestPreviewRun?.status === 'running' ? 'running' : latestPreviewRun?.status === 'failed' ? 'failed' : previewComplete ? 'complete' : readyForPreview ? 'ready' : 'blocked', latestPreviewRun?.status === 'failed' ? [latestPreviewRun.error || latestPreviewRun.message] : (previewComplete ? [] : [previewDetail]), false, {
+    stage('distrokid_preview', 'DistroKid preview',
+      latestPreviewRun?.status === 'running'
+        ? 'running'
+        : latestPreviewRun?.status === 'blocked'
+          ? 'blocked'
+          : latestPreviewRun?.status === 'failed'
+            ? 'failed'
+            : previewComplete
+              ? 'complete'
+              : readyForPreview
+                ? 'ready'
+                : 'blocked',
+      ['blocked', 'failed'].includes(latestPreviewRun?.status) ? [latestPreviewRun.error || latestPreviewRun.message] : (previewComplete ? [] : [previewDetail]), false, {
       owner: 'Browsy automation',
       detail: latestPreviewRun?.status === 'failed' ? previewDetail : (readyForPreview ? previewDetail : packageState.summary),
       issues: !readyForPreview ? packageState.validation.issues.map(issue => issue.message) : [],
       blockerCount: !readyForPreview && packageState.validation.issues.length ? packageState.validation.issues.length : 1,
       latestRun: latestPreviewRun,
       actions: [
-        { label: latestPreviewRun ? 'Rerun DistroKid preview automation' : 'Run DistroKid preview automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview`, enabled: readyForPreview && latestPreviewRun?.status !== 'running', disabledReason: latestPreviewRun?.status === 'running' ? 'Preview automation is already running.' : (readyForPreview ? '' : packageState.summary) },
+        { label: latestPreviewRun?.status === 'blocked' ? 'Complete login in browser, then resume preview' : (latestPreviewRun ? 'Rerun DistroKid preview automation' : 'Run DistroKid preview automation'), method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview`, enabled: readyForPreview && latestPreviewRun?.status !== 'running' && !latestPreviewRun?.payload?.active, disabledReason: latestPreviewRun?.status === 'running' || latestPreviewRun?.payload?.active ? 'Preview automation is already running.' : (readyForPreview ? '' : packageState.summary) },
+        { label: 'Stop / cancel run', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview/stop`, enabled: Boolean(latestPreviewRun?.payload?.active) && ['running', 'blocked'].includes(latestPreviewRun?.status), disabledReason: latestPreviewRun?.payload?.active ? '' : 'No active preview run is available to stop.' },
       ],
     }),
     stage('distrokid_live_submit', 'Live submit', latestLiveSubmitRun?.status === 'running' ? 'running' : latestLiveSubmitRun?.status === 'failed' ? 'failed' : liveComplete ? 'complete' : readyForLiveSubmit && liveSubmitApproval?.approved ? 'ready' : 'blocked', latestLiveSubmitRun?.status === 'failed' ? [latestLiveSubmitRun.error || latestLiveSubmitRun.message] : (liveComplete ? [] : [liveSubmitDetail]), false, {
@@ -957,11 +970,12 @@ function findLatestRun(runHistory = [], action) {
 function normalizeRunStatus(status) {
   if (status === 'success') return 'complete';
   if (status === 'warning') return 'failed';
+  if (status === 'pending') return 'running';
   return String(status || 'not_started');
 }
 
 function isTerminalRunStatus(status) {
-  return ['complete', 'failed', 'blocked', 'skipped', 'success', 'warning'].includes(String(status || ''));
+  return ['complete', 'failed', 'blocked', 'cancelled', 'skipped', 'success', 'warning'].includes(String(status || ''));
 }
 
 function extractRunError(log) {
@@ -995,6 +1009,7 @@ function runStatusRank(status) {
     failed: 5,
     complete: 4,
     blocked: 3,
+    cancelled: 2,
     skipped: 2,
     running: 1,
     ready: 0,
