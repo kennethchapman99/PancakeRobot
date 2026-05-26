@@ -19,7 +19,9 @@ import { DISTROKID_JOB_STATUSES, getDistroKidJob, markDistroKidJobStatus } from 
 import { getReleaseAssetState } from './song-release-assets-service.js';
 import { getMarketingCampaigns } from './marketing-db.js';
 import { DEFAULT_PROFILE_ID, getActiveProfileId, loadBrandProfileById } from './brand-profile.js';
+import { getSongFinanceSummary } from './finance-manager.js';
 import { getSelectedReleaseAudio } from './song-audio-selection.js';
+import { isRealSongCatalogRow } from './song-catalog-cleanup.js';
 import { summarizeMagicReleaseForCockpit } from './magic-release.js';
 
 const execFileAsync = promisify(execFile);
@@ -69,9 +71,15 @@ export const RELEASE_COCKPIT_STAGES = Object.freeze([
 ]);
 
 export function listReleaseCockpitEntries() {
-  const albums = getAllAlbums().map(album => {
-    const tracks = getSongsForAlbum(album.id);
+  const albums = getAllAlbums().flatMap(album => {
+    const tracks = getSongsForAlbum(album.id).filter(isRealSongCatalogRow);
+    const plannedTrackCount = Array.isArray(album.shared_orchestration?.plan?.tracks)
+      ? album.shared_orchestration.plan.tracks.length
+      : 0;
+    const allowPlannedAlbum = tracks.length === 0 && plannedTrackCount > 0 && album.status === 'generating_tracks';
+    if (tracks.length === 0 && !allowPlannedAlbum) return [];
     const hyperfollowUrl = findPersistedHyperFollowUrl(tracks);
+    const trackCount = tracks.length || plannedTrackCount;
     return {
       type: 'album',
       id: album.id,
@@ -79,9 +87,11 @@ export function listReleaseCockpitEntries() {
       subtitle: 'Album release',
       lifecycle: hyperfollowUrl ? 'hyperfollow_ready' : (album.status || 'draft'),
       releaseDate: album.release_date || null,
-      stageSummary: `${tracks.length} track${tracks.length === 1 ? '' : 's'}`,
+      stageSummary: tracks.length
+        ? `${trackCount} track${trackCount === 1 ? '' : 's'}`
+        : `${trackCount} planned track${trackCount === 1 ? '' : 's'}`,
       blockerCount: 0,
-      trackCount: tracks.length,
+      trackCount,
       brandProfileId: album.brand_profile_id || null,
       hyperfollowUrl,
       distributionStatus: summarizePersistedDistributionStatus(tracks),
@@ -119,11 +129,13 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const tracks = release.tracks.map((track, index) => {
     const fsAssets = scanSongOutput(track.id);
     const releaseAudio = getSelectedReleaseAudio(track.id);
+    const finance = getSongFinanceSummary(track.id, { syncArtifacts: false });
     return {
       ...track,
       track_number: track.track_number || index + 1,
       fsAssets,
       releaseAudio,
+      finance,
       links: getReleaseLinks(track.id),
       distrokidJob: getDistroKidJob(track.id),
     };
@@ -134,11 +146,30 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const hyperfollow = findHyperFollow(tracks);
   const packageState = readReleasePackageState(type, release.id, tracks);
   const logs = getReleaseCockpitLogs(type, release.id, { limit: 50 });
+  const runHistory = buildRunHistory(logs);
   const magicRelease = summarizeMagicReleaseForCockpit(type, release.id);
-  const stages = buildStages({ release, tracks, assetState, campaigns, social, hyperfollow, packageState, logs });
+  const liveSubmitApproval = summarizeLiveSubmitApproval(magicRelease);
+  const stages = buildStages({
+    type,
+    release,
+    tracks,
+    assetState,
+    campaigns,
+    social,
+    hyperfollow,
+    packageState,
+    logs,
+    runHistory,
+    liveSubmitApproval,
+    magicRelease,
+  });
   const blockers = stages.filter(stage => stage.blocksLiveSubmit && stage.status !== 'complete').flatMap(stage => stage.issues);
   const lifecycle = determineReleaseLifecycle({ tracks, stages, blockers, hyperfollow, campaigns, packageState });
-  const nextActions = buildNextActions({ type, release, stages, blockers, hyperfollow, lifecycle, packageState });
+  const nextActions = buildNextActions({ type, release, stages, blockers, hyperfollow, lifecycle, packageState, liveSubmitApproval, magicRelease });
+  const trackTable = buildTrackTable({ type, release, tracks });
+  const commandCenter = buildCommandCenter({ type, release, stages, nextActions, magicRelease, liveSubmitApproval, packageState, hyperfollow });
+  const blockerSummary = summarizeCockpitBlockers({ type, release, stages, blockers });
+  const canLiveSubmit = Boolean(nextActions.find(action => action.key === 'live_submit')?.enabled);
 
   return {
     type,
@@ -154,13 +185,18 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     packageState,
     stages,
     blockers,
-    canLiveSubmit: blockers.length === 0,
+    blockerSummary,
+    canLiveSubmit,
     hyperfollow,
     campaigns,
     social,
     logs,
+    runHistory,
     magicRelease,
+    liveSubmitApproval,
     nextActions,
+    commandCenter,
+    trackTable,
     updatedAt: release.updatedAt,
   };
 }
@@ -250,6 +286,7 @@ export function validateReleaseAction(action, cockpit, options = {}) {
     if (cockpit.stages.find(stage => stage.key === 'distrokid_preview')?.status !== 'complete' || !isAtLeastLifecycle(cockpit.lifecycle.current, 'distrokid_previewed')) {
       blockers.push('DistroKid preview has not been completed');
     }
+    if (!cockpit.liveSubmitApproval?.approved) blockers.push('Live DistroKid submit requires explicit human approval.');
     if (options.confirm !== true) blockers.push('Live DistroKid submit requires explicit confirmation.');
   }
 
@@ -301,20 +338,27 @@ function buildSingleRelease(songId) {
   };
 }
 
-function buildStages({ release, tracks, assetState, campaigns, social, hyperfollow, packageState, logs = [] }) {
+function buildStages({ type, release, tracks, assetState, campaigns, social, hyperfollow, packageState, logs = [], runHistory = [], liveSubmitApproval = null, magicRelease = null }) {
   const metadataIssues = [];
+  const metadataTrackIds = [];
   if (!release.title) metadataIssues.push('Release title is missing');
   if (!release.releaseDate) metadataIssues.push('Release date is missing');
   for (const track of tracks) {
     if (!track.title && !track.topic) metadataIssues.push(`${track.id}: track title is missing`);
-    if (!track.fsAssets.metadata && !track.metadata_path) metadataIssues.push(`${track.id}: metadata.json is missing`);
+    if (!track.fsAssets.metadata && !track.metadata_path) {
+      metadataIssues.push(`${track.id}: metadata.json is missing`);
+      metadataTrackIds.push(track.id);
+    }
   }
 
+  const audioTrackIds = [];
   const audioIssues = tracks.flatMap(track => {
     if (track.releaseAudio?.requiresSelection) {
+      audioTrackIds.push(track.id);
       return [`${track.id}: choose release audio master (${track.releaseAudio.candidates?.length || 0} candidates)`];
     }
     if (!track.releaseAudio?.selected && !(track.fsAssets.audioFiles || []).length) {
+      audioTrackIds.push(track.id);
       return [`${track.id}: audio file is missing`];
     }
     return [];
@@ -326,46 +370,153 @@ function buildStages({ release, tracks, assetState, campaigns, social, hyperfoll
   if (missingDerivatives.length) mediaIssues.push(`Platform derivatives missing: ${missingDerivatives.slice(0, 3).join(', ')}${missingDerivatives.length > 3 ? '...' : ''}`);
 
   const jobs = tracks.map(track => track.distrokidJob).filter(Boolean);
+  const latestPreviewRun = findLatestRun(runHistory, 'distrokid_preview');
+  const latestLiveSubmitRun = findLatestRun(runHistory, 'distrokid_live_submit');
+  const latestHyperFollowRun = findLatestRun(runHistory, 'hyperfollow');
+  const latestOutreachRun = findLatestRun(runHistory, 'outreach_campaign');
   const previewComplete = logs.some(log => log.action === 'distrokid_preview' && log.status === 'complete')
     || jobs.some(job => PREVIEW_READY_JOB_STATUSES.has(job.status));
   const liveComplete = tracks.every(track => ['submitted', 'submitted_pending_hyperfollow'].includes(track.distrokidJob?.status) || /submitted to distrokid/i.test(track.status || ''));
   const postLinks = tracks.flatMap(track => track.links || []).filter(link => !/hyperfollow|distrokid/i.test(`${link.platform} ${link.url}`));
+  const tracksMetadataUrl = `/releases/${type}/${encodeURIComponent(release.id)}?focus=metadata#tracks`;
+  const tracksAudioUrl = `/releases/${type}/${encodeURIComponent(release.id)}?focus=audio#tracks`;
+  const readyForPackage = !metadataIssues.length && !audioIssues.length && !mediaIssues.length;
+  const readyForPreview = readyForPackage && packageState.ready;
+  const readyForLiveSubmit = previewComplete && packageState.ready;
+  const readyHyperfollowCapture = Boolean(magicRelease?.tasks?.some(task => task.task_key === 'hyperfollow_capture' && task.status === 'ready'));
+  const packageBlockedReason = readyForPackage ? (packageState.blockers[0] || 'Canonical package has not been built yet.') : `Blocked by ${[metadataIssues.length ? 'metadata' : '', audioIssues.length ? 'audio' : '', mediaIssues.length ? 'release assets' : ''].filter(Boolean).join(', ')}`;
+  const previewDetail = latestPreviewRun?.error
+    || latestPreviewRun?.message
+    || (previewComplete ? 'Preview automation completed.' : readyForPreview ? 'Ready to run the DistroKid preview automation.' : (packageState.ready ? 'Resolve release blockers before preview can run.' : 'Waiting for the canonical package to become ready.'));
+  const liveSubmitDetail = latestLiveSubmitRun?.error
+    || latestLiveSubmitRun?.message
+    || (liveComplete
+      ? 'Live submit completed.'
+      : readyForLiveSubmit
+        ? (liveSubmitApproval?.approved ? 'Ready to run the live submit automation.' : 'Waiting for explicit human approval before live submit.')
+        : 'Waiting for DistroKid preview to complete.');
+  const hyperfollowDetail = latestHyperFollowRun?.error
+    || latestHyperFollowRun?.message
+    || (hyperfollow?.url ? `Saved HyperFollow URL: ${hyperfollow.url}` : liveComplete ? 'Paste or capture the HyperFollow URL after submission.' : 'Waiting for DistroKid submission before HyperFollow can be captured.');
+  const outreachDetail = latestOutreachRun?.error
+    || latestOutreachRun?.message
+    || (campaigns.length ? `Built ${campaigns.length} outreach campaign${campaigns.length === 1 ? '' : 's'}.` : hyperfollow?.url ? 'Ready to build outreach and social tasks.' : 'Waiting for HyperFollow before non-draft outreach.');
 
   return [
-    stage('metadata', 'Metadata ready', metadataIssues.length ? 'blocked' : 'complete', metadataIssues, true),
-    stage('audio', 'Release audio selected', audioIssues.length ? 'blocked' : 'complete', audioIssues, true),
-    stage('media', release.tracks?.length > 1 ? 'Album media ready' : 'Single media ready', mediaIssues.length ? 'needs_action' : 'complete', mediaIssues, true),
-    stage('package', 'Canonical release package ready', packageState.ready ? 'complete' : packageState.exists ? 'blocked' : 'not_started', packageState.ready ? [] : packageState.blockers, false),
-    stage('distrokid_preview', 'DistroKid preview complete', previewComplete ? 'complete' : 'not_started', previewComplete ? [] : ['Preview has not been run yet'], false),
-    stage('distrokid_live_submit', 'DistroKid live submit complete', liveComplete ? 'complete' : 'not_started', liveComplete ? [] : ['Live submit has not been completed'], false),
-    stage('hyperfollow', 'HyperFollow URL captured', hyperfollow?.url ? 'complete' : 'not_started', hyperfollow?.url ? [] : ['HyperFollow URL is not captured yet'], false),
-    stage('youtube', 'YouTube publish/schedule status', social.youtube.complete ? 'complete' : social.youtube.any ? 'needs_action' : 'placeholder', social.youtube.issues, false),
-    stage('meta', 'Meta/Instagram/Facebook publish/schedule status', social.meta.complete ? 'complete' : social.meta.any ? 'needs_action' : 'placeholder', social.meta.issues, false),
-    stage('outreach', 'Outreach campaign status', campaigns.length ? 'complete' : 'not_started', campaigns.length ? [] : ['No outreach campaign is linked yet'], false),
-    stage('platform_links', 'Post-release platform links updated', postLinks.length ? 'complete' : 'not_started', postLinks.length ? [] : ['Spotify, Apple, YouTube Music, and other platform links are not recorded yet'], false),
+    stage('metadata', 'Metadata inspection', metadataIssues.length ? 'blocked' : 'complete', metadataIssues, true, {
+      owner: 'Pipeline',
+      affectedTrackIds: metadataTrackIds,
+      detail: metadataIssues.length ? metadataIssues.join('; ') : 'All required release metadata is present.',
+      actions: [
+        { label: 'Fix metadata', method: 'GET', url: metadataTrackIds.length === 1 ? `/songs/${encodeURIComponent(metadataTrackIds[0])}?tab=meta` : tracksMetadataUrl, enabled: metadataIssues.length > 0 },
+        { label: 'Generate missing metadata', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/generate-metadata`, enabled: metadataTrackIds.length > 0 },
+        { label: 'Open filtered tracks', method: 'GET', url: tracksMetadataUrl, enabled: metadataTrackIds.length > 0 },
+      ],
+    }),
+    stage('audio', 'Release audio master', audioIssues.length ? 'blocked' : 'complete', audioIssues, true, {
+      owner: 'Human review',
+      affectedTrackIds: audioTrackIds,
+      detail: audioIssues.length ? audioIssues.join('; ') : 'Every track has a selected release master.',
+      actions: [
+        { label: 'Choose master', method: 'GET', url: audioTrackIds.length === 1 ? `/songs/${encodeURIComponent(audioTrackIds[0])}/release-audio?return_to=${encodeURIComponent(`/releases/${type}/${encodeURIComponent(release.id)}`)}` : tracksAudioUrl, enabled: audioTrackIds.length > 0 },
+        { label: 'Generate master', method: 'GET', url: audioTrackIds.length === 1 ? `/songs/${encodeURIComponent(audioTrackIds[0])}/generate` : tracksAudioUrl, enabled: audioTrackIds.length > 0 },
+        { label: 'Open affected tracks', method: 'GET', url: tracksAudioUrl, enabled: audioTrackIds.length > 0 },
+      ],
+    }),
+    stage('media', release.tracks?.length > 1 ? 'Release assets' : 'Release assets', mediaIssues.length ? 'blocked' : 'complete', mediaIssues, true, {
+      owner: 'Pipeline',
+      detail: mediaIssues.length ? mediaIssues.join('; ') : 'Primary artwork and platform derivatives are ready.',
+      actions: [
+        { label: assetState.primaryImage?.path ? 'Generate / refresh release assets' : 'Open album details', method: assetState.primaryImage?.path ? 'POST' : 'GET', url: assetState.primaryImage?.path ? `/releases/${type}/${encodeURIComponent(release.id)}/actions/release-assets/build` : (type === 'album' ? `/albums/${encodeURIComponent(release.id)}` : `/songs/${encodeURIComponent(tracks[0]?.id || release.id)}`), enabled: true },
+      ],
+    }),
+    stage('package', 'Canonical package', packageState.ready ? 'complete' : readyForPackage ? 'ready' : 'blocked', packageState.ready ? [] : [packageBlockedReason], false, {
+      owner: 'Pipeline',
+      detail: packageState.ready ? 'Canonical package is ready for DistroKid.' : packageBlockedReason,
+      actions: [
+        { label: 'Build canonical package', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/package`, enabled: readyForPackage, disabledReason: readyForPackage ? '' : packageBlockedReason },
+      ],
+    }),
+    stage('distrokid_preview', 'DistroKid preview', latestPreviewRun?.status === 'running' ? 'running' : latestPreviewRun?.status === 'failed' ? 'failed' : previewComplete ? 'complete' : readyForPreview ? 'ready' : 'blocked', latestPreviewRun?.status === 'failed' ? [latestPreviewRun.error || latestPreviewRun.message] : (previewComplete ? [] : [previewDetail]), false, {
+      owner: 'Browsy automation',
+      detail: previewDetail,
+      latestRun: latestPreviewRun,
+      actions: [
+        { label: 'Run DistroKid preview automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview`, enabled: readyForPreview && latestPreviewRun?.status !== 'running', disabledReason: latestPreviewRun?.status === 'running' ? 'Preview automation is already running.' : (readyForPreview ? '' : previewDetail) },
+      ],
+    }),
+    stage('distrokid_live_submit', 'Live submit', latestLiveSubmitRun?.status === 'running' ? 'running' : latestLiveSubmitRun?.status === 'failed' ? 'failed' : liveComplete ? 'complete' : readyForLiveSubmit && liveSubmitApproval?.approved ? 'ready' : 'blocked', latestLiveSubmitRun?.status === 'failed' ? [latestLiveSubmitRun.error || latestLiveSubmitRun.message] : (liveComplete ? [] : [liveSubmitDetail]), false, {
+      owner: liveSubmitApproval?.approved ? 'Browsy automation' : 'Human review',
+      detail: liveSubmitDetail,
+      latestRun: latestLiveSubmitRun,
+      actions: [
+        { label: liveSubmitApproval?.approved ? 'Live submit approved' : 'Approve live submit', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/approve-live-submit`, enabled: readyForLiveSubmit && !liveComplete, disabledReason: readyForLiveSubmit ? '' : 'Preview must complete before live submit can be approved.' },
+        { label: 'Run live submit automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-live-submit`, enabled: readyForLiveSubmit && Boolean(liveSubmitApproval?.approved) && !liveComplete && latestLiveSubmitRun?.status !== 'running', confirmation: 'Run the live DistroKid submit? This can submit externally.', disabledReason: latestLiveSubmitRun?.status === 'running' ? 'Live submit automation is already running.' : (liveSubmitApproval?.approved ? '' : 'Human approval is still required.') },
+      ],
+    }),
+    stage('hyperfollow', 'HyperFollow capture', latestHyperFollowRun?.status === 'failed' ? 'failed' : hyperfollow?.url ? 'complete' : liveComplete ? 'ready' : 'blocked', latestHyperFollowRun?.status === 'failed' ? [latestHyperFollowRun.error || latestHyperFollowRun.message] : (hyperfollow?.url ? [] : [hyperfollowDetail]), false, {
+      owner: liveComplete ? 'Browsy automation' : 'Platform/manual',
+      detail: hyperfollowDetail,
+      latestRun: latestHyperFollowRun,
+      actions: [
+        { label: 'Paste HyperFollow URL', method: 'GET', url: `/releases/${type}/${encodeURIComponent(release.id)}#hyperfollow-step`, enabled: liveComplete || Boolean(hyperfollow?.url) },
+        { label: 'Save HyperFollow', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/hyperfollow`, enabled: liveComplete || Boolean(hyperfollow?.url), disabledReason: liveComplete || hyperfollow?.url ? '' : 'Available after live submit.' },
+        { label: 'Capture with Browsy', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/magic-release/tasks/hyperfollow_capture/run`, enabled: readyHyperfollowCapture, disabledReason: readyHyperfollowCapture ? '' : 'No HyperFollow capture workflow is ready yet.' },
+      ],
+    }),
+    stage('outreach', 'Outreach / social handoff', latestOutreachRun?.status === 'failed' ? 'failed' : campaigns.length ? 'complete' : hyperfollow?.url ? 'ready' : 'blocked', latestOutreachRun?.status === 'failed' ? [latestOutreachRun.error || latestOutreachRun.message] : (campaigns.length ? [] : [outreachDetail]), false, {
+      owner: 'Pipeline',
+      detail: outreachDetail,
+      latestRun: latestOutreachRun,
+      actions: [
+        { label: 'Build outreach campaign', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/outreach`, enabled: true },
+        { label: 'Send outreach / social tasks', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/outreach`, enabled: true },
+      ],
+    }),
+    stage('platform_links', 'Platform links', postLinks.length ? 'complete' : liveComplete ? 'not_started' : 'blocked', postLinks.length ? [] : [liveComplete ? 'Post-release store links are not recorded yet.' : 'Waiting for submission before link harvest.'], false, {
+      owner: liveComplete ? 'Browsy automation' : 'Platform/manual',
+      detail: postLinks.length ? `Captured ${postLinks.length} post-release platform link${postLinks.length === 1 ? '' : 's'}.` : (liveComplete ? 'Post-release store links are not recorded yet.' : 'Waiting for submission before link harvest.'),
+      actions: [],
+    }),
   ];
 }
 
-function stage(key, label, status, issues, blocksLiveSubmit) {
-  return { key, label, status, issues, blocksLiveSubmit };
+function stage(key, label, status, issues, blocksLiveSubmit, options = {}) {
+  return {
+    key,
+    label,
+    status,
+    displayStatus: humanizeCockpitStatus(status),
+    issues,
+    blocksLiveSubmit,
+    owner: options.owner || 'Pipeline',
+    optional: options.optional === true,
+    affectedTrackIds: options.affectedTrackIds || [],
+    blockerCount: (options.affectedTrackIds || []).length || issues.length,
+    detail: options.detail || ((issues || []).length ? issues.join('; ') : 'Ready.'),
+    latestRun: options.latestRun || null,
+    actions: (options.actions || []).filter(action => action && action.label),
+  };
 }
 
-function buildNextActions({ type, release, stages, blockers, hyperfollow, lifecycle, packageState }) {
+function buildNextActions({ type, release, stages, blockers, hyperfollow, lifecycle, packageState, liveSubmitApproval, magicRelease }) {
   const previewEnabled = blockers.length === 0 && packageState.ready;
-  const liveEnabled = previewEnabled && isAtLeastLifecycle(lifecycle.current, 'distrokid_previewed');
+  const liveEnabled = previewEnabled && isAtLeastLifecycle(lifecycle.current, 'distrokid_previewed') && Boolean(liveSubmitApproval?.approved);
   const hyperfollowEnabled = isAtLeastLifecycle(lifecycle.current, 'submitted_to_distrokid');
   return [
     { key: 'readiness', label: 'Run readiness check', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/readiness`, enabled: true },
-    { key: 'package', label: 'Build/rebuild release package', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/package`, enabled: blockers.length === 0 },
-    { key: 'preview', label: 'Run DistroKid automation preview', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview`, enabled: previewEnabled },
-    { key: 'live_submit', label: 'Run DistroKid live submit', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-live-submit`, enabled: liveEnabled, confirmation: 'Run the live DistroKid submit? This can submit externally.' },
-    { key: 'hyperfollow', label: hyperfollow?.url ? 'Refresh HyperFollow URL' : 'Fetch/add HyperFollow URL', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/hyperfollow`, enabled: hyperfollowEnabled },
+    { key: 'plan', label: 'Generate / refresh release plan', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/magic-release/plan`, enabled: true },
+    { key: 'package', label: 'Build canonical package', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/package`, enabled: blockers.length === 0 },
+    { key: 'preview', label: 'Run DistroKid preview automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-preview`, enabled: previewEnabled },
+    { key: 'approve_live_submit', label: 'Approve live submit', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/approve-live-submit`, enabled: previewEnabled && !liveSubmitApproval?.approved },
+    { key: 'live_submit', label: 'Run live submit automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-live-submit`, enabled: liveEnabled, confirmation: 'Run the live DistroKid submit? This can submit externally.' },
+    { key: 'hyperfollow', label: hyperfollow?.url ? 'Save HyperFollow' : 'Capture HyperFollow URL', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/hyperfollow`, enabled: hyperfollowEnabled },
     { key: 'outreach', label: 'Build outreach campaign', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/outreach`, enabled: true },
-    { key: 'byteseed', label: 'ByteSeed video publishing', enabled: false, placeholder: true },
-    { key: 'meta_publish', label: 'Meta publishing', enabled: false, placeholder: true },
+    { key: 'release_assets', label: 'Generate / refresh release assets', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/release-assets/build`, enabled: Boolean(stages.find(stage => stage.key === 'media')?.actions?.some(action => action.enabled)) },
+    { key: 'browsy_dry_run', label: 'Run Browsy dry run', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/magic-release/browsy-dry-run`, enabled: Boolean(magicRelease?.tasks?.some(task => task.owner === 'browsy' && task.status === 'ready')) },
   ].map(action => ({
     ...action,
-    disabledReason: action.placeholder ? 'Placeholder: automation not implemented yet' : disabledReasonForAction(action.key, { blockers, packageState, lifecycle }),
+    disabledReason: disabledReasonForAction(action.key, { blockers, packageState, lifecycle, liveSubmitApproval }),
     status: stages.find(stage => stage.key === action.key)?.status || null,
   }));
 }
@@ -590,20 +741,241 @@ function actionLabel(action) {
   return {
     package: 'Package',
     preview: 'DistroKid preview',
+    approve_live_submit: 'Live submit approval',
     live_submit: 'Live submit',
     hyperfollow: 'HyperFollow',
     outreach: 'Outreach',
   }[action] || action;
 }
 
-function disabledReasonForAction(key, { blockers, packageState, lifecycle }) {
+function disabledReasonForAction(key, { blockers, packageState, lifecycle, liveSubmitApproval }) {
   if (key === 'package' && blockers.length) return `Blocked: ${blockers.join(', ')}`;
+  if (key === 'release_assets' && blockers.length && !blockers.every(blocker => /Primary release image|Platform derivatives/i.test(blocker))) return 'Blocked: fix metadata or audio before refreshing release assets only if asset problems remain.';
   if (key === 'preview' && blockers.length) return `Blocked: ${blockers.join(', ')}`;
   if (key === 'preview' && !packageState.ready) return `Blocked: ${packageState.blockers.join(', ')}`;
+  if (key === 'approve_live_submit' && !isAtLeastLifecycle(lifecycle.current, 'distrokid_previewed')) return 'Blocked: DistroKid preview has not been completed';
   if (key === 'live_submit' && blockers.length) return `Blocked: ${blockers.join(', ')}`;
   if (key === 'live_submit' && !isAtLeastLifecycle(lifecycle.current, 'distrokid_previewed')) return 'Blocked: DistroKid preview has not been completed';
+  if (key === 'live_submit' && !liveSubmitApproval?.approved) return 'Blocked: explicit human approval is required';
   if (key === 'hyperfollow' && !isAtLeastLifecycle(lifecycle.current, 'submitted_to_distrokid')) return 'Blocked: requires submitted_to_distrokid';
+  if (key === 'browsy_dry_run') return 'Blocked: no ready Browsy task is available.';
   return '';
+}
+
+function summarizeLiveSubmitApproval(magicRelease) {
+  const task = magicRelease?.tasks?.find(item => item.task_key === 'distrokid_final_submit_approval') || null;
+  return {
+    taskKey: 'distrokid_final_submit_approval',
+    approved: task?.status === 'complete',
+    status: task?.status || 'not_started',
+    reason: task?.reason || '',
+    completedAt: task?.completed_at || null,
+  };
+}
+
+function buildTrackTable({ type, release, tracks }) {
+  return {
+    focusOptions: ['all', 'metadata', 'audio'],
+    rows: tracks.map(track => {
+      const hasMetadata = Boolean(track.fsAssets.metadata || track.metadata_path);
+      const hasAnyAudio = Boolean(track.releaseAudio?.selected || (track.fsAssets.audioFiles || []).length);
+      const needsAudioSelection = Boolean(track.releaseAudio?.requiresSelection);
+      const affected = {
+        metadata: !hasMetadata,
+        audio: !hasAnyAudio || needsAudioSelection,
+      };
+      const canRemove = type === 'album';
+      const costKnown = track.finance?.event_count > 0 || Number(track.total_cost_usd || 0) > 0;
+      return {
+        ...track,
+        affected,
+        metadataStatus: {
+          status: hasMetadata ? 'complete' : 'blocked',
+          label: hasMetadata ? 'complete' : 'blocked',
+        },
+        audioStatus: {
+          status: needsAudioSelection ? 'needs_attention' : (hasAnyAudio ? 'complete' : 'blocked'),
+          label: needsAudioSelection
+            ? `choose master (${track.releaseAudio?.candidates?.length || 0})`
+            : (track.releaseAudio?.selected ? 'master selected' : (hasAnyAudio ? 'available' : 'missing')),
+          fileName: track.releaseAudio?.selected?.name || track.releaseAudio?.selected?.relativePath || null,
+        },
+        costDisplay: costKnown ? formatUsd(track.finance?.total_cost_usd ?? track.total_cost_usd ?? 0) : '—',
+        lifecycleLabel: String(track.status || 'draft'),
+        actions: {
+          openSong: `/songs/${encodeURIComponent(track.id)}`,
+          fixMetadata: `/songs/${encodeURIComponent(track.id)}?tab=meta`,
+          generateMetadata: `/releases/${type}/${encodeURIComponent(release.id)}/tracks/${encodeURIComponent(track.id)}/metadata/generate`,
+          chooseMaster: `/songs/${encodeURIComponent(track.id)}/release-audio?return_to=${encodeURIComponent(`/releases/${type}/${encodeURIComponent(release.id)}`)}`,
+          generateMaster: `/songs/${encodeURIComponent(track.id)}/generate`,
+          removeTrack: canRemove ? `/releases/${type}/${encodeURIComponent(release.id)}/tracks/${encodeURIComponent(track.id)}/remove` : null,
+        },
+      };
+    }),
+  };
+}
+
+function buildCommandCenter({ type, release, stages, nextActions, magicRelease, liveSubmitApproval, packageState, hyperfollow }) {
+  const findAction = key => nextActions.find(action => action.key === key) || null;
+  const nextAutomatableAction = [
+    findAction('release_assets'),
+    findAction('package'),
+    findAction('preview'),
+    findAction('approve_live_submit'),
+    findAction('live_submit'),
+    findAction('hyperfollow'),
+    findAction('outreach'),
+  ].find(action => action?.enabled);
+  const stepActions = [
+    findAction('preview'),
+    findAction('approve_live_submit'),
+    findAction('live_submit'),
+    findAction('hyperfollow'),
+    findAction('outreach'),
+  ].filter(Boolean).filter(action => action.enabled || action.key === 'approve_live_submit');
+  return {
+    title: 'Magic Release',
+    primaryActions: [
+      magicRelease ? { key: 'start_full_magic_release', label: 'Start full Magic Release', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/magic-release/run-next`, enabled: true } : { key: 'start_full_magic_release', label: 'Start full Magic Release', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/magic-release/create`, enabled: true },
+      nextAutomatableAction ? { ...nextAutomatableAction, label: 'Run next fixable step' } : { key: 'run_next_fixable', label: 'Run next fixable step', enabled: false, disabledReason: 'No fixable step is runnable yet.' },
+      findAction('readiness'),
+      findAction('plan'),
+      findAction('browsy_dry_run')?.enabled ? findAction('browsy_dry_run') : null,
+    ].filter(Boolean),
+    stepActions: [],
+  };
+}
+
+function summarizeCockpitBlockers({ type, release, stages, blockers }) {
+  const actionableStages = stages.filter(stage => ['blocked', 'failed', 'ready', 'running', 'not_started'].includes(stage.status) && stage.issues.length);
+  const primary = actionableStages[0] || null;
+  return {
+    count: blockers.length,
+    category: primary?.label || 'Release blockers',
+    headline: blockers.length ? `${blockers.length} blocking issue${blockers.length === 1 ? '' : 's'} need attention` : 'No blocking issues',
+    issues: actionableStages.slice(0, 4).map(stage => ({
+      key: stage.key,
+      label: stage.label,
+      count: stage.blockerCount || stage.issues.length,
+      url: `/releases/${type}/${encodeURIComponent(release.id)}${stage.key === 'metadata' || stage.key === 'audio' ? `?focus=${stage.key}#tracks` : ''}`,
+      actions: stage.actions,
+    })),
+  };
+}
+
+function humanizeCockpitStatus(status) {
+  return String(status || 'not_started').replace(/_/g, ' ');
+}
+
+function buildRunHistory(logs = []) {
+  const records = [];
+  const seen = new Map();
+  for (const log of logs) {
+    const runId = String(log.payload?.runId || '').trim();
+    const key = `${log.action}:${runId || log.id}`;
+    const normalizedStatus = normalizeRunStatus(log.status);
+    let record = seen.get(key);
+    if (!record) {
+      record = {
+        key,
+        runId: runId || log.id,
+        action: log.action,
+        status: normalizedStatus,
+        startedAt: normalizedStatus === 'running' ? log.created_at : null,
+        finishedAt: isTerminalRunStatus(log.status) ? log.created_at : null,
+        latestAt: log.created_at,
+        message: log.message || '',
+        error: extractRunError(log),
+        command: log.payload?.command || log.payload?.commandLine || '',
+        script: log.payload?.script || '',
+        logPath: extractRunLogPath(log),
+        outputPath: log.payload?.outputPath || '',
+        logUrl: toOutputMediaUrl(extractRunLogPath(log)),
+        payload: log.payload || {},
+      };
+      seen.set(key, record);
+      records.push(record);
+    } else if (shouldReplaceRunRecord(record, log, normalizedStatus)) {
+      record.status = normalizedStatus;
+      record.latestAt = log.created_at;
+      record.finishedAt = isTerminalRunStatus(log.status) ? log.created_at : record.finishedAt;
+      record.message = log.message || record.message;
+      record.error = extractRunError(log) || record.error;
+      record.command = log.payload?.command || log.payload?.commandLine || record.command;
+      record.script = log.payload?.script || record.script;
+      record.logPath = extractRunLogPath(log) || record.logPath;
+      record.logUrl = toOutputMediaUrl(record.logPath);
+      record.payload = log.payload || record.payload;
+    }
+    if (normalizedStatus === 'running') {
+      record.startedAt = log.created_at;
+      if (!record.command) record.command = log.payload?.command || log.payload?.commandLine || '';
+      if (!record.script) record.script = log.payload?.script || '';
+      if (!record.logPath) {
+        record.logPath = extractRunLogPath(log);
+        record.logUrl = toOutputMediaUrl(record.logPath);
+      }
+    }
+  }
+  return records.sort((a, b) => String(b.latestAt || '').localeCompare(String(a.latestAt || '')));
+}
+
+function findLatestRun(runHistory = [], action) {
+  return runHistory.find(run => run.action === action) || null;
+}
+
+function normalizeRunStatus(status) {
+  if (status === 'success') return 'complete';
+  if (status === 'warning') return 'failed';
+  return String(status || 'not_started');
+}
+
+function isTerminalRunStatus(status) {
+  return ['complete', 'failed', 'blocked', 'skipped', 'success', 'warning'].includes(String(status || ''));
+}
+
+function extractRunError(log) {
+  return log.payload?.error
+    || log.payload?.latest_error
+    || log.payload?.latestError
+    || log.payload?.result?.error
+    || (/failed|blocked/i.test(String(log.status || '')) ? log.message : '');
+}
+
+function extractRunLogPath(log) {
+  return log.payload?.logPath
+    || log.payload?.latest_run_log_path
+    || log.payload?.latestRunLogPath
+    || log.payload?.job?.latest_run_log_path
+    || '';
+}
+
+function toOutputMediaUrl(filePath) {
+  const relativePath = String(filePath || '').trim().replace(/^output\//, '');
+  return relativePath ? `/media/${relativePath}` : '';
+}
+
+function shouldReplaceRunRecord(record, log, normalizedStatus) {
+  if (String(log.created_at || '') > String(record.latestAt || '')) return true;
+  return runStatusRank(normalizedStatus) > runStatusRank(record.status);
+}
+
+function runStatusRank(status) {
+  return {
+    failed: 5,
+    complete: 4,
+    blocked: 3,
+    skipped: 2,
+    running: 1,
+    ready: 0,
+    not_started: 0,
+  }[String(status || 'not_started')] ?? 0;
+}
+
+function formatUsd(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '—';
+  return `$${amount.toFixed(4)}`;
 }
 
 function scanSongOutput(songId) {

@@ -26,7 +26,9 @@ const {
   assignSongsToAlbum,
   createAlbum,
   getReleaseCockpitLogs,
+  getReleaseCampaignByRelease,
   getReleaseLinks,
+  upsertReleaseCampaignTask,
   upsertReleaseLink,
   upsertSong,
 } = await import('../src/shared/db.js');
@@ -47,6 +49,9 @@ const {
   runDistroKidAlbumAutomation,
   runDistroKidSongAutomation,
 } = await import('../src/shared/distrokid-automation.js');
+const {
+  createMagicReleaseCampaign,
+} = await import('../src/shared/magic-release.js');
 const {
   getDistroKidJob,
 } = await import('../src/shared/distrokid-jobs.js');
@@ -340,10 +345,133 @@ test('cockpit templates avoid duplicate competing controls for album-owned songs
   assert.match(songDetail, /Packaging, DistroKid preview, live submit, HyperFollow, and outreach actions are managed in the Release Cockpit/);
   assert.doesNotMatch(songDetail, /Run Automation Preview/);
   assert.doesNotMatch(songDetail, /Build Package/);
-  assert.match(releaseDetail, /Run DistroKid live submit/);
-  assert.match(releaseDetail, /Choose release master/);
-  assert.match(releaseModel, /ByteSeed video publishing/);
-  assert.match(releaseModel, /Meta publishing/);
+  assert.match(releaseDetail, /Magic Release/);
+  assert.match(releaseDetail, /Magic Release command bar/);
+  assert.match(releaseDetail, /Release Readiness/);
+  assert.match(releaseDetail, /Paste \/ save HyperFollow URL/);
+  assert.match(releaseDetail, /Run history \/ logs/);
+  assert.match(releaseDetail, /Generate metadata/);
+  assert.match(releaseDetail, /Remove track/);
+  assert.doesNotMatch(releaseDetail, /DistroKid Preview card/);
+  assert.doesNotMatch(releaseDetail, /Release approval \+ HyperFollow/);
+  assert.doesNotMatch(releaseDetail, /HyperFollow capture<\/div>\s*<form/);
+  assert.doesNotMatch(releaseDetail, /Release assets in pipeline/);
+  assert.doesNotMatch(releaseDetail, /Magic Release tasks/);
+  assert.doesNotMatch(releaseDetail, /Control Panel/);
+  assert.doesNotMatch(releaseDetail, /Human Handoff/);
+  assert.match(releaseModel, /Start full Magic Release/);
+  assert.match(releaseModel, /Run next fixable step/);
+  assert.match(releaseModel, /Run readiness check/);
+  assert.match(releaseModel, /Generate \/ refresh release plan/);
+  assert.match(releaseModel, /Run Browsy dry run/);
+  assert.match(releaseModel, /Run DistroKid preview automation/);
+  assert.match(releaseModel, /Run live submit automation/);
+  assert.match(releaseModel, /Build outreach campaign/);
+  assert.match(releaseModel, /Send outreach \/ social tasks/);
+  assert.match(releaseModel, /HyperFollow capture/);
+  assert.match(releaseModel, /Approve live submit/);
+  assert.match(releaseModel, /Generate \/ refresh release assets/);
+});
+
+test('blocked readiness stages expose inline fix actions', () => {
+  const songId = createSong('Blocked Actions Single');
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+  const metadataStage = cockpit.stages.find(stage => stage.key === 'metadata');
+  const audioStage = cockpit.stages.find(stage => stage.key === 'audio');
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+
+  assert.ok(metadataStage);
+  assert.equal(metadataStage.status, 'blocked');
+  assert.deepEqual(metadataStage.actions.map(action => action.label), ['Fix metadata', 'Generate missing metadata', 'Open filtered tracks']);
+
+  assert.ok(audioStage);
+  assert.equal(audioStage.status, 'blocked');
+  assert.deepEqual(audioStage.actions.map(action => action.label), ['Choose master', 'Generate master', 'Open affected tracks']);
+
+  assert.ok(previewStage);
+  assert.equal(previewStage.status, 'blocked');
+  assert.match(previewStage.actions[0].disabledReason, /metadata|audio|package/i);
+});
+
+test('live submit requires explicit approval before automation becomes runnable', async () => {
+  const songId = createSong('Approval Gate Single');
+  writeReadySongFiles(songId);
+
+  await buildReleasePackageForCockpit('single', songId);
+  const preview = await runDistroKidSongAutomation(songId, { mode: 'preview' });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'complete', 'Preview completed for approval test.', preview);
+
+  let cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.liveSubmitApproval.approved, false);
+  assert.equal(cockpit.nextActions.find(action => action.key === 'approve_live_submit')?.enabled, true);
+  assert.equal(cockpit.nextActions.find(action => action.key === 'live_submit')?.enabled, false);
+  assert.throws(() => validateReleaseAction('live_submit', cockpit, { confirm: true }), /human approval/i);
+
+  const state = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  upsertReleaseCampaignTask({
+    campaign_id: state.campaign.id,
+    task_key: 'distrokid_final_submit_approval',
+    title: 'Ken approval gate for DistroKid final submit',
+    owner: 'ken',
+    status: 'complete',
+    blocking: true,
+    reason: 'Approved for test coverage.',
+    completed_at: new Date().toISOString(),
+  });
+
+  cockpit = buildReleaseCockpitViewModel('single', songId);
+  assert.equal(cockpit.liveSubmitApproval.approved, true);
+  assert.equal(cockpit.nextActions.find(action => action.key === 'live_submit')?.enabled, true);
+});
+
+test('album cockpit track table exposes remove-from-release actions and asset pipeline state', () => {
+  const first = createSong('Remove Action One');
+  const second = createSong('Remove Action Two');
+  const albumId = createAlbum({
+    id: uniqueId('COCKPIT_ALBUM_REMOVE_ROUTE'),
+    album_title: 'Remove Action Album',
+    release_date: '2026-08-10',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  albumIds.add(albumId);
+  assignSongsToAlbum(albumId, [first, second]);
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+  const mediaStage = cockpit.stages.find(stage => stage.key === 'media');
+
+  assert.ok(cockpit.trackTable.rows.every(row => row.actions.removeTrack));
+  assert.ok(mediaStage);
+  assert.equal(mediaStage.label, 'Release assets');
+  assert.ok(mediaStage.actions.some(action => action.label === 'Generate / refresh release assets' || action.label === 'Open album details'));
+});
+
+test('failed DistroKid preview is visible in readiness row and run history', () => {
+  const songId = createSong('Failed Preview Visibility Single');
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'running', 'DistroKid preview automation started.', {
+    runId: 'preview_test_run',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: `output/release-packages/${songId}/distrokid-run/run-log.json`,
+  });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'failed', 'Preview crashed before upload.', {
+    runId: 'preview_test_run',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: `output/release-packages/${songId}/distrokid-run/run-log.json`,
+    error: 'ReferenceError: Cannot access finished before initialization',
+  });
+
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+
+  assert.ok(previewStage);
+  assert.equal(previewStage.status, 'failed');
+  assert.match(previewStage.detail, /ReferenceError/);
+  assert.equal(previewStage.latestRun?.runId, 'preview_test_run');
+  assert.match(previewStage.latestRun?.logPath || '', /run-log\.json$/);
+  assert.ok(previewStage.actions.some(action => action.label === 'Run DistroKid preview automation'));
+  assert.equal(cockpit.runHistory[0].runId, 'preview_test_run');
+  assert.equal(cockpit.runHistory[0].status, 'failed');
 });
 
 test('mocked release cockpit acceptance covers single lifecycle actions', async () => {
