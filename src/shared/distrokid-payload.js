@@ -51,7 +51,8 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
     cockpit.releaseAssetState?.primaryImage?.path,
   ), repoRoot);
 
-  const tracks = (cockpit.tracks || []).map((track, index) => buildTrackPayload({
+  const sourceTracks = collectPayloadTracks({ cockpit, manifest, uploadPayload, releaseType, releaseId });
+  const tracks = sourceTracks.map((track, index) => buildTrackPayload({
     track,
     index,
     manifest,
@@ -204,6 +205,83 @@ export function buildBrowsyDistroKidWorkflowPackage({
     payload: canonicalPayload,
     workflowPackage,
   };
+}
+
+function collectPayloadTracks({ cockpit, manifest, uploadPayload, releaseType, releaseId }) {
+  const cockpitTracks = Array.isArray(cockpit?.tracks) ? cockpit.tracks.filter(Boolean) : [];
+  if (cockpitTracks.length) return cockpitTracks;
+
+  const manifestTracks = Array.isArray(manifest?.tracks) ? manifest.tracks.filter(Boolean) : [];
+  if (manifestTracks.length) return manifestTracks;
+
+  const uploadTracks = Array.isArray(uploadPayload?.tracks) ? uploadPayload.tracks.filter(Boolean) : [];
+  if (uploadTracks.length) return uploadTracks;
+
+  if (releaseType !== 'single') return [];
+
+  const singleTrack = pruneUndefined({
+    ...manifest,
+    ...uploadPayload,
+    id: releaseId
+      || cockpit?.id
+      || cockpit?.songId
+      || cockpit?.song_id
+      || manifest?.song_id
+      || manifest?.songId
+      || uploadPayload?.song_id
+      || uploadPayload?.songId,
+    song_id: releaseId
+      || cockpit?.song_id
+      || cockpit?.songId
+      || manifest?.song_id
+      || manifest?.songId
+      || uploadPayload?.song_id
+      || uploadPayload?.songId,
+    songId: releaseId
+      || cockpit?.songId
+      || cockpit?.song_id
+      || manifest?.songId
+      || manifest?.song_id
+      || uploadPayload?.songId
+      || uploadPayload?.song_id,
+    title: cockpit?.title
+      || uploadPayload?.track_title
+      || uploadPayload?.title
+      || manifest?.track_title
+      || manifest?.title
+      || manifest?.release_title,
+    track_title: uploadPayload?.track_title
+      || manifest?.track_title
+      || cockpit?.title
+      || manifest?.title
+      || manifest?.release_title,
+    audioPath: uploadPayload?.audioPath
+      || uploadPayload?.audio_path
+      || uploadPayload?.audio_file
+      || manifest?.audioPath
+      || manifest?.audio_path
+      || manifest?.audio_file,
+    audio_path: uploadPayload?.audio_path
+      || uploadPayload?.audioPath
+      || uploadPayload?.audio_file
+      || manifest?.audio_path
+      || manifest?.audioPath
+      || manifest?.audio_file,
+    audio_file: uploadPayload?.audio_file
+      || uploadPayload?.audioPath
+      || uploadPayload?.audio_path
+      || manifest?.audio_file
+      || manifest?.audioPath
+      || manifest?.audio_path,
+    lyrics: uploadPayload?.lyrics || uploadPayload?.lyrics_text || manifest?.lyrics || manifest?.lyrics_text,
+    lyricsPath: uploadPayload?.lyricsPath || uploadPayload?.lyrics_path || uploadPayload?.lyrics_file || manifest?.lyricsPath || manifest?.lyrics_path || manifest?.lyrics_file,
+    lyrics_path: uploadPayload?.lyrics_path || uploadPayload?.lyricsPath || uploadPayload?.lyrics_file || manifest?.lyrics_path || manifest?.lyricsPath || manifest?.lyrics_file,
+    metadata_path: uploadPayload?.metadata_path || uploadPayload?.metadataPath || manifest?.metadata_path || manifest?.metadataPath,
+  });
+
+  return singleTrack.song_id || singleTrack.songId || singleTrack.id || singleTrack.audioPath || singleTrack.audio_path || singleTrack.audio_file
+    ? [singleTrack]
+    : [];
 }
 
 function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) {
