@@ -29,6 +29,7 @@ import { createOrRefreshReleaseSocialCampaign } from '../agents/daily-social-pla
 import { getSongMarketingKit, saveSongMarketingKit } from './song-marketing-kit.js';
 import { recommendVisualAssets, selectReusableAssetOrSuggestCustomVideo } from './visual-library.js';
 import { buildCanonicalDistroKidPayload } from './distrokid-payload.js';
+import { runReleaseBrowsyPipeline } from './browsy-release-pipeline.js';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -410,7 +411,16 @@ async function runAgentTask({ campaign, task, release, dryRun }) {
   return { ok: true, task: updatedTask, payload };
 }
 
+function browsyHttpTransportEnabled() {
+  return ['http', 'api', 'rest'].includes(
+    String(process.env.BROWSY_TRANSPORT || process.env.PANCAKE_BROWSY_TRANSPORT || '').trim().toLowerCase(),
+  );
+}
+
 async function runBrowsyTask({ campaign, task, release, dryRun }) {
+  if (browsyHttpTransportEnabled()) {
+    return runBrowsyTaskViaHttp({ campaign, task, release, dryRun });
+  }
   upsertReleaseCampaignTask({ id: task.id, campaign_id: campaign.id, task_key: task.task_key, status: 'running' });
   const packageResult = writeBrowsyWorkflowPackage({ campaign, task, release, dryRun });
   const run = addReleaseCampaignRun({
@@ -449,6 +459,136 @@ async function runBrowsyTask({ campaign, task, release, dryRun }) {
   });
   recomputeTaskStatuses(campaign.id);
   return { ok: execution.ok, task: updatedTask, execution };
+}
+
+/**
+ * HTTP transport for Browsy tasks: drives the async contract pipeline
+ * (dry_run -> preview -> optional live) and reuses ingestBrowsyResult() for
+ * persistence by translating the contract result into the legacy
+ * automation-result-v1 shape the rest of the cockpit already understands.
+ */
+async function runBrowsyTaskViaHttp({ campaign, task, release, dryRun }) {
+  upsertReleaseCampaignTask({ id: task.id, campaign_id: campaign.id, task_key: task.task_key, status: 'running' });
+  const workflowDir = path.join(WORKFLOW_ROOT, campaign.id, task.task_key);
+  fs.mkdirSync(workflowDir, { recursive: true });
+  const stages = dryRun ? ['dry_run', 'preview'] : ['dry_run', 'preview', 'live'];
+  const run = addReleaseCampaignRun({
+    campaign_id: campaign.id,
+    task_id: task.id,
+    workflow_id: task.source_workflow_id,
+    status: 'running',
+    log: { mode: dryRun ? 'dry_run' : 'live', transport: 'http', stages },
+  });
+
+  let pipeline;
+  try {
+    pipeline = await runReleaseBrowsyPipeline({
+      releaseType: release.type,
+      releaseId: release.id,
+      workflowId: task.source_workflow_id,
+      stages,
+      approvalToken: process.env.BROWSY_APPROVAL_TOKEN || '',
+      approvedBy: process.env.BROWSY_APPROVED_BY || 'pancake-robot',
+      autoApproveSubmit: false, // human approval gate stays with Ken
+      // ingestBrowsyResult handles persistence below — avoid double-writing.
+      persist: false,
+    });
+  } catch (error) {
+    updateReleaseCampaignRun(run.id, { status: 'failed', log: { error: error.message } });
+    const failedTask = upsertReleaseCampaignTask({
+      id: task.id,
+      campaign_id: campaign.id,
+      task_key: task.task_key,
+      status: 'failed',
+      reason: error.message,
+    });
+    addReleaseCockpitLog({
+      releaseType: campaign.release_type,
+      releaseId: campaign.release_id,
+      action: 'magic_release_browsy_http',
+      status: 'error',
+      message: `Browsy HTTP run failed for ${task.source_workflow_id}: ${error.message}`,
+      payload: { taskKey: task.task_key },
+    });
+    recomputeTaskStatuses(campaign.id);
+    return { ok: false, task: failedTask, error: error.message };
+  }
+
+  const legacyResult = browsyPipelineToLegacyResult({ pipeline, release });
+  const resultPath = path.join(workflowDir, 'result.json');
+  fs.writeFileSync(resultPath, JSON.stringify(legacyResult, null, 2));
+  updateReleaseCampaignRun(run.id, {
+    run_id: legacyResult.run_id,
+    status: legacyResult.status === 'failed' || legacyResult.status === 'blocked'
+      ? 'failed'
+      : (pipeline.needsHuman ? 'needs_ken' : 'complete'),
+    result_path: resultPath,
+    log: pipeline,
+  });
+  return ingestBrowsyResult({ resultPath, campaignId: campaign.id, taskKey: task.task_key });
+}
+
+function browsyPipelineToLegacyResult({ pipeline, release }) {
+  const stages = pipeline.stages || [];
+  const lastStage = stages[stages.length - 1] || {};
+  const liveStage = stages.find(stage => stage.mode === 'live');
+  const result = lastStage.result || {};
+
+  const capturedOutputs = {};
+  for (const [id, output] of Object.entries(result.outputs || {})) {
+    if (output && output.status === 'captured' && output.value !== undefined && output.value !== null) {
+      capturedOutputs[id] = output.value;
+    }
+  }
+
+  let status;
+  if (pipeline.needsHuman) status = 'live_run_gated';
+  else if (lastStage.status === 'failed') status = 'failed';
+  else if (lastStage.status === 'blocked' || lastStage.status === 'canceled') status = 'blocked';
+  else if (liveStage && liveStage.status === 'completed') status = 'live_run_completed';
+  else status = 'dry_run_passed';
+
+  const screenshots = [];
+  const artifactPaths = [];
+  for (const stage of stages) {
+    for (const item of (stage.result?.artifacts?.screenshots) || []) {
+      if (item?.path) screenshots.push(item.path);
+    }
+    for (const group of Object.values(stage.result?.artifacts || {})) {
+      for (const item of group || []) {
+        if (item?.path && !artifactPaths.includes(item.path)) artifactPaths.push(item.path);
+      }
+    }
+  }
+
+  const clientActionRequests = pipeline.needsHuman
+    ? [{
+        type: 'human_decision_required',
+        severity: 'blocking',
+        reason: result.blockingReason || `Browsy paused at status "${lastStage.status}" and needs a human.`,
+        suggested_action: `Resolve "${lastStage.status}" in Browsy, then approve to resume.`,
+      }]
+    : [];
+
+  return {
+    ok: status !== 'failed',
+    workflow_id: pipeline.workflowId,
+    run_id: liveStage?.runId || lastStage.runId || null,
+    source_system: 'pancake_robot',
+    entity_type: release.type,
+    entity_id: release.id,
+    status,
+    captured_outputs: capturedOutputs,
+    filled_fields: result.completedSteps || [],
+    skipped_fields: result.skippedSteps || [],
+    errors: result.failedSteps || [],
+    screenshots,
+    artifact_paths: artifactPaths,
+    manual_checkpoints: (result.checkpoints || []).map(checkpoint => checkpoint?.title || checkpoint?.id || 'checkpoint'),
+    client_action_requests: clientActionRequests,
+    next_required_action: pipeline.needsHuman ? `Resolve "${lastStage.status}" in Browsy` : null,
+    contract_version: pipeline.contractVersion || null,
+  };
 }
 
 function markNeedsKenTask(task, reason) {
