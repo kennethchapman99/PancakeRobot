@@ -223,33 +223,7 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
     uploadTrack?.lyrics,
     uploadTrack?.lyrics_text,
   ) || readTextIfExists(lyricsPath);
-  const songId = clean(
-    track.id
-    || track.song_id
-    || track.songId
-    || track.song?.id
-    || track.song?.song_id
-    || track.track_metadata?.id
-    || track.metadata?.id
-    || track.metadata?.song_id
-    || track.metadata?.songId
-    || trackManifest?.song_id
-    || trackManifest?.songId
-    || trackManifest?.id
-    || trackManifest?.track_id
-    || trackManifest?.track_metadata?.id
-    || trackManifest?.metadata?.id
-    || trackManifest?.metadata?.song_id
-    || uploadTrack?.song_id
-    || uploadTrack?.songId
-    || uploadTrack?.id
-    || uploadTrack?.track_id
-    || uploadTrack?.track_metadata?.id
-    || uploadTrack?.metadata?.id
-    || metadata.id
-    || metadata.song_id
-    || metadata.songId
-  );
+  const songId = findFirstSongId(track, trackManifest, uploadTrack, metadata);
   const title = clean(
     trackManifest?.track_title
       || uploadTrack?.track_title
@@ -319,6 +293,53 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
     aiDisclosure: firstDefined(track.aiDisclosure, track.ai_disclosure, trackManifest?.aiDisclosure, trackManifest?.ai_disclosure, uploadTrack?.aiDisclosure, uploadTrack?.ai_disclosure, metadata.aiDisclosure, metadata.ai_disclosure),
     metadata,
   });
+}
+
+function findFirstSongId(...sources) {
+  for (const source of sources) {
+    const found = findSongIdInObject(source);
+    if (found) return found;
+  }
+  return '';
+}
+
+function findSongIdInObject(value, depth = 0) {
+  if (!value || typeof value !== 'object' || depth > 3) return '';
+
+  const direct = clean(
+    value.song_id
+    || value.songId
+    || value.songID
+    || value.song_uuid
+    || value.catalog_song_id
+    || value.catalogSongId
+    || value.source_song_id
+    || value.sourceSongId
+  );
+  if (direct) return direct;
+
+  const id = clean(value.id);
+  if (id && /SONG/i.test(id)) return id;
+
+  const nestedKeys = [
+    'song',
+    'sourceSong',
+    'catalogSong',
+    'track',
+    'track_metadata',
+    'trackMetadata',
+    'metadata',
+    'releaseSong',
+    'dbSong',
+    'record',
+  ];
+
+  for (const key of nestedKeys) {
+    const found = findSongIdInObject(value[key], depth + 1);
+    if (found) return found;
+  }
+
+  return '';
 }
 
 function findTrackManifest(container, track) {
