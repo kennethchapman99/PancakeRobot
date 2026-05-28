@@ -11,7 +11,29 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
   const manifest = cockpit.packageState?.manifest || {};
   const uploadPayload = manifest.canonical_distrokid_upload_payload || {};
   const releaseType = normalizeReleaseType(cockpit.type || manifest.release_type || uploadPayload.release_type);
-  const releaseId = clean(cockpit.id || manifest.release_id || manifest.album_id || manifest.song_id);
+  const releaseId = clean(
+    cockpit.id
+    || cockpit.releaseId
+    || cockpit.release_id
+    || cockpit.songId
+    || cockpit.song_id
+    || cockpit.release?.id
+    || cockpit.release?.releaseId
+    || cockpit.release?.release_id
+    || uploadPayload.releaseId
+    || uploadPayload.release_id
+    || uploadPayload.albumId
+    || uploadPayload.album_id
+    || uploadPayload.songId
+    || uploadPayload.song_id
+    || manifest.releaseId
+    || manifest.release_id
+    || manifest.albumId
+    || manifest.album_id
+    || manifest.songId
+    || manifest.song_id
+    || (releaseType === 'single' ? findFirstSongId(cockpit.tracks?.[0], cockpit, manifest, uploadPayload) : '')
+  );
   const releaseTitle = clean(uploadPayload.release_title || manifest.release_title || cockpit.title);
   const artistName = clean(uploadPayload.artist || manifest.artist || options.artistName || options.artist);
   const releaseDate = clean(uploadPayload.release_date || manifest.release_date || cockpit.releaseDate);
