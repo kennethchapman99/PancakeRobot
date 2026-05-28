@@ -258,6 +258,25 @@ function firstTrackArtworkPath(sourceTracks = []) {
   return '';
 }
 
+function findDefaultSongAudioPath({ songId, repoRoot }) {
+  const id = clean(songId);
+  if (!id) return '';
+
+  const candidates = [
+    path.join(repoRoot, 'output', 'songs', id, 'audio.mp3'),
+    path.join(repoRoot, 'output', 'songs', id, 'audio.wav'),
+    path.join(repoRoot, 'output', 'songs', id, 'audio.m4a'),
+    path.join(repoRoot, 'output', 'songs', id, 'master.mp3'),
+    path.join(repoRoot, 'output', 'songs', id, 'master.wav'),
+    path.join(repoRoot, 'output', 'songs', id, 'final.mp3'),
+    path.join(repoRoot, 'output', 'songs', id, 'final.wav'),
+    path.join(repoRoot, 'output', 'songs', id, 'release-master.mp3'),
+    path.join(repoRoot, 'output', 'songs', id, 'release-master.wav'),
+  ];
+
+  return candidates.find(candidate => fs.existsSync(candidate)) || '';
+}
+
 function findDefaultSongArtworkPath({ sourceTracks = [], releaseId, repoRoot }) {
   const ids = [
     releaseId,
@@ -367,6 +386,7 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
   const trackManifest = findTrackManifest(manifest, track);
   const uploadTrack = findTrackManifest(uploadPayload, track);
   const metadata = readTrackMetadata(track, trackManifest, repoRoot);
+  const candidateSongId = findFirstSongId(track, trackManifest, uploadTrack, metadata);
   const audioPath = toAbsolutePath(firstText(
     track.audioPath,
     track.audio_path,
@@ -375,12 +395,18 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
     track.releaseAudio?.selected?.filePath,
     track.releaseAudio?.selected?.absolutePath,
     track.fsAssets?.audioFiles?.[0]?.path,
+    track.fsAssets?.audioFiles?.[0],
+    track.fsAssets?.audio,
     trackManifest?.audioPath,
     trackManifest?.audio_path,
     trackManifest?.audio_file,
     uploadTrack?.audioPath,
     uploadTrack?.audio_path,
     uploadTrack?.audio_file,
+    metadata.audioPath,
+    metadata.audio_path,
+    metadata.audio_file,
+    findDefaultSongAudioPath({ songId: candidateSongId, repoRoot }),
   ), repoRoot);
   const lyricsPath = toAbsolutePath(firstText(
     track.lyricsPath,
@@ -402,7 +428,7 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
     uploadTrack?.lyrics,
     uploadTrack?.lyrics_text,
   ) || readTextIfExists(lyricsPath);
-  const songId = findFirstSongId(track, trackManifest, uploadTrack, metadata);
+  const songId = candidateSongId;
   const title = clean(
     trackManifest?.track_title
       || uploadTrack?.track_title
