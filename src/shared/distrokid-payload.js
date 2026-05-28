@@ -40,18 +40,9 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
   const label = clean(uploadPayload.label || manifest.label || manifest.record_label || options.label);
   const primaryGenre = clean(uploadPayload.primary_genre || manifest.primary_genre || uploadPayload.genre || manifest.genre || options.primaryGenre || options.genre);
   const secondaryGenre = clean(uploadPayload.secondary_genre || manifest.secondary_genre || options.secondaryGenre);
-  const artworkPath = toAbsolutePath(firstText(
-    uploadPayload.artworkPath,
-    uploadPayload.artwork_path,
-    uploadPayload.cover_art,
-    manifest.artworkPath,
-    manifest.artwork_path,
-    manifest.cover_art,
-    cockpit.distrokidArtwork?.path,
-    cockpit.releaseAssetState?.primaryImage?.path,
-  ), repoRoot);
-
   const sourceTracks = collectPayloadTracks({ cockpit, manifest, uploadPayload, releaseType, releaseId });
+  const artworkPath = resolvePayloadArtworkPath({ cockpit, manifest, uploadPayload, sourceTracks, releaseId, repoRoot });
+
   const tracks = sourceTracks.map((track, index) => buildTrackPayload({
     track,
     index,
@@ -205,6 +196,94 @@ export function buildBrowsyDistroKidWorkflowPackage({
     payload: canonicalPayload,
     workflowPackage,
   };
+}
+
+function resolvePayloadArtworkPath({ cockpit, manifest, uploadPayload, sourceTracks, releaseId, repoRoot }) {
+  const explicit = toAbsolutePath(firstText(
+    uploadPayload.artworkPath,
+    uploadPayload.artwork_path,
+    uploadPayload.cover_art,
+    uploadPayload.coverArt,
+    uploadPayload.coverArtPath,
+    uploadPayload.image_path,
+    uploadPayload.imagePath,
+    manifest.artworkPath,
+    manifest.artwork_path,
+    manifest.cover_art,
+    manifest.coverArt,
+    manifest.coverArtPath,
+    manifest.image_path,
+    manifest.imagePath,
+    cockpit.artworkPath,
+    cockpit.artwork_path,
+    cockpit.cover_art,
+    cockpit.coverArtPath,
+    cockpit.distrokidArtwork?.path,
+    cockpit.distrokidArtwork?.filePath,
+    cockpit.distrokidArtwork?.absolutePath,
+    cockpit.releaseAssetState?.primaryImage?.path,
+    cockpit.releaseAssetState?.primaryImage?.filePath,
+    cockpit.releaseAssetState?.primaryImage?.absolutePath,
+    cockpit.primaryImage?.path,
+    cockpit.headerArtwork?.path,
+    cockpit.media?.primaryImage?.path,
+    firstTrackArtworkPath(sourceTracks),
+  ), repoRoot);
+
+  if (explicit) return explicit;
+
+  return findDefaultSongArtworkPath({ sourceTracks, releaseId, repoRoot });
+}
+
+function firstTrackArtworkPath(sourceTracks = []) {
+  for (const track of sourceTracks || []) {
+    const candidate = firstText(
+      track?.artworkPath,
+      track?.artwork_path,
+      track?.cover_art,
+      track?.coverArt,
+      track?.coverArtPath,
+      track?.image_path,
+      track?.imagePath,
+      track?.releaseAssetState?.primaryImage?.path,
+      track?.releaseAssetState?.primaryImage?.filePath,
+      track?.releaseAssetState?.primaryImage?.absolutePath,
+      track?.primaryImage?.path,
+      track?.fsAssets?.primaryImage,
+      track?.fsAssets?.baseImage,
+      track?.fsAssets?.referenceImage,
+    );
+    if (candidate) return candidate;
+  }
+  return '';
+}
+
+function findDefaultSongArtworkPath({ sourceTracks = [], releaseId, repoRoot }) {
+  const ids = [
+    releaseId,
+    ...sourceTracks.flatMap(track => [
+      track?.id,
+      track?.song_id,
+      track?.songId,
+      track?.song?.id,
+      track?.song?.song_id,
+      track?.song?.songId,
+    ]),
+  ].map(clean).filter(Boolean);
+
+  for (const id of [...new Set(ids)]) {
+    const candidates = [
+      path.join(repoRoot, 'output', 'songs', id, 'reference', 'base-image.png'),
+      path.join(repoRoot, 'output', 'songs', id, 'reference', 'base-image.jpg'),
+      path.join(repoRoot, 'output', 'songs', id, 'reference', 'base-image.webp'),
+      path.join(repoRoot, 'output', 'songs', id, 'cover_art.png'),
+      path.join(repoRoot, 'output', 'songs', id, 'cover-art.png'),
+    ];
+    const found = candidates.find(candidate => fs.existsSync(candidate));
+    if (found) return found;
+  }
+
+  return null;
 }
 
 function collectPayloadTracks({ cockpit, manifest, uploadPayload, releaseType, releaseId }) {
