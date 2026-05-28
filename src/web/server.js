@@ -84,6 +84,7 @@ import {
   isRecognizedSongStatusInput,
 } from '../shared/song-status.js';
 import { markSongSubmittedToDistroKid } from '../shared/distrokid-release.js';
+import { buildCanonicalDistroKidPayload } from '../shared/distrokid-payload.js';
 import {
   buildDistroKidUploadInvocation,
   hasConfirmedDistroKidAuth,
@@ -120,6 +121,7 @@ import {
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
   resolveDistroKidArtwork,
+  updateCanonicalReleaseDate,
   validateReleaseAction,
 } from '../shared/release-cockpit.js';
 import {
@@ -334,6 +336,20 @@ app.get('/releases/:type/:id', (req, res) => {
   });
 });
 
+app.post('/releases/:type/:id/actions/release-date', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const result = updateCanonicalReleaseDate(cockpit.type, cockpit.id, req.body?.release_date);
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'release_date_update', 'complete', `Release date saved: ${result.releaseDate}.`, result);
+    respondReleaseAction(req, res, cockpit, 'Release date saved.', { level: 'success' });
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'release_date_update', 'blocked', error.message);
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, { error: error.message, level: 'error' }));
+  }
+});
+
 app.post('/releases/:type/:id/actions/readiness', (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
@@ -460,6 +476,22 @@ app.get('/releases/:type/:id/assets/distrokid-artwork/download', (req, res) => {
   const filename = `${cockpit.id}-distrokid-artwork.${artwork.ext}`;
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.sendFile(artwork.path);
+});
+
+app.get('/releases/:type/:id/assets/distrokid-payload/download', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    if (!cockpit.packageState?.exists && cockpit.blockers.length === 0) {
+      await buildReleasePackageForCockpit(cockpit.type, cockpit.id);
+    }
+    const payload = buildCanonicalDistroKidPayload({ releaseType: cockpit.type, releaseId: cockpit.id });
+    const filename = `${cockpit.id}-distrokid-payload.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.type('application/json').send(`${JSON.stringify(payload, null, 2)}\n`);
+  } catch (error) {
+    res.status(/not found|blocked/i.test(error.message) ? 409 : 500).json({ ok: false, error: error.message });
+  }
 });
 
 app.post('/releases/:type/:id/actions/distrokid-preview/stop', (req, res) => {
@@ -2664,6 +2696,7 @@ function buildDistroKidPreviewCommand(cockpit) {
     mode: 'preview',
     interactivePreview: true,
     authConfirmed: hasConfirmedDistroKidAuth(),
+    artworkPath: cockpit?.distrokidArtwork?.path || '',
   });
 }
 

@@ -3,7 +3,9 @@ import { join } from 'path';
 import { writeJson } from './lib.mjs';
 
 export const BLOCKED_UPLOAD_VALIDATION_CODE = 'blocked_upload_validation';
+export const BLOCKED_FILL_VALIDATION_CODE = 'blocked_fill_validation';
 export const BLOCKED_UPLOAD_VALIDATION_EXIT_CODE = 22;
+export const BLOCKED_FILL_VALIDATION_EXIT_CODE = 23;
 export const TRACK_COUNT_VALIDATION_ARTIFACT = 'track-count-validation.json';
 
 export function getDistroKidTrackCountLabel(trackCount) {
@@ -117,38 +119,45 @@ export async function fillReleaseFields({
   manifest,
   fieldEntries,
   ensureTrackCount,
+  waitForAlbumFormReady,
   runFieldForManifest,
 }) {
-  let trackCountEnsured = false;
-  let trackCountResult = null;
+  if (isAlbumManifest(manifest)) {
+    // Phase 1: select track count before touching any form fields
+    const trackCountResult = await ensureTrackCount(page, manifest.tracks.length);
+    if (!trackCountResult?.ok) {
+      return { ok: false, code: BLOCKED_UPLOAD_VALIDATION_CODE, trackCountCheck: trackCountResult };
+    }
 
-  for (const [fieldName, fieldDef] of fieldEntries) {
-    if (isAlbumManifest(manifest) && isTrackLevelField(fieldName, fieldDef)) {
-      if (!trackCountEnsured) {
-        trackCountResult = await ensureTrackCount(page, manifest.tracks.length);
-        trackCountEnsured = true;
-        if (!trackCountResult?.ok) {
-          return {
-            ok: false,
-            code: BLOCKED_UPLOAD_VALIDATION_CODE,
-            trackCountCheck: trackCountResult,
-          };
-        }
-      }
+    // Wait for DistroKid to finish re-rendering the form after the dropdown change
+    if (typeof waitForAlbumFormReady === 'function') {
+      await waitForAlbumFormReady(page, manifest, trackCountResult);
+    }
+
+    const albumLevelEntries = fieldEntries.filter(([n, d]) => !isTrackLevelField(n, d));
+    const trackLevelEntries = fieldEntries.filter(([n, d]) => isTrackLevelField(n, d));
+
+    // Phase 2: fill album-level fields (release title, artist, cover art, etc.)
+    for (const [fieldName, fieldDef] of albumLevelEntries) {
+      await runFieldForManifest(page, fieldName, fieldDef, manifest);
+    }
+
+    // Phase 3: fill per-track fields for every track
+    for (const [fieldName, fieldDef] of trackLevelEntries) {
       for (const [trackIndex, trackManifest] of manifest.tracks.entries()) {
         const trackFieldDef = fieldDefForTrack(fieldDef, trackIndex + 1);
         await runFieldForManifest(page, `${fieldName}_track_${trackIndex + 1}`, trackFieldDef, trackManifest);
       }
-      continue;
     }
-    await runFieldForManifest(page, fieldName, fieldDef, manifest);
+
+    return { ok: true, code: '', trackCountCheck: trackCountResult };
   }
 
-  return {
-    ok: true,
-    code: '',
-    trackCountCheck: trackCountResult,
-  };
+  // Single release: one pass in fieldEntries order
+  for (const [fieldName, fieldDef] of fieldEntries) {
+    await runFieldForManifest(page, fieldName, fieldDef, manifest);
+  }
+  return { ok: true, code: '', trackCountCheck: null };
 }
 
 async function defaultLocateAndSelectTrackCount(page, requestedTrackCount, optionLabel) {
@@ -229,8 +238,35 @@ async function defaultLocateAndSelectTrackCount(page, requestedTrackCount, optio
   }, { optionLabel, requestedTrackCount });
 }
 
+export async function countRenderedTrackBlocksFromPage(page) {
+  return page.evaluate(() => {
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const audioInputs = [...document.querySelectorAll('input[type="file"]')]
+      .filter(visible)
+      .filter(input => {
+        const id = String(input.id || '');
+        const name = String(input.getAttribute('name') || '');
+        const accept = String(input.getAttribute('accept') || '');
+        const classes = String(input.className || '');
+        const signature = `${id} ${name} ${classes}`.toLowerCase();
+        if (/artwork|cover/.test(signature) || /image/.test(accept)) return false;
+        return /track|upload|audio|song/.test(signature);
+      })
+      .length;
+    const titleInputs = [...document.querySelectorAll('input')]
+      .filter(visible)
+      .filter(input => /^(title_|track-title)/i.test(String(input.id || '')) || /^title_/i.test(String(input.getAttribute('name') || '')))
+      .length;
+    return Math.max(audioInputs, titleInputs);
+  }).catch(() => 0);
+}
+
 async function defaultWaitForRenderedTrackCount(page, requestedTrackCount, options = {}) {
-  const timeout = Number(options.renderTimeoutMs || 10000);
+  const timeout = Number(options.renderTimeoutMs || 30000);
   await page.waitForTimeout(750).catch(() => {});
   await page.waitForFunction((count) => {
     const visible = el => {

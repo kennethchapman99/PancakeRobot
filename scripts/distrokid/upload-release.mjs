@@ -4,11 +4,6 @@ import fs from 'fs';
 import { join } from 'path';
 import { validateCanonicalReleasePackageManifest } from '../../src/shared/release-package-validation.js';
 import {
-  DISTROKID_JOB_STATUSES,
-  getDistroKidJob,
-  markDistroKidJobStatus,
-} from '../../src/shared/distrokid-jobs.js';
-import {
   DANGEROUS_BUTTON_NAMES,
   DISTROKID_AUTH_PATH,
   DISTROKID_PLAYWRIGHT_PROFILE_DIR,
@@ -29,12 +24,25 @@ import {
   writeText,
 } from './lib.mjs';
 import {
+  BLOCKED_FILL_VALIDATION_CODE,
+  BLOCKED_FILL_VALIDATION_EXIT_CODE,
   BLOCKED_UPLOAD_VALIDATION_CODE,
   BLOCKED_UPLOAD_VALIDATION_EXIT_CODE,
   createTrackCountValidationError,
   ensureDistroKidTrackCount,
   fillReleaseFields,
 } from './upload-release-helpers.mjs';
+
+let DISTROKID_JOB_STATUSES = {
+  UPLOAD_STARTED: 'upload_started',
+  BLOCKED_UPLOAD_VALIDATION: 'blocked_upload_validation',
+  AUTH_NEEDED: 'auth_needed',
+  FAILED: 'failed',
+  SUBMITTED: 'submitted',
+  AWAITING_MANUAL_REVIEW: 'awaiting_manual_review',
+};
+let getDistroKidJob = () => null;
+let markDistroKidJobStatus = () => {};
 
 const { values } = parseArgs({
   manifest: { type: 'string' },
@@ -49,6 +57,7 @@ const { values } = parseArgs({
   'browser-mode': { type: 'string', default: 'storage-state' },
   'discover-fields': { type: 'boolean', default: false },
   'certify-important-checkboxes': { type: 'boolean', default: false },
+  'artwork-path': { type: 'string' },
   help: { type: 'boolean', short: 'h' },
 });
 
@@ -125,6 +134,8 @@ if (!exists(manifestPath)) {
 
 let manifest = readJson(manifestPath);
 manifest = normalizeDistroKidManifest(manifest);
+const resolvedArtworkPath = resolveArtworkPath(manifest, values['artwork-path']);
+if (resolvedArtworkPath) manifest.cover_art = resolvedArtworkPath;
 const manifestEntityId = resolveManifestEntityId(manifest);
 if (!manifestEntityId) {
   console.error('FAIL: manifest is missing song_id/release_id/album_id.');
@@ -156,12 +167,31 @@ const runLog = {
     skipped_fields: [],
     discovery_files: [],
     track_count_validation: null,
+    fill_validation: null,
+    lifecycle: [],
   },
   final_status: null,
   final_code: null,
   final_message: null,
+  releaseDateFromManifest: null,
+  releaseDateAppliedToDistroKid: null,
 };
+runLog.resolved_artwork_path = resolvedArtworkPath || manifest.cover_art || null;
 const manifestJobSongIds = collectManifestSongIds(manifest);
+const normalizedManifestReleaseDate = normalizeReleaseDateValue(manifest.release_date);
+runLog.releaseDateFromManifest = normalizedManifestReleaseDate;
+if (normalizedManifestReleaseDate) {
+  console.log(JSON.stringify({ releaseDateFromManifest: normalizedManifestReleaseDate }));
+  runLog.diagnostics.lifecycle.push(`releaseDateFromManifest=${normalizedManifestReleaseDate}`);
+} else if (manifest.release_date) {
+  const warning = `Manifest release_date is invalid and will not be trusted: ${manifest.release_date}`;
+  console.warn(warning);
+  runLog.diagnostics.lifecycle.push(warning);
+} else {
+  const warning = 'Manifest release_date is missing; DistroKid automation will leave the current release date behavior unchanged.';
+  console.warn(warning);
+  runLog.diagnostics.lifecycle.push(warning);
+}
 const validation = validateCanonicalReleasePackageManifest(manifest, { releaseType: manifest.release_type });
 for (const issue of validation.issues) {
   if (issue.code === 'missing_cover_art') errors.push({ field: 'cover_art', error: 'cover_art not found: (missing)' });
@@ -179,6 +209,9 @@ if (errors.length) {
   await finish(null, true);
   process.exit(1);
 }
+
+logRunStep('loading manifest');
+logRunStep('resolving artwork');
 
 const auth = exists(DISTROKID_AUTH_PATH) ? readJson(DISTROKID_AUTH_PATH) : null;
 console.log(`Cookie domains: ${getCookieDomains(auth).join(', ') || '(none)'}`);
@@ -213,6 +246,7 @@ if (certifyImportantCheckboxes) {
 }
 console.log(`Field map: ${relativeToRepo(fieldMapPath)}`);
 
+await loadDistroKidJobBindings();
 const existingJob = manifestJobSongIds.map(id => getDistroKidJob(id)).find(Boolean) || null;
 markManifestJobs(DISTROKID_JOB_STATUSES.UPLOAD_STARTED, {
   attempt_count: (existingJob?.attempt_count || 0) + 1,
@@ -279,11 +313,18 @@ try {
       fieldEntries: getOrderedFields(fieldMap.fields || {}),
       ensureTrackCount: async () => {
         const trackCount = Array.isArray(manifest.tracks) ? manifest.tracks.length : 1;
+        logRunStep(`selecting track count: ${getTrackCountPhaseLabel(trackCount)}`);
         const result = await ensureDistroKidTrackCount(page, trackCount, runDir);
         runLog.diagnostics.track_count_validation = result;
         return result;
       },
+      waitForAlbumFormReady: async () => {
+        const trackCount = Array.isArray(manifest.tracks) ? manifest.tracks.length : 1;
+        logRunStep(`waiting for ${trackCount} track groups`);
+        runLog.diagnostics.post_track_count_render = await waitForAlbumFormReady(page, manifest, fieldMap);
+      },
       runFieldForManifest: async (...args) => {
+        logFieldPhase(args[0], manifest);
         if (page.isClosed()) {
           const message = 'DistroKid page closed before field loop completed';
           errors.push({ field: 'browser', error: message });
@@ -321,6 +362,38 @@ try {
     }
 
     if (!finishedEarly) {
+      logRunStep('validating filled DistroKid form');
+      const fillValidation = await validateFilledDistroKidForm(page, manifest, fieldMap);
+      runLog.diagnostics.fill_validation = fillValidation;
+      if (!fillValidation.ok) {
+        const fillValidationError = {
+          field: 'distrokid_form_validation',
+          code: BLOCKED_FILL_VALIDATION_CODE,
+          error: fillValidation.summary,
+          diagnostics_path: relativeToRepo(join(runDir, 'fill-validation.json')),
+        };
+        errors.push(fillValidationError);
+        finalStatus = 'blocked';
+        finalCode = BLOCKED_FILL_VALIDATION_CODE;
+        finalMessage = fillValidation.summary;
+        exitCode = BLOCKED_FILL_VALIDATION_EXIT_CODE;
+        markManifestJobs(DISTROKID_JOB_STATUSES.BLOCKED_UPLOAD_VALIDATION, {
+          latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+          latest_error_json: fillValidationError,
+        });
+        await saveScreenshot(page, 'screenshot-fill-validation.png');
+        await savePageSnapshot(page);
+        emitRunEvent({
+          status: 'blocked',
+          code: finalCode,
+          message: finalMessage,
+          latest_run_log_path: relativeToRepo(join(runDir, 'run-log.json')),
+        });
+        finishedEarly = true;
+      }
+    }
+
+    if (!finishedEarly) {
       await page.waitForTimeout(1000);
       await saveScreenshot(page, 'screenshot-after-fill.png');
       await auditDangerousButtons(page, dangerousNames);
@@ -336,6 +409,7 @@ try {
           errors.push({ field: 'submit', error: submitResult.reason });
         }
       }
+      console.log(`PLAYWRIGHT STAGING COMPLETE: ${manifestEntityId}`);
     }
   }
 } catch (error) {
@@ -392,7 +466,17 @@ async function runFieldForManifest(page, fieldName, fieldDef, sourceManifest) {
         return;
       }
       const result = await fillField(page, fieldName, fieldDef, value);
-      if (result.ok) filledFields.push({ field: fieldName, strategy: fieldDef.strategy, manifest_key: manifestKey, category: fieldDef.category || null, status: fieldDef.category === 'certification' ? 'checked' : undefined });
+      if (result.ok) {
+        filledFields.push({ field: fieldName, strategy: fieldDef.strategy, manifest_key: manifestKey, category: fieldDef.category || null, status: fieldDef.category === 'certification' ? 'checked' : undefined });
+        if (manifestKey === 'release_date') {
+          const appliedReleaseDate = normalizeReleaseDateValue(value);
+          runLog.releaseDateAppliedToDistroKid = appliedReleaseDate;
+          if (appliedReleaseDate) {
+            console.log(JSON.stringify({ releaseDateAppliedToDistroKid: appliedReleaseDate }));
+            runLog.diagnostics.lifecycle.push(`releaseDateAppliedToDistroKid=${appliedReleaseDate}`);
+          }
+        }
+      }
       else {
         if (isPageClosedError(result.reason)) {
           const message = 'DistroKid page closed before field loop completed';
@@ -577,6 +661,10 @@ async function fillField(page, fieldName, fieldDef, value) {
         const result = await clickModalButton(page, fieldDef);
         return result;
       }
+      case 'smartFill': {
+        const result = await smartFillField(page, fieldDef, value);
+        return result;
+      }
       case 'cssFill':
       case 'fill':
       case 'textarea':
@@ -670,6 +758,86 @@ async function clickModalButton(page, fieldDef) {
   if (!result.ok) return { ok: false, skipped: true, reason: result.reason || `visible AI modal with ${buttonText} button not found` };
   await page.waitForTimeout(fieldDef.waitAfterMs || 500);
   return { ok: true };
+}
+
+async function smartFillField(page, fieldDef, value) {
+  const keywords = String(fieldDef.selector || '')
+    .split('|')
+    .map(item => item.trim().toLowerCase())
+    .filter(Boolean);
+  const result = await page.evaluate(({ keywords, value: nextValue }) => {
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const labelsFor = input => {
+      const labels = new Set();
+      if (input.id) document.querySelectorAll(`label[for="${CSS.escape(input.id)}"]`).forEach(label => labels.add(label.innerText.trim()));
+      input.labels?.forEach?.(label => labels.add(label.innerText.trim()));
+      if (input.closest('label')?.innerText) labels.add(input.closest('label').innerText.trim());
+      let cursor = input.parentElement;
+      for (let depth = 0; cursor && depth < 3; depth += 1, cursor = cursor.parentElement) {
+        if (cursor.innerText) labels.add(cursor.innerText.trim());
+      }
+      return [...labels].filter(Boolean);
+    };
+    const fillable = input => {
+      const tag = String(input.tagName || '').toLowerCase();
+      const type = String(input.getAttribute('type') || '').toLowerCase();
+      if (tag === 'textarea') return true;
+      if (tag !== 'input') return false;
+      return !['checkbox', 'radio', 'file', 'button', 'submit', 'reset', 'hidden'].includes(type);
+    };
+    const score = input => {
+      const haystack = `${labelsFor(input).join(' ')} ${input.getAttribute('placeholder') || ''} ${input.getAttribute('aria-label') || ''} ${input.getAttribute('name') || ''}`.toLowerCase();
+      let points = 0;
+      for (const keyword of keywords) {
+        if (haystack.includes(keyword)) points += keyword.length;
+      }
+      if (/track\s*\d+/i.test(haystack)) points -= 100;
+      return points;
+    };
+    const candidates = [...document.querySelectorAll('input, textarea')]
+      .filter(visible)
+      .filter(fillable)
+      .map(input => ({
+        input,
+        score: score(input),
+        labels: labelsFor(input),
+      }))
+      .filter(candidate => candidate.score > 0)
+      .sort((a, b) => b.score - a.score);
+    const best = candidates[0];
+    if (!best) {
+      return {
+        ok: false,
+        candidates: [],
+        reason: `smart fill target not found for keywords: ${keywords.join(', ')}`,
+      };
+    }
+    best.input.focus();
+    best.input.value = String(nextValue ?? '');
+    best.input.dispatchEvent(new Event('input', { bubbles: true }));
+    best.input.dispatchEvent(new Event('change', { bubbles: true }));
+    best.input.dispatchEvent(new Event('blur', { bubbles: true }));
+    return {
+      ok: true,
+      element: {
+        id: best.input.id || null,
+        name: best.input.getAttribute('name') || null,
+        placeholder: best.input.getAttribute('placeholder') || null,
+        labels: best.labels,
+      },
+      candidates: candidates.slice(0, 5).map(candidate => ({
+        id: candidate.input.id || null,
+        name: candidate.input.getAttribute('name') || null,
+        placeholder: candidate.input.getAttribute('placeholder') || null,
+        labels: candidate.labels,
+      })),
+    };
+  }, { keywords, value }).catch(error => ({ ok: false, reason: error.message }));
+  return result.ok ? { ok: true } : { ok: false, reason: result.reason, candidates: result.candidates || [], element: result.element || null };
 }
 
 async function enforceAiDisclosureModal(page, disclosure) {
@@ -947,10 +1115,10 @@ async function finish(context, skipBrowserClose) {
       finalCode = 'distrokid_login_required';
       finalMessage = 'DistroKid login required. Complete login in the browser, then resume.';
       exitCode = BLOCKED_LOGIN_EXIT_CODE;
-    } else if (errors.some(item => item.code === BLOCKED_UPLOAD_VALIDATION_CODE)) {
+    } else if (errors.some(item => isBlockedValidationCode(item.code))) {
       finalStatus = 'blocked';
-      finalCode = BLOCKED_UPLOAD_VALIDATION_CODE;
-      finalMessage = errors.find(item => item.code === BLOCKED_UPLOAD_VALIDATION_CODE)?.error || 'DistroKid upload blocked by Number of songs validation.';
+      finalCode = errors.find(item => isBlockedValidationCode(item.code))?.code || BLOCKED_UPLOAD_VALIDATION_CODE;
+      finalMessage = errors.find(item => isBlockedValidationCode(item.code))?.error || 'DistroKid upload blocked by validation.';
       exitCode = BLOCKED_UPLOAD_VALIDATION_EXIT_CODE;
     } else if (errors.length) {
       finalStatus = 'failed';
@@ -976,7 +1144,7 @@ async function finish(context, skipBrowserClose) {
   writeJson(join(runDir, 'skipped-fields.json'), skippedFields);
   writeJson(join(runDir, 'errors.json'), errors);
   const authError = errors.some(item => item.field === 'auth');
-  const validationBlocked = errors.some(item => item.code === BLOCKED_UPLOAD_VALIDATION_CODE) || finalCode === BLOCKED_UPLOAD_VALIDATION_CODE;
+  const validationBlocked = errors.some(item => isBlockedValidationCode(item.code)) || isBlockedValidationCode(finalCode);
   markManifestJobs(
     authError
       ? DISTROKID_JOB_STATUSES.AUTH_NEEDED
@@ -1174,6 +1342,304 @@ function addSkipped(item) {
   runLog.diagnostics.skipped_fields.push(item);
 }
 
+function resolveArtworkPath(currentManifest, overridePath) {
+  if (!isPresent(overridePath)) return currentManifest.cover_art || null;
+  const resolvedPath = absoluteFromMaybeRelative(overridePath);
+  if (!exists(resolvedPath)) {
+    errors.push({ field: 'cover_art', error: `cover_art not found: ${overridePath}` });
+    return currentManifest.cover_art || null;
+  }
+  return resolvedPath;
+}
+
+function normalizeReleaseDateValue(value) {
+  const normalized = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+  const date = new Date(`${normalized}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10) === normalized ? normalized : null;
+}
+
+function logRunStep(message) {
+  const entry = { at: new Date().toISOString(), message };
+  runLog.diagnostics.lifecycle.push(entry);
+  console.log(`[distrokid] ${message}`);
+}
+
+function getTrackCountPhaseLabel(trackCount) {
+  return getTrackCountLabel(trackCount);
+}
+
+function getTrackCountLabel(trackCount) {
+  return `${trackCount} song${trackCount === 1 ? '' : 's'}`;
+}
+
+const loggedFieldPhases = new Set();
+
+function logFieldPhase(fieldName, currentManifest) {
+  const trackCount = Array.isArray(currentManifest?.tracks) ? currentManifest.tracks.length : 1;
+  if (fieldName === 'release_title' || fieldName === 'artist' || fieldName === 'primary_genre' || fieldName === 'language') {
+    if (!loggedFieldPhases.has('album_metadata')) {
+      loggedFieldPhases.add('album_metadata');
+      logRunStep('filling album metadata');
+    }
+    return;
+  }
+  if (fieldName === 'cover_art') {
+    if (!loggedFieldPhases.has('artwork')) {
+      loggedFieldPhases.add('artwork');
+      logRunStep(dryRun ? 'uploading artwork in preview mode' : 'uploading artwork');
+    }
+    return;
+  }
+  const trackMatch = String(fieldName || '').match(/_track_(\d+)$/);
+  if (trackMatch) {
+    const trackNumber = Number(trackMatch[1]) || 1;
+    const key = `track_${trackNumber}`;
+    if (!loggedFieldPhases.has(key)) {
+      loggedFieldPhases.add(key);
+      logRunStep(`filling track ${trackNumber}/${trackCount}`);
+    }
+  }
+}
+
+function isBlockedValidationCode(code) {
+  return [BLOCKED_UPLOAD_VALIDATION_CODE, BLOCKED_FILL_VALIDATION_CODE].includes(String(code || ''));
+}
+
+async function waitForAlbumFormReady(page, currentManifest, currentFieldMap) {
+  const expectedTrackCount = Array.isArray(currentManifest?.tracks) ? currentManifest.tracks.length : 1;
+  const titleSelector = currentFieldMap?.fields?.release_title?.selector || '';
+  const artistSelector = currentFieldMap?.fields?.artist?.selector || '';
+  await page.waitForFunction(({ count, titleSelector: releaseSelector, artistSelector: bandSelector }) => {
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const labelsFor = input => {
+      const labels = new Set();
+      if (input.id) document.querySelectorAll(`label[for="${CSS.escape(input.id)}"]`).forEach(label => labels.add(label.innerText));
+      input.labels?.forEach?.(label => labels.add(label.innerText));
+      if (input.closest('label')?.innerText) labels.add(input.closest('label').innerText);
+      let cursor = input.parentElement;
+      for (let depth = 0; cursor && depth < 3; depth += 1, cursor = cursor.parentElement) {
+        if (cursor.innerText) labels.add(cursor.innerText);
+      }
+      return [...labels].join(' ').toLowerCase();
+    };
+    const renderedTrackCount = (() => {
+      const audioInputs = [...document.querySelectorAll('input[type="file"]')]
+        .filter(visible)
+        .filter(input => {
+          const signature = `${input.id || ''} ${input.getAttribute('name') || ''} ${input.className || ''}`.toLowerCase();
+          const accept = String(input.getAttribute('accept') || '').toLowerCase();
+          if (/artwork|cover/.test(signature) || /image/.test(accept)) return false;
+          return /track|upload|audio|song/.test(signature);
+        })
+        .length;
+      const titleInputs = [...document.querySelectorAll('input')]
+        .filter(visible)
+        .filter(input => /^(title_|track-title)/i.test(String(input.id || '')) || /^title_/i.test(String(input.getAttribute('name') || '')))
+        .length;
+      return Math.max(audioInputs, titleInputs);
+    })();
+    if (renderedTrackCount < count) return false;
+
+    const candidates = [...document.querySelectorAll('input, textarea, select')].filter(visible);
+    const globalFieldVisible = selector => {
+      if (!selector) return false;
+      return candidates.some(input => {
+        try {
+          return input.matches(selector);
+        } catch {
+          return false;
+        }
+      });
+    };
+    const heuristicVisible = keywordList => candidates.some(input => {
+      const context = `${labelsFor(input)} ${input.getAttribute('placeholder') || ''} ${input.getAttribute('aria-label') || ''}`.toLowerCase();
+      return keywordList.some(keyword => context.includes(keyword));
+    });
+    return globalFieldVisible(releaseSelector)
+      || globalFieldVisible(bandSelector)
+      || heuristicVisible(['album title', 'release title', 'album', 'artist', 'band name']);
+  }, { count: expectedTrackCount, titleSelector, artistSelector }, { timeout: 15000 }).catch(() => {});
+
+  await page.waitForTimeout(500).catch(() => {});
+  return page.evaluate(() => {
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const countVisible = selector => {
+      try {
+        return document.querySelectorAll(selector).length;
+      } catch {
+        return 0;
+      }
+    };
+    return {
+      captured_at: new Date().toISOString(),
+      visible_input_count: [...document.querySelectorAll('input,textarea,select')].filter(visible).length,
+      track_title_input_count: [...document.querySelectorAll('input')]
+        .filter(visible)
+        .filter(input => /^(title_|track-title)/i.test(String(input.id || '')) || /^title_/i.test(String(input.getAttribute('name') || '')))
+        .length,
+      file_input_count: countVisible('input[type="file"]'),
+    };
+  }).catch(() => ({ captured_at: new Date().toISOString() }));
+}
+
+async function validateFilledDistroKidForm(page, currentManifest, currentFieldMap) {
+  const expectedTrackCount = Array.isArray(currentManifest?.tracks) ? currentManifest.tracks.length : 1;
+  const expectedAlbumTitle = String(currentManifest.release_title || currentManifest.album_metadata?.title || '').trim();
+  const expectedTrackTitles = (Array.isArray(currentManifest.tracks) && currentManifest.tracks.length
+    ? currentManifest.tracks
+    : [currentManifest]).map(track => String(track?.track_title || '').trim());
+  const snapshot = await inspectFilledDistroKidForm(page, currentFieldMap);
+  const targetIndexes = [...new Set([
+    0,
+    Math.max(0, Math.floor((expectedTrackCount - 1) / 2)),
+    Math.max(0, expectedTrackCount - 1),
+  ])];
+  const failingTrackIndex = findFirstMissingTrackIndex(expectedTrackTitles, snapshot.trackTitleFields);
+  const albumTitleMatches = !expectedAlbumTitle || snapshot.albumTitleField.value === expectedAlbumTitle;
+  const renderedTrackCountMatches = Number(snapshot.renderedTrackCount || 0) >= expectedTrackCount;
+  const sampledTracksMatch = targetIndexes.every(index => {
+    const expected = expectedTrackTitles[index] || '';
+    const actual = snapshot.trackTitleFields[index]?.value || '';
+    return !expected || expected === actual;
+  });
+  const filledTrackCount = snapshot.trackTitleFields.filter(field => field.value).length;
+  const artworkUploadAttempted = filledFields.some(item => item.field === 'cover_art');
+  const artworkUploadExplicitlySkipped = skippedFields.some(item => item.field === 'cover_art');
+  const ok = albumTitleMatches
+    && renderedTrackCountMatches
+    && sampledTracksMatch
+    && filledTrackCount >= expectedTrackCount
+    && (artworkUploadAttempted || artworkUploadExplicitlySkipped);
+
+  const validation = {
+    ok,
+    expectedAlbumTitle,
+    detectedAlbumTitleFieldCandidates: snapshot.albumTitleCandidates,
+    expectedTrackCount,
+    renderedTrackCount: snapshot.renderedTrackCount,
+    filledTrackCount,
+    expectedTrackTitles: summarizeTrackTitleExpectations(expectedTrackTitles, targetIndexes),
+    actualTrackTitles: summarizeTrackTitleActuals(snapshot.trackTitleFields, targetIndexes),
+    firstMissingFailingTrackIndex: failingTrackIndex,
+    artworkPath: runLog.resolved_artwork_path || currentManifest.cover_art || null,
+    artworkUploadAttempted,
+    dryRunSuppressedUpload: false,
+    artworkUploadExplicitlySkipped,
+    selectorCandidates: {
+      albumTitle: snapshot.albumTitleCandidates,
+      artworkInput: snapshot.artworkCandidates,
+      trackTitleFields: snapshot.trackTitleCandidates,
+    },
+  };
+  validation.summary = ok
+    ? 'Filled DistroKid form validation passed.'
+    : `DistroKid form validation failed. Expected album title "${expectedAlbumTitle}", rendered ${snapshot.renderedTrackCount}/${expectedTrackCount} track groups, filled ${filledTrackCount}/${expectedTrackCount} track titles.`;
+  writeJson(join(runDir, 'fill-validation.json'), validation);
+  return validation;
+}
+
+function summarizeTrackTitleExpectations(expectedTrackTitles, indexes) {
+  return indexes.map(index => ({ index: index + 1, value: expectedTrackTitles[index] || '' }));
+}
+
+function summarizeTrackTitleActuals(trackTitleFields, indexes) {
+  return indexes.map(index => ({ index: index + 1, value: trackTitleFields[index]?.value || '' }));
+}
+
+function findFirstMissingTrackIndex(expectedTrackTitles, actualFields) {
+  for (let index = 0; index < expectedTrackTitles.length; index += 1) {
+    const expected = String(expectedTrackTitles[index] || '').trim();
+    const actual = String(actualFields[index]?.value || '').trim();
+    if (expected && expected !== actual) return index + 1;
+  }
+  return null;
+}
+
+async function inspectFilledDistroKidForm(page, currentFieldMap) {
+  const releaseTitleSelector = currentFieldMap?.fields?.release_title?.selector || '';
+  const artworkSelector = currentFieldMap?.fields?.cover_art?.selector || '';
+  return page.evaluate(({ releaseTitleSelector: titleSelector, artworkSelector: coverSelector }) => {
+    const visible = el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
+    const labelsFor = input => {
+      const labels = new Set();
+      if (input.id) document.querySelectorAll(`label[for="${CSS.escape(input.id)}"]`).forEach(label => labels.add(label.innerText.trim()));
+      input.labels?.forEach?.(label => labels.add(label.innerText.trim()));
+      if (input.closest('label')?.innerText) labels.add(input.closest('label').innerText.trim());
+      let cursor = input.parentElement;
+      for (let depth = 0; cursor && depth < 3; depth += 1, cursor = cursor.parentElement) {
+        if (cursor.innerText) labels.add(cursor.innerText.trim());
+      }
+      return [...labels].filter(Boolean);
+    };
+    const describe = input => ({
+      id: input.id || null,
+      name: input.getAttribute('name') || null,
+      placeholder: input.getAttribute('placeholder') || null,
+      ariaLabel: input.getAttribute('aria-label') || null,
+      labels: labelsFor(input),
+      value: 'value' in input ? String(input.value || '').trim() : '',
+      visible: visible(input),
+    });
+    const allInputs = [...document.querySelectorAll('input, textarea')].filter(visible);
+    const albumTitleCandidates = allInputs
+      .filter(input => {
+        const text = `${labelsFor(input).join(' ')} ${input.getAttribute('placeholder') || ''} ${input.getAttribute('aria-label') || ''}`.toLowerCase();
+        if (titleSelector) {
+          try {
+            if (input.matches(titleSelector)) return true;
+          } catch {}
+        }
+        return /album title|release title/.test(text);
+      })
+      .map(describe);
+    const albumTitleField = albumTitleCandidates[0] || { value: '' };
+    const trackTitleFields = allInputs
+      .filter(input => /^(title_|track-title)/i.test(String(input.id || '')) || /^title_/i.test(String(input.getAttribute('name') || '')))
+      .map(describe);
+    const trackTitleCandidates = trackTitleFields.slice(0, 10);
+    const artworkCandidates = [...document.querySelectorAll('input[type="file"]')]
+      .filter(input => {
+        const text = `${labelsFor(input).join(' ')} ${input.id || ''} ${input.getAttribute('name') || ''} ${input.getAttribute('accept') || ''}`.toLowerCase();
+        if (coverSelector) {
+          try {
+            if (input.matches(coverSelector)) return true;
+          } catch {}
+        }
+        return /artwork|cover|image/.test(text);
+      })
+      .map(describe);
+    return {
+      albumTitleField,
+      albumTitleCandidates,
+      trackTitleFields,
+      trackTitleCandidates,
+      artworkCandidates,
+      renderedTrackCount: trackTitleFields.length,
+    };
+  }, { releaseTitleSelector, artworkSelector }).catch(() => ({
+    albumTitleField: { value: '' },
+    albumTitleCandidates: [],
+    trackTitleFields: [],
+    trackTitleCandidates: [],
+    artworkCandidates: [],
+    renderedTrackCount: 0,
+  }));
+}
+
 async function discoverPageFields(page) {
   return page.evaluate(() => {
     const visible = el => {
@@ -1267,6 +1733,15 @@ function validatePackageFile(key, value, errors) {
   if (!value || !exists(absoluteFromMaybeRelative(value))) {
     errors.push({ field: key, error: `${key} not found: ${value || '(missing)'}` });
   }
+}
+
+async function loadDistroKidJobBindings() {
+  try {
+    const jobs = await import('../../src/shared/distrokid-jobs.js');
+    DISTROKID_JOB_STATUSES = jobs.DISTROKID_JOB_STATUSES || DISTROKID_JOB_STATUSES;
+    getDistroKidJob = jobs.getDistroKidJob || getDistroKidJob;
+    markDistroKidJobStatus = jobs.markDistroKidJobStatus || markDistroKidJobStatus;
+  } catch {}
 }
 
 function normalizeDistroKidManifest(manifest) {

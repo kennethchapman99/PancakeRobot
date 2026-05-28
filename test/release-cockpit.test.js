@@ -243,6 +243,54 @@ test('album cockpit includes ordered tracks', () => {
   assert.deepEqual(cockpit.tracks.map(track => track.track_number), [1, 2]);
 });
 
+test('release detail page renders release date input, saves release date to canonical manifest, reloads saved value, and shows header artwork or a placeholder cleanly', async t => {
+  const withLogoSongId = createSong('Release Detail Save Date');
+  writeReadySongFiles(withLogoSongId);
+  await buildReleasePackageForCockpit('single', withLogoSongId);
+
+  const withoutLogoSongId = createSong('Release Detail Missing Logo', { brand_profile_id: 'missing-release-logo-profile' });
+
+  const server = await startServer();
+  t.after(() => server.close());
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  const initialRes = await fetch(`${baseUrl}/releases/single/${withLogoSongId}`);
+  const initialHtml = await initialRes.text();
+  assert.equal(initialRes.status, 200);
+  assert.match(initialHtml, /data-release-date-input/);
+  assert.match(initialHtml, /value="2026-06-12"/);
+  assert.match(initialHtml, /data-save-release-date/);
+  assert.match(initialHtml, /data-release-header-art/);
+
+  const postRes = await fetch(`${baseUrl}/releases/single/${withLogoSongId}/actions/release-date`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ release_date: '2026-09-19' }),
+    redirect: 'manual',
+  });
+  assert.equal(postRes.status, 303);
+  assert.match(postRes.headers.get('location') || '', /notice=Release\+date\+saved\./);
+
+  const manifest = getCanonicalReleaseManifest('single', withLogoSongId);
+  assert.equal(manifest.release_date, '2026-09-19');
+  assert.equal(manifest.field_sources.release_date, 'release_cockpit');
+
+  const reloadedRes = await fetch(`${baseUrl}${postRes.headers.get('location')}`);
+  const reloadedHtml = await reloadedRes.text();
+  assert.equal(reloadedRes.status, 200);
+  assert.match(reloadedHtml, /value="2026-09-19"/);
+  assert.match(reloadedHtml, /Release date saved\./);
+
+  const missingLogoRes = await fetch(`${baseUrl}/releases/single/${withoutLogoSongId}`);
+  const missingLogoHtml = await missingLogoRes.text();
+  assert.equal(missingLogoRes.status, 200);
+  assert.match(missingLogoHtml, /data-release-date-input/);
+  assert.match(missingLogoHtml, /data-release-header-placeholder/);
+  assert.doesNotMatch(missingLogoHtml, /data-release-header-art/);
+});
+
 test('album-owned songs inherit album media in release cockpit context', () => {
   const songId = createSong('Inherited Media Track');
   const albumId = createAlbum({
@@ -858,6 +906,34 @@ test('blocked DistroKid preview exposes resume guidance and stop action while br
   assert.ok(previewStage.actions.some(action => action.label === 'Stop / cancel run' && action.enabled));
 });
 
+test('blocked fill validation preview is not reported as successful', () => {
+  const songId = createSong('Blocked Fill Validation Single');
+  const logPath = writePreviewRunArtifacts(songId, {
+    filledCount: 8,
+    skippedCount: 2,
+    errorCount: 1,
+    finalStatus: 'blocked',
+    errors: [
+      { field: 'distrokid_form_validation', code: 'blocked_fill_validation', error: 'DistroKid form validation failed. Expected album title "Blocked Fill Validation Single", rendered 21/21 track groups, filled 0/21 track titles.' },
+    ],
+  });
+  logReleaseCockpitEvent('single', songId, 'distrokid_preview', 'blocked', 'DistroKid form validation failed after fill.', {
+    runId: 'blocked_fill_validation_run',
+    command: 'node scripts/distrokid/upload-release.mjs --dry-run',
+    latest_run_log_path: logPath,
+    code: 'blocked_fill_validation',
+  });
+
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+  const previewStage = cockpit.stages.find(stage => stage.key === 'distrokid_preview');
+
+  assert.ok(previewStage);
+  assert.equal(previewStage.status, 'blocked');
+  assert.equal(previewStage.outcome, 'failed');
+  assert.match(previewStage.detail, /form validation failed/i);
+  assert.equal(cockpit.nextActions.find(action => action.key === 'approve_live_submit')?.enabled, false);
+});
+
 test('mocked release cockpit acceptance covers single lifecycle actions', async () => {
   const songId = createSong('Acceptance Cockpit Single');
   writeReadySongFiles(songId);
@@ -945,6 +1021,118 @@ test('mocked release cockpit acceptance covers canonical album package and logs'
   assert.equal(preview.ok, true);
   logReleaseCockpitEvent('album', albumId, 'distrokid_preview', 'complete', 'Acceptance preview complete.', preview);
   assert.equal(buildReleaseCockpitViewModel('album', albumId).logs[0].action, 'distrokid_preview');
+});
+
+test('album media stage falls back to canonical package media when live album asset directory is missing', async () => {
+  const first = createSong('Canonical Media Fallback One');
+  const second = createSong('Canonical Media Fallback Two');
+  const albumId = createAlbum({
+    id: uniqueId('COCKPIT_ALBUM_MEDIA_FALLBACK'),
+    album_title: 'Canonical Media Fallback Album',
+    release_date: '2026-07-22',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  albumIds.add(albumId);
+  assignSongsToAlbum(albumId, [first, second]);
+  writeReadyAlbumFiles(albumId, [first, second]);
+
+  const pkg = await buildReleasePackageForCockpit('album', albumId);
+  assert.equal(pkg.ok, true);
+
+  fs.rmSync(path.join(repoRoot, 'output', 'albums', albumId), { recursive: true, force: true });
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+  const mediaStage = cockpit.stages.find(stage => stage.key === 'media');
+
+  assert.ok(cockpit.releaseAssetState.primaryImage);
+  assert.equal(cockpit.releaseAssetState.primaryImage.source, 'canonical_package_media');
+  assert.equal(mediaStage?.status, 'complete');
+  assert.equal(mediaStage?.issues.length, 0);
+  assert.equal(cockpit.distrokidArtwork.blocked, false);
+  assert.match(cockpit.distrokidArtwork.path || '', new RegExp(`output/release-packages/${albumId}/cover-art`));
+});
+
+test('album header artwork renders brand image when album media is missing', async t => {
+  const songId = createSong('Header Brand Fallback Song', { brand_profile_id: 'test-header-brand-fallback' });
+  const albumId = uniqueId('COCKPIT_ALBUM_HEADER_BRAND');
+  albumIds.add(albumId);
+  createAlbum({
+    id: albumId,
+    album_title: 'Header Brand Fallback Album',
+    release_date: '2026-08-11',
+    brand_profile_id: 'test-header-brand-fallback',
+    number_of_songs: 1,
+    status: 'assembled',
+    is_test: true,
+  });
+  assignSongsToAlbum(albumId, [songId]);
+
+  const brandMediaDir = path.join(repoRoot, 'config', 'brand-media', 'test-header-brand-fallback');
+  fs.mkdirSync(brandMediaDir, { recursive: true });
+  fs.writeFileSync(path.join(brandMediaDir, 'default-image.png'), 'fake-header-brand-image');
+
+  const server = await startServer();
+  t.after(() => {
+    server.close();
+    fs.rmSync(brandMediaDir, { recursive: true, force: true });
+  });
+
+  const html = await fetch(`http://127.0.0.1:${server.address().port}/releases/album/${albumId}`).then(res => res.text());
+  assert.match(html, /data-release-header-art/);
+  assert.match(html, /data-release-header-art-source="brand_media"/);
+  assert.match(html, /\/brand-media\/test-header-brand-fallback\/default-image\.png/);
+});
+
+test('album header artwork prefers canonical package artwork over brand image', async t => {
+  const songId = createSong('Header Canonical Artwork Song');
+  const albumId = uniqueId('COCKPIT_ALBUM_HEADER_CANONICAL');
+  albumIds.add(albumId);
+  createAlbum({
+    id: albumId,
+    album_title: 'Header Canonical Artwork Album',
+    release_date: '2026-08-12',
+    brand_profile_id: 'default',
+    number_of_songs: 1,
+    status: 'assembled',
+    is_test: true,
+  });
+  assignSongsToAlbum(albumId, [songId]);
+  writeReadyAlbumFiles(albumId, [songId]);
+  await buildReleasePackageForCockpit('album', albumId);
+  fs.rmSync(path.join(repoRoot, 'output', 'albums', albumId), { recursive: true, force: true });
+
+  const server = await startServer();
+  t.after(() => server.close());
+
+  const html = await fetch(`http://127.0.0.1:${server.address().port}/releases/album/${albumId}`).then(res => res.text());
+  assert.match(html, /data-release-header-art-source="canonical_package_media"/);
+  assert.match(html, new RegExp(`/media/release-packages/${albumId}/cover-art\\.png`));
+  assert.doesNotMatch(html, /\/brand-media\/default\/default-image\.png/);
+});
+
+test('album header artwork renders a placeholder instead of a broken image when no media is available', async t => {
+  const songId = createSong('Header Placeholder Song', { brand_profile_id: 'test-header-placeholder' });
+  const albumId = uniqueId('COCKPIT_ALBUM_HEADER_PLACEHOLDER');
+  albumIds.add(albumId);
+  createAlbum({
+    id: albumId,
+    album_title: 'Header Placeholder Album',
+    release_date: '2026-08-13',
+    brand_profile_id: 'test-header-placeholder',
+    number_of_songs: 1,
+    status: 'assembled',
+    is_test: true,
+  });
+  assignSongsToAlbum(albumId, [songId]);
+
+  const server = await startServer();
+  t.after(() => server.close());
+
+  const html = await fetch(`http://127.0.0.1:${server.address().port}/releases/album/${albumId}`).then(res => res.text());
+  assert.match(html, /data-release-header-placeholder/);
+  assert.doesNotMatch(html, /data-release-header-art/);
 });
 
 test('distrokidArtwork uses album primary image when present', () => {
@@ -1048,4 +1236,25 @@ test('distrokid artwork download route returns deterministic filename', async t 
   const disposition = res.headers.get('content-disposition');
   assert.ok(disposition, 'content-disposition header should be present');
   assert.match(disposition, new RegExp(`${songId}-distrokid-artwork\\.png`));
+});
+
+test('distrokid payload download route returns canonical JSON with absolute paths', async t => {
+  const songId = createSong('Payload Download Single');
+  writeReadySongFiles(songId);
+  await buildReleasePackageForCockpit('single', songId);
+
+  const server = await startServer();
+  t.after(() => server.close());
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  const res = await fetch(`${baseUrl}/releases/single/${songId}/assets/distrokid-payload/download`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-disposition') || '', new RegExp(`${songId}-distrokid-payload\\.json`));
+
+  const payload = await res.json();
+  assert.equal(payload.releaseId, songId);
+  assert.equal(payload.trackCount, 1);
+  assert.equal(path.isAbsolute(payload.artworkPath), true);
+  assert.equal(path.isAbsolute(payload.tracks[0].audioPath), true);
+  assert.equal(typeof payload.tracks[0].lyrics, 'string');
 });

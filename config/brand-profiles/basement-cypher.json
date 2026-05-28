@@ -238,5 +238,9 @@
   "ui": {
     "sidebar_subtitle": "Figment Factory Studio",
     "logo_path": "/figment-factory-logo.png"
+  },
+  "media": {
+    "default_image_url": "/brand-media/basement-cypher/default-image.png",
+    "default_image_path": ""
   }
 }

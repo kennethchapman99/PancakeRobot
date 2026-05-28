@@ -153,5 +153,9 @@
   "guardrails": {
     "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
     "brand_safe": true
+  },
+  "media": {
+    "default_image_url": "/brand-media/sunstone-signal-modern-roots-reggae/default-image.png",
+    "default_image_path": ""
   }
 }

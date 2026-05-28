@@ -232,5 +232,9 @@
   "ui": {
     "sidebar_subtitle": "Music Studio",
     "logo_path": "/logo.png"
+  },
+  "media": {
+    "default_image_url": "/brand-media/default/default-image.png",
+    "default_image_path": ""
   }
 }

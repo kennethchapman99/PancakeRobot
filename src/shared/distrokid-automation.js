@@ -18,7 +18,9 @@ import {
   getDistroKidJob,
   markDistroKidJobStatus,
 } from './distrokid-jobs.js';
+import { buildDistroKidUploadInvocation } from './distrokid-upload-invocation.js';
 import {
+  buildReleaseCockpitViewModel,
   buildReleasePackageForCockpit,
   getCanonicalReleaseManifestPath,
 } from './release-cockpit.js';
@@ -29,6 +31,8 @@ const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const PACKAGE_ROOT = join(REPO_ROOT, 'output', 'release-packages');
 const AUTOMATION_TIMEOUT_MS = 20 * 60 * 1000;
 
+export { buildDistroKidUploadInvocation } from './distrokid-upload-invocation.js';
+
 export function hasConfirmedDistroKidAuth() {
   try {
     if (!existsSync(DISTROKID_AUTH_PATH)) return false;
@@ -37,24 +41,6 @@ export function hasConfirmedDistroKidAuth() {
   } catch {
     return false;
   }
-}
-
-export function buildDistroKidUploadInvocation({ manifestPath, mode = 'preview', interactivePreview = false, authConfirmed = hasConfirmedDistroKidAuth() } = {}) {
-  const resolvedMode = mode === 'live' ? 'live' : 'preview';
-  const args = [
-    join(REPO_ROOT, 'scripts/distrokid/upload-release.mjs'),
-    '--manifest',
-    manifestPath,
-  ];
-  if (!(interactivePreview && !authConfirmed && resolvedMode === 'preview')) args.push('--no-pause');
-  if (resolvedMode === 'live') args.push('--live-submit', '--confirm-live-submit');
-  else args.push('--dry-run');
-  return {
-    args,
-    authConfirmed,
-    interactivePreview,
-    command: `${process.execPath} ${args.map(arg => String(arg).includes(' ') ? JSON.stringify(arg) : arg).join(' ')}`,
-  };
 }
 
 export async function runDistroKidSongAutomation(songId, options = {}) {
@@ -87,7 +73,12 @@ export async function runDistroKidSongAutomation(songId, options = {}) {
     throw new Error(`DistroKid package is blocked: ${blocking.join(', ') || 'unknown readiness failure'}`);
   }
 
-  const uploadArgs = buildDistroKidUploadInvocation({ manifestPath, mode }).args;
+  const cockpit = buildReleaseCockpitViewModel('single', songId);
+  const uploadArgs = buildDistroKidUploadInvocation({
+    manifestPath,
+    mode,
+    artworkPath: cockpit?.distrokidArtwork?.path || '',
+  }).args;
 
   append(mode === 'live' ? 'Running Playwright upload and live submit' : 'Running Playwright preview upload');
   const upload = await execNode(uploadArgs).catch(error => {
@@ -141,8 +132,13 @@ export async function runDistroKidAlbumAutomation(albumId, options = {}) {
   const packageResult = await buildReleasePackageForCockpit('album', albumId);
   const albumManifestPath = getCanonicalReleaseManifestPath('album', albumId);
   append(`Canonical album package ready: ${packageResult.manifestPath || albumManifestPath}`);
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
 
-  const uploadArgs = buildDistroKidUploadInvocation({ manifestPath: albumManifestPath, mode }).args;
+  const uploadArgs = buildDistroKidUploadInvocation({
+    manifestPath: albumManifestPath,
+    mode,
+    artworkPath: cockpit?.distrokidArtwork?.path || '',
+  }).args;
 
   const upload = await execNode(uploadArgs).catch(error => {
     throw enrichAutomationError(albumId, error);

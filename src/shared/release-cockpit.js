@@ -14,6 +14,8 @@ import {
   getReleaseLinks,
   getSong,
   getSongsForAlbum,
+  updateAlbum,
+  upsertSong,
 } from './db.js';
 import { DISTROKID_JOB_STATUSES, getDistroKidJob, markDistroKidJobStatus } from './distrokid-jobs.js';
 import { getReleaseAssetState } from './song-release-assets-service.js';
@@ -163,13 +165,16 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const social = summarizeSocialPosts(tracks.map(track => track.id));
   const hyperfollow = findHyperFollow(tracks);
   const packageState = readReleasePackageState(type, release.id, tracks);
+  const effectiveReleaseDate = packageState.manifest?.release_date || release.releaseDate || null;
   const logs = getReleaseCockpitLogs(type, release.id, { limit: 50 });
   const runHistory = buildRunHistory(logs);
   const magicRelease = summarizeMagicReleaseForCockpit(type, release.id);
   const liveSubmitApproval = summarizeLiveSubmitApproval(magicRelease);
+  const brandProfile = resolveReleaseBrandProfile(release.brandProfileId);
+  const headerArtwork = resolveReleaseHeaderArtwork({ assetState, brandProfile });
   const stages = buildStages({
     type,
-    release,
+    release: { ...release, releaseDate: effectiveReleaseDate },
     tracks,
     assetState,
     distrokidArtwork,
@@ -195,8 +200,11 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     id: release.id,
     title: release.title,
     subtitle: release.subtitle,
-    releaseDate: release.releaseDate,
+    releaseDate: effectiveReleaseDate,
     brandProfileId: release.brandProfileId,
+    brandProfileName: brandProfile?.brand_name || release.brandProfileId || null,
+    brandProfileLogoUrl: resolveBrandProfileLogoUrl(brandProfile),
+    headerArtwork,
     canonicalMediaOwner: assetState.owner,
     releaseAssetState: assetState,
     distrokidArtwork,
@@ -331,6 +339,64 @@ export function getCanonicalReleaseManifestPath(releaseType, releaseId) {
 
 export function getCanonicalReleaseManifest(releaseType, releaseId) {
   return readJsonIfExists(getCanonicalReleaseManifestPath(releaseType, releaseId));
+}
+
+export function updateCanonicalReleaseDate(releaseType, releaseId, releaseDate) {
+  const normalizedType = normalizeReleaseType(releaseType);
+  const normalizedDate = normalizeReleaseDateInput(releaseDate);
+  if (normalizedDate === null) throw new Error('Release date must use YYYY-MM-DD.');
+
+  if (normalizedType === 'album') {
+    const album = getAlbum(releaseId);
+    if (!album) throw new Error('Release not found.');
+    updateAlbum(releaseId, { release_date: normalizedDate });
+  } else {
+    const song = getSong(releaseId);
+    if (!song || song.album_id) throw new Error('Release not found.');
+    upsertSong({ id: releaseId, release_date: normalizedDate });
+  }
+
+  const manifestPath = getCanonicalReleaseManifestPath(normalizedType, releaseId);
+  const manifest = readJsonIfExists(manifestPath);
+  if (manifest) {
+    manifest.release_date = normalizedDate;
+    manifest.field_sources = {
+      ...(manifest.field_sources || {}),
+      release_date: 'release_cockpit',
+    };
+    if (manifest.album_metadata && typeof manifest.album_metadata === 'object') {
+      manifest.album_metadata.release_date = normalizedDate;
+    }
+    if (Array.isArray(manifest.tracks)) {
+      for (const track of manifest.tracks) {
+        if (track && typeof track === 'object' && Object.hasOwn(track, 'release_date')) {
+          track.release_date = normalizedDate;
+        }
+        if (track?.track_metadata && typeof track.track_metadata === 'object') {
+          track.track_metadata.release_date = normalizedDate;
+        }
+      }
+    }
+    if (manifest.canonical_distrokid_upload_payload && typeof manifest.canonical_distrokid_upload_payload === 'object') {
+      manifest.canonical_distrokid_upload_payload.release_date = normalizedDate;
+    }
+    const validation = validateCanonicalReleasePackageManifest(manifest, { releaseType: normalizedType });
+    if (manifest.readiness && typeof manifest.readiness === 'object') {
+      manifest.readiness.ready_for_distrokid_dry_run = validation.ready;
+      manifest.readiness.blocking_missing_fields = validation.blocking_missing_fields;
+      manifest.readiness.validation_summary = validation.summary;
+    }
+    fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  }
+
+  return {
+    releaseType: normalizedType,
+    releaseId,
+    releaseDate: normalizedDate,
+    manifestPath,
+    manifestUpdated: Boolean(manifest),
+  };
 }
 
 export function resolveDistroKidArtwork(assetState) {
@@ -889,6 +955,50 @@ function loadProfile(profileId) {
   return loadBrandProfileById(profileId || DEFAULT_PROFILE_ID);
 }
 
+function resolveReleaseBrandProfile(profileId) {
+  try {
+    return loadProfile(profileId);
+  } catch {
+    return null;
+  }
+}
+
+function resolveBrandProfileLogoUrl(profile) {
+  const value = profile?.marketing?.logo_url || profile?.ui?.logo_url || profile?.ui?.logo_path || null;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function resolveReleaseHeaderArtwork({ assetState, brandProfile }) {
+  if (assetState?.primaryImage?.url) {
+    return {
+      url: assetState.primaryImage.url,
+      source: assetState.primaryImage.source || 'release_primary',
+      alt: assetState.primaryImage.source_label || 'Release artwork',
+    };
+  }
+  const logoUrl = resolveBrandProfileLogoUrl(brandProfile);
+  if (logoUrl) {
+    return {
+      url: logoUrl,
+      source: 'brand_profile_logo',
+      alt: brandProfile?.brand_name || 'Brand profile image',
+    };
+  }
+  return {
+    url: null,
+    source: 'placeholder',
+    alt: 'Release artwork placeholder',
+  };
+}
+
+function normalizeReleaseDateInput(value) {
+  const normalized = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+  const date = new Date(`${normalized}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10) === normalized ? normalized : null;
+}
+
 function normalizeActionKey(action) {
   const value = String(action || '').trim();
   if (value === 'distrokid-preview') return 'preview';
@@ -1177,7 +1287,9 @@ function collectRunArtifacts(runDir) {
   const files = [
     ['Final review screenshot', 'screenshot-final-review.png'],
     ['After fill screenshot', 'screenshot-after-fill.png'],
+    ['Fill validation screenshot', 'screenshot-fill-validation.png'],
     ['Errors JSON', 'errors.json'],
+    ['Fill validation JSON', 'fill-validation.json'],
     ['Filled fields JSON', 'filled-fields.json'],
     ['Skipped fields JSON', 'skipped-fields.json'],
     ['Run log JSON', 'run-log.json'],

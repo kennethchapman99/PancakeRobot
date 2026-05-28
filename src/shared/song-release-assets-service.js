@@ -71,6 +71,10 @@ function songAssetsDir(songId) {
   return path.join(OUTPUT_ROOT, 'marketing-ready', songId);
 }
 
+function albumReleasePackageManifestPath(albumId) {
+  return path.join(OUTPUT_ROOT, 'release-packages', albumId, 'manifest.json');
+}
+
 function mediaUrl(absPath) {
   return '/media/' + path.relative(OUTPUT_ROOT, absPath).replace(/\\/g, '/');
 }
@@ -104,6 +108,66 @@ function findAlbumPrimaryImage(albumId) {
   } : null;
 }
 
+function resolveRepoPath(filePath) {
+  if (!filePath) return null;
+  return path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+}
+
+function toPublicUrlFromAssetPath(filePath) {
+  const resolvedPath = resolveRepoPath(filePath);
+  if (!resolvedPath || !resolvedPath.startsWith(OUTPUT_ROOT) || !fs.existsSync(resolvedPath)) return null;
+  return mediaUrl(resolvedPath);
+}
+
+function readCanonicalAlbumPackageMedia(albumId) {
+  const manifest = readJson(albumReleasePackageManifestPath(albumId));
+  if (!manifest || manifest.release_type !== ENTITY_TYPE_ALBUM) return null;
+
+  const generatedAssets = Array.isArray(manifest.inherited_album_media?.assets)
+    ? manifest.inherited_album_media.assets.map(asset => {
+        const filePath = asset?.filePath || asset?.path || null;
+        return {
+          ...asset,
+          path: filePath,
+          publicUrl: asset?.publicUrl || toPublicUrlFromAssetPath(filePath),
+        };
+      })
+    : [];
+
+  const inheritedAssetPrimary = generatedAssets.find(asset => {
+    const assetPath = resolveRepoPath(asset?.path);
+    return assetPath && fs.existsSync(assetPath);
+  }) || null;
+  const primaryCandidate = resolveRepoPath(
+    manifest.cover_art
+    || manifest.inherited_album_media?.primary_image
+    || inheritedAssetPrimary?.path
+  );
+  const primaryImage = primaryCandidate && fs.existsSync(primaryCandidate)
+    ? {
+        path: primaryCandidate,
+        url: mediaUrl(primaryCandidate),
+        name: path.basename(primaryCandidate),
+        source: 'canonical_package_media',
+        source_label: inheritedAssetPrimary?.path && path.resolve(primaryCandidate) === path.resolve(resolveRepoPath(inheritedAssetPrimary.path))
+          ? 'Inherited album media'
+          : 'Canonical package media',
+      }
+    : null;
+
+  if (!primaryImage && generatedAssets.length === 0) return null;
+  return {
+    primaryImage,
+    metadata: generatedAssets.length
+      ? {
+          generated_assets: generatedAssets,
+          primary_image_fingerprint: primaryImage?.path ? fileFingerprint(primaryImage.path) : null,
+          source: 'canonical_package_media',
+        }
+      : null,
+  };
+}
+
 function derivativeStateFor(owner, metadata) {
   const byName = new Map((metadata?.generated_assets || []).map(asset => [asset.name || asset.format, asset]));
   return RELEASE_ASSET_TARGETS.map(target => {
@@ -113,7 +177,7 @@ function derivativeStateFor(owner, metadata) {
       label: asset.label || target.label,
       format: asset.format || target.fileName,
       dimensions: asset.dimensions || { width: target.width, height: target.height },
-      publicUrl: asset.publicUrl || (asset.path ? mediaUrl(asset.path) : null),
+      publicUrl: asset.publicUrl || (asset.path ? toPublicUrlFromAssetPath(asset.path) : null),
     } : {
       name: target.fileName,
       format: target.fileName,
@@ -166,6 +230,8 @@ function ownerPrimaryImage(owner) {
   if (owner.type === ENTITY_TYPE_ALBUM) {
     const albumImage = findAlbumPrimaryImage(owner.id);
     if (albumImage) return albumImage;
+    const packageMedia = readCanonicalAlbumPackageMedia(owner.id);
+    if (packageMedia?.primaryImage) return packageMedia.primaryImage;
     const album = requireAlbum(owner.id);
     return localBrandDefaultImage(album.brand_profile_id || getActiveProfileId());
   }
@@ -189,7 +255,10 @@ function localBrandDefaultImage(profileId) {
 }
 
 function ownerMetadata(owner) {
-  return readJson(path.join(ownerOutputDir(owner), 'metadata.json'));
+  const liveMetadata = readJson(path.join(ownerOutputDir(owner), 'metadata.json'));
+  if (liveMetadata) return liveMetadata;
+  if (owner.type === ENTITY_TYPE_ALBUM) return readCanonicalAlbumPackageMedia(owner.id)?.metadata || null;
+  return null;
 }
 
 export function getReleaseAssetOwner(entityType, entityId) {

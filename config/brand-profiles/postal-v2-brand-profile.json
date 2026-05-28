@@ -179,5 +179,9 @@
   "guardrails": {
     "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists. Preserve the handmade glitch-indietronica direction without cloning any specific act.",
     "brand_safe": true
+  },
+  "media": {
+    "default_image_url": "/brand-media/postal-v2-brand-profile/default-image.png",
+    "default_image_path": ""
   }
 }
