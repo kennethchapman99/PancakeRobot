@@ -408,6 +408,77 @@ SELECT song_id, title, status, brand_score FROM songs ORDER BY created_at DESC;
 
 ---
 
+## Browsy Workflow Integration (DistroKid release upload)
+
+Pancake Robot replays human-recorded browser workflows (e.g. the DistroKid release
+upload) through **Browsy**, a separate, generic browser workflow recorder/replayer.
+Browsy is treated as a black-box HTTP service — all Pancake-Robot-specific logic
+(the release → payload mapping, the DistroKid binding names, the gate rules) lives
+in this repo. The integration boundary is the Browsy HTTP contract, nothing more.
+
+### Pieces in this repo
+
+- `src/shared/browsy-client.js` — `BrowsyClient`, a thin async HTTP wrapper:
+  `getContract()`, `startRun()`, `pollUntilDone()` (handles `waiting_*` states),
+  `approve()`, `cancel()`, `getArtifacts()`. Base URL from `BROWSY_BASE_URL`.
+- `src/shared/browsy-release-pipeline.js` — the pipeline step. Fetches the workflow
+  **contract**, maps release data → payload **by binding name** (and fails loudly if
+  a `requiredPayloadField` is unmapped), then drives `dry_run → preview → live` and
+  persists `result.outputs`, `result.artifacts` and the `runId` back onto the release.
+- `src/scripts/browsy-release-cli.js` — CLI wrapper (npm scripts below).
+
+### Configuration
+
+Set these in `.env` (see `.env.example`):
+
+```bash
+BROWSY_BASE_URL=http://localhost:3001          # where `npm run api` serves Browsy
+BROWSY_APP_ID=pancake-robot
+BROWSY_DISTROKID_SINGLE_WORKFLOW=distrokid-single-submit
+BROWSY_DISTROKID_ALBUM_WORKFLOW=distrokid-album-submit
+BROWSY_APPROVAL_TOKEN=                          # REQUIRED for live; never commit a real one
+BROWSY_APPROVED_BY=pancake-robot
+# Optional override if a recorded workflow uses non-conventional binding names:
+# PANCAKE_BROWSY_BINDING_MAP_JSON={"weird_title_field":"release_title"}
+```
+
+Start Browsy in its own repo first: `npm run api` (listens on `http://localhost:3001`).
+
+### One worked release: dry_run → preview → live
+
+```bash
+# 0. Inspect the contract (which payload fields / files the workflow needs)
+npm run browsy:contract -- --type single --id SONG_123
+
+# 1. Pre-flight: validates the materialized payload/bindings — no browser
+npm run browsy:dry-run  -- --type single --id SONG_123
+
+# 2. Preview: REAL browser replay, fills/uploads, stops at every human checkpoint,
+#    never clicks submit. This is the GATE — it asserts status === "completed",
+#    no failedSteps, and the expected outputs were captured.
+npm run browsy:preview  -- --type single --id SONG_123
+
+# 3. Live: REAL replay against the authenticated site. Requires BROWSY_APPROVAL_TOKEN.
+#    Any waiting_for_auth / waiting_for_2fa is surfaced to a human (never auto-approved);
+#    waiting_for_approval_to_submit can be resumed with --auto-approve once you trust it.
+BROWSY_APPROVAL_TOKEN=… npm run browsy:live -- --type single --id SONG_123
+```
+
+`npm run browsy:run -- --type single --id SONG_123 --stages dry_run,preview` runs an
+explicit subset. Live always runs `dry_run → preview` first — **preview must pass
+before any live submission.**
+
+### Inside the Magic Release pipeline
+
+The Magic Release campaign has `browsy`-owned tasks (e.g. `distrokid_submit_dry_run`).
+Set `BROWSY_TRANSPORT=http` to route those tasks through the async HTTP pipeline above
+(otherwise the legacy package/CLI path is used). The contract result is translated
+into the cockpit's existing automation-result shape, so captured links (HyperFollow,
+DistroKid, Spotify, …) flow onto the release record automatically, and any `waiting_*`
+state becomes a "needs Ken" approval task.
+
+---
+
 ## License
 
 MIT
