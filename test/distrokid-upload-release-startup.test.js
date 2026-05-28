@@ -28,7 +28,7 @@ test('upload-release dry-run startup no longer throws finished temporal dead zon
 
   let error = null;
   try {
-    await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause'], {
+    await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause', '--browser-mode', 'none'], {
       cwd: repoRoot,
       env: process.env,
       timeout: 30000,
@@ -70,7 +70,7 @@ test('upload-release accepts album manifests that use release_id and track audio
   let error = null;
   let result = null;
   try {
-    result = await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause'], {
+    result = await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause', '--browser-mode', 'none'], {
       cwd: repoRoot,
       env: process.env,
       timeout: 30000,
@@ -102,7 +102,7 @@ test('upload-release still handles legacy single manifests that only provide son
   let error = null;
   let result = null;
   try {
-    result = await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause'], {
+    result = await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause', '--browser-mode', 'none'], {
       cwd: repoRoot,
       env: process.env,
       timeout: 30000,
@@ -116,6 +116,7 @@ test('upload-release still handles legacy single manifests that only provide son
   assert.doesNotMatch(combinedOutput, /manifest is missing song_id\/release_id\/album_id/i);
   assert.doesNotMatch(combinedOutput, /audio_file not found/i);
   assert.doesNotMatch(combinedOutput, /cover_art not found/i);
+  assert.match(combinedOutput, /browserLaunchSkipped/);
 });
 
 test('upload-release records release date from manifest in startup output', async () => {
@@ -135,7 +136,7 @@ test('upload-release records release date from manifest in startup output', asyn
   let error = null;
   let result = null;
   try {
-    result = await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause'], {
+    result = await execFileAsync(process.execPath, [scriptPath, '--manifest', manifestPath, '--dry-run', '--no-pause', '--browser-mode', 'none'], {
       cwd: repoRoot,
       env: process.env,
       timeout: 30000,
@@ -147,6 +148,7 @@ test('upload-release records release date from manifest in startup output', asyn
 
   const combinedOutput = `${result?.stdout || error?.stdout || ''}\n${result?.stderr || error?.stderr || ''}`;
   assert.match(combinedOutput, /"releaseDateFromManifest":"2026-06-12"/);
+  assert.match(combinedOutput, /browserLaunchSkipped/);
 });
 
 test('upload-release blocks before DistroKid fill when --artwork-path points to a missing file', async () => {

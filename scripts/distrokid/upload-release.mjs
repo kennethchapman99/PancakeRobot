@@ -73,6 +73,11 @@ if (liveSubmit && values['confirm-live-submit'] !== true) {
 }
 const dryRun = !liveSubmit;
 const headed = parseBool(values.headed, true);
+const browserMode = String(values['browser-mode'] || '').trim().toLowerCase();
+const browserDisabled = browserMode === 'none'
+  || browserMode === 'no-browser'
+  || browserMode === 'validate-only'
+  || process.env.PANCAKE_DISTROKID_DISABLE_BROWSER === '1';
 const pauseAtEnd = values['no-pause'] ? false : parseBool(values['pause-at-end'], true);
 const discoverFields = values['discover-fields'] === true;
 const certifyImportantCheckboxes = values['certify-important-checkboxes'] === true;
@@ -208,6 +213,21 @@ if (manifest.lyrics_file && !exists(absoluteFromMaybeRelative(manifest.lyrics_fi
 if (errors.length) {
   await finish(null, true);
   process.exit(1);
+}
+
+if (browserDisabled) {
+  finalStatus = 'complete';
+  finalCode = 'distrokid_browser_skipped';
+  finalMessage = 'DistroKid browser launch skipped by --browser-mode none / validate-only.';
+  runLog.diagnostics.lifecycle.push('browserLaunchSkipped=true');
+  console.log(JSON.stringify({
+    browserLaunchSkipped: true,
+    browserMode,
+    manifestEntityId,
+    dryRun,
+  }));
+  await finish(null, true);
+  process.exit(0);
 }
 
 logRunStep('loading manifest');
