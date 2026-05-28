@@ -223,7 +223,33 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
     uploadTrack?.lyrics,
     uploadTrack?.lyrics_text,
   ) || readTextIfExists(lyricsPath);
-  const songId = clean(track.id || track.song_id || trackManifest?.song_id || trackManifest?.track_metadata?.id);
+  const songId = clean(
+    track.id
+    || track.song_id
+    || track.songId
+    || track.song?.id
+    || track.song?.song_id
+    || track.track_metadata?.id
+    || track.metadata?.id
+    || track.metadata?.song_id
+    || track.metadata?.songId
+    || trackManifest?.song_id
+    || trackManifest?.songId
+    || trackManifest?.id
+    || trackManifest?.track_id
+    || trackManifest?.track_metadata?.id
+    || trackManifest?.metadata?.id
+    || trackManifest?.metadata?.song_id
+    || uploadTrack?.song_id
+    || uploadTrack?.songId
+    || uploadTrack?.id
+    || uploadTrack?.track_id
+    || uploadTrack?.track_metadata?.id
+    || uploadTrack?.metadata?.id
+    || metadata.id
+    || metadata.song_id
+    || metadata.songId
+  );
   const title = clean(
     trackManifest?.track_title
       || uploadTrack?.track_title
@@ -297,11 +323,28 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
 
 function findTrackManifest(container, track) {
   const tracks = Array.isArray(container?.tracks) ? container.tracks : [];
-  const songId = clean(track?.id || track?.song_id);
+  const songId = clean(
+    track?.id
+    || track?.song_id
+    || track?.songId
+    || track?.song?.id
+    || track?.song?.song_id
+    || track?.track_metadata?.id
+    || track?.metadata?.id
+    || track?.metadata?.song_id
+  );
   if (!tracks.length) {
-    return container?.song_id || container?.audio_file || container?.track_title ? container : null;
+    return container?.song_id || container?.songId || container?.id || container?.audio_file || container?.track_title ? container : null;
   }
-  return tracks.find(item => clean(item?.song_id || item?.id || item?.track_metadata?.id) === songId) || tracks[0] || null;
+  return tracks.find(item => clean(
+    item?.song_id
+    || item?.songId
+    || item?.id
+    || item?.track_id
+    || item?.track_metadata?.id
+    || item?.metadata?.id
+    || item?.metadata?.song_id
+  ) === songId) || tracks[0] || null;
 }
 
 function readTrackMetadata(track, trackManifest, repoRoot) {
