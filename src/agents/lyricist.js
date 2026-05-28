@@ -36,7 +36,7 @@ export const LYRICIST_DEF = {
   maxTokens: LYRICIST_MAX_TOKENS,
   maxRetries: 1,
   retryDelayMs: LYRICIST_RETRY_DELAY_MS,
-  system: `You are the head songwriter for ${BRAND_NAME}. Follow the active brand profile exactly. Do not import characters, references, sound effects, structures, genre rules, or motifs from unrelated brands. Output valid production-ready JSON only. Never wrap JSON in markdown fences.`,
+  system: `You are the head songwriter for ${BRAND_NAME}. Follow the active brand profile exactly, but treat profile examples, lore, numbers, reference artists, and catchphrases as guidance rather than reusable lyric inventory unless the user explicitly requests them. Do not import characters, references, sound effects, structures, genre rules, or motifs from unrelated brands. Output valid production-ready JSON only. Never wrap JSON in markdown fences.`,
 };
 
 export async function writeLyrics({ songId, topic, researchReport, revisionNotes, existingLyrics }) {
@@ -76,20 +76,27 @@ export async function writeLyrics({ songId, topic, researchReport, revisionNotes
 
     const candidate = sanitizeSongData(parsedSongData, topic);
     const contamination = findForbiddenElementContamination(candidate);
-    if (contamination.length === 0) {
+    if (contamination.length > 0) {
+      lastFailure = `attempt ${attempt}: forbidden active-profile element(s): ${contamination.map(item => item.element).join(', ')}`;
+      qaRevisionNotes = [
+        revisionNotes || '',
+        'CRITICAL PROFILE QA FAILURE:',
+        `The previous draft included forbidden active-profile element(s) in the title, lyrics, hook, or chorus: ${contamination.map(item => item.element).join(', ')}.`,
+        'Rewrite from scratch and remove every forbidden element from singable song content. Use only allowed and required elements from the active brand profile.',
+        'Keep audio_prompt metadata positive-only and do not mention forbidden elements there, even as exclusions.',
+        'Keep the JSON complete and valid. Do not shorten long hip-hop verses; instead keep metadata concise.'
+      ].filter(Boolean).join('\n');
+      continue;
+    }
+
+    const seedOveruse = findProfileSeedOveruse(candidate, BRAND_PROFILE, topic);
+    if (seedOveruse.length === 0) {
       songData = candidate;
       break;
     }
 
-    lastFailure = `attempt ${attempt}: forbidden active-profile element(s): ${contamination.map(item => item.element).join(', ')}`;
-    qaRevisionNotes = [
-      revisionNotes || '',
-      'CRITICAL PROFILE QA FAILURE:',
-      `The previous draft included forbidden active-profile element(s) in the title, lyrics, hook, or chorus: ${contamination.map(item => item.element).join(', ')}.`,
-      'Rewrite from scratch and remove every forbidden element from singable song content. Use only allowed and required elements from the active brand profile.',
-      'Keep audio_prompt metadata positive-only and do not mention forbidden elements there, even as exclusions.',
-      'Keep the JSON complete and valid. Do not shorten long hip-hop verses; instead keep metadata concise.'
-    ].filter(Boolean).join('\n');
+    lastFailure = `attempt ${attempt}: profile example/lore overuse: ${formatSeedOveruseList(seedOveruse)}`;
+    qaRevisionNotes = buildProfileSeedRetryNotes({ revisionNotes, seedOveruse });
   }
 
   if (!songData) {
@@ -99,6 +106,11 @@ export async function writeLyrics({ songId, topic, researchReport, revisionNotes
   const contamination = findForbiddenElementContamination(songData);
   if (contamination.length > 0) {
     throw new Error(`Lyricist profile QA failed for "${songData.title || topic}". Forbidden element(s): ${contamination.map(item => item.element).join(', ')}`);
+  }
+
+  const seedOveruse = findProfileSeedOveruse(songData, BRAND_PROFILE, topic);
+  if (seedOveruse.length > 0) {
+    throw new Error(`Lyricist profile seed QA failed for "${songData.title || topic}". Profile seed term(s): ${formatSeedOveruseList(seedOveruse)}`);
   }
 
   const lyricsContent = formatLyricsMarkdown(songData);
@@ -137,6 +149,15 @@ export function buildLyricsTask({ topic, researchReport, revisionNotes, existing
   return `${existingLyrics ? 'Revise' : 'Write'} a complete, production-ready song for the active ${BRAND_NAME} brand on this topic: "${topic}"
 ${existingLyricsContext}${revisionContext}
 
+PROFILE SEED SAFETY:
+- The active brand profile is creative guidance, not a lyric ingredient list.
+- Do not reuse exact strings from title examples, catchphrases, reference artists, visual references, social tags, distribution tags, or background lore unless the user explicitly requests them.
+- Title examples are style references only; do not reuse them as song titles, hooks, chorus lines, or lyric phrases unless the user provides that exact title.
+- Catchphrases are optional spice, not mandatory lyrics. Use at most one only when it naturally fits, and usually none.
+- Reference artists are internal vibe references only. Never place artist names in lyrics, song title, audio_prompt voice style, or metadata unless the user explicitly asks for a song about that artist.
+- Specific numbers, symbols, or lore terms in the profile are background texture only. Never force them into every song.
+- Prefer abstract interpretation of profile examples over exact copying.
+
 ACTIVE BRAND PROFILE — SOURCE OF TRUTH:
 ${JSON.stringify(BRAND_PROFILE, null, 2)}
 
@@ -154,7 +175,7 @@ TITLE RULES:
 - If no explicit title is provided, choose one creative title and treat it as locked.
 - The locked exact title must appear word-for-word in the first singable line, chorus, final chorus or last chorus repeat, and audio_prompt.special_notes.
 - Do not create title variants in the lyrics.
-- Good title examples for this brand: ${BRAND_PROFILE.lyrics.title_examples.map(t => `"${t}"`).join(', ')}.
+- Title examples in the active profile are style references only and must not be reused unless the user explicitly requested that exact title.
 
 LYRIC RULES:
 - Use only the active brand profile as brand truth.
@@ -163,7 +184,7 @@ LYRIC RULES:
 - Follow every forbidden element in SONGWRITING DIRECTION.
 - Include required elements naturally when they fit the topic.
 - Keep the tone aligned to this guardrail: ${BRAND_PROFILE.audience.guardrail}.
-- Use specific memories, images, names, relationships, and emotional details from the active profile.
+- Abstract profile memories, images, names, relationships, and emotional details into fresh song-specific language; do not copy exact lore, numbers, examples, or catchphrases unless requested.
 - Follow the required closing: ${BRAND_PROFILE.lyrics.required_closing}.
 
 REQUIREMENTS:
@@ -207,6 +228,17 @@ function buildRetryRevisionNotes({ revisionNotes, lastFailure, rawText = '' }) {
     'Long hip-hop lyrics are allowed and expected; do not shorten verses. Keep metadata fields concise if space is needed.',
     'Keep audio_prompt metadata positive-only and do not mention forbidden elements as exclusions.',
     tail ? `Previous output tail for debugging:\n${tail}` : ''
+  ].filter(Boolean).join('\n');
+}
+
+function buildProfileSeedRetryNotes({ revisionNotes, seedOveruse }) {
+  return [
+    revisionNotes || '',
+    'PROFILE SEED OVERUSE QA:',
+    `The previous draft reused profile example/lore/reference term(s) too literally: ${formatSeedOveruseList(seedOveruse)}.`,
+    'Rewrite from scratch using the active brand direction abstractly rather than copying exact profile examples.',
+    'Do not reuse title examples, catchphrases, reference artist names, visual-reference phrases, social/distribution tags, specific numbers, or background lore unless the user explicitly requested them.',
+    'Invent fresh song-specific title, hook, chorus language, and audio_prompt wording while staying inside the brand profile.'
   ].filter(Boolean).join('\n');
 }
 
@@ -270,6 +302,7 @@ function formatSongwritingGuidance() {
     structure_preferences: SONGWRITING.structure_preferences || [],
     render_safety: SONGWRITING.render_safety || [],
     qa_rules: SONGWRITING.qa_rules || [],
+    seed_safety: SONGWRITING.seed_safety || {},
     output_schema: OUTPUT_SCHEMA,
   }, null, 2);
 }
@@ -313,13 +346,13 @@ function formatOutputSchema() {
     "instrumentation": "match the active profile music direction",
     "energy": "match the emotional arc of the song",
     "mood": "match the song",
-    "voice_style": "match the active brand profile, audience, and topic",
+    "voice_style": "match the active brand profile, audience, and topic without naming reference artists unless explicitly requested",
     "structure_note": "describe the actual structure used and say vocals start immediately",
     "target_length": "${MUSIC.target_length}",
     "first_vocal_by_seconds": ${MUSIC.first_vocal_by_seconds},
     "max_instrumental_intro_seconds": ${MUSIC.max_instrumental_intro_seconds},
     "exact_title_usage": "Exact title appears in opening vocal line, chorus, and final chorus",
-    "special_notes": "Vocals begin immediately; exact title must be sung clearly early and repeated in chorus; follow the active brand profile only."
+    "special_notes": "Vocals begin immediately; exact title must be sung clearly early and repeated in chorus; follow the active brand profile only; do not copy profile examples or lore terms unless requested."
   }`);
   }
 
@@ -377,6 +410,70 @@ export function findForbiddenElementContamination(songData, forbiddenElements = 
     .map(({ element, pattern }) => ({ element, pattern: pattern.source }));
 }
 
+export function collectProfileSeedTerms(profile = {}) {
+  const terms = [];
+  const seen = new Set();
+  const seedSafety = profile.songwriting?.seed_safety || {};
+  const protectedTerms = collectProtectedProfileTerms(profile);
+
+  const addTerm = (rawTerm, type, source, { allowShort = false } = {}) => {
+    const term = cleanSeedTerm(rawTerm);
+    const normalized = normalizeForForbiddenMatch(term).trim();
+    if (!term || !normalized) return;
+    if (!allowShort && normalized.length < 4) return;
+    if (isGenericSeedTerm(normalized)) return;
+    if (protectedTerms.has(normalized)) return;
+
+    const key = `${type}:${normalized}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    terms.push({ term, normalized, type, source });
+  };
+
+  const addStringArray = (value, type, source) => {
+    for (const item of normalizeStringArray(value)) addTerm(item, type, source);
+  };
+
+  if (seedSafety.allow_title_example_reuse !== true) {
+    addStringArray(profile.lyrics?.title_examples, 'title_example', 'lyrics.title_examples');
+  }
+
+  if (seedSafety.allow_catchphrase_reuse !== true) {
+    addStringArray(profile.character?.catchphrases, 'catchphrase', 'character.catchphrases');
+  }
+
+  if (seedSafety.allow_reference_artist_names_in_prompt !== true) {
+    addStringArray(profile.songwriting?.reference_artists_for_internal_vibe_only, 'reference_artist', 'songwriting.reference_artists_for_internal_vibe_only');
+  }
+
+  addStringArray(profile.songwriting?.background_lore_terms, 'background_lore', 'songwriting.background_lore_terms');
+  addStringArray(profile.songwriting?.lore_terms, 'background_lore', 'songwriting.lore_terms');
+  addStringArray(profile.songwriting?.optional_lore_terms, 'background_lore', 'songwriting.optional_lore_terms');
+
+  for (const sourceString of collectProfileSeedSourceStrings(profile)) {
+    for (const number of extractDistinctiveNumbers(sourceString)) {
+      addTerm(number, 'background_lore_number', 'profile distinctive number', { allowShort: true });
+    }
+  }
+
+  return terms;
+}
+
+export function findProfileSeedOveruse(songData = {}, profile = BRAND_PROFILE, topic = '') {
+  const seedTerms = collectProfileSeedTerms(profile);
+  if (seedTerms.length === 0) return [];
+
+  const searchable = collectSingableSongText(songData);
+  const normalizedSearchable = normalizeForForbiddenMatch(searchable);
+  const seedSafety = profile.songwriting?.seed_safety || {};
+
+  return seedTerms
+    .map(seed => ({ ...seed, count: countNormalizedSeedMatches(normalizedSearchable, seed.normalized) }))
+    .filter(seed => seed.count > 0)
+    .filter(seed => !topicExplicitlyAllowsSeedTerm(topic, seed))
+    .filter(seed => shouldFlagSeedMatch(seed, seedSafety));
+}
+
 function collectSingableSongText(songData = {}) {
   const audioPromptStrings = songData.audio_prompt && typeof songData.audio_prompt === 'object' && !Array.isArray(songData.audio_prompt)
     ? Object.values(songData.audio_prompt).filter(value => typeof value === 'string')
@@ -392,6 +489,120 @@ function collectSingableSongText(songData = {}) {
   ];
 
   return parts.filter(Boolean).join('\n');
+}
+
+function collectProtectedProfileTerms(profile = {}) {
+  return new Set([
+    profile.brand_name,
+    profile.character?.name,
+    profile.distribution?.default_artist,
+  ]
+    .map(term => normalizeForForbiddenMatch(term).trim())
+    .filter(Boolean));
+}
+
+function normalizeStringArray(value) {
+  return Array.isArray(value)
+    ? value.map(item => cleanSeedTerm(item)).filter(Boolean)
+    : [];
+}
+
+function cleanSeedTerm(value = '') {
+  return String(value || '')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .trim();
+}
+
+function collectProfileSeedSourceStrings(profile = {}) {
+  return [
+    ...normalizeStringArray(profile.lyrics?.title_examples),
+    ...normalizeStringArray(profile.character?.catchphrases),
+    ...normalizeStringArray(profile.character?.visual_reference),
+    profile.lyrics?.topic_variety,
+    profile.character?.fallback_summary,
+    profile.character?.core_concept,
+    profile.brand_description,
+    ...normalizeStringArray(profile.songwriting?.background_lore_terms),
+    ...normalizeStringArray(profile.songwriting?.lore_terms),
+    ...normalizeStringArray(profile.songwriting?.optional_lore_terms),
+  ].map(value => String(value || '').trim()).filter(Boolean);
+}
+
+function extractDistinctiveNumbers(value = '') {
+  const matches = String(value || '').match(/\b\d{2,3}\b/g) || [];
+  return [...new Set(matches)]
+    .filter(number => {
+      const parsed = Number(number);
+      if (!Number.isFinite(parsed)) return false;
+      if (parsed < 10 || parsed > 99) return false;
+      return true;
+    });
+}
+
+function shouldFlagSeedMatch(seed, seedSafety = {}) {
+  if (seed.type === 'catchphrase') {
+    const mode = seedSafety.allow_catchphrase_reuse ?? 'rare';
+    if (mode === true) return false;
+    if (mode === 'rare' && seed.count <= 1) return false;
+  }
+
+  return true;
+}
+
+function topicExplicitlyAllowsSeedTerm(topic = '', seed) {
+  const normalizedTopic = normalizeForForbiddenMatch(topic).trim();
+  if (!normalizedTopic) return false;
+  return buildSeedPatterns(seed.normalized).some(pattern => pattern.test(` ${normalizedTopic} `));
+}
+
+function countNormalizedSeedMatches(normalizedSearchable, normalizedSeed) {
+  return buildSeedPatterns(normalizedSeed)
+    .reduce((count, pattern) => count + countPatternMatches(normalizedSearchable, pattern), 0);
+}
+
+function buildSeedPatterns(normalizedSeed = '') {
+  const seed = String(normalizedSeed || '').trim();
+  if (!seed) return [];
+  return [new RegExp(`\\b${escapeRegExp(seed).replace(/\s+/g, '\\s+')}\\b`, 'gi')];
+}
+
+function countPatternMatches(value = '', pattern) {
+  const matches = String(value || '').match(pattern);
+  return matches ? matches.length : 0;
+}
+
+function isGenericSeedTerm(normalized = '') {
+  const generic = new Set([
+    'music',
+    'song',
+    'songs',
+    'pop',
+    'rock',
+    'rap',
+    'hip hop',
+    'hiphop',
+    'chorus',
+    'verse',
+    'bridge',
+    'intro',
+    'outro',
+    'artist',
+    'album',
+    'single',
+    'spotify',
+    'youtube',
+    'apple music',
+    'figment factory',
+    'studio',
+  ]);
+  return generic.has(normalized);
+}
+
+function formatSeedOveruseList(seedOveruse = []) {
+  return seedOveruse
+    .map(item => `${item.term} (${item.type}, ${item.count}x)`)
+    .join(', ');
 }
 
 function stripForbiddenNegatedClauses(value = '', forbiddenElements = SONGWRITING.forbidden_elements || []) {
