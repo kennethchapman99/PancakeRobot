@@ -218,5 +218,9 @@
     "brand_safe": true,
     "lyric_guardrail": "Prioritize space, restraint, and image-led writing. Avoid fast constant lyrics, forced rhymes, pop slogans, songs centered on phones/draft messages/cursors/apps/notifications, and repeating the same narrow set of images across an album.",
     "instrumental_guardrail": "Creative instrumentation is encouraged when it fits the mood: scratching, wood flute, melodica, toy keys, muted guitar, field recordings, tape loops, bowed strings, or other organic fragments can appear, but should feel integrated and intimate rather than novelty-driven."
+  },
+  "media": {
+    "default_image_url": "/brand-media/postal-v3-brand-profile-expanded/default-image.png",
+    "default_image_path": ""
   }
 }

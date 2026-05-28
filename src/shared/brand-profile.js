@@ -341,7 +341,10 @@ export function validateBrandProfile(profile, profilePath = 'brand profile') {
 
 function validateSongwriting(songwriting, profilePath) {
   for (const key of ['allowed_elements', 'forbidden_elements', 'required_elements', 'structure_preferences']) {
-    if (songwriting[key] !== undefined) validateStringArray(songwriting[key], `${profilePath} songwriting.${key}`);
+    const val = songwriting[key];
+    if (val !== undefined && !(Array.isArray(val) && val.length === 0)) {
+      validateStringArray(val, `${profilePath} songwriting.${key}`);
+    }
   }
 
   if (songwriting.output_schema !== undefined) {

@@ -3,18 +3,16 @@
   "stop_before_submit": true,
   "fields": {
     "artist": {
-      "strategy": "cssFill",
-      "selector": "",
+      "strategy": "smartFill",
+      "selector": "artist|band name",
       "manifest_key": "artist",
-      "optional": true,
-      "note": "Use config/distrokid/field-map.local.json if your DistroKid account shows an editable artist field."
+      "optional": true
     },
     "release_title": {
-      "strategy": "cssFill",
-      "selector": "",
+      "strategy": "smartFill",
+      "selector": "album title|release title",
       "manifest_key": "release_title",
-      "optional": true,
-      "note": "Use config/distrokid/field-map.local.json if your DistroKid account shows a release/album title field."
+      "optional": true
     },
     "cover_art": {
       "strategy": "inputFile",

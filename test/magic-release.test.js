@@ -128,6 +128,18 @@ test('task dependency readiness promotes later steps only when prerequisites com
 test('Browsy package generation and stub run stay on the generic contract', async () => {
   const songId = seedSong(uniqueId('MAGIC_BROWSY_SINGLE'));
   packageIds.add(songId);
+  const songDir = path.join(repoRoot, 'output', 'songs', songId);
+  fs.mkdirSync(path.join(songDir, 'reference'), { recursive: true });
+  fs.writeFileSync(path.join(songDir, 'audio.mp3'), 'fake-audio');
+  fs.writeFileSync(path.join(songDir, 'reference', 'base-image.png'), 'fake-artwork');
+  fs.writeFileSync(path.join(songDir, 'lyrics.md'), 'Payload lyrics');
+  fs.writeFileSync(path.join(songDir, 'metadata.json'), JSON.stringify({
+    artist: 'Pancake Robot',
+    title: 'Browsy Payload Song',
+    primary_genre: "Children's Music",
+    language: 'English',
+    songwriter: 'Kenneth Chapman',
+  }));
   const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
   await runMagicReleaseTask({ campaignId: created.campaign.id, taskKey: 'verify_release_metadata', dryRun: true });
   await runMagicReleaseTask({ campaignId: created.campaign.id, taskKey: 'distrokid_package_readiness', dryRun: true });
@@ -146,6 +158,10 @@ test('Browsy package generation and stub run stay on the generic contract', asyn
   assert.equal(pkg.source_system, 'pancake_robot');
   assert.equal(pkg.return_contract_version, 'automation-result-v1');
   assert.equal(Object.hasOwn(pkg, 'selectors'), false);
+  assert.equal(pkg.canonical_payload.releaseId, songId);
+  assert.equal(pkg.canonical_payload.trackCount, 1);
+  assert.equal(path.isAbsolute(pkg.canonical_payload.artworkPath), true);
+  assert.equal(path.isAbsolute(pkg.canonical_payload.tracks[0].audioPath), true);
   assert.equal(task.status, 'complete');
 });
 

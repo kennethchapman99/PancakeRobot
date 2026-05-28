@@ -28,6 +28,7 @@ import { createOutreachRun, getCanonicalEmailOutletsForSelection } from '../agen
 import { createOrRefreshReleaseSocialCampaign } from '../agents/daily-social-planner-agent.js';
 import { getSongMarketingKit, saveSongMarketingKit } from './song-marketing-kit.js';
 import { recommendVisualAssets, selectReusableAssetOrSuggestCustomVideo } from './visual-library.js';
+import { buildCanonicalDistroKidPayload } from './distrokid-payload.js';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -615,6 +616,17 @@ function writeBrowsyWorkflowPackage({ campaign, task, release, dryRun }) {
   fs.mkdirSync(workflowDir, { recursive: true });
   const packagePath = path.join(workflowDir, 'workflow-package.json');
   const manifestPath = path.join(workflowDir, 'manifest.json');
+  const canonicalPayload = /distrokid/i.test(task.source_workflow_id || '')
+    ? buildCanonicalDistroKidPayload({ releaseType: release.type, releaseId: release.id })
+    : {
+        release_title: release.title,
+        release_date: release.releaseDate,
+        tracks: release.tracks.map(track => ({
+          id: track.id,
+          title: track.title || track.topic || track.id,
+          track_number: track.track_number || null,
+        })),
+      };
   const payload = {
     workflow_id: task.source_workflow_id,
     source_system: 'pancake_robot',
@@ -623,15 +635,7 @@ function writeBrowsyWorkflowPackage({ campaign, task, release, dryRun }) {
     mode: dryRun ? 'dry_run' : 'live',
     human_gate: true,
     manifest_path: path.relative(REPO_ROOT, manifestPath),
-    canonical_payload: {
-      release_title: release.title,
-      release_date: release.releaseDate,
-      tracks: release.tracks.map(track => ({
-        id: track.id,
-        title: track.title || track.topic || track.id,
-        track_number: track.track_number || null,
-      })),
-    },
+    canonical_payload: canonicalPayload,
     assets: [],
     capture_outputs: defaultCaptureOutputs(task.source_workflow_id),
     on_failure: 'stop_and_return_blocked_result',
