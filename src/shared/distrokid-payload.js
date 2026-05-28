@@ -78,6 +78,36 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
   });
 }
 
+export function buildCanonicalDistroKidPayload(input, options = {}) {
+  if (!input) throw new Error('DistroKid payload input is required.');
+
+  if (input.packageState || input.tracks || input.type || input.id) {
+    return buildDistroKidPayloadFromCockpit(input, options);
+  }
+
+  const manifest = input;
+  const releaseType = normalizeReleaseType(
+    manifest.release_type || (Array.isArray(manifest.tracks) && manifest.tracks.length > 1 ? 'album' : 'single')
+  );
+
+  const cockpit = {
+    id: manifest.release_id || manifest.album_id || manifest.song_id,
+    type: releaseType,
+    title: manifest.release_title || manifest.album_title || manifest.title,
+    releaseDate: manifest.release_date,
+    packageState: { manifest },
+    tracks: Array.isArray(manifest.tracks)
+      ? manifest.tracks.map((track, index) => ({
+          ...track,
+          id: track.id || track.song_id || track.track_id || `track-${index + 1}`,
+          title: track.title || track.track_title || track.topic,
+        }))
+      : [],
+  };
+
+  return buildDistroKidPayloadFromCockpit(cockpit, options);
+}
+
 export function writeDistroKidPayloadFromCockpit(cockpit, outputPath, options = {}) {
   if (!outputPath) throw new Error('outputPath is required.');
   const payload = buildDistroKidPayloadFromCockpit(cockpit, options);
