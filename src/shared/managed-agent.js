@@ -209,20 +209,149 @@ function hashAgentDefinition(agentDef, model) {
     .digest('hex');
 }
 
+// Scalar error fields that are safe to surface (no secrets, no request bodies).
+const SAFE_ERROR_FIELDS = ['code', 'errno', 'syscall', 'hostname', 'address', 'port', 'status'];
+
 /**
- * Emit a structured diagnostic line for a direct-call failure.
- * Never logs raw key values — only presence (boolean) and masked indicator.
+ * Describe a single error/cause node, picking only safe scalar fields.
+ * Never reads headers, request bodies, or anything that could carry an API key.
  */
-function logDirectCallDiagnostics(label, { model, err }) {
+function describeSingleError(node) {
+  if (node == null) return { value: String(node) };
+  if (typeof node !== 'object') return { value: String(node) };
+  const out = { name: node.name || node.constructor?.name || 'Error' };
+  if (node.message != null) out.message = String(node.message);
+  for (const field of SAFE_ERROR_FIELDS) {
+    if (node[field] !== undefined && node[field] !== null) out[field] = node[field];
+  }
+  return out;
+}
+
+/**
+ * Walk err, err.cause, err.cause.cause, ... collecting safe fields at each level.
+ * Cycle-protected (object identity) and depth-capped. The default "fetch failed"
+ * message from undici hides the real ECONNREFUSED/ENOTFOUND/timeout cause one or
+ * two levels deeper — this surfaces it without ever leaking secrets.
+ */
+export function describeErrorChain(err, { maxDepth = 8 } = {}) {
+  const chain = [];
+  const seen = new Set();
+  let current = err;
+  let depth = 0;
+  while (current !== undefined && current !== null && depth < maxDepth) {
+    if (typeof current === 'object') {
+      if (seen.has(current)) {
+        chain.push({ note: 'cycle detected — stopping cause walk' });
+        break;
+      }
+      seen.add(current);
+    }
+    chain.push(describeSingleError(current));
+    current = typeof current === 'object' ? current.cause : undefined;
+    depth++;
+  }
+  if (current !== undefined && current !== null && depth >= maxDepth) {
+    chain.push({ note: `cause chain truncated at depth ${maxDepth}` });
+  }
+  return chain;
+}
+
+function formatErrorChainForLog(chain) {
+  return chain.map((node, idx) => {
+    if (node.note) return `    [${idx}] ${node.note}`;
+    if (node.value !== undefined) return `    [${idx}] ${node.value}`;
+    const fields = SAFE_ERROR_FIELDS
+      .filter(field => node[field] !== undefined)
+      .map(field => `${field}=${node[field]}`)
+      .join(' ');
+    const msg = node.message ? ` message="${node.message}"` : '';
+    return `    [${idx}] ${node.name}${msg}${fields ? ` ${fields}` : ''}`;
+  }).join('\n');
+}
+
+/**
+ * Build the structured diagnostic text for a direct-call failure.
+ * Pure (returns a string) so it can be unit-tested for secret leakage.
+ * Never includes raw key values — only presence (boolean).
+ */
+export function formatDirectCallDiagnostics({ model, err }) {
   const apiKeyPresent = Boolean(process.env.ANTHROPIC_API_KEY);
   const baseUrlOverride = process.env.ANTHROPIC_BASE_URL ? ` base_url=${process.env.ANTHROPIC_BASE_URL}` : '';
   const errClass = err?.constructor?.name || 'Error';
   const errStatus = err?.status != null ? ` status=${err.status}` : '';
-  const causeMsg = err?.cause?.message ? ` cause="${err.cause.message}"` : '';
-  console.log(chalk.red(
+  const chainStr = formatErrorChainForLog(describeErrorChain(err));
+  return (
     `  provider=anthropic model=${model}${baseUrlOverride} api_key_present=${apiKeyPresent}` +
-    `\n  error_class=${errClass}${errStatus} message="${err?.message}"${causeMsg}`
-  ));
+    `\n  error_class=${errClass}${errStatus} message="${err?.message}"` +
+    `\n  cause_chain:\n${chainStr}`
+  );
+}
+
+/**
+ * Emit a structured diagnostic line for a direct-call failure.
+ * Never logs raw key values — only presence (boolean).
+ */
+function logDirectCallDiagnostics(label, { model, err }) {
+  console.log(chalk.red(formatDirectCallDiagnostics({ model, err })));
+}
+
+/**
+ * Build the exact options object passed to client.messages.create for a
+ * direct (noTools) call. Shared by runAgentDirect and the diagnostic script so
+ * the diagnostic exercises the real request shape, not a hand-written copy.
+ */
+export function buildDirectMessagesPayload({ model, maxTokens, system, task }) {
+  return {
+    model,
+    max_tokens: maxTokens,
+    system,
+    messages: [{ role: 'user', content: task }],
+    stream: true,
+  };
+}
+
+/**
+ * Summarize a messages.create payload for logging with all secrets/bodies
+ * redacted: no API key, no system text, no message text, no headers.
+ */
+export function summarizeRequestOptions(payload = {}) {
+  return {
+    model: payload.model ?? null,
+    max_tokens: payload.max_tokens ?? null,
+    stream: payload.stream === true,
+    system_present: typeof payload.system === 'string' && payload.system.length > 0,
+    system_chars: typeof payload.system === 'string' ? payload.system.length : 0,
+    message_count: Array.isArray(payload.messages) ? payload.messages.length : 0,
+    user_chars: Array.isArray(payload.messages)
+      ? payload.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0)
+      : 0,
+    timeout: payload.timeout ?? '(sdk default)',
+    signal: payload.signal ? 'set' : 'none',
+    request_max_retries: payload.maxRetries ?? '(sdk default)',
+  };
+}
+
+/**
+ * Report managed-agent client/env state for diagnostics. Reads only safe,
+ * non-secret fields. Reports whether the singleton client already exists so a
+ * caller can tell "reused" vs "newly created" by sampling before/after a call.
+ */
+export function getManagedAgentDiagnostics() {
+  const baseURLConfigured = Boolean(process.env.ANTHROPIC_BASE_URL);
+  const info = {
+    apiKeyPresent: Boolean(process.env.ANTHROPIC_API_KEY),
+    baseURLConfigured,
+    baseURL: baseURLConfigured ? process.env.ANTHROPIC_BASE_URL : null,
+    clientInstantiated: _client !== null,
+    defaultDirectMaxTokens: DEFAULT_DIRECT_MAX_TOKENS,
+    defaultDirectRetryDelayMs: DEFAULT_DIRECT_RETRY_DELAY_MS,
+  };
+  if (_client) {
+    info.clientBaseURL = _client.baseURL ?? null;
+    info.clientTimeoutMs = _client.timeout ?? null;
+    info.clientMaxRetries = _client.maxRetries ?? null;
+  }
+  return info;
 }
 
 /**
@@ -258,13 +387,9 @@ async function runAgentDirect(agentName, agentDef, task, options = {}) {
       console.log(`\n${label} ${chalk.dim(`Direct call (${model}, no-tools, max_tokens=${maxTokens})`)}`);
       console.log(`${label} ${chalk.italic(task.substring(0, 120))}${task.length > 120 ? '...' : ''}`);
 
-      const response = await client.messages.create({
-        model,
-        max_tokens: maxTokens,
-        system: agentDef.system,
-        messages: [{ role: 'user', content: task }],
-        stream: true,
-      });
+      const response = await client.messages.create(
+        buildDirectMessagesPayload({ model, maxTokens, system: agentDef.system, task })
+      );
 
       let fullText = '';
       let inputTokens = 0;
@@ -346,7 +471,10 @@ async function runAgentDirect(agentName, agentDef, task, options = {}) {
     }
   }
 
-  throw new Error(`Agent ${agentName} direct call failed after ${maxRetries + 1} attempts: ${lastError?.message}`);
+  throw new Error(
+    `Agent ${agentName} direct call failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
+    { cause: lastError }
+  );
 }
 
 /**
@@ -547,7 +675,10 @@ export async function runAgent(agentName, agentDef, task, options = {}) {
     }
   }
 
-  throw new Error(`Agent ${agentName} failed after ${maxRetries + 1} attempts: ${lastError?.message}`);
+  throw new Error(
+    `Agent ${agentName} failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
+    { cause: lastError }
+  );
 }
 
 /**
