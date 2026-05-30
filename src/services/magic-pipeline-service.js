@@ -247,6 +247,7 @@ async function runMagicPipelineServiceInner({
           existingLyrics: firstPass.lyricsResult.lyricsText,
           passLabel: 'Magic Pass 2/2',
           forceRegenerate: true,
+          confirmPaidRerender: true,
           logger,
           emit,
           modules,
@@ -409,6 +410,7 @@ async function runSongBuildPass({
   passLabel = 'Pass',
   stopAfterAudio = false,
   forceRegenerate = false,
+  confirmPaidRerender = false,
   logger,
   emit,
   modules,
@@ -487,6 +489,7 @@ async function runSongBuildPass({
     lyricsText: lyricsResult.lyricsText,
     audioPromptData: lyricsResult.songData?.audio_prompt,
     forceRegenerate,
+    confirmPaidRerender,
   });
 
   if (musicResult.audioFiles?.length > 0) {

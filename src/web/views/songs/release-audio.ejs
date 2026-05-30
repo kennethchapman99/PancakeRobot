@@ -7,15 +7,22 @@
       <div>
         <div class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Release Master Audio</div>
         <h1 class="mt-1 text-3xl font-black tracking-tight text-zinc-900"><%= song.title || song.topic || song.id %></h1>
-        <p class="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">Pick the exact audio file that should be used for song detail, album release packaging, and DistroKid submission. This does not delete the other versions.</p>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-zinc-600"><% if (releaseAudio.duplicate) { %>Recovery action: this track has more than one master audio file. Choose the single canonical master to use for song detail, album packaging, and DistroKid. This does not delete the other versions.<% } else if (releaseAudio.status === 'selected' || releaseAudio.status === 'auto') { %>This track has one canonical release master (shown below). You normally do not need to change anything here.<% } else { %>Select the audio file to use for song detail, album release packaging, and DistroKid submission. This does not delete the other versions.<% } %></p>
       </div>
       <div class="rounded-xl border <%= releaseAudio.status === 'selected' || releaseAudio.status === 'auto' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : releaseAudio.status === 'needs_selection' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-rose-200 bg-rose-50 text-rose-950' %> px-4 py-3 text-sm">
         <div class="text-xs font-semibold uppercase tracking-wide opacity-75">Current state</div>
-        <div class="mt-1 font-black"><%= releaseAudio.status === 'selected' ? 'Release master selected' : releaseAudio.status === 'auto' ? 'Auto-selected single file' : releaseAudio.status === 'needs_selection' ? 'Choose a release master' : 'No audio found' %></div>
+        <div class="mt-1 font-black"><%= releaseAudio.status === 'selected' ? 'Release master selected' : releaseAudio.status === 'auto' ? 'Auto-selected single file' : releaseAudio.status === 'duplicate' ? 'Duplicate master audio' : releaseAudio.status === 'needs_selection' ? 'Choose a release master' : 'No audio found' %></div>
         <div class="mt-1 text-xs leading-5 opacity-90"><%= releaseAudio.message %></div>
       </div>
     </div>
   </div>
+
+  <% if (releaseAudio.duplicate) { %>
+    <div class="mt-4 rounded-2xl border-2 border-rose-300 bg-rose-50 p-5 text-rose-950">
+      <div class="font-black">⛔ Duplicate master audio detected for this track</div>
+      <p class="mt-1 text-sm leading-6">This track has <%= releaseAudio.candidates.length %> candidate master files. This usually means a paid render ran more than once. <strong>Packaging and DistroKid submission are blocked until you pick exactly one canonical master below.</strong> The others are kept, not deleted.</p>
+    </div>
+  <% } %>
 
   <% if ((releaseAudio.candidates || []).length) { %>
     <section class="mt-6 space-y-4">

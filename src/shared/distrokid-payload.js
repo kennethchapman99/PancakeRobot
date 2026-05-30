@@ -387,6 +387,28 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
   const uploadTrack = findTrackManifest(uploadPayload, track);
   const metadata = readTrackMetadata(track, trackManifest, repoRoot);
   const candidateSongId = findFirstSongId(track, trackManifest, uploadTrack, metadata);
+  // When duplicate masters are detected for this track and none has been explicitly
+  // selected, do NOT auto-resolve audio from a directory scan — that could package the
+  // wrong track's file. Only an explicit selected master or explicit per-track audio
+  // path is trusted until a human resolves the duplicate.
+  const duplicateUnresolved = Boolean(track.releaseAudio?.duplicate) && !track.releaseAudio?.selected;
+  const directoryScanFallbacks = duplicateUnresolved
+    ? []
+    : [
+        track.fsAssets?.audioFiles?.[0]?.path,
+        track.fsAssets?.audioFiles?.[0],
+        track.fsAssets?.audio,
+        trackManifest?.audioPath,
+        trackManifest?.audio_path,
+        trackManifest?.audio_file,
+        uploadTrack?.audioPath,
+        uploadTrack?.audio_path,
+        uploadTrack?.audio_file,
+        metadata.audioPath,
+        metadata.audio_path,
+        metadata.audio_file,
+        findDefaultSongAudioPath({ songId: candidateSongId, repoRoot }),
+      ];
   const audioPath = toAbsolutePath(firstText(
     track.audioPath,
     track.audio_path,
@@ -394,19 +416,7 @@ function buildTrackPayload({ track, index, manifest, uploadPayload, repoRoot }) 
     track.releaseAudio?.selected?.path,
     track.releaseAudio?.selected?.filePath,
     track.releaseAudio?.selected?.absolutePath,
-    track.fsAssets?.audioFiles?.[0]?.path,
-    track.fsAssets?.audioFiles?.[0],
-    track.fsAssets?.audio,
-    trackManifest?.audioPath,
-    trackManifest?.audio_path,
-    trackManifest?.audio_file,
-    uploadTrack?.audioPath,
-    uploadTrack?.audio_path,
-    uploadTrack?.audio_file,
-    metadata.audioPath,
-    metadata.audio_path,
-    metadata.audio_file,
-    findDefaultSongAudioPath({ songId: candidateSongId, repoRoot }),
+    ...directoryScanFallbacks,
   ), repoRoot);
   const lyricsPath = toAbsolutePath(firstText(
     track.lyricsPath,

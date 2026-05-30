@@ -63,12 +63,19 @@ export function getSelectedReleaseAudio(songId, { assets = null } = {}) {
     : null;
 
   if (selected) {
+    // An explicit canonical master has been chosen. If extra files exist they are
+    // tolerated duplicates that have already been resolved by the selection.
     return {
       status: 'selected',
       selected,
       candidates,
       requiresSelection: false,
-      message: 'Release master selected.',
+      duplicate: false,
+      blocking: false,
+      duplicateCount: candidates.length > 1 ? candidates.length : 0,
+      message: candidates.length > 1
+        ? `Release master selected (${candidates.length - 1} other audio file(s) present and ignored).`
+        : 'Release master selected.',
     };
   }
 
@@ -78,17 +85,26 @@ export function getSelectedReleaseAudio(songId, { assets = null } = {}) {
       selected: candidates[0],
       candidates,
       requiresSelection: false,
+      duplicate: false,
+      blocking: false,
+      duplicateCount: 0,
       message: 'Only one audio file found; using it as the release master.',
     };
   }
 
   if (candidates.length > 1) {
+    // Multiple masters for ONE track with no explicit selection is a release-integrity
+    // error (likely a duplicate paid render), not a normal "choose one" workflow.
+    // Packaging/DistroKid must be blocked until a human resolves it via the recovery picker.
     return {
-      status: 'needs_selection',
+      status: 'duplicate',
       selected: null,
       candidates,
       requiresSelection: true,
-      message: `${candidates.length} audio files found. Select the release master before packaging.`,
+      duplicate: true,
+      blocking: true,
+      duplicateCount: candidates.length,
+      message: `Duplicate master audio detected for this track (${candidates.length} files). Packaging and DistroKid submission blocked until resolved.`,
     };
   }
 
@@ -97,6 +113,9 @@ export function getSelectedReleaseAudio(songId, { assets = null } = {}) {
     selected: null,
     candidates,
     requiresSelection: false,
+    duplicate: false,
+    blocking: false,
+    duplicateCount: 0,
     message: 'No audio files found.',
   };
 }

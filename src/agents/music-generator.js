@@ -49,24 +49,137 @@ export function findExistingValidAudioFile(audioDir) {
   return null;
 }
 
-export async function generateMusic({ songId, title, lyricsText, audioPromptData, forceRegenerate = false }) {
+// Stale locks (e.g. left by a crashed/killed process) are reclaimed after this window
+// so a single failed run cannot block paid generation for a track forever.
+const GENERATION_LOCK_STALE_MS = Number(process.env.MUSIC_GEN_LOCK_STALE_MS || 30 * 60 * 1000);
+
+/**
+ * Acquire an exclusive per-track generation lock. This closes the TOCTOU window where two
+ * concurrent generateMusic() calls for the same songId both pass the "no existing master"
+ * check and both bill MiniMax. Acquisition is synchronous so it completes before any await.
+ */
+export function acquireGenerationLock(audioDir) {
+  fs.mkdirSync(audioDir, { recursive: true });
+  const lockPath = join(audioDir, '.generation.lock');
+  try {
+    const fd = fs.openSync(lockPath, 'wx');
+    fs.writeSync(fd, JSON.stringify({ pid: process.pid, acquired_at: new Date().toISOString() }));
+    fs.closeSync(fd);
+    return { acquired: true, lockPath };
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err;
+    // Reclaim a stale lock left by a dead run.
+    try {
+      const age = Date.now() - fs.statSync(lockPath).mtimeMs;
+      if (age > GENERATION_LOCK_STALE_MS) {
+        fs.rmSync(lockPath, { force: true });
+        return acquireGenerationLock(audioDir);
+      }
+    } catch {}
+    return { acquired: false, lockPath };
+  }
+}
+
+export function releaseGenerationLock(lock) {
+  if (!lock?.lockPath) return;
+  try {
+    fs.rmSync(lock.lockPath, { force: true });
+  } catch {}
+}
+
+function buildReuseResult(existingAudioFile) {
+  return {
+    audioFiles: [{ path: existingAudioFile, version: 1, model: null, tier: null, reused: true }],
+    skipped: false,
+    skipped_existing_audio: true,
+  };
+}
+
+/**
+ * @param {boolean} forceRegenerate   Request a brand-new paid render for a track that already
+ *                                    has a master. Ignored unless confirmPaidRerender is also true.
+ * @param {boolean} confirmPaidRerender  Explicit cost acknowledgement required to bill MiniMax
+ *                                    again for a track that already has a master.
+ */
+export async function generateMusic({ songId, title, lyricsText, audioPromptData, forceRegenerate = false, confirmPaidRerender = false }) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   const audioDir = join(songDir, 'audio');
   fs.mkdirSync(audioDir, { recursive: true });
 
-  if (!forceRegenerate) {
+  // A paid re-render is only permitted when BOTH the force flag and an explicit cost
+  // confirmation are present. Any other "force" without confirmation is treated as a
+  // normal (idempotent) run so we never silently bill MiniMax twice for one track.
+  const paidRerenderConfirmed = forceRegenerate === true && confirmPaidRerender === true;
+  if (forceRegenerate === true && !paidRerenderConfirmed) {
+    console.log('[MUSIC-GEN] ⚠ Paid re-render requested without confirmPaidRerender=true — refusing to bill MiniMax again. Reusing existing master if present.');
+  }
+
+  if (!paidRerenderConfirmed) {
     const existingAudioFile = findExistingValidAudioFile(audioDir);
     if (existingAudioFile) {
       const existingFilename = existingAudioFile.split('/').pop();
-      console.log(`[MUSIC-GEN] ✓ Reusing existing audio file: ${existingFilename} — skipping MiniMax generation (pass forceRegenerate=true to force new generation)`);
-      return {
-        audioFiles: [{ path: existingAudioFile, version: 1, model: null, tier: null, reused: true }],
-        skipped: false,
-        skipped_existing_audio: true,
-      };
+      console.log(`[MUSIC-GEN] ✓ reused existing paid master: ${existingFilename} — skipping MiniMax generation (forceRegenerate=true + confirmPaidRerender=true required to bill a new render)`);
+      return buildReuseResult(existingAudioFile);
     }
+  } else {
+    console.log(`[MUSIC-GEN] 💸 explicit paid regeneration requested for ${songId} ("${title}") — a new MiniMax render WILL be billed.`);
   }
 
+  // Close the TOCTOU window: two concurrent calls for the same track must not both bill.
+  const lock = acquireGenerationLock(audioDir);
+  if (!lock.acquired) {
+    console.log(`[MUSIC-GEN] ⛔ blocked duplicate paid generation — another render is already in progress for ${songId}`);
+    const existingAudioFile = findExistingValidAudioFile(audioDir);
+    return existingAudioFile
+      ? buildReuseResult(existingAudioFile)
+      : { audioFiles: [], skipped: true, blocked_concurrent: true };
+  }
+
+  try {
+    // Re-check inside the lock: a racing call may have produced the master while we waited.
+    if (!paidRerenderConfirmed) {
+      const existingAudioFile = findExistingValidAudioFile(audioDir);
+      if (existingAudioFile) {
+        const existingFilename = existingAudioFile.split('/').pop();
+        console.log(`[MUSIC-GEN] ✓ reused existing paid master (post-lock): ${existingFilename}`);
+        return buildReuseResult(existingAudioFile);
+      }
+    }
+    return await runPaidGeneration({ songId, title, lyricsText, audioPromptData, songDir, audioDir, paidRerenderConfirmed });
+  } finally {
+    releaseGenerationLock(lock);
+  }
+}
+
+// Move every audio file in audioDir EXCEPT keepPath into audio/superseded/<timestamp>/.
+// Used after a confirmed paid re-render so exactly one canonical master remains on disk
+// without ever destroying the prior take.
+export function quarantinePriorMasters(audioDir, keepPath) {
+  if (!fs.existsSync(audioDir)) return [];
+  const keep = keepPath ? join(audioDir, keepPath.split('/').pop()) : null;
+  const stale = fs.readdirSync(audioDir)
+    .filter(name => /\.(mp3|wav)$/i.test(name))
+    .map(name => join(audioDir, name))
+    .filter(filePath => filePath !== keep);
+  if (stale.length === 0) return [];
+
+  const quarantineDir = join(audioDir, 'superseded', new Date().toISOString().replace(/[:.]/g, '-'));
+  fs.mkdirSync(quarantineDir, { recursive: true });
+  const moved = [];
+  for (const filePath of stale) {
+    const dest = join(quarantineDir, filePath.split('/').pop());
+    try {
+      fs.renameSync(filePath, dest);
+      moved.push(dest);
+    } catch {}
+  }
+  if (moved.length) {
+    console.log(`[MUSIC-GEN] 🗄 quarantined ${moved.length} superseded master(s) to ${quarantineDir} (kept new canonical master)`);
+  }
+  return moved;
+}
+
+async function runPaidGeneration({ songId, title, lyricsText, audioPromptData, songDir, audioDir, paidRerenderConfirmed = false }) {
   const modelConfig = resolveMiniMaxModelConfig();
   const prompt = buildStylePrompt(audioPromptData, { title });
 
@@ -194,6 +307,12 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     postRenderQA.warnings.forEach(w => console.log(`  • ${w}`));
   }
 
+  // On a confirmed paid re-render the new file is now canonical (post-QA); quarantine the
+  // prior take(s) so the track is never left with duplicate masters.
+  if (paidRerenderConfirmed) {
+    quarantinePriorMasters(audioDir, filePath);
+  }
+
   const generatedAt = new Date().toISOString();
 
   recordCostEvent({
@@ -227,6 +346,7 @@ export async function generateMusic({ songId, title, lyricsText, audioPromptData
     pre_render_qa_blocking: false,
     post_render_qa_passed: postRenderQA.passed,
     post_render_qa_blocking: false,
+    canonical_master: filename,
     versions: [{ version: 1, tier: modelConfig.tier, model: modelConfig.model, file: filename }],
   };
   fs.writeFileSync(join(audioDir, 'generation-meta.json'), JSON.stringify(meta, null, 2));

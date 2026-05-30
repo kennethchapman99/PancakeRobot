@@ -466,6 +466,10 @@ function buildStages({ type, release, tracks, assetState, distrokidArtwork, camp
 
   const audioTrackIds = [];
   const audioIssues = tracks.flatMap(track => {
+    if (track.releaseAudio?.duplicate) {
+      audioTrackIds.push(track.id);
+      return [`${track.id}: duplicate master audio detected (${track.releaseAudio.candidates?.length || 0} files) — resolve before packaging`];
+    }
     if (track.releaseAudio?.requiresSelection) {
       audioTrackIds.push(track.id);
       return [`${track.id}: choose release audio master (${track.releaseAudio.candidates?.length || 0} candidates)`];
@@ -1303,6 +1307,7 @@ function buildTrackTable({ type, release, tracks }) {
     rows: tracks.map(track => {
       const hasMetadata = Boolean(track.fsAssets.metadata || track.metadata_path);
       const hasAnyAudio = Boolean(track.releaseAudio?.selected || (track.fsAssets.audioFiles || []).length);
+      const hasDuplicateAudio = Boolean(track.releaseAudio?.duplicate);
       const needsAudioSelection = Boolean(track.releaseAudio?.requiresSelection);
       const affected = {
         metadata: !hasMetadata,
@@ -1318,10 +1323,12 @@ function buildTrackTable({ type, release, tracks }) {
           label: hasMetadata ? 'complete' : 'blocked',
         },
         audioStatus: {
-          status: needsAudioSelection ? 'needs_attention' : (hasAnyAudio ? 'complete' : 'blocked'),
-          label: needsAudioSelection
-            ? `choose master (${track.releaseAudio?.candidates?.length || 0})`
-            : (track.releaseAudio?.selected ? 'master selected' : (hasAnyAudio ? 'available' : 'missing')),
+          status: hasDuplicateAudio ? 'blocked' : (needsAudioSelection ? 'needs_attention' : (hasAnyAudio ? 'complete' : 'blocked')),
+          label: hasDuplicateAudio
+            ? `duplicate master (${track.releaseAudio?.candidates?.length || 0}) — resolve`
+            : (needsAudioSelection
+              ? `choose master (${track.releaseAudio?.candidates?.length || 0})`
+              : (track.releaseAudio?.selected ? 'master selected' : (hasAnyAudio ? 'available' : 'missing'))),
           fileName: track.releaseAudio?.selected?.name || track.releaseAudio?.selected?.relativePath || null,
         },
         costDisplay: costKnown ? formatUsd(track.finance?.total_cost_usd ?? track.total_cost_usd ?? 0) : '—',

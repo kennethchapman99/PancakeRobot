@@ -348,15 +348,19 @@ test('multiple audio files block packaging until a release master is selected', 
   writeSongAsset(songId, 'audio/final.wav', 'final-candidate');
 
   let releaseAudio = getSelectedReleaseAudio(songId);
-  assert.equal(releaseAudio.status, 'needs_selection');
+  // Multiple masters for one track with no explicit selection is a blocking duplicate,
+  // not a normal "choose one" picker.
+  assert.equal(releaseAudio.status, 'duplicate');
+  assert.equal(releaseAudio.duplicate, true);
+  assert.equal(releaseAudio.blocking, true);
   assert.equal(releaseAudio.requiresSelection, true);
   assert.ok(releaseAudio.candidates.length >= 3);
 
   let cockpit = buildReleaseCockpitViewModel('single', songId);
   assert.equal(cockpit.stages.find(stage => stage.key === 'audio')?.status, 'blocked');
-  assert.ok(cockpit.blockers.some(blocker => /choose release audio master/i.test(blocker)));
+  assert.ok(cockpit.blockers.some(blocker => /duplicate master audio detected/i.test(blocker)));
   assert.equal(cockpit.nextActions.find(action => action.key === 'package')?.enabled, false);
-  assert.throws(() => validateReleaseAction('package', cockpit), /choose release audio master/i);
+  assert.throws(() => validateReleaseAction('package', cockpit), /duplicate master audio detected/i);
 
   selectReleaseAudio(songId, `output/songs/${songId}/audio/final.wav`);
   releaseAudio = getSelectedReleaseAudio(songId);
