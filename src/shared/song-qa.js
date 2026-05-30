@@ -58,6 +58,8 @@ export function getLyricConventions(profile = BRAND_PROFILE) {
     require_verse: configured.require_verse === true,
     allow_unconventional_structure: configured.allow_unconventional_structure !== false,
     explicitness: configured.explicitness || profile.audience?.explicitness || 'clean',
+    vocal_timing: configured.vocal_timing || 'free',
+    allow_instrumental_intro: configured.allow_instrumental_intro !== false,
   };
 }
 
@@ -143,7 +145,19 @@ export function extractSection(text = '', sectionName = 'CHORUS') { const escape
 export function extractFirstSingableLines(text = '', maxChars = 500) { return String(text).split('\n').filter(line => { const trimmed = line.trim(); if (!trimmed) return false; if (/^#{1,6}\s/.test(trimmed)) return false; if (/^\*\*[^*]+\*\*:/.test(trimmed)) return false; if (/^---+$/.test(trimmed)) return false; if (SECTION_HEADER_PATTERN.test(trimmed)) return false; if (isStageDirectionLine(trimmed)) return false; return true; }).join('\n').slice(0, maxChars); }
 
 export function buildRenderSafetyPrompt(title, conventions = getLyricConventions()) {
-  const safety = [`song title for metadata: "${title}"`, `first vocal should start by ${FIRST_VOCAL_REQUIRED_BY_SECONDS} seconds unless the active brand profile explicitly asks for an instrumental opening`, `maximum non-vocal opening target ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds unless profile structure requires otherwise`, 'lyrics contain no visible section labels, stage directions, or emoji in the provider payload', `complete ${BRAND_PROFILE.brand_description}, target ${BRAND_PROFILE.music.target_length}, not a micro-jingle unless explicitly requested`];
+  const safety = [
+    `song title for metadata: "${title}"`,
+    'lyrics contain no visible section labels, stage directions, or emoji in the provider payload',
+    `complete ${BRAND_PROFILE.brand_description}, target ${BRAND_PROFILE.music.target_length}, not a micro-jingle unless explicitly requested`,
+  ];
+
+  if (conventions.vocal_timing === 'fast' || conventions.allow_instrumental_intro === false) {
+    safety.push(`first vocal should start by ${FIRST_VOCAL_REQUIRED_BY_SECONDS} seconds`);
+    safety.push(`maximum non-vocal opening target ${MAX_INSTRUMENTAL_INTRO_SECONDS} seconds`);
+  } else {
+    safety.push('vocal entrance, intro length, and instrumental opening are profile-driven and may vary by genre');
+  }
+
   if (conventions.title_usage_required) {
     safety.push(`title usage required: ${conventions.title_usage} / ${conventions.title_usage_location}`);
     if (conventions.title_usage === 'opening_line' || conventions.title_usage_location === 'opening_line') safety.push(`sing the exact title "${title}" clearly in the opening vocal line`);
