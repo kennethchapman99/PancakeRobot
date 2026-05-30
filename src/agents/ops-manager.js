@@ -8,6 +8,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { loadBrandProfile } from '../shared/brand-profile.js';
+import { getLyricConventions } from '../shared/song-qa.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BRAND_PROFILE = loadBrandProfile();
@@ -18,6 +19,7 @@ const PRIMARY_GENRE = BRAND_PROFILE.distribution.primary_genre;
 const AUDIENCE_COMPLIANCE_STATUS = BRAND_PROFILE.distribution.coppa_status;
 const CONTENT_ADVISORY = BRAND_PROFILE.distribution.content_advisory;
 const YOUTUBE_TAGS_SEED = BRAND_PROFILE.distribution.youtube_tags_seed || [];
+const LYRIC_CONVENTIONS = getLyricConventions(BRAND_PROFILE);
 
 export const OPS_MANAGER_DEF = {
   name: `${BRAND_NAME} Operations Manager`,
@@ -109,10 +111,30 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
     const wordCount = txt.split(/\s+/).filter(Boolean).length;
     const hasVerse = /\[(VERSE|VERSE\s+\d+)\]/i.test(txt);
     const hasHookOrChorus = /\[(CHORUS|HOOK|FINAL CHORUS|FINAL HOOK)\]/i.test(txt);
-    if (!hasHookOrChorus) fail('Lyrics', 'Missing hook/chorus section ([HOOK] or [CHORUS])');
-    else if (!hasVerse) fail('Lyrics', 'Missing [VERSE] section');
-    else if (wordCount < 80) fail('Lyrics', `Word count too low: ${wordCount} (min 80)`);
-    else pass('Lyrics', `${wordCount} words, has hook/chorus + verse`);
+
+    if (wordCount < 80) {
+      fail('Lyrics', `Word count too low: ${wordCount} (min 80)`);
+    } else {
+      if (LYRIC_CONVENTIONS.require_chorus_or_hook && !hasHookOrChorus) {
+        fail('Lyrics', 'Missing hook/chorus section required by active brand profile');
+      } else if (!hasHookOrChorus) {
+        warn('Lyrics', 'No hook/chorus section; allowed by active brand profile');
+      }
+
+      if (LYRIC_CONVENTIONS.require_verse && !hasVerse) {
+        fail('Lyrics', 'Missing verse section required by active brand profile');
+      } else if (!hasVerse) {
+        warn('Lyrics', 'No verse section; allowed by active brand profile');
+      }
+
+      if (
+        hasVerse ||
+        hasHookOrChorus ||
+        (!LYRIC_CONVENTIONS.require_verse && !LYRIC_CONVENTIONS.require_chorus_or_hook)
+      ) {
+        pass('Lyrics', `${wordCount} words, profile lyric conventions satisfied`);
+      }
+    }
   }
 
   // ── Audio prompt ───────────────────────────────────────────
@@ -185,6 +207,7 @@ export function runQAChecklist({ songId, songDir, lyricsPath, audioPromptPath, b
     failures,
     warnings,
     checks,
+    lyric_conventions: LYRIC_CONVENTIONS,
   };
   fs.writeFileSync(join(songDir, 'qa-report.json'), JSON.stringify(qaReport, null, 2));
 
