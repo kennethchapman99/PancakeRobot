@@ -1,0 +1,301 @@
+{
+  "brand_name": "Mic Makker",
+  "app_title": "Mic Makker",
+  "brand_type": "music",
+  "brand_description": "Mic Makker is an original AI-assisted artist brand for song-forward hip hop and alternative rap releases: witty, melodic, emotionally open, sometimes party-ready, sometimes introspective, with jazz/soul warmth, experimental texture, and a clear independent-label identity. The brand should feel human, clever, vulnerable, and surprising without imitating any real artist, voice, flow, lyrics, cadence, or production.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Listeners who like creative hip hop, alt-rap, melodic rap, indie pop-rap, jazzy samples, late-night headphone music, clever wordplay, emotional honesty, and occasional upbeat anthems.",
+    "guardrail": "Create clean or lightly mature music suitable for general streaming audiences. Avoid explicit sexual detail, graphic violence, hate, glorified drug abuse, self-harm instruction, or content aimed at children. Emotional struggle may appear, but it must not romanticize harm."
+  },
+  "character": {
+    "name": "Mic Makker",
+    "core_concept": "A surreal independent rapper-producer persona where odd ideas, honest feelings, dusty grooves, and polished hooks get assembled into original songs.",
+    "fallback_summary": "song-forward alt-hip-hop artist blending cleverness, warmth, melancholy, and groove",
+    "clap_name": "none",
+    "personality_traits": [
+      "Witty without sounding smug",
+      "Emotionally honest without becoming melodramatic",
+      "Playful and surreal when the track calls for looseness",
+      "Self-aware, reflective, and human",
+      "Comfortable moving between party energy, late-night vulnerability, and experimental left turns",
+      "Warm, handmade, and independent rather than corporate or glossy"
+    ],
+    "catchphrases": [
+      "Most dope sounds, never copy-paste",
+      "Built from strange sparks and honest noise"
+    ],
+    "visual_identity": "A retro hand-drawn music factory with thick black outlines, warm paper texture, playful colored lettering, a friendly surreal mascot presence, music equipment built into factory machinery, and a tone that mixes underground hip hop collage with charming independent label art.",
+    "visual_reference": [
+      "Cream paper texture with clean black ink outlines",
+      "Bold colorful bubble letters used sparingly",
+      "Factory shapes mixed with samplers, keyboards, waveform screens, and conveyor belts",
+      "Friendly surreal ghost or mascot figure as optional background identity, not required in every visual",
+      "Vintage zine, indie-label flyer, and underground mixtape energy without copying any existing cover art"
+    ]
+  },
+  "music": {
+    "default_style": "song-forward alternative hip hop with jazz, soul, indie, and experimental textures",
+    "default_bpm": 92,
+    "default_key": "C Minor",
+    "default_prompt": "Original song-forward alternative hip hop with warm jazz/soul chords, tasteful drums, melodic rap, hooky sung sections, and occasional experimental texture. Use a flexible lane: some tracks can be upbeat party anthems, some reflective late-night songs, some sparse emotional pieces, and some weird playful left-field cuts. Never imitate, clone, or reference any real artist voice, cadence, lyrics, melody, beat, arrangement, persona, or copyrighted work. Build a fresh performance with human warmth, wit, groove, and emotional range.",
+    "target_length": "2:00-3:30",
+    "min_words": 160,
+    "normal_word_range": "180-420",
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 12
+  },
+  "lyrics": {
+    "title_examples": [
+      "Basement Weather",
+      "Sidewalk Static",
+      "Soft Landing",
+      "Afterparty Moon",
+      "Pocket Universe"
+    ],
+    "topic_variety": "Use broad topic families: personal growth and self-doubt, friendship and loyalty, celebration and release, late-night reflection, creative obsession, surreal city imagery, romance from a grounded perspective, resilience after mistakes, and finding humor inside heavy feelings. Do not repeat the same images, symbols, or phrases across songs.",
+    "required_closing": "End with a natural final image, emotional turn, unresolved question, or memorable tag; avoid forced moral lessons or tidy conclusions."
+  },
+  "songwriting": {
+    "song_type": "alternative_hip_hop",
+    "primary_emotional_goal": "Make original hip hop songs that feel clever, musical, warm, replayable, and emotionally specific without copying any source artist.",
+    "voice_perspective": "Flexible first-person or close third-person, grounded in human details, humor, vulnerability, and momentum.",
+    "character_voice": {
+      "person": "Usually first-person, sometimes second-person address, rarely close third-person story mode.",
+      "tone": "Conversational, witty, vulnerable, relaxed, occasionally ecstatic, occasionally haunted, never try-hard.",
+      "vocabulary": "Modern, plainspoken, image-rich, with flashes of clever internal rhyme and surreal phrasing; avoid dense thesaurus writing.",
+      "signature_sounds": [
+        "warm Rhodes or dusty keys",
+        "loose pocket drums",
+        "subtle vocal stacks",
+        "bass with bounce",
+        "occasional tape wobble or vinyl texture"
+      ],
+      "comedy_mode": "Dry, self-aware, situational, and brief; use humor to create humanity, not novelty-song gimmicks.",
+      "kid_relationship": "Not a children's brand; lyrics should be suitable for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Mac Miller early mixtape-era brightness",
+      "Mac Miller Swimming-era introspection",
+      "Mac Miller Diablo-era grit and wordplay",
+      "warm jazz rap",
+      "left-field alternative hip hop",
+      "melodic indie rap"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, flow, cadence, lyrics, melodies, beats, arrangements, album sequencing, persona, or copyrighted material. Produce original songs with adjacent emotional range, not replicas.",
+    "allowed_elements": [
+      "melodic rap verses with sung or half-sung hooks",
+      "warm jazz, soul, funk, or indie chord color",
+      "clever internal rhyme used naturally",
+      "introspective late-night imagery",
+      "party tracks with emotional undercurrents",
+      "surreal but understandable metaphors",
+      "beat switches or small arrangement surprises",
+      "human flaws, humor, and recovery without glamorizing harm",
+      "dynamic vocal delivery across sections",
+      "clean or radio-friendly language by default"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist cadence, flow, melody, beat, or persona",
+      "overusing the same title examples, symbols, numbers, or invented lore terms",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "glorified drug abuse or instructions for drug use",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing or Pancake Robot contamination",
+      "generic trap-brag lyrics with no emotional specificity"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should feel song-like and memorable, but each track must invent its own hook language.",
+      "Use concrete sensory detail in at least one verse instead of only abstract feelings."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid explicit content unless a separate release profile explicitly permits it.",
+      "Emotional darkness is allowed, but the song must not instruct or encourage self-harm, dangerous behavior, or substance abuse."
+    ],
+    "structure_preferences": [
+      "[INTRO] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [HOOK] -> [BRIDGE or BREAK] -> [FINAL HOOK] -> [OUTRO]",
+      "[COLD OPEN HOOK] -> [VERSE 1] -> [REFRAIN] -> [VERSE 2] -> [HOOK] -> [BEAT SWITCH] -> [FINAL VERSE/TAG]",
+      "[INTRO VAMP] -> [VERSE] -> [PRE-HOOK] -> [HOOK] -> [VERSE] -> [HOOK] -> [INSTRUMENTAL BREAK] -> [OUTRO]",
+      "[VERSE 1] -> [HOOK] -> [VERSE 2] -> [HOOK] -> [SPOKEN/TEXTURAL TAG] -> [SHORT FINAL HOOK]"
+    ],
+    "song_family_types": [
+      "Upbeat house-party anthem with bounce, humor, and a sticky chorus; keep it clever rather than shallow.",
+      "Reflective late-night track with warm chords, restrained drums, and emotional clarity.",
+      "Gritty wordplay track with sparse drums, darker keys, and confident but not derivative rap density.",
+      "Melodic recovery song with sung hooks, softer percussion, and a hopeful but imperfect ending.",
+      "Experimental vignette with unusual texture, odd structure, and concise lyrical focus.",
+      "Sunny cruising song with relaxed groove, conversational verses, and a chorus that feels effortless."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feels: boom-bap pocket, loose live-kit groove, crisp modern bounce, half-time sway, stripped percussion, or upbeat shuffle.",
+      "Rotate harmonic beds: Rhodes, piano, guitar loops, organ pads, synth haze, horn stabs, or sparse bass-led minimalism.",
+      "Rotate vocal shape: rap-heavy, sung-hook/rap-verse, conversational half-sung, layered chorus, call-back adlibs, or intimate close-mic.",
+      "Rotate texture: clean studio polish, tape-worn warmth, basement demo grit, airy night-drive space, collage-like transitions, or dry minimal focus.",
+      "Use occasional beat switches, but not every song; when used, the switch should serve the lyric arc."
+    ],
+    "tempo_energy_lanes": [
+      "78-86 BPM: slow, smoky, intimate, emotionally heavy, minimal percussion.",
+      "87-96 BPM: classic head-nod groove, balanced rap and melody, strong lyrical focus.",
+      "97-108 BPM: brighter bounce, playful hooks, more social or party-facing.",
+      "109-122 BPM: energetic anthem lane, crisp drums, chantable refrain, still lyrically specific.",
+      "Half-time or double-time interpretation is allowed when it creates contrast without confusing the song."
+    ],
+    "arrangement_variation_rules": [
+      "Do not use the same intro approach twice in a row across an album; rotate cold vocal, instrumental vamp, sample-like texture, drum fill, or immediate hook.",
+      "Every track should change at least one major variable: tempo, drum feel, hook type, vocal density, emotional posture, or instrumentation.",
+      "Use bridges sparingly; some songs should use a beat switch, a breakdown, a short instrumental breath, or no bridge at all.",
+      "Final choruses should not always get bigger; sometimes end smaller, stranger, or more intimate.",
+      "Avoid formulaic verse lengths; vary concise verses, dense verses, and hook-forward structures."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: sung chorus, chanted refrain, repeated one-line mantra, melodic call-back, wordless vocal texture, or short question-answer pattern.",
+      "Do not reuse the same hook rhythm or phrase shape across adjacent songs.",
+      "Hooks may be catchy without being simplistic; avoid forcing the title into every hook if it sounds unnatural.",
+      "Use repetition for musicality, but change one word, harmony, or response on later hook returns when useful.",
+      "Each hook should have a clear emotional job: celebration, confession, deflection, release, tension, or acceptance."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: direct confession, scene-based storytelling, address to a friend or lover, internal monologue, playful persona, or reflective narrator.",
+      "Do not make every song about being an artist; creative struggle is one lane, not the whole brand.",
+      "For emotional songs, include grounded detail before abstraction.",
+      "For party songs, include a shadow or self-awareness so they do not become generic celebration tracks.",
+      "For surreal songs, keep at least one plainspoken emotional line so the listener stays connected."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same mascot, factory, ghost, moon, basement, weather, static, or universe imagery across every song.",
+      "Avoid repeated opening moves such as waking up, driving at night, staring at the ceiling, or entering a party.",
+      "Do not force specific numbers, symbols, or lore terms; any such details are optional background texture only.",
+      "Avoid using the same rhyme family, chorus cadence, or emotional conclusion across multiple tracks.",
+      "Keep Mic Makker identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open albums with a confident, accessible song that defines the emotional world without exhausting the highest-energy lane.",
+      "Sequence party-facing tracks beside reflective tracks so the project feels dimensional.",
+      "Use one or two experimental cuts as texture pivots, not as the entire album identity.",
+      "Place the most vulnerable song after trust has been built through groove or humor.",
+      "End with either a soft landing, a strange unresolved image, or a warm anthem reprise; avoid overly neat resolution."
+    ],
+    "earworm_stack": [
+      "Land a memorable vocal idea within the first 15 seconds.",
+      "Use a chorus or refrain that can be remembered after one listen without feeling childish.",
+      "Pair clever verses with a simpler emotional hook.",
+      "Let a small instrumental motif recur enough to unify the track, but vary it by section.",
+      "Use surprise details in verses and emotional simplicity in the hook."
+    ],
+    "hook_design_rules": [
+      "The hook should be singable, chantable, or rhythmically sticky.",
+      "Avoid using artist-reference language in hooks.",
+      "The title may appear in the hook, but only if it feels natural.",
+      "Use contrast between verse density and hook clarity.",
+      "A hook can be understated if the groove and emotional line are strong."
+    ],
+    "energy_arc": {
+      "pattern": "GROOVE -> CHARACTER -> LIFT -> CONTRAST -> RETURN -> AFTERGLOW",
+      "rules": [
+        "Start with a clear groove, texture, or vocal identity rather than a long empty intro.",
+        "Build toward the first hook without overloading the arrangement.",
+        "Use contrast through a bridge, breakdown, beat switch, or stripped final section.",
+        "Final section should feel earned: bigger, quieter, stranger, or more resolved depending on the song family.",
+        "Leave a memorable aftertaste rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Subtle chant-back hook for party tracks",
+      "Short repeated refrain that listeners can sing without reading lyrics",
+      "Adlib response lines that add humor or vulnerability",
+      "Crowd-like background texture used occasionally, not by default",
+      "A final tag line that invites replay without directly asking for it"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in the finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Mac Miller imitation rather than an original adjacent emotional lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, drum feel, hook type, vocal delivery, emotional posture, structure, instrumentation, or production texture.",
+      "If a song uses surreal imagery, confirm it still has a plain emotional center.",
+      "If a song is upbeat, confirm it still has at least one specific human detail.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Retro hand-drawn indie music label artwork: cream paper grain, thick black linework, colored bubble-letter accents, surreal friendly mascot energy, music gear inside a factory silhouette, underground hip hop flyer influence, polished enough for streaming cover art.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#F3E8C8",
+      "accent": "#2563EB",
+      "background": "#F7EFD2",
+      "warm_red": "#D84A36",
+      "sun_yellow": "#E7B84B",
+      "soft_green": "#7DA66B",
+      "muted_purple": "#7E6AA8"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit drug imagery, weapons, gore, children's cartoon branding, Pancake Robot character, readable copyrighted logos, messy text, misspelled typography",
+    "text_overlay_style": "bold hand-drawn display lettering, limited words, high contrast, imperfect ink edges, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/micmakker/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Mic Makker",
+    "default_album": "Mic Makker Vol. 1",
+    "label_name": "Figment Factory",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "alternative hip hop",
+      "jazz rap",
+      "indie hip hop",
+      "melodic rap",
+      "conscious hip hop"
+    ],
+    "youtube_tags_seed": [
+      "alternative hip hop",
+      "jazz rap",
+      "indie rap",
+      "melodic hip hop",
+      "original music",
+      "Mic Makker"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "Alternative Rap",
+      "Indie Pop"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; lightly mature themes allowed without explicit content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Mic Makker Studio",
+    "logo_path": "/Mic Makker.png"
+  }
+}

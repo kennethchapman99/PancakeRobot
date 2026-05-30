@@ -3,7 +3,7 @@
 import { basename, extname, join } from 'path';
 import fs from 'fs';
 import { getSong, getAssetsForSong } from '../../src/shared/db.js';
-import { getActiveProfileId, loadBrandProfile, loadBrandProfileById } from '../../src/shared/brand-profile.js';
+import { getActiveProfileId, loadBrandProfile, loadBrandProfileById, resolveDistroKidArtist } from '../../src/shared/brand-profile.js';
 import { DISTROKID_JOB_STATUSES, getDistroKidJob, markDistroKidJobStatus } from '../../src/shared/distrokid-jobs.js';
 import { getSelectedReleaseAudio } from '../../src/shared/song-audio-selection.js';
 import {
@@ -122,9 +122,7 @@ function buildReleasePackage(songId) {
     song_id: songId,
     brand_profile_id: profileId,
     artist: pick('artist', [
-      [metadata.value?.artist, metadata.source],
-      [metadata.value?.primary_artist, metadata.source],
-      [dist.default_artist, 'brand_profile'],
+      [resolveDistroKidArtist(profileId), 'brand_profile_rule'],
     ], fieldSources),
     release_title: null,
     track_title: pick('track_title', [

@@ -1,0 +1,303 @@
+{
+  "brand_name": "Midnight Province",
+  "app_title": "Midnight Province",
+  "brand_type": "music",
+  "brand_description": "Midnight Province is an original AI-assisted artist brand for minimalist dark-pop, art-pop, synth-pop, and emotionally sharp coming-of-age songs. The sound blends sparse drums, intimate low-register vocals, suburban-night imagery, elegant restraint, explosive emotional choruses, and cinematic youth-to-adult tension. It should feel cool, private, observant, wounded, stylish, and quietly intense without imitating any real artist, voice, cadence, lyrics, melodies, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Listeners who like minimalist dark-pop, art-pop, synth-pop, moody alt-pop, intimate vocal performances, sharp coming-of-age writing, late-night emotional detail, and songs that feel restrained, elegant, and emotionally devastating without being overproduced.",
+    "guardrail": "Suitable for general streaming audiences ages 16+. Allow romance, jealousy, loneliness, partying, status anxiety, heartbreak, growing up, friendship tension, and emotional volatility. Avoid explicit sexual detail, graphic violence, hate, slurs, self-harm instruction, drug-use instruction, or child-directed framing."
+  },
+  "character": {
+    "name": "Midnight Province",
+    "core_concept": "A private pop narrator watching parties, bedrooms, highways, and friendships from the edge of the room, turning small social details into huge emotional weather.",
+    "fallback_summary": "minimalist dark-pop artist blending intimate vocals, sparse production, suburban-night detail, and cinematic emotional release",
+    "clap_name": "none",
+    "personality_traits": [
+      "Observant, cool, and emotionally precise",
+      "Private and restrained until the chorus breaks open",
+      "Young-feeling but not childish",
+      "Romantic, jealous, lonely, and self-aware in different lanes",
+      "Able to make ordinary rooms feel cinematic",
+      "Stylish and minimal without losing warmth"
+    ],
+    "catchphrases": [
+      "Small room, huge feeling",
+      "Soft voice, bright damage"
+    ],
+    "visual_identity": "Minimal dark-pop visuals with night roads, pool light, mirror glass, deep blue shadows, pale gold highlights, empty rooms after parties, suburban streetlights, and editorial typography. Visuals should feel intimate, cinematic, expensive-but-understated, and emotionally charged.",
+    "visual_reference": [
+      "Deep navy, black, pale gold, wine red, soft cream, and sodium streetlight palette",
+      "Empty party rooms, parking lots, bedrooms, mirrors, pools, highways, and night windows used occasionally, not forced",
+      "Minimal editorial cover design with large negative space",
+      "Subtle grain, soft flash photography feeling, and cinematic blue-hour lighting",
+      "No celebrity likeness, no copied album layouts, no dense typography"
+    ]
+  },
+  "music": {
+    "default_style": "minimalist dark-pop and art-pop with sparse drums, synth bass, intimate vocals, cinematic pads, and explosive emotional chorus options",
+    "default_bpm": 92,
+    "default_key": "F Minor",
+    "default_prompt": "Original minimalist dark-pop with sparse programmed drums, deep synth bass, intimate low-register vocal presence, elegant negative space, soft harmonies, cinematic pads, and carefully placed emotional lift. Vary the lane by song: cool restrained dark-pop, glittering heartbreak anthem, sparse bedroom confession, party-afterglow song, anxious synth-pop pulse, intimate piano/synth ballad, and explosive final-chorus catharsis are all valid. Never imitate, clone, or reference any real artist voice, vocal tone, cadence, lyrics, melody, beat, arrangement, production, persona, or copyrighted work. Create a fresh performance with restraint, emotional precision, youth-memory detail, elegance, and melodic impact.",
+    "target_length": "2:20-4:00",
+    "min_words": 120,
+    "normal_word_range": "150-340",
+    "first_vocal_by_seconds": 10,
+    "max_instrumental_intro_seconds": 16
+  },
+  "lyrics": {
+    "title_examples": [
+      "Blue Room Fever",
+      "Afterparty Weather",
+      "Glass Youth",
+      "Quiet Crown",
+      "Parking Lot Angels"
+    ],
+    "topic_variety": "Use broad topic families: private jealousy, friendship drift, first adult heartbreak, parties that feel lonely, status and class observation, suburban nights, self-mythology, quiet confidence, romantic obsession, growing up too fast, and the moment after a huge emotional event. Do not repeat the same crown, royal, party, glass, room, blue, youth, gold, or angel imagery across songs.",
+    "required_closing": "End with a precise final image, whispered realization, unresolved emotional turn, repeated soft phrase, or cinematic cut-to-black; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "minimalist_dark_pop_art_pop",
+    "primary_emotional_goal": "Create original pop songs that feel restrained, intelligent, intimate, stylish, and emotionally huge, with enough variation to support albums without repeating one sparse-pop formula.",
+    "voice_perspective": "Mostly first-person and direct second-person, with occasional observer distance. The narrator can be cool, jealous, heartbroken, detached, euphoric, embarrassed, or quietly powerful depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person or second-person, with occasional cinematic observer framing.",
+      "tone": "Intimate, cool, dry, emotionally precise, restrained, dramatic under the surface, and never derivative.",
+      "vocabulary": "Plain modern language with sharp social detail, small luxury or suburban images, emotional understatement, and memorable concrete nouns used sparingly.",
+      "signature_sounds": [
+        "minimal programmed drums",
+        "deep synth bass",
+        "close low-register vocal",
+        "soft harmony stacks",
+        "cinematic pads",
+        "sudden chorus lift"
+      ],
+      "comedy_mode": "Very light dry wit or social observation only; avoid novelty or joke-song framing.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Lorde Pure Heroine-era minimalist dark-pop coolness",
+      "Lorde Melodrama-era emotional maximalism inside elegant pop",
+      "sparse coming-of-age synth-pop",
+      "moody art-pop intimacy",
+      "cinematic heartbreak pop",
+      "late-night minimalist alt-pop"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, vocal tone, cadence, phrasing, lyrics, melodies, drum programming, synth motifs, arrangements, album sequencing, persona, or copyrighted material. Use broad emotional and sonic traits—minimalism, intimacy, observational writing, controlled cool, and explosive emotional release—as inspiration for an original Midnight Province identity.",
+    "allowed_elements": [
+      "sparse programmed drums and negative space",
+      "intimate low-register vocal energy without soundalike imitation",
+      "deep synth bass, soft pads, and restrained percussion",
+      "sharp social observation and small room details",
+      "coming-of-age romance, jealousy, friendship, and status tension",
+      "explosive chorus lift after restrained verses",
+      "party imagery with loneliness or self-awareness underneath",
+      "plain emotional lines surrounded by cinematic imagery",
+      "clean or radio-friendly language by default",
+      "subtle harmony stacks and chant-like refrains used sparingly"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist vocal style, cadence, melody, beat, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "overusing royal, crown, party, blue, glass, youth, or invented lore imagery",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "drug-use instructions or glamorized addiction",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, production lane, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be memorable and emotionally precise, but every song should invent its own hook language.",
+      "Use at least one concrete room, clothing, light, weather, social, or body-language detail in each song."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid explicit content unless a separate release profile explicitly permits it.",
+      "Emotional darkness is allowed, but the song must not instruct or encourage self-harm, dangerous behavior, or substance abuse."
+    ],
+    "structure_preferences": [
+      "[COLD VOCAL or TEXTURE] -> [VERSE 1] -> [PRE-HOOK] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE or QUIET TURN] -> [FINAL CHORUS] -> [OUTRO]",
+      "[MINIMAL INTRO] -> [VERSE] -> [REFRAIN] -> [VERSE] -> [REFRAIN] -> [SYNTH LIFT] -> [FINAL REFRAIN]",
+      "[PULSE INTRO] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [HOOK] -> [BREAKDOWN] -> [EXPLOSIVE FINAL HOOK]",
+      "[PIANO/SYNTH INTRO] -> [CONFESSION VERSE] -> [SOFT CHORUS] -> [VERSE] -> [BIG CHORUS] -> [CUT-TO-BLACK TAG]"
+    ],
+    "song_family_types": [
+      "Minimal dark-pop statement with sparse drums, cool vocal restraint, and sharp social detail.",
+      "Glittering heartbreak anthem with bigger chorus, emotional lift, and cinematic synths.",
+      "Bedroom confession with close vocal, minimal bass, and a devastating plainspoken hook.",
+      "Afterparty song with lonely celebration, pulsing beat, and bittersweet crowd imagery.",
+      "Anxious synth-pop track with faster pulse, clipped phrasing, and status tension.",
+      "Piano/synth ballad with understated vocal, slow build, and quiet final image."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feel: minimal kick/snare, dry clap pattern, pulsing synth-pop beat, half-time emotional stomp, near-beatless ballad, or late-night dance pulse.",
+      "Rotate bass role: deep synth sub, melodic bass hook, sparse pulsing low-end, warm electric bass support, distorted synth growl, or no bass until chorus.",
+      "Rotate vocal shape: close low lead, whispered double, restrained verse, chant-like refrain, stacked final chorus, or exposed bridge vocal.",
+      "Rotate texture: empty-room minimalism, glossy heartbreak pop, blue-hour synth haze, dry bedroom demo feel, cinematic club afterglow, or piano-led intimacy.",
+      "Use big chorus lifts selectively; some songs should stay small and tense by design."
+    ],
+    "tempo_energy_lanes": [
+      "62-76 BPM: slow piano/synth confession, sparse and emotionally exposed.",
+      "77-90 BPM: restrained dark-pop groove, minimal drums, cool vocal control.",
+      "91-104 BPM: pulsing art-pop lane, balanced hook and verse energy.",
+      "105-118 BPM: brighter synth-pop movement, anxious party or heartbreak energy.",
+      "119-128 BPM: rare dance-adjacent catharsis, used for emotional release rather than default."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: cold vocal, dry drum hit, synth pulse, bass note, room tone, piano figure, or immediate lyric image.",
+      "Every song should vary at least three major variables: tempo, drum feel, vocal delivery, hook type, emotional posture, structure, or production density.",
+      "Do not always build to a huge final chorus; sometimes end small, dry, whispered, or abruptly unresolved.",
+      "Use silence and negative space as arrangement features, not absence of effort.",
+      "Avoid identical verse lengths, chorus density, bridge placement, and final-hook stacking across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: understated refrain, explosive chorus, one-line mantra, whispered callback, chant-like phrase, or instrumental synth motif.",
+      "Do not reuse the same hook rhythm, title placement, vocal register, or phrase shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: jealousy, release, numbness, awe, regret, power, loneliness, or surrender.",
+      "Use repetition for emotional gravity, but change harmony, silence, texture, lyric detail, or backing vocal shape on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: private confession, direct romantic address, observer at a party, friendship postmortem, status critique, self-mythologizing narrator, or quiet morning-after reflection.",
+      "Do not make every song about parties, royalty, youth, or heartbreak; those are lanes, not the whole brand.",
+      "When lyrics are cool or detached, include one line that reveals the wound underneath.",
+      "When lyrics are romantic, include imperfection, jealousy, distance, or social pressure rather than generic sweetness.",
+      "When lyrics are dramatic, ground them in one ordinary object or room detail."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same crown, royal, glass, party, blue, gold, room, angel, youth, or car imagery across every song.",
+      "Do not force specific numbers, symbols, objects, slogans, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as arriving at a party, staring in a mirror, driving at night, or texting an ex.",
+      "Do not reuse the same chorus cadence, drum pattern, synth motif, emotional reveal, or final-image style across multiple tracks.",
+      "Keep Midnight Province identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible minimal-pop track that establishes voice, space, and emotional intelligence without using the biggest chorus first.",
+      "Sequence sparse songs beside bigger synth-pop or heartbreak anthems so the album breathes.",
+      "Use afterparty or dance-adjacent songs as emotional contrast, not pure celebration.",
+      "Place the most vulnerable ballad after a cooler or more observational track.",
+      "Save one maximal emotional chorus for the late-middle or final third.",
+      "End with either a small unresolved image, a quiet confession, or a final chorus that feels like lights coming on after the party."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable vocal phrase, synth pulse, bass movement, or lyric image within the first 12 seconds.",
+      "Pair restrained verses with a clearer emotional hook.",
+      "Let negative space, dry drums, and small melodic changes create replay value.",
+      "Use one vivid object or social detail per section rather than crowding the lyric with symbols.",
+      "Keep hooks memorable without making them childish or over-explained."
+    ],
+    "hook_design_rules": [
+      "Hooks should be emotionally precise, minimal, chantable, or quietly explosive.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse restraint and chorus emotional scale.",
+      "For sparse lanes, let silence and phrasing carry the hook; for anthem lanes, let melody and stacked vocals carry it."
+    ],
+    "energy_arc": {
+      "pattern": "GLOW -> OBSERVE -> ACHE -> LIFT -> BREAK -> AFTERLIGHT",
+      "rules": [
+        "Start with a recognizable vocal, drum, bass, synth, or room-tone identity rather than a long empty intro.",
+        "Build intimacy through detail and restraint before the first emotional lift.",
+        "Reveal the plain emotional truth before the final third.",
+        "Let the final section shift energy: bigger, smaller, stranger, colder, or more euphoric depending on the song family.",
+        "End with a memorable afterlight rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Soft repeated refrain listeners can sing without dense lyrics",
+      "One-line chant used sparingly for emotional release",
+      "Background vocal answer that feels like inner thought",
+      "Instrumental synth motif that returns like a memory",
+      "Final lyric tag that reframes the narrator's coolness"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Lorde imitation rather than an original adjacent dark-pop/art-pop lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, drum feel, bass role, hook type, vocal delivery, emotional posture, structure, or production density.",
+      "If a song is minimal, confirm it still has a memorable hook, image, or vocal motif.",
+      "If a song is dramatic, confirm it has concrete detail and not just abstract emotion.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Minimal cinematic dark-pop cover art with deep night colors, blue-hour lighting, empty rooms, pool glow, streetlights, mirror reflections, soft grain, and clean editorial typography. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#E8DDC7",
+      "accent": "#C9A44C",
+      "background": "#0B1020",
+      "deep_navy": "#111A33",
+      "wine_red": "#7A263A",
+      "pool_blue": "#2E6F95",
+      "streetlight_gold": "#D7A84B"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "minimal editorial pop typography, limited words, deep navy/gold contrast, elegant spacing, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/lorde/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Midnight Province",
+    "default_album": "Blue Room Fever",
+    "label_name": "Figment Factory",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "art pop",
+      "dark pop",
+      "synth pop",
+      "alternative pop",
+      "electropop"
+    ],
+    "youtube_tags_seed": [
+      "art pop",
+      "dark pop",
+      "synth pop",
+      "alternative pop",
+      "electropop",
+      "Midnight Province"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Pop",
+      "Electronic"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; heartbreak, partying, jealousy, and lightly mature themes allowed without explicit content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Midnight Province Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

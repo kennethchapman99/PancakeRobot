@@ -11,7 +11,18 @@ import {
 import {
   buildBrowsyWorkflowRef,
   startBrowsyWorkflowRun,
+  executeBrowsyWorkflowRun,
+  categorizeBrowsyStatus,
 } from '../src/shared/browsy-client.js';
+import { resolveDistroKidArtist } from '../src/shared/brand-profile.js';
+
+test('DistroKid artist resolves from brand profile: default is Pancake Robot, all others are Figment Factory', () => {
+  assert.equal(resolveDistroKidArtist(null), 'Pancake Robot');
+  assert.equal(resolveDistroKidArtist(''), 'Pancake Robot');
+  assert.equal(resolveDistroKidArtist('default'), 'Pancake Robot');
+  assert.equal(resolveDistroKidArtist('basement-cypher'), 'Figment Factory');
+  assert.equal(resolveDistroKidArtist('gravl-brand-profile'), 'Figment Factory');
+});
 
 test('canonical DistroKid payload includes absolute artwork, audio, release metadata, lyrics, and AI fields', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-distrokid-payload-'));
@@ -135,6 +146,81 @@ test('Browsy client posts to documented workflowRef run endpoint and normalizes 
     globalThis.fetch = originalFetch;
   }
 });
+
+test('executeBrowsyWorkflowRun posts to the run endpoint, polls GET /api/runs/:id, and maps terminal status', async () => {
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  let polls = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url, method: options.method || 'GET' });
+    if ((options.method || 'GET') === 'POST') {
+      return jsonResponse(201, { ok: true, runId: 'run_poll_1', status: 'created', run: { runId: 'run_poll_1', status: 'created' } });
+    }
+    // GET /api/runs/:id — first poll is still running, second is completed.
+    polls += 1;
+    const status = polls < 2 ? 'running' : 'completed';
+    return jsonResponse(200, {
+      ok: true,
+      run: { runId: 'run_poll_1', status },
+      result: { runId: 'run_poll_1', status, outputs: { smart_link_url: 'https://distrokid.com/hyperfollow/x' }, artifacts: { screenshots: [], downloads: [], trace: [], logs: [] }, checkpoints: [] },
+    });
+  };
+
+  try {
+    const result = await executeBrowsyWorkflowRun({
+      workflowId: 'distrokid-single-submit',
+      payload: { releaseId: 'SONG_1' },
+      mode: 'live',
+      config: { baseUrl: 'http://browsy.local', appId: 'pancake-robot', workflowVersion: '', timeoutMs: 1000, pollIntervalMs: 1, runTimeoutMs: 5000 },
+      sleep: async () => {},
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.category, 'success');
+    assert.equal(result.runId, 'run_poll_1');
+    assert.equal(result.result.outputs.smart_link_url, 'https://distrokid.com/hyperfollow/x');
+    assert.ok(calls.some(c => c.method === 'POST' && /\/runs$/.test(c.url)));
+    assert.ok(calls.some(c => c.method === 'GET' && /\/api\/runs\/run_poll_1$/.test(c.url)));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('executeBrowsyWorkflowRun reports unreachable Browsy instead of fabricating success', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('ECONNREFUSED'); };
+  try {
+    const result = await executeBrowsyWorkflowRun({
+      workflowId: 'distrokid-single-submit',
+      payload: {},
+      mode: 'live',
+      config: { baseUrl: 'http://127.0.0.1:9', appId: 'pancake-robot', workflowVersion: '', timeoutMs: 200, pollIntervalMs: 1, runTimeoutMs: 1000 },
+      sleep: async () => {},
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reachable, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('categorizeBrowsyStatus maps Browsy public statuses to Pancake categories', () => {
+  assert.equal(categorizeBrowsyStatus('completed'), 'success');
+  assert.equal(categorizeBrowsyStatus('waiting_for_auth'), 'blocked_auth');
+  assert.equal(categorizeBrowsyStatus('waiting_for_approval_to_submit'), 'blocked_human_approval');
+  assert.equal(categorizeBrowsyStatus('waiting_for_file_selection'), 'blocked_validation');
+  assert.equal(categorizeBrowsyStatus('failed'), 'failed');
+  assert.equal(categorizeBrowsyStatus('canceled'), 'failed');
+});
+
+function jsonResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: String(status),
+    async text() { return JSON.stringify(body); },
+  };
+}
 
 function buildSyntheticCockpit({ root, artworkPath, audioPath, lyricsPath }) {
   return {

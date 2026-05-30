@@ -45,7 +45,7 @@ When the topic/profile/prompt says ballad, slow, Mother’s Day, Sue, or adult d
 
 ## QA expectations
 
-- Run `npm test` before a paid render.
+- Run `./bin/pancakerobot test` before a paid render.
 - Review `pre-render-qa.json` and `provider-lyrics-sanitization.json`.
 - Do not render if sanitizer logs forbidden contamination or residual non-lyric payload issues.
 - If the sanitizer removed stage directions or prompt artifacts, fix the lyricist output upstream, while keeping the provider payload protected.

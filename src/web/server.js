@@ -133,6 +133,20 @@ import {
   runNextMagicReleaseTask,
 } from '../shared/magic-release.js';
 import {
+  getBrowsyRecordingContract,
+  getBrowsyWorkflowContract,
+} from '../shared/browsy-client.js';
+import {
+  importMagicReleaseBrowsyRecording,
+  launchMagicReleaseBrowsyRecording,
+  listMagicReleaseBrowsyRecordings,
+  prepareMagicReleaseBrowsyAuthProfile,
+  refreshMagicReleaseBrowsyContract,
+  startMagicReleaseBrowsyRecording,
+  stopMagicReleaseBrowsyRecording,
+  verifyMagicReleaseBrowsyAuth,
+} from '../shared/magic-release-browsy-recordings.js';
+import {
   createOutreachRun,
   getCanonicalEmailOutletsForSelection,
 } from '../agents/marketing-outreach-run-agent.js';
@@ -722,6 +736,138 @@ app.post('/releases/:type/:id/magic-release/ingest-result', (req, res) => {
     if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
     return res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
   });
+});
+
+// ─────────────────────────────────────────────
+// Browsy recording management (Magic Release)
+// ─────────────────────────────────────────────
+
+function browsyCampaignId(req) {
+  const state = getMagicReleaseState(req.params.type, req.params.id)
+    || createMagicReleaseCampaign({ releaseType: req.params.type, releaseId: req.params.id });
+  return state.campaign.id;
+}
+
+function redirectToRelease(req, res) {
+  return res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+}
+
+app.post('/releases/:type/:id/magic-release/recordings/start', async (req, res) => {
+  try {
+    const campaignId = browsyCampaignId(req);
+    const taskKey = String(req.body?.task_key || '').trim();
+    if (!taskKey) throw new Error('A task_key is required to start a Browsy recording.');
+    const result = await startMagicReleaseBrowsyRecording({ campaignId, taskKey });
+    if (wantsJson(req)) return res.status(result.ok ? 200 : 400).json(result);
+    return redirectToRelease(req, res);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return redirectToRelease(req, res);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/recordings/:recordingId/launch', async (req, res) => {
+  try {
+    const result = await launchMagicReleaseBrowsyRecording({ recordingId: req.params.recordingId });
+    if (wantsJson(req)) return res.status(result.ok ? 200 : 400).json(result);
+    return redirectToRelease(req, res);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return redirectToRelease(req, res);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/recordings/auth-setup', async (req, res) => {
+  try {
+    const campaignId = browsyCampaignId(req);
+    const taskKey = String(req.body?.task_key || '').trim();
+    if (!taskKey) throw new Error('A task_key is required to open auth setup.');
+    const result = await prepareMagicReleaseBrowsyAuthProfile({ campaignId, taskKey });
+    if (wantsJson(req)) return res.status(result.ok ? 200 : 400).json(result);
+    return redirectToRelease(req, res);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return redirectToRelease(req, res);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/recordings/verify-auth', async (req, res) => {
+  try {
+    const campaignId = browsyCampaignId(req);
+    const taskKey = String(req.body?.task_key || '').trim();
+    if (!taskKey) throw new Error('A task_key is required to verify auth.');
+    const result = await verifyMagicReleaseBrowsyAuth({ campaignId, taskKey });
+    if (wantsJson(req)) return res.status(result.ok ? 200 : 400).json(result);
+    return redirectToRelease(req, res);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return redirectToRelease(req, res);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/recordings/:recordingId/stop', async (req, res) => {
+  try {
+    const result = await stopMagicReleaseBrowsyRecording({ recordingId: req.params.recordingId });
+    if (wantsJson(req)) return res.status(result.ok ? 200 : 400).json(result);
+    return redirectToRelease(req, res);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return redirectToRelease(req, res);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/recordings/:recordingId/import', async (req, res) => {
+  try {
+    const overwrite = req.body?.overwrite !== 'false' && req.body?.overwrite !== false;
+    const result = await importMagicReleaseBrowsyRecording({ recordingId: req.params.recordingId, overwrite });
+    if (wantsJson(req)) return res.status(result.ok ? 200 : 400).json(result);
+    return redirectToRelease(req, res);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return redirectToRelease(req, res);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/recordings/refresh-contract', async (req, res) => {
+  try {
+    const campaignId = browsyCampaignId(req);
+    const taskKey = String(req.body?.task_key || '').trim();
+    if (!taskKey) throw new Error('A task_key is required to refresh a Browsy contract.');
+    const result = await refreshMagicReleaseBrowsyContract({ campaignId, taskKey });
+    if (wantsJson(req)) return res.json(result);
+    return redirectToRelease(req, res);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return redirectToRelease(req, res);
+  }
+});
+
+app.get('/releases/:type/:id/magic-release/recordings', (req, res) => {
+  try {
+    const campaignId = browsyCampaignId(req);
+    const recordings = listMagicReleaseBrowsyRecordings({ campaignId });
+    return res.json({ ok: true, recordings });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get('/releases/:type/:id/magic-release/recordings/contract', async (req, res) => {
+  try {
+    const recordingSessionId = String(req.query?.recording_session_id || '').trim();
+    const workflowId = String(req.query?.workflow_id || '').trim();
+    if (recordingSessionId) {
+      const result = await getBrowsyRecordingContract(recordingSessionId);
+      return res.status(result.ok ? 200 : 400).json(result);
+    }
+    if (workflowId) {
+      const result = await getBrowsyWorkflowContract({ workflowId });
+      return res.status(result.ok ? 200 : 400).json(result);
+    }
+    return res.status(400).json({ ok: false, error: 'workflow_id or recording_session_id is required.' });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
 });
 
 app.get('/magic-song', (req, res) => {

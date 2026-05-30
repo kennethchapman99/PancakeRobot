@@ -379,6 +379,33 @@ function initSchema(db) {
       used_at TEXT NOT NULL,
       FOREIGN KEY (asset_id) REFERENCES visual_library_assets(id)
     );
+
+    CREATE TABLE IF NOT EXISTS release_browsy_recordings (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      task_id TEXT,
+      task_key TEXT NOT NULL,
+      release_type TEXT,
+      release_id TEXT,
+      workflow_id TEXT,
+      workflow_ref TEXT,
+      recording_session_id TEXT,
+      recording_status TEXT NOT NULL DEFAULT 'setup_ready',
+      wizard_url TEXT,
+      recorder_url TEXT,
+      browsy_base_url TEXT,
+      contract_snapshot_json TEXT,
+      contract_completeness_json TEXT,
+      imported_workflow_ref TEXT,
+      imported_at TEXT,
+      started_at TEXT,
+      launched_at TEXT,
+      stopped_at TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (campaign_id) REFERENCES release_campaigns(id)
+    );
   `);
 
   // Migrate existing songs table — add new columns if they don't exist yet
@@ -1354,6 +1381,121 @@ export function listReleaseCampaignRuns(campaignId) {
 }
 
 // ─────────────────────────────────────────────
+// RELEASE BROWSY RECORDINGS
+// ─────────────────────────────────────────────
+
+export function createReleaseBrowsyRecording(input = {}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const id = input.id || `RBREC_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  db.prepare(`
+    INSERT INTO release_browsy_recordings
+      (id, campaign_id, task_id, task_key, release_type, release_id, workflow_id, workflow_ref,
+       recording_session_id, recording_status, wizard_url, recorder_url, browsy_base_url,
+       contract_snapshot_json, contract_completeness_json, imported_workflow_ref, imported_at,
+       started_at, launched_at, stopped_at, last_error, created_at, updated_at)
+    VALUES
+      (@id, @campaign_id, @task_id, @task_key, @release_type, @release_id, @workflow_id, @workflow_ref,
+       @recording_session_id, @recording_status, @wizard_url, @recorder_url, @browsy_base_url,
+       @contract_snapshot_json, @contract_completeness_json, @imported_workflow_ref, @imported_at,
+       @started_at, @launched_at, @stopped_at, @last_error, @created_at, @updated_at)
+  `).run({
+    id,
+    campaign_id: String(input.campaign_id || ''),
+    task_id: input.task_id || null,
+    task_key: String(input.task_key || ''),
+    release_type: input.release_type || null,
+    release_id: input.release_id || null,
+    workflow_id: input.workflow_id || null,
+    workflow_ref: input.workflow_ref || null,
+    recording_session_id: input.recording_session_id || null,
+    recording_status: input.recording_status || 'setup_ready',
+    wizard_url: input.wizard_url || null,
+    recorder_url: input.recorder_url || null,
+    browsy_base_url: input.browsy_base_url || null,
+    contract_snapshot_json: stringifyOptionalJson(input.contract_snapshot ?? null),
+    contract_completeness_json: stringifyOptionalJson(input.contract_completeness ?? null),
+    imported_workflow_ref: input.imported_workflow_ref || null,
+    imported_at: input.imported_at || null,
+    started_at: input.started_at || now,
+    launched_at: input.launched_at || null,
+    stopped_at: input.stopped_at || null,
+    last_error: input.last_error || null,
+    created_at: now,
+    updated_at: now,
+  });
+  return getReleaseBrowsyRecording(id);
+}
+
+export function updateReleaseBrowsyRecording(id, patch = {}) {
+  const existing = getReleaseBrowsyRecording(id);
+  if (!existing) throw new Error(`Release Browsy recording not found: ${id}`);
+  const merged = {
+    recording_status: patch.recording_status ?? existing.recording_status,
+    workflow_id: patch.workflow_id ?? existing.workflow_id,
+    workflow_ref: patch.workflow_ref ?? existing.workflow_ref,
+    recording_session_id: patch.recording_session_id ?? existing.recording_session_id,
+    wizard_url: patch.wizard_url ?? existing.wizard_url,
+    recorder_url: patch.recorder_url ?? existing.recorder_url,
+    browsy_base_url: patch.browsy_base_url ?? existing.browsy_base_url,
+    contract_snapshot_json: patch.contract_snapshot !== undefined
+      ? stringifyOptionalJson(patch.contract_snapshot)
+      : existing.contract_snapshot_json,
+    contract_completeness_json: patch.contract_completeness !== undefined
+      ? stringifyOptionalJson(patch.contract_completeness)
+      : existing.contract_completeness_json,
+    imported_workflow_ref: patch.imported_workflow_ref ?? existing.imported_workflow_ref,
+    imported_at: patch.imported_at ?? existing.imported_at,
+    started_at: patch.started_at ?? existing.started_at,
+    launched_at: patch.launched_at ?? existing.launched_at,
+    stopped_at: patch.stopped_at ?? existing.stopped_at,
+    last_error: patch.last_error !== undefined ? patch.last_error : existing.last_error,
+    updated_at: new Date().toISOString(),
+    id,
+  };
+  getDb().prepare(`
+    UPDATE release_browsy_recordings SET
+      recording_status = @recording_status,
+      workflow_id = @workflow_id,
+      workflow_ref = @workflow_ref,
+      recording_session_id = @recording_session_id,
+      wizard_url = @wizard_url,
+      recorder_url = @recorder_url,
+      browsy_base_url = @browsy_base_url,
+      contract_snapshot_json = @contract_snapshot_json,
+      contract_completeness_json = @contract_completeness_json,
+      imported_workflow_ref = @imported_workflow_ref,
+      imported_at = @imported_at,
+      started_at = @started_at,
+      launched_at = @launched_at,
+      stopped_at = @stopped_at,
+      last_error = @last_error,
+      updated_at = @updated_at
+    WHERE id = @id
+  `).run(merged);
+  return getReleaseBrowsyRecording(id);
+}
+
+export function getReleaseBrowsyRecording(id) {
+  return parseReleaseBrowsyRecording(getDb().prepare('SELECT * FROM release_browsy_recordings WHERE id = ?').get(String(id || '')));
+}
+
+export function getLatestReleaseBrowsyRecordingForTask(campaignId, taskKey) {
+  return parseReleaseBrowsyRecording(getDb().prepare(`
+    SELECT * FROM release_browsy_recordings
+    WHERE campaign_id = ? AND task_key = ?
+    ORDER BY created_at DESC LIMIT 1
+  `).get(String(campaignId || ''), String(taskKey || '')));
+}
+
+export function listReleaseBrowsyRecordingsForCampaign(campaignId) {
+  return getDb()
+    .prepare('SELECT * FROM release_browsy_recordings WHERE campaign_id = ? ORDER BY created_at DESC')
+    .all(String(campaignId || ''))
+    .map(parseReleaseBrowsyRecording);
+}
+
+// ─────────────────────────────────────────────
 // VISUAL LIBRARY
 // ─────────────────────────────────────────────
 
@@ -1567,6 +1709,15 @@ function parseReleaseCampaignRun(row) {
   return {
     ...row,
     log: parseJsonObject(row.log_json),
+  };
+}
+
+function parseReleaseBrowsyRecording(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    contract_snapshot: parseJsonObject(row.contract_snapshot_json),
+    contract_completeness: parseJsonObject(row.contract_completeness_json),
   };
 }
 

@@ -194,6 +194,22 @@ export function clearBrandProfileCache() {
   cachedProfile = null;
 }
 
+export const DISTROKID_DEFAULT_PROFILE_ARTIST = 'Pancake Robot';
+export const DISTROKID_NON_DEFAULT_PROFILE_ARTIST = 'Figment Factory';
+
+/**
+ * Resolves the DistroKid artist name from a release's brand profile id.
+ * The default Pancake Robot profile releases as "Pancake Robot"; every other
+ * brand profile releases under the "Figment Factory" umbrella, regardless of
+ * that profile's own distribution.default_artist value.
+ */
+export function resolveDistroKidArtist(profileId) {
+  const raw = String(profileId || '').trim();
+  return !raw || raw === DEFAULT_PROFILE_ID
+    ? DISTROKID_DEFAULT_PROFILE_ARTIST
+    : DISTROKID_NON_DEFAULT_PROFILE_ARTIST;
+}
+
 export function getActiveProfileId() {
   try {
     if (fs.existsSync(ACTIVE_PROFILE_PATH)) {

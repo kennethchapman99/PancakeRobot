@@ -1,7 +1,5 @@
-import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 
 import {
@@ -29,8 +27,14 @@ import { createOrRefreshReleaseSocialCampaign } from '../agents/daily-social-pla
 import { getSongMarketingKit, saveSongMarketingKit } from './song-marketing-kit.js';
 import { recommendVisualAssets, selectReusableAssetOrSuggestCustomVideo } from './visual-library.js';
 import { buildCanonicalDistroKidPayload } from './distrokid-payload.js';
+import {
+  BROWSY_WORKFLOW_IDS,
+  evaluateBrowsyContractCompleteness,
+  executeBrowsyWorkflowRun,
+  getBrowsyConfig,
+  getBrowsyWorkflowContract,
+} from './browsy-client.js';
 
-const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const WORKFLOW_ROOT = path.join(REPO_ROOT, 'output', 'release-workflows');
 
@@ -57,10 +61,10 @@ const TASK_TEMPLATES = Object.freeze([
   { key: 'verify_release_metadata', title: 'Verify release metadata', offsetDays: -30, owner: 'agent', blocking: true },
   { key: 'spotify_pre_release_positioning', title: 'Confirm Spotify pitch / pre-release positioning', offsetDays: -30, owner: 'ken', blocking: false },
   { key: 'distrokid_package_readiness', title: 'Run DistroKid package readiness', offsetDays: -28, owner: 'agent', blocking: true },
-  { key: 'distrokid_submit_dry_run', title: 'Launch Browsy DistroKid submit dry-run', offsetDays: -28, owner: 'browsy', blocking: true, workflowId: release => release.type === 'album' ? 'distrokid-album-submit' : 'distrokid-single-submit' },
+  { key: 'distrokid_submit_dry_run', title: 'Launch Browsy DistroKid submit dry-run', offsetDays: -28, owner: 'browsy', blocking: true, workflowId: release => release.type === 'album' ? BROWSY_WORKFLOW_IDS.distrokidAlbumSubmit : BROWSY_WORKFLOW_IDS.distrokidSingleSubmit },
   { key: 'distrokid_final_submit_approval', title: 'Ken approval gate for DistroKid final submit', offsetDays: -27, owner: 'ken', blocking: true, dependsOn: ['distrokid_submit_dry_run'] },
-  { key: 'hyperfollow_capture', title: 'Capture HyperFollow URL', offsetDays: -26, owner: 'browsy', blocking: true, workflowId: 'distrokid-hyperfollow-capture', dependsOn: ['distrokid_final_submit_approval'] },
-  { key: 'hyperfollow_enrich', title: 'Enrich HyperFollow page', offsetDays: -25, owner: 'browsy', blocking: false, workflowId: 'distrokid-hyperfollow-enrich', dependsOn: ['hyperfollow_capture'] },
+  { key: 'hyperfollow_capture', title: 'Capture HyperFollow URL', offsetDays: -26, owner: 'browsy', blocking: true, workflowId: BROWSY_WORKFLOW_IDS.hyperfollowCapture, dependsOn: ['distrokid_final_submit_approval'] },
+  { key: 'hyperfollow_enrich', title: 'Enrich HyperFollow page', offsetDays: -25, owner: 'browsy', blocking: false, workflowId: BROWSY_WORKFLOW_IDS.hyperfollowEnrich, dependsOn: ['hyperfollow_capture'] },
   { key: 'select_visual_assets', title: 'Select reusable visual assets', offsetDays: -24, owner: 'agent', blocking: true },
   { key: 'decide_custom_video', title: 'Decide whether any album singles need custom video', offsetDays: -23, owner: 'ken', blocking: false, dependsOn: ['select_visual_assets'] },
   { key: 'youtube_teaser_schedule', title: 'Create/schedule YouTube teaser', offsetDays: -21, owner: 'ken', blocking: false, workflowId: 'youtube-upload-schedule', dependsOn: ['select_visual_assets'] },
@@ -69,7 +73,7 @@ const TASK_TEMPLATES = Object.freeze([
   { key: 'pre_save_push', title: 'Pre-save push', offsetDays: -10, owner: 'agent', blocking: false, dependsOn: ['hyperfollow_capture', 'select_visual_assets'] },
   { key: 'final_pre_release_checklist', title: 'Final pre-release checklist', offsetDays: -7, owner: 'ken', blocking: true },
   { key: 'release_week_posts_approved', title: 'Release-week posts approved', offsetDays: -3, owner: 'ken', blocking: false },
-  { key: 'harvest_platform_links', title: 'Harvest platform links', offsetDays: 0, owner: 'browsy', blocking: true, workflowId: 'platform-link-harvest', dependsOn: ['distrokid_final_submit_approval'] },
+  { key: 'harvest_platform_links', title: 'Harvest platform links', offsetDays: 0, owner: 'browsy', blocking: true, workflowId: BROWSY_WORKFLOW_IDS.platformLinkHarvest, dependsOn: ['distrokid_final_submit_approval'] },
   { key: 'switch_release_cta', title: 'Switch CTA from pre-save to listen/save/share', offsetDays: 0, owner: 'agent', blocking: false, dependsOn: ['harvest_platform_links'] },
   { key: 'thank_you_post', title: 'Thank-you/save/share post', offsetDays: 1, owner: 'ken', blocking: false },
   { key: 'outreach_follow_up', title: 'Outreach follow-up', offsetDays: 3, owner: 'agent', blocking: false, dependsOn: ['outreach_wave_1'] },
@@ -97,7 +101,14 @@ export function createMagicReleaseCampaign({ releaseType, releaseId, albumSingle
     run_summary: {},
   });
   refreshMagicReleasePlan({ releaseType: release.type, releaseId: release.id });
-  addReleaseCockpitLog(release.type, release.id, 'magic_release_create', 'success', 'Magic Release campaign created.', { campaignId: campaign.id });
+  addReleaseCockpitLog({
+    releaseType: release.type,
+    releaseId: release.id,
+    action: 'magic_release_create',
+    status: 'success',
+    message: 'Magic Release campaign created.',
+    payload: { campaignId: campaign.id },
+  });
   return getMagicReleaseState(release.type, release.id);
 }
 
@@ -199,10 +210,19 @@ export async function ingestBrowsyResult({ resultPath, campaignId = null, taskKe
   for (const request of result.client_action_requests || []) {
     createNeedsKenTaskFromActionRequest(campaign, task, request, resultPath, result);
   }
-  addReleaseCockpitLog(campaign.release_type, campaign.release_id, 'magic_release_ingest', nextStatus.logStatus, `Browsy result ingested for ${result.workflow_id}.`, {
-    taskKey: task.task_key,
-    resultPath,
-    workflowStatus: result.status,
+  addReleaseCockpitLog({
+    releaseType: campaign.release_type,
+    releaseId: campaign.release_id,
+    action: 'magic_release_ingest',
+    status: nextStatus.logStatus,
+    message: `Browsy result ingested for ${result.workflow_id}.`,
+    payload: {
+      taskKey: task.task_key,
+      resultPath,
+      workflowStatus: result.status,
+      workflowRef: result.workflow_id,
+      runId: result.run_id || null,
+    },
   });
   recomputeTaskStatuses(campaign.id);
   return {
@@ -229,6 +249,44 @@ export function summarizeMagicReleaseForCockpit(releaseType, releaseId) {
     selectedVisualAssets: state.campaign.asset_selection || {},
     runs: state.runs.slice(0, 10),
     tasks: state.tasks,
+  };
+}
+
+// Non-blocking summary of the Browsy integration for the Release Cockpit. It
+// reports configuration and the last persisted run without making a network
+// call, so building the cockpit view model stays fast. Reachability is checked
+// explicitly via the cockpit's "preview/run" actions, not here.
+export function summarizeBrowsyIntegration(releaseType, releaseId) {
+  const config = getBrowsyConfig();
+  const state = getMagicReleaseState(releaseType, releaseId);
+  const runs = state?.runs || [];
+  const lastRun = runs.find(run => run.workflow_id) || null;
+  const log = lastRun?.log || {};
+  return {
+    configured: Boolean(config.baseUrl),
+    baseUrl: config.baseUrl,
+    appId: config.appId,
+    mode: config.dryRun === true ? 'dry_run' : (config.dryRun === false ? 'live' : config.mode),
+    dryRunForced: config.dryRun,
+    workflowIds: BROWSY_WORKFLOW_IDS,
+    lastRun: lastRun ? {
+      id: lastRun.id,
+      workflowId: lastRun.workflow_id,
+      workflowVersion: log.workflow_version || null,
+      browsyRunId: log.browsy_run_id || lastRun.run_id || null,
+      status: lastRun.status,
+      browsyStatus: log.browsy_status || null,
+      pancakeStatus: log.pancake_status || null,
+      mode: log.mode || null,
+      dryRun: Boolean(log.dry_run),
+      reachable: log.reachable !== false,
+      timedOut: Boolean(log.timed_out),
+      resultPath: lastRun.result_path || null,
+      packagePath: lastRun.package_path || null,
+      artifactPaths: log.artifact_paths || [],
+      error: log.error || null,
+      finishedAt: log.finished_at || lastRun.updated_at || null,
+    } : null,
   };
 }
 
@@ -405,50 +463,84 @@ async function runAgentTask({ campaign, task, release, dryRun }) {
     reason: payload.needs_ken?.reason || task.reason,
     suggested_action: payload.needs_ken?.suggested_action || task.suggested_action,
   });
-  addReleaseCockpitLog(campaign.release_type, campaign.release_id, 'magic_release_task', status === 'complete' ? 'success' : 'warning', `${task.title} ${status}.`, { taskKey: task.task_key, dryRun });
+  addReleaseCockpitLog({
+    releaseType: campaign.release_type,
+    releaseId: campaign.release_id,
+    action: 'magic_release_task',
+    status: status === 'complete' ? 'success' : 'warning',
+    message: `${task.title} ${status}.`,
+    payload: { taskKey: task.task_key, dryRun, result: status },
+  });
   recomputeTaskStatuses(campaign.id);
   return { ok: true, task: updatedTask, payload };
 }
 
 async function runBrowsyTask({ campaign, task, release, dryRun }) {
+  const config = getBrowsyConfig();
+  const effectiveDryRun = config.dryRun === null ? Boolean(dryRun) : config.dryRun;
   upsertReleaseCampaignTask({ id: task.id, campaign_id: campaign.id, task_key: task.task_key, status: 'running' });
-  const packageResult = writeBrowsyWorkflowPackage({ campaign, task, release, dryRun });
+  const packageResult = writeBrowsyWorkflowPackage({ campaign, task, release, dryRun: effectiveDryRun });
   const run = addReleaseCampaignRun({
     campaign_id: campaign.id,
     task_id: task.id,
     workflow_id: task.source_workflow_id,
     status: 'running',
     package_path: packageResult.packagePath,
-    log: { mode: dryRun ? 'dry_run' : 'live' },
+    log: {
+      mode: effectiveDryRun ? 'dry_run' : 'live',
+      browsy_base_url: config.baseUrl,
+      browsy_app_id: config.appId,
+      started_at: new Date().toISOString(),
+    },
   });
+
   const execution = await runBrowsyWorkflow({
     workflowId: task.source_workflow_id,
     packagePath: packageResult.packagePath,
-    mode: dryRun ? 'dry_run' : 'live',
+    payload: packageResult.payload,
+    dryRun: effectiveDryRun,
+    config,
   });
+
   updateReleaseCampaignRun(run.id, {
-    run_id: execution.result?.run_id || execution.runId || null,
-    status: execution.ok ? 'complete' : 'failed',
-    result_path: execution.resultPath,
-    stdout_path: execution.stdoutPath,
-    stderr_path: execution.stderrPath,
-    log: execution,
+    run_id: execution.runId || execution.result?.run_id || null,
+    status: execution.runRecordStatus || (execution.ok ? 'complete' : 'failed'),
+    result_path: execution.resultPath || null,
+    log: {
+      mode: effectiveDryRun ? 'dry_run' : 'live',
+      browsy_base_url: config.baseUrl,
+      browsy_app_id: config.appId,
+      workflow_id: task.source_workflow_id,
+      workflow_version: config.workflowVersion || null,
+      browsy_run_id: execution.runId || null,
+      browsy_workflow_ref: execution.workflowRef || null,
+      browsy_status: execution.browsyStatus || null,
+      pancake_status: execution.resultStatus || null,
+      artifact_paths: execution.artifactPaths || [],
+      finished_at: new Date().toISOString(),
+      error: execution.error || null,
+      reachable: execution.reachable !== false,
+      dry_run: effectiveDryRun,
+      timed_out: Boolean(execution.timedOut),
+    },
   });
+
   if (execution.resultPath && fs.existsSync(execution.resultPath)) {
     return ingestBrowsyResult({ resultPath: execution.resultPath, campaignId: campaign.id, taskKey: task.task_key });
   }
-  const status = execution.ok ? 'complete' : 'failed';
+
+  // No result file was written (only happens on an internal error). Surface a
+  // clear failure instead of pretending the run completed.
   const updatedTask = upsertReleaseCampaignTask({
     id: task.id,
     campaign_id: campaign.id,
     task_key: task.task_key,
-    status,
+    status: 'failed',
     result: execution,
-    result_path: execution.resultPath || null,
-    completed_at: status === 'complete' ? new Date().toISOString() : null,
+    reason: execution.error || 'Browsy run did not produce a result.',
   });
   recomputeTaskStatuses(campaign.id);
-  return { ok: execution.ok, task: updatedTask, execution };
+  return { ok: false, task: updatedTask, execution };
 }
 
 function markNeedsKenTask(task, reason) {
@@ -468,11 +560,21 @@ function mapBrowsyStatus(status) {
     case 'dry_run_passed':
       return { status: 'complete', logStatus: 'success' };
     case 'live_run_gated':
-      return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy returned a live human gate.' };
+      return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy paused for human approval before final submit.', suggestedAction: 'Approve the DistroKid final submit gate.' };
     case 'live_run_completed':
       return { status: 'complete', logStatus: 'success' };
+    case 'blocked_auth':
+      return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy needs an authenticated session (login/2FA).', suggestedAction: 'Complete login in the Browsy session, then rerun.' };
+    case 'blocked_validation':
+      return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy could not resolve required inputs automatically.', suggestedAction: 'Resolve the flagged inputs, then rerun.' };
     case 'blocked':
       return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy returned a blocking result.' };
+    case 'not_configured':
+      return { status: 'blocked', logStatus: 'error', reason: 'Browsy is not configured or unreachable. No automation ran and nothing was submitted.', suggestedAction: 'Start the Browsy service or set PANCAKE_BROWSY_DRY_RUN=true.' };
+    case 'contract_not_ready':
+      return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy workflow has no recorded/imported contract yet (scaffold-only or missing). No automation ran.', suggestedAction: 'Record/import Browsy workflow first.' };
+    case 'timeout':
+      return { status: 'failed', logStatus: 'error', reason: 'Browsy run timed out before reaching a terminal state.' };
     default:
       return { status: 'failed', logStatus: 'error', reason: 'Browsy workflow failed.' };
   }
@@ -650,61 +752,277 @@ function writeBrowsyWorkflowPackage({ campaign, task, release, dryRun }) {
   return { packagePath, manifestPath, payload };
 }
 
-async function runBrowsyWorkflow({ workflowId, packagePath, mode }) {
-  const browsyBin = process.env.PANCAKE_BROWSY_BIN || '';
-  const browsyRepoPath = process.env.PANCAKE_BROWSY_REPO_PATH || '';
-  if (!browsyBin && !browsyRepoPath) {
-    const resultPath = path.join(path.dirname(packagePath), 'result.json');
-    fs.writeFileSync(resultPath, JSON.stringify({
-      ok: true,
-      workflow_id: workflowId,
-      run_id: `stub_${Date.now().toString(36)}`,
-      source_system: 'pancake_robot',
-      entity_type: JSON.parse(fs.readFileSync(packagePath, 'utf8')).entity_type,
-      entity_id: JSON.parse(fs.readFileSync(packagePath, 'utf8')).entity_id,
-      status: mode === 'dry_run' ? 'dry_run_passed' : 'live_run_gated',
-      captured_outputs: {},
-      filled_fields: [],
-      skipped_fields: [],
-      errors: [],
-      screenshots: [],
-      artifact_paths: [],
-      manual_checkpoints: mode === 'live' ? ['Human approval required'] : [],
-      client_action_requests: mode === 'live' ? [{
-        type: 'human_decision_required',
-        severity: 'blocking',
-        reason: 'Live workflow requires human approval before external action.',
-        suggested_action: 'Approve live workflow',
-      }] : [],
-      next_required_action: mode === 'live' ? 'Approve live workflow' : null,
-    }, null, 2));
-    return { ok: true, stubbed: true, resultPath, result: JSON.parse(fs.readFileSync(resultPath, 'utf8')) };
-  }
-  const stdoutPath = path.join(path.dirname(packagePath), 'stdout.log');
-  const stderrPath = path.join(path.dirname(packagePath), 'stderr.log');
+// Runs (or explicitly dry-runs) a Browsy workflow and writes a pancake-contract
+// result.json that ingestBrowsyResult understands. There is no silent fake
+// success: an explicit dry-run is clearly marked, and a live run that cannot
+// reach Browsy is recorded as not_configured rather than a passing run.
+async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, config = getBrowsyConfig() }) {
   const resultPath = path.join(path.dirname(packagePath), 'result.json');
-  const executable = browsyBin || path.join(browsyRepoPath, 'bin', 'browsy');
-  const args = [
-    'workflow:run',
-    '--workflow', workflowId,
-    '--package', packagePath,
-    '--mode', mode,
-    '--result-path', resultPath,
-  ];
-  const output = await execFileAsync(executable, args, {
-    cwd: browsyRepoPath || REPO_ROOT,
-    timeout: Number(process.env.PANCAKE_BROWSY_TIMEOUT_MS || 20 * 60 * 1000),
-    maxBuffer: 1024 * 1024 * 4,
+  const packagePayload = payload || JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+  const entityType = packagePayload.entity_type;
+  const entityId = packagePayload.entity_id;
+  const captureOutputs = packagePayload.capture_outputs || [];
+
+  if (dryRun) {
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    result.status = 'dry_run_passed';
+    result.dry_run = true;
+    result.mode = 'preview';
+    result.note = 'Explicit Browsy dry-run. No browser automation was executed and nothing was submitted.';
+    writeJson(resultPath, result);
+    return {
+      ok: true,
+      dryRun: true,
+      resultPath,
+      runRecordStatus: 'complete',
+      resultStatus: 'dry_run_passed',
+      browsyStatus: null,
+      reachable: true,
+      result,
+    };
+  }
+
+  // Live runs are gated on contract readiness. Before any browser automation we
+  // fetch the workflow contract from Browsy and verify it is a real
+  // recorded/imported workflow — not a scaffold-only stub. A missing or
+  // incomplete contract is reported as a blocking result, never a fake run.
+  const contractGate = await getBrowsyWorkflowContract({ workflowId, version: config.workflowVersion || '', config });
+  if (contractGate.reachable === false) {
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    result.status = 'not_configured';
+    result.mode = 'live';
+    result.errors = [contractGate.error || 'Browsy service was unreachable while fetching the workflow contract.'];
+    result.next_required_action = `Start Browsy at ${config.baseUrl} and rerun, or set PANCAKE_BROWSY_DRY_RUN=true for a dry run.`;
+    writeJson(resultPath, result);
+    return {
+      ok: false,
+      resultPath,
+      runRecordStatus: 'blocked',
+      resultStatus: 'not_configured',
+      reachable: false,
+      error: contractGate.error || 'Browsy unreachable',
+      result,
+    };
+  }
+
+  const completeness = evaluateBrowsyContractCompleteness(contractGate.contract, workflowId);
+  if (!completeness.ready) {
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    result.status = 'contract_not_ready';
+    result.mode = 'live';
+    result.errors = [completeness.summary];
+    result.contract_completeness = completeness;
+    result.next_required_action = 'Record/import the Browsy workflow first.';
+    writeJson(resultPath, result);
+    return {
+      ok: false,
+      resultPath,
+      runRecordStatus: 'blocked',
+      resultStatus: 'contract_not_ready',
+      reachable: true,
+      error: completeness.summary,
+      result,
+    };
+  }
+
+  const variables = buildBrowsyRunVariables(packagePayload);
+  const execution = await executeBrowsyWorkflowRun({
+    workflowId,
+    payload: variables,
+    mode: 'live',
+    callerId: 'pancake-robot',
+    config,
   });
-  fs.writeFileSync(stdoutPath, output.stdout || '');
-  fs.writeFileSync(stderrPath, output.stderr || '');
+
+  // Browsy unreachable / not configured: surface a clear blocked status.
+  if (execution.reachable === false) {
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    result.status = 'not_configured';
+    result.mode = 'live';
+    result.errors = [execution.error || 'Browsy service was unreachable.'];
+    result.next_required_action = `Start Browsy at ${config.baseUrl} and rerun, or set PANCAKE_BROWSY_DRY_RUN=true for a dry run.`;
+    writeJson(resultPath, result);
+    return {
+      ok: false,
+      resultPath,
+      runRecordStatus: 'blocked',
+      resultStatus: 'not_configured',
+      reachable: false,
+      error: execution.error || 'Browsy unreachable',
+      result,
+    };
+  }
+
+  if (execution.timedOut) {
+    const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution });
+    result.status = 'timeout';
+    result.errors = [`Browsy run ${execution.runId} did not reach a terminal state within the timeout.`];
+    writeJson(resultPath, result);
+    return {
+      ok: false,
+      resultPath,
+      runId: execution.runId,
+      workflowRef: execution.workflowRef,
+      runRecordStatus: 'failed',
+      resultStatus: 'timeout',
+      browsyStatus: execution.status,
+      artifactPaths: result.artifact_paths,
+      reachable: true,
+      timedOut: true,
+      result,
+    };
+  }
+
+  const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution });
+  result.status = mapCategoryToResultStatus(execution.category);
+  writeJson(resultPath, result);
+  return {
+    ok: execution.category === 'success',
+    resultPath,
+    runId: execution.runId,
+    workflowRef: execution.workflowRef,
+    runRecordStatus: execution.category === 'success' ? 'complete' : (execution.category === 'failed' ? 'failed' : 'blocked'),
+    resultStatus: result.status,
+    browsyStatus: execution.status,
+    artifactPaths: result.artifact_paths,
+    reachable: true,
+    result,
+  };
+}
+
+function baseResult({ workflowId, entityType, entityId, captureOutputs }) {
   return {
     ok: true,
-    stdoutPath,
-    stderrPath,
-    resultPath,
-    result: fs.existsSync(resultPath) ? JSON.parse(fs.readFileSync(resultPath, 'utf8')) : null,
+    workflow_id: workflowId,
+    run_id: null,
+    source_system: 'pancake_robot',
+    entity_type: entityType,
+    entity_id: entityId,
+    status: null,
+    captured_outputs: {},
+    requested_outputs: captureOutputs,
+    filled_fields: [],
+    skipped_fields: [],
+    errors: [],
+    screenshots: [],
+    artifact_paths: [],
+    manual_checkpoints: [],
+    client_action_requests: [],
+    next_required_action: null,
   };
+}
+
+// Translates a live Browsy run (buildRunResult shape) into the pancake-contract
+// result.json shape consumed by ingestBrowsyResult.
+function resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution }) {
+  const runResult = execution.result || {};
+  const artifactGroups = runResult.artifacts || {};
+  const screenshots = (artifactGroups.screenshots || []).map(a => a.path || a.name).filter(Boolean);
+  const artifactPaths = ['screenshots', 'downloads', 'trace', 'logs']
+    .flatMap(key => (artifactGroups[key] || []).map(a => a.path).filter(Boolean));
+  const checkpoints = runResult.checkpoints || [];
+  const category = execution.category;
+  const blockingReason = runResult.blockingReason || null;
+  const clientActionRequests = [];
+  if (category === 'blocked_human_approval') {
+    clientActionRequests.push({
+      type: 'human_decision_required',
+      severity: 'blocking',
+      reason: blockingReason || 'Browsy paused for human approval before completing.',
+      suggested_action: 'Review and approve the Browsy run before final submission.',
+    });
+  } else if (category === 'blocked_auth') {
+    clientActionRequests.push({
+      type: 'auth_required',
+      severity: 'blocking',
+      reason: blockingReason || 'Browsy needs an authenticated session.',
+      suggested_action: 'Complete login/2FA in the Browsy session, then rerun.',
+    });
+  } else if (category === 'blocked_validation') {
+    clientActionRequests.push({
+      type: 'human_decision_required',
+      severity: 'blocking',
+      reason: blockingReason || 'Browsy could not resolve required inputs automatically.',
+      suggested_action: 'Resolve the flagged inputs, then rerun.',
+    });
+  }
+
+  return {
+    ok: category === 'success',
+    workflow_id: workflowId,
+    run_id: execution.runId || null,
+    browsy_run_id: execution.runId || null,
+    browsy_status: execution.status || null,
+    source_system: 'pancake_robot',
+    entity_type: entityType,
+    entity_id: entityId,
+    status: null,
+    captured_outputs: runResult.outputs || {},
+    requested_outputs: captureOutputs,
+    filled_fields: runResult.completedSteps || [],
+    skipped_fields: runResult.skippedSteps || [],
+    errors: runResult.failedSteps || [],
+    screenshots,
+    artifact_paths: artifactPaths,
+    manual_checkpoints: checkpoints,
+    client_action_requests: clientActionRequests,
+    next_required_action: blockingReason,
+  };
+}
+
+function mapCategoryToResultStatus(category) {
+  switch (category) {
+    case 'success': return 'live_run_completed';
+    case 'blocked_human_approval': return 'live_run_gated';
+    case 'blocked_auth': return 'blocked_auth';
+    case 'blocked_validation': return 'blocked_validation';
+    default: return 'failed';
+  }
+}
+
+// Domain-specific runtime variables Pancake hands to Browsy. Browsy only
+// consumes these and the recorded steps; it does not resolve DistroKid fields.
+function buildBrowsyRunVariables(packagePayload) {
+  const canonical = packagePayload.canonical_payload || {};
+  const idKey = packagePayload.entity_type === 'album' ? 'albumId' : 'songId';
+  return pruneEmptyValues({
+    appId: getBrowsyConfig().appId,
+    releaseId: canonical.release_id || packagePayload.entity_id,
+    [idKey]: canonical.release_id || packagePayload.entity_id,
+    mode: packagePayload.mode,
+    distrokid_payload: canonical,
+    release: pruneEmptyValues({
+      title: canonical.release_title,
+      artist: canonical.artist,
+      label: canonical.label,
+      releaseDate: canonical.release_date,
+      genre: canonical.primary_genre,
+      subgenre: canonical.secondary_genre,
+    }),
+    artworkPath: canonical.artworkPath || null,
+    tracks: Array.isArray(canonical.tracks)
+      ? canonical.tracks.map(track => pruneEmptyValues({
+          songId: track.song_id,
+          title: track.title,
+          trackNumber: track.track_number,
+          audioPath: track.audioPath,
+          lyrics: track.lyrics,
+          explicit: track.explicit,
+          instrumental: track.instrumental,
+          isAiGenerated: track.is_ai_generated,
+        }))
+      : [],
+    expected_human_gates: packagePayload.human_gate ? ['final_submit_approval'] : [],
+    expected_outputs: packagePayload.capture_outputs || [],
+  });
+}
+
+function pruneEmptyValues(value) {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && item !== null && item !== ''));
+}
+
+function writeJson(filePath, value) {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
 function findTaskForWorkflow(campaignId, workflowId) {

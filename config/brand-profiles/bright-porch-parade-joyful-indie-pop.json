@@ -16,7 +16,10 @@
   "character": {
     "name": "Bright Porch Parade",
     "core_concept": "A bright indie-pop collective of friends making clever, handmade-but-polished songs with male/female vocals, handclaps, stomps, and unexpected instruments.",
-    "fallback_summary": "Happy varied indie pop with male and female vocals, bright acoustic instruments, playful percussion, group harmonies, and instantly singable choruses."
+    "fallback_summary": "Happy varied indie pop with male and female vocals, bright acoustic instruments, playful percussion, group harmonies, and instantly singable choruses.",
+    "visual_identity": "",
+    "personality_traits": [],
+    "catchphrases": []
   },
   "positioning": {
     "one_liner": "Joyful, clever indie pop with group vocals, playful arrangements, male/female vocal interplay, and sunshine hooks.",
@@ -78,7 +81,8 @@
       "generic kids music clichés",
       "forced zaniness",
       "direct artist imitation"
-    ]
+    ],
+    "default_key": ""
   },
   "lyrics": {
     "title_examples": [
@@ -156,5 +160,33 @@
   "guardrails": {
     "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
     "brand_safe": true
+  },
+  "media": {
+    "default_image_url": "/brand-media/bright-porch-parade-joyful-indie-pop/default-image.png",
+    "default_image_path": ""
+  },
+  "songwriting": {
+    "primary_emotional_goal": "",
+    "character_voice": {
+      "person": "",
+      "tone": "",
+      "vocabulary": "",
+      "signature_sounds": [],
+      "comedy_mode": "",
+      "kid_relationship": ""
+    },
+    "earworm_stack": [],
+    "hook_design_rules": [],
+    "energy_arc": {
+      "pattern": "",
+      "rules": []
+    },
+    "participation_patterns": [],
+    "structure_preferences": [],
+    "allowed_elements": [],
+    "forbidden_elements": [],
+    "render_safety": [],
+    "required_elements": [],
+    "qa_rules": []
   }
 }

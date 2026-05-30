@@ -1,0 +1,303 @@
+{
+  "brand_name": "Cipher Engine",
+  "app_title": "Cipher Engine",
+  "brand_type": "music",
+  "brand_description": "Cipher Engine is an original AI-assisted artist brand for high-velocity technical rap, battle-rap intensity, cinematic protest energy, dark humor, emotional confession, and hook-friendly rap collaborations. The sound should feel sharp, relentless, witty, aggressive, vulnerable, and highly controlled without imitating any real artist, voice, cadence, flow, lyrics, melodies, beats, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "18+",
+    "description": "Adult listeners who like technical hip-hop, fast rap, battle bars, dark comedy, personal storytelling, protest-rap urgency, aggressive delivery, dense internal rhyme, and high-energy rap tracks with occasional melodic or guest-style hooks.",
+    "guardrail": "Adult-oriented music. Strong profanity, dark humor, anger, confrontation, trauma, addiction recovery themes, and political frustration are allowed. Do not include hate slurs, identity-based attacks, graphic sexual detail, graphic violence, actionable threats, self-harm instruction, drug-use instructions, or harassment of real people."
+  },
+  "character": {
+    "name": "Cipher Engine",
+    "core_concept": "A relentless verbal machine with a human bruise inside it: part battle rapper, part protest narrator, part dark comedian, part confessional storyteller.",
+    "fallback_summary": "technical rap artist blending speed, aggression, dark wit, protest urgency, confession, and hook-ready songwriting",
+    "clap_name": "none",
+    "personality_traits": [
+      "Technically precise and rhythmically restless",
+      "Aggressive and confrontational, but not careless",
+      "Darkly funny with a sharp sense of timing",
+      "Emotionally exposed under the armor",
+      "Capable of political urgency without becoming slogan-heavy",
+      "Collaboration-friendly: can leave room for sung hooks, guest verses, and contrast"
+    ],
+    "catchphrases": [
+      "No wasted syllables",
+      "Run the rhyme till it sparks"
+    ],
+    "visual_identity": "Hard monochrome-and-warning-color rap visuals: typewriter keys, engine parts, cassette reels, cracked concrete, battle-cipher circles, smoke, neon red, and kinetic typography. Visuals should feel gritty, precise, intense, and urban without copying any existing artist branding or album art.",
+    "visual_reference": [
+      "Black, off-white, steel grey, warning red, and sodium-orange palette",
+      "Cipher circles, notebooks, tape reels, microphones, and engine diagrams as optional background texture",
+      "Kinetic typography and fractured text shapes used sparingly, not dense lyric walls",
+      "Urban nighttime, underpass, warehouse, studio booth, or protest-poster atmosphere",
+      "High-contrast rap cover design without celebrity likeness or copied album references"
+    ]
+  },
+  "music": {
+    "default_style": "technical hip-hop with fast rap, battle-rap aggression, protest-rap tension, dark humor, and melodic hook options",
+    "default_bpm": 148,
+    "default_key": "D Minor",
+    "default_prompt": "Original technical hip-hop with hard drums, tense minor-key production, rapid-fire rap sections, dense internal rhyme, aggressive delivery, dark comic timing, and occasional melodic or guest-style hooks for contrast. Vary the lane by song: high-speed technical showcase, raw early-battle-style rap, protest anthem, darkly funny character track, confessional recovery song, cinematic posse-cut structure, and hook-driven rap collaboration are all valid. Never imitate, clone, or reference any real artist voice, cadence, flow, lyrics, melody, beat, arrangement, adlibs, persona, or copyrighted work. Create a fresh performance with speed, precision, anger, wit, vulnerability, and strong rhythmic identity.",
+    "target_length": "2:20-4:10",
+    "min_words": 260,
+    "normal_word_range": "280-680",
+    "first_vocal_by_seconds": 5,
+    "max_instrumental_intro_seconds": 8
+  },
+  "lyrics": {
+    "title_examples": [
+      "Redline Static",
+      "Paper War",
+      "No Brake Light",
+      "Crowd Control",
+      "Burn Notice"
+    ],
+    "topic_variety": "Use broad topic families: technical self-proving, betrayal and comeback, public anger and protest, personal damage and recovery, fame pressure, dark comedy under stress, family or hometown ghosts, competitive cipher energy, media noise, and collaboration-style contrast between hard verses and melodic relief. Do not repeat the same engine, fire, paper, crowd, war, monster, or speed imagery across songs.",
+    "required_closing": "End with a final punch, cold image, unresolved confession, crowd-silencing line, abrupt cutoff, or hard emotional turn; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "technical_rap",
+    "primary_emotional_goal": "Create original rap songs that feel technically elite, aggressive, funny, angry, vulnerable, and replayable, while varying flow, structure, tempo, hooks, and emotional posture across releases.",
+    "voice_perspective": "Mostly first-person and direct address, with occasional public-address protest voice or close third-person character scene. The narrator can be furious, wounded, absurd, precise, competitive, or reflective.",
+    "character_voice": {
+      "person": "Mostly first-person with direct second-person confrontation, occasional crowd-address or cinematic third-person.",
+      "tone": "Fast, sharp, explicit, darkly funny, combative, self-aware, emotionally volatile, and technically controlled.",
+      "vocabulary": "Adult rap language with profanity allowed; dense rhyme, internal rhyme, multisyllabic patterns, punchline compression, and clear plainspoken emotional lines for contrast.",
+      "signature_sounds": [
+        "hard snare and kick pressure",
+        "rapid double-time pockets",
+        "tense minor-key strings or synths",
+        "record-scratch or tape-stop accents",
+        "melodic hook contrast",
+        "breathless final-verse escalation"
+      ],
+      "comedy_mode": "Dark wordplay, insult comedy, absurd exaggeration, persona flips, and bait-and-switch punchlines; jokes should serve tension or character.",
+      "kid_relationship": "Not a children's brand; lyrics are adult-oriented and may include strong profanity."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Eminem-inspired high-speed technical control",
+      "Eminem-inspired early battle-rap rawness",
+      "Eminem-inspired protest-rap urgency",
+      "Eminem-inspired dark comic aggression",
+      "fast technical rap",
+      "hook-driven rap collaborations"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, cadence, flows, rhyme schemes, adlibs, accent, lyrics, melodies, beats, arrangements, persona, alter egos, or copyrighted material. Use broad performance attributes—speed, precision, protest urgency, dark humor, confession, and collaboration contrast—as inspiration for an original Cipher Engine identity.",
+    "allowed_elements": [
+      "rapid-fire technical rap and double-time bursts",
+      "dense internal rhyme and multisyllabic rhyme",
+      "aggressive battle-rap energy without identity-based attacks",
+      "political or public anger framed as personal urgency",
+      "dark humor and absurd exaggeration",
+      "confessional verses about damage, recovery, pressure, or regret",
+      "melodic or guest-style hooks for contrast",
+      "beat switches that raise intensity or reveal vulnerability",
+      "strong profanity and hard adult language",
+      "clear emotional lines after dense rhyme sections"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist cadence, flow, rhyme scheme, accent, adlib, beat, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "hate slurs or identity-based attacks",
+      "graphic sexual detail or coercive sexual content",
+      "graphic violence or actionable threats",
+      "drug-use instructions or glamorized addiction",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Technical rhyme should serve meaning; do not stack syllables with no emotional or narrative purpose.",
+      "Use at least one plainspoken emotional sentence or concrete scene detail in each song."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be rapped or sung.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Profanity is allowed, but hate slurs and identity-based demeaning language are not.",
+      "Anger, threat, and battle language must stay theatrical or metaphorical and must not encourage real-world harm."
+    ],
+    "structure_preferences": [
+      "[COLD OPEN] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [HOOK] -> [FAST BRIDGE] -> [FINAL VERSE] -> [TAG]",
+      "[INTRO] -> [HOOK] -> [VERSE 1] -> [FLOW SWITCH] -> [HOOK] -> [VERSE 2] -> [BEAT SWITCH] -> [FINAL HOOK]",
+      "[PUBLIC ADDRESS INTRO] -> [VERSE 1] -> [CHANT HOOK] -> [VERSE 2] -> [BREAKDOWN] -> [FINAL ESCALATION]",
+      "[VERSE 1] -> [MELODIC HOOK] -> [VERSE 2] -> [GUEST-SPACE HOOK] -> [RAP RUN] -> [OUTRO LINE]"
+    ],
+    "song_family_types": [
+      "High-speed technical showcase with double-time bursts, breath control, and escalating rhyme density.",
+      "Raw battle-rap track with stripped drums, insult comedy, and competitive cipher energy.",
+      "Protest anthem with public anger, cinematic tension, and chantable hook.",
+      "Dark comic character song with absurd exaggeration, persona flips, and hard punchlines.",
+      "Confessional recovery track with aggressive verses and a vulnerable melodic hook.",
+      "Collaboration-style rap single with hard verses, open hook space, and contrasting emotional tone."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feel: hard boom-bap, tense trap, military-march protest pulse, double-time sprint, stripped cipher beat, or cinematic orchestral rap.",
+      "Rotate bass texture: clean sub, distorted 808, live bass grit, minimal kick-bass lock, blown-speaker low-end, or tense pulsing synth bass.",
+      "Rotate vocal shape: clipped rapid rap, shouted battle stance, lower spoken menace, nasal comic character, melodic hook contrast, or breathless final escalation.",
+      "Rotate production color: grimy basement cipher, glossy rap single, protest-march tension, horror-comedy strings, sparse battle room, or arena-collab lift.",
+      "Use beat switches selectively; when used, the switch should reveal a new argument, character mode, or emotional crack."
+    ],
+    "tempo_energy_lanes": [
+      "82-94 BPM: heavy battle pocket, punchlines, darker restraint.",
+      "95-112 BPM: classic rap drive, hook-friendly structure, balanced verse density.",
+      "113-130 BPM: protest urgency, march-like pulse, high-pressure delivery.",
+      "131-155 BPM: fast technical lane, double-time bursts, high adrenaline.",
+      "156-175 BPM: rare extreme-speed section, used briefly for impact rather than whole-song default."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: cold punchline, news-like texture, drum pickup, crowd noise, piano sting, bass drop, or immediate rapid verse.",
+      "Every song should vary at least three major variables: tempo, drum feel, vocal delivery, hook type, emotional posture, structure, or production texture.",
+      "Do not always rely on speed; some songs should win through menace, hook craft, storytelling, humor, or emotional clarity.",
+      "Use stripped sections to reveal vulnerability or sharpen a punchline, not as generic breathers.",
+      "Avoid identical verse lengths, rhyme density, beat switch placement, hook shape, and outro tag style across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: chant, melodic guest-style chorus, shouted phrase, sarcastic refrain, protest slogan-adjacent line, whispered menace, or instrumental drop.",
+      "Do not reuse the same hook rhythm, profanity pattern, title placement, or cadence shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: rage, mockery, confession, warning, momentum, public pressure, or relief.",
+      "Use repetition for impact, but change adlibs, pauses, delivery, harmony, or response lines on later hook returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: battle stance, public protest narrator, private confession, dark comic rant, comeback story, media-noise critique, or collaborator-aware open space.",
+      "Do not make every song about speed or being the best; technical skill is one lane, not the whole brand.",
+      "When lyrics are angry, keep threats metaphorical or performative rather than actionable.",
+      "When lyrics are funny, include one real emotional or social stake so the song does not become empty punchlines.",
+      "When lyrics are dense, include plain lines that let listeners breathe and understand the emotional center."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same engine, cipher, fire, paper, crowd, monster, speed, war, or courtroom imagery across every song.",
+      "Do not force specific numbers, symbols, objects, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as announcing speed, attacking critics, waking up angry, or calling out an unnamed enemy.",
+      "Do not reuse the same rhyme family, curse pattern, hook cadence, fast-rap trick, or emotional conclusion across multiple tracks.",
+      "Keep Cipher Engine identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with a technically impressive but accessible rap statement that establishes control without exhausting the fastest lane.",
+      "Place high-speed tracks beside hook-driven or confessional songs so the album does not become a speed contest.",
+      "Use protest or public-anger songs as major peaks, not every-track posture.",
+      "Place the most vulnerable track after a hard or comic track for contrast.",
+      "Save one extreme-speed or final-boss verse for the late-middle or finale.",
+      "End with either a cold punchline, a serious emotional turn, or a cinematic unresolved exit."
+    ],
+    "earworm_stack": [
+      "Land a memorable vocal attack, rhyme pattern, hook, or beat hit within the first 8 seconds.",
+      "Pair dense verses with simpler hooks or clear recurring phrases.",
+      "Use speed as contrast, not constant blur.",
+      "Make at least one line per verse quotable without relying on slurs or lazy shock.",
+      "Let breath control, pauses, and rhythmic silence create replay value."
+    ],
+    "hook_design_rules": [
+      "Hooks should be aggressive, memorable, sarcastic, melodic, or chantable.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse density and hook clarity.",
+      "For protest lanes, let rhythm and repetition carry urgency; for collab lanes, leave space for melodic lift."
+    ],
+    "energy_arc": {
+      "pattern": "SPARK -> ATTACK -> SWERVE -> PRESSURE -> REVEAL -> FINAL BLOW",
+      "rules": [
+        "Start with a sharp vocal, drum hit, argument, or texture rather than a long empty intro.",
+        "Build energy through flow variation, rhyme density, and vocal control rather than only volume.",
+        "Include at least one swerve: beat switch, joke, emotional crack, public-address turn, or sudden slower pocket.",
+        "Let the final section hit faster, colder, funnier, or more emotionally bare depending on the song family.",
+        "End with a memorable final blow rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Chant hook for protest or battle tracks",
+      "Short sarcastic refrain listeners can repeat",
+      "Melodic hook contrast for collaboration-style songs",
+      "Beat-stop punchline moment",
+      "Final tag line that reframes the narrator's anger or vulnerability"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Eminem imitation rather than an original adjacent technical-rap lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, drum feel, rhyme density, hook type, vocal delivery, emotional posture, structure, or production texture.",
+      "If a song is very fast, confirm the lyrics remain intelligible and emotionally purposeful.",
+      "If a song is aggressive or explicit, confirm it avoids hate slurs, actionable threats, and identity-based attacks.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Gritty technical-rap cover art with monochrome contrast, warning red accents, cassette/tape textures, typewriter or notebook details, engine/cipher diagrams, concrete walls, smoke, kinetic typography, and cinematic urban lighting. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#E5DED2",
+      "accent": "#C1121F",
+      "background": "#0D0D0D",
+      "steel_grey": "#6B7280",
+      "paper_tan": "#D8C7A3",
+      "warning_orange": "#E36414",
+      "ink_black": "#050505"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "hard kinetic rap typography, limited words, black/red/off-white contrast, distressed print texture, no dense lyric blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/Eminem/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Cipher Engine",
+    "default_album": "Redline Static",
+    "label_name": "Figment Factory",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "technical rap",
+      "hip hop",
+      "rap",
+      "battle rap",
+      "alternative hip hop"
+    ],
+    "youtube_tags_seed": [
+      "technical rap",
+      "fast rap",
+      "battle rap",
+      "hip hop",
+      "rap",
+      "Cipher Engine"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "Rap",
+      "Alternative Rap"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "explicit adult language allowed; no hate slurs, actionable threats, graphic sexual content, or self-harm instruction"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Cipher Engine Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

@@ -1,0 +1,303 @@
+{
+  "brand_name": "Soundhead",
+  "app_title": "Soundhead",
+  "brand_type": "music",
+  "brand_description": "Original atmospheric alternative rock/art-rock brand: guitar-driven, anxious, melodic, cinematic, sometimes raw and loud, sometimes fragile and electronic. Inspired by broad 1990s alternative rock and experimental art-rock moods without copying any real artist, voice, lyrics, melodies, riffs, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Fans of atmospheric alternative rock, art rock, indie rock, experimental guitar music, moody melodies, dystopian texture, fragile vocals, and cinematic dynamic builds.",
+    "guardrail": "General streaming audience, 16+. Melancholy, alienation, anxiety, romance, technology dread, and political unease are allowed. Avoid explicit sexual detail, graphic violence, hate, slurs, self-harm instruction, drug glorification, or child-directed framing."
+  },
+  "character": {
+    "name": "Soundhead",
+    "core_concept": "A haunted signal from a half-broken music machine: part guitar band, part dream transmission, part anxious human voice trying to stay warm inside a cold system.",
+    "fallback_summary": "atmospheric alternative rock artist blending fragile melody, distorted guitars, electronic unease, and cinematic tension",
+    "clap_name": "none",
+    "personality_traits": [
+      "Melancholic but not hopeless",
+      "Intelligent and emotionally observant without becoming academic",
+      "Anxious, intimate, and cinematic",
+      "Comfortable moving between raw guitar catharsis and cold electronic atmosphere",
+      "Human and vulnerable inside abstract or dystopian imagery",
+      "Restless with structure, but still committed to memorable songs"
+    ],
+    "catchphrases": [
+      "Static with a heartbeat",
+      "Beautiful noise, human signal"
+    ],
+    "visual_identity": "Cream paper grain, stark black shapes, muted blue-grey, signal-wave imagery, surreal machinery, distressed poster texture, minimal text, lonely highways, old CRT glow, worn concert flyers, and dreamlike industrial landscapes.",
+    "visual_reference": [
+      "Muted cream, black, grey-blue, washed green, and warning amber palette",
+      "Abstract sound waves, antenna shapes, wires, towers, and soft distortion",
+      "Lonely figures or faceless silhouettes used occasionally, not required",
+      "Old broadcast gear, CRT screens, tape machines, guitar amps, and damaged typography",
+      "Dystopian city or highway atmosphere without copying any existing album cover"
+    ]
+  },
+  "music": {
+    "default_style": "atmospheric alternative rock with art rock, indie rock, post-Britpop guitar, and experimental electronic textures",
+    "default_bpm": 96,
+    "default_key": "E Minor",
+    "default_prompt": "Original atmospheric alternative rock with emotional guitar hooks, tense chord movement, expressive vocals, cinematic dynamics, and occasional experimental electronic texture. Vary the lane by song: raw guitar-driven rock, fragile acoustic-electric ballads, dystopian mid-tempo anthems, cold electronic-guitar hybrids, noisy cathartic crescendos, and sparse late-night laments are all valid. Never imitate, clone, or reference any real artist voice, cadence, lyrics, melody, guitar riff, chord progression, beat, arrangement, persona, or copyrighted work. Create a fresh performance with melancholy, tension, beauty, unease, and strong melodic identity.",
+    "target_length": "2:30-4:30",
+    "min_words": 130,
+    "normal_word_range": "160-360",
+    "first_vocal_by_seconds": 12,
+    "max_instrumental_intro_seconds": 18
+  },
+  "lyrics": {
+    "title_examples": [
+      "Signal Weather",
+      "Glass Motor",
+      "Soft Collapse",
+      "Exit Screen",
+      "Low Orbit"
+    ],
+    "topic_variety": "Use broad topic families: alienation in modern life, romance under pressure, technology and surveillance anxiety, emotional numbness breaking open, late-night travel, environmental unease, identity fragmentation, quiet rebellion, grief without melodrama, and the search for human warmth inside mechanical systems. Do not repeat the same images, phrases, symbols, or title language across songs.",
+    "required_closing": "End with an unresolved image, fragile refrain, sudden cutoff, quiet acceptance, or final emotional turn; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "atmospheric_alternative_rock",
+    "primary_emotional_goal": "Create original songs that feel haunting, melodic, tense, intelligent, and emotionally alive, with enough variation to support full albums without repeating one production recipe.",
+    "voice_perspective": "Flexible first-person, direct address, or cinematic observer. The narrator can be intimate, paranoid, romantic, detached, angry, fragile, or quietly defiant depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person or second-person, with occasional cinematic third-person distance.",
+      "tone": "Melancholic, observant, anxious, intimate, surreal, occasionally bitter, never melodramatic or derivative.",
+      "vocabulary": "Plain emotional language mixed with abstract images, technological metaphors, environmental details, and concise poetic turns.",
+      "signature_sounds": [
+        "clean electric guitar arpeggios",
+        "distorted guitar crescendos",
+        "uneasy synth pads",
+        "subtle glitch texture",
+        "live-feeling drums",
+        "fragile layered vocals"
+      ],
+      "comedy_mode": "Almost none; occasional dry irony or bleak understatement is allowed but should never turn the song into parody.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Radiohead Pablo Honey-era raw guitar-rock youthfulness",
+      "Radiohead The Bends-era melodic alternative rock catharsis",
+      "Radiohead OK Computer-era dystopian atmosphere and emotional alienation",
+      "1990s alternative rock dynamics",
+      "art rock tension",
+      "experimental electronic-rock texture"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, falsetto, phrasing, lyrics, melodies, guitar riffs, chord progressions, drum patterns, arrangements, album sequencing, persona, or copyrighted material. Use the broad emotional and sonic range as inspiration for an original Soundhead identity.",
+    "allowed_elements": [
+      "clean arpeggiated guitars and distorted chorus lift",
+      "fragile verses that open into loud cathartic sections",
+      "uneasy synths, drones, glitches, and electronic pulses",
+      "melancholic but memorable vocal melodies",
+      "odd chord color without copying known progressions",
+      "lyrics about alienation, technology, longing, and modern anxiety",
+      "dynamic builds from quiet intimacy to full-band release",
+      "abstract images anchored by plain emotional lines",
+      "organic drums mixed with subtle machine-like textures",
+      "clean or radio-friendly language by default"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist vocal style, melody, riff, chord progression, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "overusing the same title examples, static imagery, machine imagery, or invented lore terms",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "glorified drug abuse or instructions for drug use",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be melodic and memorable, but every song should invent its own hook language.",
+      "Use at least one concrete sensory, environmental, or scene detail in each song to prevent generic abstract writing."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid explicit content unless a separate release profile explicitly permits it.",
+      "Emotional darkness is allowed, but the song must not instruct or encourage self-harm, dangerous behavior, or substance abuse."
+    ],
+    "structure_preferences": [
+      "[INTRO TEXTURE] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE or NOISE BREAK] -> [FINAL CHORUS] -> [OUTRO]",
+      "[GUITAR INTRO] -> [VERSE] -> [CHORUS] -> [VERSE] -> [CHORUS] -> [QUIET BREAKDOWN] -> [LOUD FINAL SECTION]",
+      "[COLD VOCAL] -> [VERSE 1] -> [REFRAIN] -> [VERSE 2] -> [REFRAIN] -> [INSTRUMENTAL BUILD] -> [FINAL REFRAIN]",
+      "[ELECTRONIC PULSE INTRO] -> [VERSE] -> [HOOK] -> [VERSE] -> [HOOK] -> [GLITCH/DRONE TURN] -> [CATHARTIC OUTRO]"
+    ],
+    "song_family_types": [
+      "Raw guitar-driven alternative rock song with emotional urgency, loud chorus lift, and concise melodic hook.",
+      "Melancholic mid-tempo anthem with clean guitars, tense chords, and a chorus that feels both intimate and huge.",
+      "Dystopian electronic-rock track with machine pulse, alienated lyrics, and human warmth breaking through.",
+      "Sparse acoustic-electric lament with fragile vocal, subtle texture, and a quiet unresolved ending.",
+      "Noisy cathartic crescendo track that builds from restraint into distortion, layered vocals, and release.",
+      "Strange art-rock vignette with unusual structure, eerie texture, and one clear emotional refrain."
+    ],
+    "production_variation_matrix": [
+      "Rotate guitar roles: clean arpeggio, distorted power lift, tremolo texture, acoustic pulse, feedback swell, or minimal single-note motif.",
+      "Rotate rhythm feel: straight alt-rock pulse, half-time heaviness, jittery electronic pulse, slow ballad sway, driving eighth-note momentum, or loose live-band push.",
+      "Rotate harmonic beds: minor-key guitar progression, suspended chords, piano/organ pad, synth drone, bass-led minimalism, or washed-out ambient layer.",
+      "Rotate vocal shape: intimate close vocal, soaring chorus, restrained monotone tension, layered harmonies, whispered bridge, or raw final take.",
+      "Use occasional electronic or noise transitions, but only when they serve the emotional arc."
+    ],
+    "tempo_energy_lanes": [
+      "68-78 BPM: sparse lament, heavy air, slow emotional burn.",
+      "79-92 BPM: brooding mid-tempo, tense groove, restrained verses and wide choruses.",
+      "93-108 BPM: classic alternative-rock momentum with guitar lift and melodic urgency.",
+      "109-126 BPM: anxious driving track, sharper drums, more restless vocal energy.",
+      "127-150 BPM: raw early-rock burst or frantic finale energy, used sparingly for contrast."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: guitar riff, ambient drone, electronic pulse, cold vocal, feedback swell, or drum entrance.",
+      "Every song should vary at least three major variables: tempo, guitar texture, vocal delivery, hook type, emotional posture, structure, or electronic presence.",
+      "Do not always resolve with a huge final chorus; sometimes end with a quiet fragment, unresolved chord, feedback tail, or abrupt cutoff.",
+      "Use noise, glitches, and drones as emotional texture, not as default decoration.",
+      "Avoid identical verse lengths, chorus density, and bridge placement across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: soaring chorus, repeated fragile refrain, one-line mantra, melodic question, instrumental motif, or explosive final phrase.",
+      "Do not reuse the same hook rhythm, title placement, or melodic contour across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: yearning, dread, defiance, numbness, tenderness, collapse, or release.",
+      "Use repetition for emotional gravity, but change harmony, volume, texture, or lyric detail on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: intimate confession, address to a partner, observer of a broken city, technology-as-pressure metaphor, quiet protest, travel scene, or dream logic.",
+      "Do not make every song about technology, dystopia, or numbness; those are lanes, not the whole brand.",
+      "When lyrics become abstract, include one plainspoken human sentence to anchor the song.",
+      "When lyrics become romantic, avoid cliché and include tension or distance.",
+      "When lyrics become political or societal, keep it emotional and image-based rather than slogan-like."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same static, signal, machine, screen, ghost, glass, highway, or collapse imagery across every song.",
+      "Do not force specific numbers, symbols, objects, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as waking up, staring at a screen, driving at night, or hearing a transmission.",
+      "Do not reuse the same rhyme family, chorus cadence, guitar texture, or emotional conclusion across multiple tracks.",
+      "Keep Soundhead identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible guitar or electronic-guitar track that defines the emotional world without exhausting the biggest catharsis.",
+      "Sequence loud guitar tracks beside sparse or electronic tracks so the project breathes.",
+      "Place experimental tracks as atmosphere pivots, not as filler.",
+      "Put the most vulnerable song after the listener has already heard confidence, tension, or beauty.",
+      "Save the largest cathartic or distorted finale for late in the sequence.",
+      "End with either a quiet unresolved image, a warm human refrain, or a final burst that cuts off before it fully resolves."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable guitar, synth, or vocal motif within the first 15 seconds.",
+      "Pair abstract verses with a simpler emotional chorus or refrain.",
+      "Let dynamics create replay value: quiet detail, lift, rupture, and afterglow.",
+      "Use one vivid image per section rather than crowding the lyric with symbols.",
+      "Keep the hook melodic enough to remember without making it overly obvious."
+    ],
+    "hook_design_rules": [
+      "Hooks should be melodic, emotionally loaded, or texturally unforgettable.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse restraint and chorus release.",
+      "For electronic lanes, let texture and repetition carry part of the hook; for guitar lanes, let melody and dynamics carry it."
+    ],
+    "energy_arc": {
+      "pattern": "SIGNAL -> TENSION -> LIFT -> FRACTURE -> RELEASE -> AFTERIMAGE",
+      "rules": [
+        "Start with a recognizable texture, guitar figure, pulse, or vocal idea rather than a long empty intro.",
+        "Build tension through restraint before giving the full chorus or distorted lift.",
+        "Reveal the plain emotional truth before the final third.",
+        "Let the final section shift energy: bigger, quieter, stranger, or more cathartic depending on the song family.",
+        "End with a memorable afterimage, not a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Melodic refrain listeners can hum without needing dense lyrics",
+      "A short repeated phrase used as emotional anchor, not slogan",
+      "Instrumental motif that returns like a memory",
+      "Final line that reframes the song emotionally",
+      "Crowd-like backing texture used rarely and only for cathartic songs"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Radiohead imitation rather than an original adjacent genre/emotional lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, guitar texture, electronic presence, hook type, vocal delivery, emotional posture, structure, or production texture.",
+      "If a song is abstract, confirm it has a plain emotional center.",
+      "If a song is loud or cathartic, confirm it has restraint somewhere before the release.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Atmospheric indie-rock poster art with cream paper grain, black silhouettes, muted signal colors, analog broadcast distortion, abstract waves, lonely industrial landscapes, damaged typography, and restrained surrealism. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#D8D1BC",
+      "accent": "#8FA3A6",
+      "background": "#F2EBD7",
+      "signal_green": "#6F8F72",
+      "warning_amber": "#D99A2B",
+      "deep_blue": "#26384A",
+      "soft_red": "#A94B3F"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit drug imagery, weapons, gore, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "minimal distressed poster typography, limited words, high contrast, analog print texture, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/soundhead/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Soundhead",
+    "default_album": "Signal Weather",
+    "label_name": "Figment Factory",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "alternative rock",
+      "art rock",
+      "indie rock",
+      "experimental rock",
+      "electronic rock"
+    ],
+    "youtube_tags_seed": [
+      "alternative rock",
+      "art rock",
+      "indie rock",
+      "experimental rock",
+      "electronic rock",
+      "Soundhead"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Rock",
+      "Indie Rock"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; melancholy and lightly mature themes allowed without explicit content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Soundhead Studio",
+    "logo_path": "/Soundhead.png"
+  }
+}

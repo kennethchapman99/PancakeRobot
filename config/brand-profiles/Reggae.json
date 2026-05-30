@@ -1,0 +1,303 @@
+{
+  "brand_name": "Yardline Sound",
+  "app_title": "Yardline Sound",
+  "brand_type": "music",
+  "brand_description": "Yardline Sound is an original AI-assisted artist brand for modern urban reggae: roots warmth, dancehall bounce, lovers-rock melody, dub space, reggae-rock lift, and conscious songwriting with streetwise vocal energy. The sound should feel soulful, rhythmic, sunlit, grounded, and modern without imitating any real artist, voice, lyrics, melodies, riddims, arrangements, persona, accent, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Listeners who like roots reggae, dancehall-influenced hooks, reggae rock, dub basslines, conscious lyrics, warm island grooves, urban vocal delivery, melodic choruses, positive energy, and songs that can move between celebration, romance, resistance, and reflection.",
+    "guardrail": "Suitable for general streaming audiences ages 16+. Allow social commentary, romance, party energy, spirituality, resilience, and cultural pride. Avoid hate, slurs, graphic violence, explicit sexual detail, self-harm instruction, drug-use instruction, or fake caricatured accents. Cannabis references, if used, should be rare, non-instructional, and not required."
+  },
+  "character": {
+    "name": "Yardline Sound",
+    "core_concept": "An urban reggae crew broadcasting warm bass, street-corner harmony, conscious fire, and late-summer hooks from the edge of the city to the shoreline.",
+    "fallback_summary": "modern urban reggae artist blending roots warmth, dancehall bounce, dub space, reggae-rock lift, and conscious hooks",
+    "clap_name": "none",
+    "personality_traits": [
+      "Warm, confident, and grounded",
+      "Streetwise without becoming cynical",
+      "Positive but not naïve",
+      "Romantic, conscious, and celebration-ready in different lanes",
+      "Rhythm-first and hook-aware",
+      "Respectful of reggae tradition while sounding modern and original"
+    ],
+    "catchphrases": [
+      "Bassline carry the message",
+      "City heat, island heart"
+    ],
+    "visual_identity": "Modern reggae artwork with city-night warmth, speaker stacks, shoreline light, bold poster shapes, sun-faded texture, green-gold-red accents used tastefully, and urban streetwear energy. Visuals should feel soulful, contemporary, and grounded without copying any real artist imagery or national/cultural symbols as gimmicks.",
+    "visual_reference": [
+      "Speaker stacks, streetlights, concrete walls, palm silhouettes, shoreline glow, and warm sunset gradients",
+      "Green, gold, red, charcoal, cream, and ocean blue used tastefully, not as cliché overload",
+      "Urban street poster layout with restrained typography",
+      "Dub mixing console, vinyl texture, waveform lines, and bass speaker circles as optional background elements",
+      "No celebrity likeness, no copied album covers, no caricatured cultural imagery"
+    ]
+  },
+  "music": {
+    "default_style": "modern urban reggae with roots reggae, dancehall, dub, lovers rock, reggae rock, and conscious pop hooks",
+    "default_bpm": 86,
+    "default_key": "G Minor",
+    "default_prompt": "Original modern urban reggae with deep bass, skanking guitars, warm organ bubbles, tasteful percussion, dub delays, melodic hooks, and rhythmic streetwise vocals. Vary the lane by song: roots-conscious anthem, dancehall-leaning bounce, lovers-rock groove, reggae-rock singalong, dub-heavy nocturne, acoustic island-soul reflection, and upbeat festival anthem are all valid. Vocals should feel urban, confident, rhythmic, warm, and contemporary without imitating any real artist, accent, cadence, melody, riddim, arrangement, persona, or copyrighted work. Use reggae vocabulary and island influence respectfully; avoid fake patois parody or forced accent writing.",
+    "target_length": "2:30-4:00",
+    "min_words": 140,
+    "normal_word_range": "170-380",
+    "first_vocal_by_seconds": 10,
+    "max_instrumental_intro_seconds": 16
+  },
+  "lyrics": {
+    "title_examples": [
+      "Concrete Sunrise",
+      "Bassline Prayer",
+      "City Tide",
+      "No Bad Season",
+      "Streetlight Garden"
+    ],
+    "topic_variety": "Use broad topic families: resilience through pressure, city life with island warmth, love and loyalty, dance-floor release, spiritual grounding, social justice without slogans, community pride, peace after conflict, late-night reflection, and hope carried through rhythm. Do not repeat the same sun, smoke, island, city, bassline, tide, garden, or freedom imagery across songs.",
+    "required_closing": "End with a warm final refrain, dubby echo image, grounded affirmation, unresolved question, or peaceful fade; avoid preachy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "modern_urban_reggae",
+    "primary_emotional_goal": "Create original reggae songs that feel soulful, rhythmic, urban, melodic, conscious, and replayable, with enough variation for full albums without repeating one riddim or message.",
+    "voice_perspective": "Flexible first-person, direct address, community voice, or romantic second-person. The narrator can be conscious, romantic, celebratory, defiant, peaceful, or reflective depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person or direct second-person, with occasional collective 'we' for community and anthem moments.",
+      "tone": "Warm, urban, confident, rhythmic, soulful, streetwise, hopeful, and occasionally defiant.",
+      "vocabulary": "Plain modern language with respectful reggae influence, concise images, hook-friendly phrasing, and no fake caricatured accent spelling.",
+      "signature_sounds": [
+        "deep round bassline",
+        "skanking guitar",
+        "organ bubble",
+        "dub delay throws",
+        "hand percussion",
+        "urban chant hook"
+      ],
+      "comedy_mode": "Light charm and playful confidence only; avoid novelty reggae, parody, or forced slang.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Bob Marley-inspired conscious warmth",
+      "Barrington Levy-inspired melodic dancehall lift",
+      "Collie Buddz-inspired modern reggae-pop accessibility",
+      "Rebelution-inspired reggae-rock festival energy",
+      "John Brown's Body-inspired horn/dub/jam-band texture",
+      "urban reggae vocal confidence"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, accents, cadence, melodies, lyrics, riddims, basslines, guitar parts, horn lines, arrangements, persona, or copyrighted material. Use broad emotional and sonic traits—conscious warmth, melodic lift, urban bounce, dub space, and reggae-rock energy—as inspiration for an original Yardline Sound identity.",
+    "allowed_elements": [
+      "deep basslines, skanking guitar, organ bubble, and dub delay",
+      "urban vocal delivery with rhythmic confidence",
+      "roots-conscious messages grounded in human detail",
+      "dancehall-leaning bounce and chant hooks",
+      "lovers-rock melody and warm romantic phrasing",
+      "reggae-rock lift with bigger chorus energy",
+      "horn stabs, percussion, and dub breakdowns used selectively",
+      "community, resilience, peace, loyalty, and social pressure themes",
+      "respectful island influence without fake accent parody",
+      "clean or radio-friendly language by default"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist vocal style, accent, cadence, melody, riddim, bassline, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "fake patois parody, caricatured dialect, or cultural stereotyping",
+      "overusing the same title examples, sun imagery, smoke imagery, island imagery, or invented lore terms",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "drug-use instructions or mandatory cannabis themes",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, groove lane, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be melodic, rhythmic, and memorable, but every song should invent its own hook language.",
+      "Use at least one concrete city, room, street, weather, movement, or relationship detail in each song to prevent generic positivity."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid fake dialect spelling; urban vocal feel should come through rhythm, phrasing, and attitude.",
+      "Cannabis references, if any, must be rare, non-instructional, and not the default identity."
+    ],
+    "structure_preferences": [
+      "[INTRO GROOVE] -> [VERSE 1] -> [PRE-HOOK] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [DUB BREAK] -> [FINAL CHORUS] -> [OUTRO]",
+      "[BASSLINE INTRO] -> [HOOK] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [CHANT BREAK] -> [FINAL HOOK]",
+      "[ACOUSTIC or ORGAN INTRO] -> [VERSE] -> [REFRAIN] -> [VERSE] -> [REFRAIN] -> [HORN or DUB LIFT] -> [OUTRO]",
+      "[PERCUSSION INTRO] -> [VERSE] -> [DANCE HOOK] -> [VERSE] -> [HOOK] -> [BRIDGE] -> [FINAL CHORUS]"
+    ],
+    "song_family_types": [
+      "Roots-conscious anthem with warm bass, community message, and uplifting chorus.",
+      "Dancehall-leaning urban bounce with chant hook, tighter drums, and confident vocal rhythm.",
+      "Lovers-rock groove with romantic lyric, smooth melody, and soft dub space.",
+      "Reggae-rock festival song with bigger guitars, singalong chorus, and live-band lift.",
+      "Dub-heavy nocturne with sparse vocal, echo trails, deep low-end, and late-night atmosphere.",
+      "Acoustic island-soul reflection with minimal percussion, gentle melody, and grounded hope."
+    ],
+    "production_variation_matrix": [
+      "Rotate groove feel: one-drop roots, rockers pulse, dancehall bounce, reggae-rock drive, lovers-rock sway, or dub minimalism.",
+      "Rotate bass texture: round vintage bass, sub-heavy modern bass, melodic walking bass, sparse dub dropouts, live-band low-end, or pulsing synth-bass support.",
+      "Rotate vocal shape: smooth melodic lead, urban chant, call-back refrain, harmony stack, intimate close vocal, or crowd-ready chorus.",
+      "Rotate instrumentation: skank guitar, organ bubble, horn stabs, acoustic guitar, synth pad, percussion layer, or dub effects.",
+      "Use dub breaks and echo throws selectively; they should create space or emotional lift, not appear automatically."
+    ],
+    "tempo_energy_lanes": [
+      "68-76 BPM: slow dub or lovers-rock sway, intimate and spacious.",
+      "77-88 BPM: classic roots pulse, grounded and warm.",
+      "89-100 BPM: modern reggae-pop bounce, hook-forward and accessible.",
+      "101-114 BPM: dancehall-leaning energy, sharper vocal rhythm and club movement.",
+      "115-128 BPM: reggae-rock festival lift, used sparingly for big singalong energy."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: bassline alone, guitar skank, organ bubble, vocal pickup, percussion groove, horn stab, or dub echo.",
+      "Every song should vary at least three major variables: tempo, groove type, vocal delivery, hook type, emotional posture, instrumentation, or dub presence.",
+      "Do not always use a large final chorus; sometimes end with a dub fade, bassline drop, acoustic tag, or quiet vocal refrain.",
+      "Use horns, percussion, and dub effects as contrast, not constant decoration.",
+      "Avoid identical verse lengths, chorus density, bridge placement, and chant-hook patterns across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: melodic chorus, chant refrain, call-and-response, bassline-led instrumental hook, harmony refrain, or soft lovers-rock hook.",
+      "Do not reuse the same hook rhythm, title placement, or phrase shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: uplift, longing, release, unity, defiance, peace, or celebration.",
+      "Use repetition for groove, but change harmony, echo, backing response, or lyric detail on later hook returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: personal testimony, community anthem, romantic address, street-corner observation, spiritual reflection, party narrator, or quiet late-night narrator.",
+      "Do not make every song about peace, weed, sunshine, or freedom; those are lanes, not the whole brand.",
+      "When lyrics become conscious or political, keep the message image-based and human rather than slogan-heavy.",
+      "When lyrics become romantic, include grounded loyalty, distance, or conflict rather than generic sweetness.",
+      "When lyrics become celebratory, include one real-world pressure that the rhythm helps release."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same sun, smoke, island, city, bassline, tide, garden, freedom, or fire imagery across every song.",
+      "Do not force specific numbers, symbols, objects, cultural markers, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as starting with sunrise, calling for unity, lighting up, or announcing a party.",
+      "Do not reuse the same groove, chant cadence, dub-break trick, horn response, or emotional conclusion across multiple tracks.",
+      "Keep Yardline Sound identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible groove that establishes warmth, bass, and vocal identity without using the biggest anthem first.",
+      "Sequence roots-conscious songs beside lovers-rock, dancehall, dub, or reggae-rock lanes so the album breathes.",
+      "Use dub-heavy tracks as atmosphere pivots, not filler.",
+      "Place the most socially conscious track after trust has been built through groove or melody.",
+      "Save one big festival-style singalong for the late-middle or final third.",
+      "End with either a peaceful dub fade, a community refrain, or a grounded personal line over bass and echo."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable bassline, guitar skank, vocal phrase, or organ motif within the first 12 seconds.",
+      "Pair conscious verses with a simpler melodic or chantable hook.",
+      "Let bass movement and vocal rhythm create replay value.",
+      "Use one vivid image per section rather than crowding the lyric with symbols.",
+      "Keep hooks warm and memorable without becoming generic positivity slogans."
+    ],
+    "hook_design_rules": [
+      "Hooks should be melodic, rhythmic, uplifting, or bassline-sticky.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse groove and chorus lift.",
+      "For dancehall lanes, let rhythm and chant carry the hook; for roots lanes, let melody and message carry it."
+    ],
+    "energy_arc": {
+      "pattern": "ROOT -> GROOVE -> MESSAGE -> LIFT -> DUB SPACE -> RETURN",
+      "rules": [
+        "Start with a recognizable bassline, skank, percussion, organ, or vocal pickup rather than a long empty intro.",
+        "Build energy through groove layering before adding full chorus lift.",
+        "Reveal the plain emotional or social truth before the final third.",
+        "Let the final section shift energy: warmer, bigger, dubbier, quieter, or more celebratory depending on the song family.",
+        "End with a memorable echo, refrain, or grounded image rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Chant refrain for dancehall or festival tracks",
+      "Melodic hook listeners can sing without dense lyrics",
+      "Call-back harmony response used occasionally, not automatically",
+      "Dub echo tag that repeats a key emotional phrase",
+      "Final bassline or vocal motif that reframes the song"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Bob Marley, Barrington Levy, Collie Buddz, Rebelution, or John Brown's Body imitation rather than an original adjacent reggae lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, groove feel, bass texture, hook type, vocal delivery, emotional posture, instrumentation, or dub presence.",
+      "If a song is conscious or political, confirm it has concrete human detail and is not just slogans.",
+      "If a song uses island or reggae vocabulary, confirm it avoids fake dialect spelling and caricature.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Modern urban reggae cover art with speaker stacks, streetlight warmth, shoreline glow, sun-faded poster grain, tasteful green-gold-red accents, ocean blue shadows, concrete texture, and dub-system geometry. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#F0E6C8",
+      "accent": "#D9A21B",
+      "background": "#0E1F1A",
+      "roots_green": "#2F6B3F",
+      "warm_red": "#B93A32",
+      "ocean_blue": "#2E6F8E",
+      "sun_gold": "#F2B705"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit drug imagery as focal point, weapons, gore, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words, cultural caricature",
+    "text_overlay_style": "bold modern reggae poster typography, limited words, warm high contrast, sun-faded print texture, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/Reggae/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Yardline Sound",
+    "default_album": "Concrete Sunrise",
+    "label_name": "Figment Factory",
+    "primary_genre": "Reggae",
+    "spotify_genres": [
+      "reggae",
+      "roots reggae",
+      "dancehall",
+      "reggae rock",
+      "dub"
+    ],
+    "youtube_tags_seed": [
+      "reggae",
+      "roots reggae",
+      "dancehall",
+      "reggae rock",
+      "dub",
+      "Yardline Sound"
+    ],
+    "apple_music_genres": [
+      "Reggae",
+      "Modern Dancehall",
+      "Roots Reggae"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; social commentary, romance, party energy, and rare non-instructional cannabis references may appear"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Yardline Sound Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

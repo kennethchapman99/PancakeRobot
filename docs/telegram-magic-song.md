@@ -151,11 +151,11 @@ The Telegram workflow also uses the same service boundary instead of spawning `s
 No-regression acceptance criteria:
 
 ```bash
-npm run magic -- "theme"
-npm run magic:workflow -- "theme"
-npm run magic:legacy -- "theme"
-npm run dev:mobile
-npm test
+./bin/pancakerobot magic -- "theme"
+./bin/pancakerobot magic:workflow -- "theme"
+./bin/pancakerobot magic:legacy -- "theme"
+./bin/pancakerobot stack
+./bin/pancakerobot test
 ```
 
 ## Service boundary design

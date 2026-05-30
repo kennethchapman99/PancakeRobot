@@ -20,11 +20,13 @@ import {
 import { DISTROKID_JOB_STATUSES, getDistroKidJob, markDistroKidJobStatus } from './distrokid-jobs.js';
 import { getReleaseAssetState } from './song-release-assets-service.js';
 import { getMarketingCampaigns } from './marketing-db.js';
-import { DEFAULT_PROFILE_ID, getActiveProfileId, loadBrandProfileById } from './brand-profile.js';
+import { DEFAULT_PROFILE_ID, getActiveProfileId, loadBrandProfileById, resolveDistroKidArtist } from './brand-profile.js';
 import { getSongFinanceSummary } from './finance-manager.js';
 import { getSelectedReleaseAudio } from './song-audio-selection.js';
 import { isRealSongCatalogRow } from './song-catalog-cleanup.js';
-import { summarizeMagicReleaseForCockpit } from './magic-release.js';
+import { summarizeBrowsyIntegration, summarizeMagicReleaseForCockpit } from './magic-release.js';
+import { summarizeMagicReleaseBrowsyRecordings } from './magic-release-browsy-recordings.js';
+import { BROWSY_WORKFLOW_IDS, buildBrowsyWorkflowRef, getBrowsyConfig } from './browsy-client.js';
 import { validateCanonicalReleasePackageManifest } from './release-package-validation.js';
 
 const execFileAsync = promisify(execFile);
@@ -75,6 +77,13 @@ const DISTROKID_DIAGNOSTIC_CATEGORY_LABELS = Object.freeze({
   ai_disclosure: 'AI disclosure',
   certifications: 'Certifications',
 });
+
+// Magic Release task that owns the Browsy DistroKid submit workflow recording.
+const DISTROKID_SUBMIT_TASK_KEY = 'distrokid_submit_dry_run';
+const DISTROKID_RECORDING_FAILED_STATUSES = new Set(['start_failed', 'launch_failed', 'stop_failed', 'import_failed']);
+const DISTROKID_RECORDING_SETUP_STATUSES = new Set(['setup_ready', 'created', 'pending']);
+const DISTROKID_RECORDING_ACTIVE_STATUSES = new Set(['recording', 'launched', 'active', 'running']);
+const DISTROKID_RECORDING_STOPPED_STATUSES = new Set(['stopped', 'recorded']);
 
 export const RELEASE_COCKPIT_STAGES = Object.freeze([
   'metadata',
@@ -169,6 +178,9 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const logs = getReleaseCockpitLogs(type, release.id, { limit: 50 });
   const runHistory = buildRunHistory(logs);
   const magicRelease = summarizeMagicReleaseForCockpit(type, release.id);
+  const browsyIntegration = magicRelease ? summarizeBrowsyIntegration(type, release.id) : null;
+  const browsyRecordings = magicRelease ? summarizeMagicReleaseBrowsyRecordings({ campaignId: magicRelease.campaignId }) : null;
+  const distrokidBrowsyWorkflow = summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState, distrokidArtwork });
   const liveSubmitApproval = summarizeLiveSubmitApproval(magicRelease);
   const brandProfile = resolveReleaseBrandProfile(release.brandProfileId);
   const headerArtwork = resolveReleaseHeaderArtwork({ assetState, brandProfile });
@@ -221,6 +233,9 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     logs,
     runHistory,
     magicRelease,
+    browsyIntegration,
+    browsyRecordings,
+    distrokidBrowsyWorkflow,
     liveSubmitApproval,
     nextActions,
     commandCenter,
@@ -836,7 +851,7 @@ function writeCanonicalAlbumReleasePackage(vm) {
 
   const canonicalDistroKidUploadPayload = {
     release_type: 'album',
-    artist: first.artist || brandProfile.distribution?.default_artist || brandProfile.brand_name || 'Pancake Robot',
+    artist: resolveDistroKidArtist(profileId),
     release_title: vm.title,
     release_date: vm.releaseDate,
     primary_genre: first.primary_genre || brandProfile.distribution?.primary_genre || null,
@@ -1046,6 +1061,240 @@ function summarizeLiveSubmitApproval(magicRelease) {
     reason: task?.reason || '',
     completedAt: task?.completed_at || null,
   };
+}
+
+// Focused, always-present summary of the Browsy DistroKid submit workflow for the
+// DistroKid automation card. Works whether or not a Magic Release campaign or
+// recording exists yet — when nothing exists it synthesizes a "missing" state so
+// the cockpit can still show the workflow ref and a Start Recording CTA. The
+// recording lifecycle routes auto-create the campaign on first POST.
+function summarizeDistroKidPayloadReadiness({ packageState, distrokidArtwork }) {
+  const artworkResolved = !(distrokidArtwork?.blocked);
+  const packageReady = Boolean(packageState?.ready);
+  const downloadable = Boolean(packageState?.exists) || packageReady;
+  const blockers = Array.isArray(packageState?.blockers) ? packageState.blockers : [];
+  return {
+    ready: packageReady,
+    downloadable,
+    artworkResolved,
+    summary: packageState?.summary
+      || (packageReady ? 'Canonical release package is valid.' : 'Canonical release package has not been built.'),
+    blockers,
+    indicators: [
+      { label: 'Canonical package built', ok: Boolean(packageState?.exists) },
+      { label: 'Package validation passed', ok: packageReady },
+      { label: 'DistroKid artwork resolved', ok: artworkResolved },
+    ],
+  };
+}
+
+function distrokidRecordingPhase(recordingStatus) {
+  const status = String(recordingStatus || '').trim();
+  if (!status) return null;
+  if (status === 'auth_required') return 'auth_required';
+  if (status === 'auth_rejected') return 'auth_rejected';
+  if (status === 'auth_blocked') return 'auth_blocked';
+  if (status === 'launch_failed') return 'launch_failed';
+  if (DISTROKID_RECORDING_FAILED_STATUSES.has(status)) return 'failed';
+  if (DISTROKID_RECORDING_SETUP_STATUSES.has(status)) return 'recording_started';
+  if (DISTROKID_RECORDING_ACTIVE_STATUSES.has(status)) return 'recording_active';
+  if (DISTROKID_RECORDING_STOPPED_STATUSES.has(status)) return 'recording_stopped';
+  if (status === 'imported') return 'imported';
+  return null;
+}
+
+// Operator-readable auth state for the cockpit Browsy panel (req: Not
+// authenticated / Authenticated / Auth expired / Auth rejected by Google /
+// Recording ready / Launch failed). Derived from the live recording phase.
+function distrokidAuthState(recordingPhase) {
+  switch (recordingPhase) {
+    case 'auth_required': return { state: 'not_authenticated', label: 'Not authenticated' };
+    case 'auth_rejected':
+    case 'auth_blocked': return { state: 'auth_rejected', label: 'Auth rejected by Google' };
+    case 'launch_failed': return { state: 'launch_failed', label: 'Launch failed' };
+    case 'recording_active':
+    case 'recording_started':
+    case 'recording_stopped': return { state: 'authenticated', label: 'Authenticated — recording' };
+    case 'imported': return { state: 'recording_ready', label: 'Recording ready' };
+    default: return { state: 'unknown', label: 'Unknown' };
+  }
+}
+
+function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState, distrokidArtwork }) {
+  const config = getBrowsyConfig();
+  const workflowId = type === 'album'
+    ? BROWSY_WORKFLOW_IDS.distrokidAlbumSubmit
+    : BROWSY_WORKFLOW_IDS.distrokidSingleSubmit;
+  const workflowRef = buildBrowsyWorkflowRef({ appId: config.appId, workflowId });
+  const workflowName = type === 'album' ? 'DistroKid Album Submit' : 'DistroKid Single Submit';
+  const configured = Boolean(config.baseUrl);
+  const payloadReadiness = summarizeDistroKidPayloadReadiness({ packageState, distrokidArtwork });
+  const item = (browsyRecordings?.items || []).find(entry => entry.taskKey === DISTROKID_SUBMIT_TASK_KEY)
+    || (browsyRecordings?.items || []).find(entry => entry.workflowId === workflowId)
+    || null;
+
+  const base = {
+    taskKey: DISTROKID_SUBMIT_TASK_KEY,
+    workflowId,
+    workflowRef,
+    workflowName,
+    configured,
+    baseUrl: config.baseUrl,
+    payloadReadiness,
+  };
+
+  if (!configured) {
+    return {
+      ...base,
+      hasRecording: Boolean(item?.hasRecording),
+      ready: false,
+      runLiveEnabled: false,
+      readinessSeverity: 'unavailable',
+      readinessLabel: 'unavailable',
+      readinessSummary: 'Browsy is not configured or cannot be reached.',
+      recordingPhase: item ? distrokidRecordingPhase(item.recordingStatus) : null,
+      recorderActive: false,
+      needsAuthSetup: false,
+      authState: 'unknown',
+      authStateLabel: 'Unknown',
+      relaunchNeeded: false,
+      nextStep: distrokidBrowsyNextStep('unavailable', [], null),
+      recordingId: item?.recordingId || null,
+      recordingSessionId: item?.recordingSessionId || null,
+      recordingStatus: item?.recordingStatus || null,
+      wizardUrl: item?.wizardUrl || null,
+      recorderUrl: item?.recorderUrl || null,
+      importedWorkflowRef: item?.importedWorkflowRef || null,
+      lastError: item?.lastError || null,
+      counts: item?.counts || { tabs: 0, recordedSteps: 0, fileUploadBindings: 0, humanApprovalCheckpoints: 0 },
+      readinessChecks: item?.readinessChecks || [],
+      missingAreas: [],
+    };
+  }
+
+  if (!item) {
+    return {
+      ...base,
+      hasRecording: false,
+      ready: false,
+      runLiveEnabled: false,
+      readinessSeverity: 'missing',
+      readinessLabel: 'missing',
+      readinessSummary: 'No Browsy workflow has been recorded for this release flow yet.',
+      recordingPhase: null,
+      recorderActive: false,
+      needsAuthSetup: false,
+      authState: 'unknown',
+      authStateLabel: 'Unknown',
+      relaunchNeeded: false,
+      nextStep: distrokidBrowsyNextStep('missing', [], null),
+      recordingId: null,
+      recordingSessionId: null,
+      recordingStatus: null,
+      wizardUrl: null,
+      recorderUrl: null,
+      importedWorkflowRef: null,
+      lastError: null,
+      counts: { tabs: 0, recordedSteps: 0, fileUploadBindings: 0, humanApprovalCheckpoints: 0 },
+      readinessChecks: [],
+      missingAreas: [],
+    };
+  }
+
+  const unreachable = /unreachable|cannot be reached|not configured|ECONNREFUSED|ENOTFOUND/i.test(String(item.lastError || ''));
+  const failed = !unreachable && (DISTROKID_RECORDING_FAILED_STATUSES.has(String(item.recordingStatus || '')) || Boolean(item.lastError));
+  const recordingPhase = distrokidRecordingPhase(item.recordingStatus);
+  const readinessLabel = item.ready
+    ? 'ready'
+    : unreachable
+      ? 'unavailable'
+      : failed
+        ? 'failed'
+        : item.readinessSeverity === 'missing'
+          ? 'missing'
+          : item.readinessSeverity === 'scaffold'
+            ? 'scaffold-only'
+            : 'incomplete';
+  const missingAreas = (item.readinessChecks || []).filter(check => !check.ok).map(check => check.label);
+  // The badge reflects CONTRACT readiness; the next-step message also factors in the
+  // live recording lifecycle (started/active/stopped/launch-failed/auth-blocked).
+  const recordingPhaseLabels = ['recording_started', 'recording_active', 'recording_stopped', 'launch_failed', 'auth_blocked', 'auth_required', 'auth_rejected'];
+  const nextStepLabel = (!item.ready && !unreachable && recordingPhase && recordingPhaseLabels.includes(recordingPhase))
+    ? recordingPhase
+    : readinessLabel;
+  const recorderActive = recordingPhase === 'recording_active';
+  // Auth setup (Open Auth Browser) is the recovery for every not-signed-in state:
+  // a pre-launch preflight block (auth_required), a Google rejection (auth_rejected),
+  // or a recorder that opened and got bounced (auth_blocked).
+  const needsAuthSetup = ['auth_required', 'auth_rejected', 'auth_blocked'].includes(recordingPhase);
+  const authState = distrokidAuthState(recordingPhase);
+  // Relaunch is a secondary recovery action: a recording exists but no recorder is
+  // currently open (launch failed, auth blocked, or the operator closed it).
+  const relaunchNeeded = Boolean(item.hasRecording) && !item.ready && !recorderActive && recordingPhase !== 'imported';
+
+  return {
+    ...base,
+    workflowName: item.workflowName || workflowName,
+    hasRecording: Boolean(item.hasRecording),
+    ready: Boolean(item.ready),
+    runLiveEnabled: Boolean(item.ready),
+    readinessSeverity: item.readinessSeverity,
+    readinessLabel,
+    readinessSummary: item.readinessSummary,
+    recordingPhase,
+    recorderActive,
+    needsAuthSetup,
+    authState: authState.state,
+    authStateLabel: authState.label,
+    relaunchNeeded,
+    nextStep: distrokidBrowsyNextStep(nextStepLabel, missingAreas, item.lastError),
+    recordingId: item.recordingId,
+    recordingSessionId: item.recordingSessionId,
+    recordingStatus: item.recordingStatus,
+    wizardUrl: item.wizardUrl,
+    recorderUrl: item.recorderUrl,
+    importedWorkflowRef: item.importedWorkflowRef,
+    lastError: item.lastError,
+    counts: item.counts,
+    readinessChecks: item.readinessChecks || [],
+    missingAreas,
+  };
+}
+
+function distrokidBrowsyNextStep(label, missingAreas = [], lastError = null) {
+  switch (label) {
+    case 'unavailable':
+      return { headline: 'Browsy is not configured or cannot be reached.', cta: 'Refresh Contract', detail: 'Set the Browsy base URL and start the Browsy server, then refresh the contract.' };
+    case 'ready':
+      return { headline: 'Workflow contract is ready.', cta: 'Run Preview / Run Live', detail: 'Contract recorded and complete. Live run still stops at the human submit gate.' };
+    case 'recording_started':
+      return { headline: 'Start recording to open the browser recorder.', cta: 'Start Recording Browser', detail: 'A Browsy recording session exists but the recorder browser is not open yet — relaunch it.' };
+    case 'recording_active':
+      return { headline: 'Recorder browser opened. Complete the DistroKid flow, then stop recording.', cta: 'Stop Recording', detail: 'Finish the DistroKid steps in the recorder browser, then stop the recording.' };
+    case 'recording_stopped':
+      return { headline: 'Recording captured. Import it to create/update the workflow package.', cta: 'Import Recording', detail: 'Import the latest recording to publish/update the Browsy workflow contract.' };
+    case 'launch_failed':
+      return { headline: 'Recorder did not open. Retry launch or check Browsy.', cta: 'Relaunch Recorder', detail: lastError || 'The recorder browser failed to launch. Make sure the Browsy API is running, then relaunch.' };
+    case 'auth_required':
+      return { headline: 'DistroKid authentication is required. Open Auth Browser first.', cta: 'Open Auth Browser', detail: lastError || 'The persistent Chrome profile is not signed in. Open Auth Browser, sign in once, click Verify Auth, then Start Recording.' };
+    case 'auth_rejected':
+      return { headline: 'DistroKid sign-in was rejected by Google. Open Auth Browser and sign in once.', cta: 'Open Auth Browser', detail: lastError || 'Google rejected sign-in in the automation browser. Sign in once via the persistent Chrome auth profile, click Verify Auth, then Start Recording.' };
+    case 'auth_blocked':
+      return { headline: 'Recorder opened but sign-in was blocked. Use Open Auth Browser, then retry.', cta: 'Open Auth Browser', detail: lastError || 'Google blocked sign-in in the automation browser. Sign in once via the persistent Chrome auth profile, then relaunch recording.' };
+    case 'scaffold-only':
+      return { headline: 'Workflow shell exists, but no real browser steps are recorded yet.', cta: 'Start Recording / Import Recording', detail: 'A contract scaffold exists but has no recorded steps or tabs yet.' };
+    case 'incomplete':
+      return {
+        headline: 'Workflow exists but is missing required contract pieces.',
+        cta: 'Re-record / Import Recording',
+        detail: missingAreas.length ? `Missing contract areas: ${missingAreas.join('; ')}.` : 'Some required contract areas are still missing.',
+      };
+    case 'failed':
+      return { headline: 'Last Browsy recording action failed.', cta: 'Retry', detail: lastError || 'Check the cockpit run history for the error.' };
+    case 'missing':
+    default:
+      return { headline: 'No Browsy workflow has been recorded for this release flow yet.', cta: 'Start Recording', detail: 'Start a Browsy recording, capture the DistroKid workflow, then import it to publish a contract.' };
+  }
 }
 
 function buildTrackTable({ type, release, tracks }) {

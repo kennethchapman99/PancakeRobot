@@ -1,0 +1,303 @@
+{
+  "brand_name": "Porchlight Atlas",
+  "app_title": "Porchlight Atlas",
+  "brand_type": "music",
+  "brand_description": "Porchlight Atlas is an original AI-assisted artist brand for intimate singer-songwriter, acoustic folk, blues-pop guitar, and understated indie rock. The sound ranges from warm community storytelling and fingerpicked acoustic songs to clean electric-guitar grooves, reflective road songs, slow-burn heartbreak, and earthy Canadian indie-folk melancholy. It should feel human, vulnerable, melodic, grounded, and emotionally direct without imitating any real artist, voice, lyrics, melodies, guitar parts, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Listeners who like heartfelt acoustic songwriting, folk-pop intimacy, bluesy guitar lines, warm live-room vocals, reflective indie folk, gentle hooks, and songs about love, family, home, regret, resilience, road life, and ordinary moments that carry emotional weight.",
+    "guardrail": "Suitable for general streaming audiences ages 16+. Allow heartbreak, longing, nostalgia, family complexity, loneliness, romance, aging, and personal failure. Avoid explicit sexual detail, graphic violence, hate, slurs, self-harm instruction, drug-use instruction, or child-directed framing."
+  },
+  "character": {
+    "name": "Porchlight Atlas",
+    "core_concept": "A road-worn songwriter with a porchlight voice: part community troubadour, part guitar craftsman, part quiet observer mapping big feelings through small places.",
+    "fallback_summary": "intimate acoustic/folk-pop artist blending warm storytelling, bluesy guitar, indie-folk melancholy, and grounded emotional hooks",
+    "clap_name": "none",
+    "personality_traits": [
+      "Warm, observant, and plainspoken",
+      "Emotionally open without becoming sentimental",
+      "Guitar-forward and melody-aware",
+      "Comfortable with quiet sadness, dry humor, and hopeful restraint",
+      "Grounded in everyday places and small human details",
+      "Able to move between solo acoustic intimacy, blues-pop polish, and indie-folk dusk"
+    ],
+    "catchphrases": [
+      "Small rooms, true songs",
+      "Follow the light home"
+    ],
+    "visual_identity": "Warm singer-songwriter artwork with porch lights, maps, old roads, acoustic guitars, coffee cups, kitchen windows, small-town streets, handwritten notes, soft paper grain, and golden-hour light. Visuals should feel handmade, honest, and modern without copying any real album art.",
+    "visual_reference": [
+      "Porchlight glow, kitchen windows, road maps, guitar cases, notebooks, and quiet street corners",
+      "Warm amber, faded denim, cream paper, forest green, tobacco brown, and night blue palette",
+      "Handwritten lyric fragments as abstract texture only, not readable dense text",
+      "Coffeehouse posters, small venue flyers, and candid live-room atmosphere",
+      "No celebrity likeness, no copied cover layouts, no copyrighted logos"
+    ]
+  },
+  "music": {
+    "default_style": "intimate singer-songwriter folk-pop with acoustic guitar, blues-pop electric guitar, indie folk, warm vocals, and live-room dynamics",
+    "default_bpm": 82,
+    "default_key": "G Major",
+    "default_prompt": "Original intimate singer-songwriter track with warm acoustic guitar, natural live-room vocal, melodic bass, restrained percussion, and emotionally direct lyrics. Vary the lane by song: fingerpicked folk confession, blues-pop guitar groove, quiet indie-folk dusk song, full-band road anthem, tender love song, family-memory ballad, and sparse late-night acoustic take are all valid. Vocals should feel close, human, urban-adult, and honest without imitating any real artist voice, tone, cadence, lyrics, melody, guitar phrasing, arrangement, persona, or copyrighted work. Create a fresh performance with warmth, craft, restraint, vulnerability, and memorable melodic hooks.",
+    "target_length": "2:30-4:10",
+    "min_words": 120,
+    "normal_word_range": "150-360",
+    "first_vocal_by_seconds": 10,
+    "max_instrumental_intro_seconds": 16
+  },
+  "lyrics": {
+    "title_examples": [
+      "Back Porch Weather",
+      "Map of Home",
+      "Blue Light Kitchen",
+      "Almost Alright",
+      "Borrowed Jacket"
+    ],
+    "topic_variety": "Use broad topic families: love that feels lived-in, family memory, small-town and city-edge life, road distance, quiet heartbreak, friendship and aging, finding steadiness after mistakes, ordinary objects that hold emotional history, and hope that arrives without drama. Do not repeat the same porch, map, kitchen, road, jacket, coffee, window, or weather imagery across songs.",
+    "required_closing": "End with a grounded final image, gentle emotional turn, unresolved question, repeated soft phrase, or quiet acceptance; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "singer_songwriter_folk_pop",
+    "primary_emotional_goal": "Create original songs that feel intimate, guitar-forward, emotionally honest, melodic, and replayable, with enough variation to support albums without repeating one acoustic formula.",
+    "voice_perspective": "Mostly first-person or direct second-person, with occasional close observational storytelling. The narrator can be tender, regretful, grateful, lonely, hopeful, dryly funny, or quietly wounded depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person and second-person, with occasional third-person character sketches.",
+      "tone": "Warm, conversational, reflective, emotionally direct, lightly poetic, occasionally dryly funny, never overwrought.",
+      "vocabulary": "Plainspoken adult language with concrete objects, places, weather, family details, and understated emotional turns.",
+      "signature_sounds": [
+        "fingerpicked acoustic guitar",
+        "clean bluesy electric guitar",
+        "warm close vocal",
+        "restrained brushed drums",
+        "melodic bass",
+        "subtle organ or piano pad"
+      ],
+      "comedy_mode": "Gentle dry humor or self-awareness only; avoid joke-song framing.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Craig Cardiff-inspired warm community folk intimacy",
+      "John Mayer-inspired blues-pop guitar fluency",
+      "Hayden-inspired understated indie-folk melancholy",
+      "acoustic singer-songwriter storytelling",
+      "coffeehouse folk-pop warmth",
+      "clean electric guitar singer-songwriter groove"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, tone, cadence, lyrics, melodies, guitar licks, chord progressions, arrangements, album sequencing, persona, or copyrighted material. Use broad traits—intimacy, guitar craft, plainspoken storytelling, blues-pop color, and indie-folk restraint—as inspiration for an original Porchlight Atlas identity.",
+    "allowed_elements": [
+      "fingerpicked acoustic guitar and warm strummed rhythm",
+      "clean blues-pop electric guitar fills without copying known licks",
+      "plainspoken storytelling with concrete places and objects",
+      "intimate vocals and restrained harmonies",
+      "soft percussion, brushed drums, or no drums when appropriate",
+      "themes of home, distance, love, family, regret, and quiet resilience",
+      "melodic choruses that feel natural rather than over-polished",
+      "small live-room imperfections and organic texture",
+      "gentle humor and adult self-awareness",
+      "clean or radio-friendly language by default"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist vocal style, melody, guitar lick, chord progression, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "overusing the same title examples, porch imagery, road imagery, kitchen imagery, or invented lore terms",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "drug-use instructions or glamorized addiction",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, guitar lane, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be melodic and emotionally plainspoken, but every song should invent its own hook language.",
+      "Use at least one concrete room, road, clothing, weather, object, family, or body-language detail in each song."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid explicit content unless a separate release profile explicitly permits it.",
+      "Emotional darkness is allowed, but the song must not instruct or encourage self-harm, dangerous behavior, or substance abuse."
+    ],
+    "structure_preferences": [
+      "[ACOUSTIC INTRO] -> [VERSE 1] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE or GUITAR TURN] -> [FINAL CHORUS] -> [OUTRO]",
+      "[COLD VOCAL] -> [VERSE] -> [REFRAIN] -> [VERSE] -> [REFRAIN] -> [INSTRUMENTAL BREAK] -> [FINAL REFRAIN]",
+      "[GUITAR RIFF INTRO] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [SOLO] -> [FINAL CHORUS]",
+      "[PIANO/ORGAN PAD] -> [CONFESSION VERSE] -> [SOFT HOOK] -> [VERSE] -> [HOOK] -> [QUIET TAG]"
+    ],
+    "song_family_types": [
+      "Fingerpicked folk confession with close vocal, concrete detail, and restrained emotional hook.",
+      "Blues-pop guitar groove with clean electric fills, relaxed confidence, and romantic tension.",
+      "Understated indie-folk melancholy track with slow tempo, dry vocal, and dusk-like atmosphere.",
+      "Full-band road anthem with acoustic rhythm, live drums, melodic bass, and open chorus.",
+      "Tender family or memory ballad with sparse arrangement and plainspoken emotional turn.",
+      "Late-night solo acoustic song with almost no percussion and unresolved final image."
+    ],
+    "production_variation_matrix": [
+      "Rotate guitar role: fingerpicked acoustic, warm strum, clean electric lead, muted groove, slide-like color without copying licks, or sparse single-note motif.",
+      "Rotate rhythm feel: no drums, brushed folk pulse, laid-back pop groove, bluesy shuffle, full-band road drive, or slow indie-rock sway.",
+      "Rotate harmonic bed: acoustic-only, organ pad, soft piano, electric guitar bed, subtle strings, or bass-led minimalism.",
+      "Rotate vocal shape: close dry lead, soft double, harmony chorus, conversational verse, restrained falsetto-like lift described generically, or raw one-take outro.",
+      "Use guitar solos or instrumental turns selectively; they should answer the lyric rather than show off."
+    ],
+    "tempo_energy_lanes": [
+      "58-70 BPM: slow acoustic or piano ballad, intimate and spacious.",
+      "71-84 BPM: reflective folk-pop, warm pocket, restrained percussion.",
+      "85-98 BPM: relaxed blues-pop groove, clean electric guitar, conversational flow.",
+      "99-112 BPM: full-band road song, brighter chorus, more forward motion.",
+      "113-124 BPM: rare upbeat coffeehouse or pop-rock lift, used for contrast."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: fingerpicked figure, cold vocal, electric-guitar lick, room noise, piano/organ pad, drum brush, or immediate lyric image.",
+      "Every song should vary at least three major variables: tempo, guitar texture, rhythm feel, vocal delivery, hook type, emotional posture, or production density.",
+      "Do not always resolve with a big final chorus; sometimes end with a small guitar figure, repeated line, room sound, or unresolved chord.",
+      "Use bluesy guitar color as seasoning, not every-track identity.",
+      "Avoid identical verse lengths, chorus density, bridge placement, solo placement, and final-image style across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: plainspoken chorus, small repeated refrain, melodic question, guitar-answer hook, harmony lift, or quiet final phrase.",
+      "Do not reuse the same hook rhythm, title placement, guitar response, or phrase shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: longing, gratitude, regret, steadiness, homecoming, apology, or acceptance.",
+      "Use repetition for warmth, but change harmony, guitar response, lyric detail, or vocal distance on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: direct love song, family memory, road reflection, apology, friend-to-friend advice, quiet self-inventory, or character sketch.",
+      "Do not make every song about home, roads, coffee, or heartbreak; those are lanes, not the whole brand.",
+      "When lyrics become sentimental, add one imperfect or ordinary detail to keep them grounded.",
+      "When lyrics become romantic, include lived-in specificity rather than generic devotion.",
+      "When lyrics become sad, leave room for resilience or dry self-awareness."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same porch, map, kitchen, road, jacket, coffee, window, weather, or guitar imagery across every song.",
+      "Do not force specific numbers, objects, symbols, places, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as driving away, waking up alone, sitting at a kitchen table, or remembering an old lover.",
+      "Do not reuse the same chorus cadence, guitar figure, rhyme family, bridge turn, or emotional conclusion across multiple tracks.",
+      "Keep Porchlight Atlas identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible guitar-forward song that establishes warmth and voice without using the most vulnerable ballad first.",
+      "Sequence acoustic confession beside blues-pop groove and full-band tracks so the album breathes.",
+      "Use solo acoustic songs as emotional anchors, not filler.",
+      "Place the most understated indie-folk track after a brighter or more guitar-fluent song for contrast.",
+      "Save one full-band road anthem or major melodic lift for the late-middle of the album.",
+      "End with either a quiet unresolved image, a final guitar figure, or a plainspoken line that feels lived-in."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable guitar figure, vocal phrase, or room-detail lyric within the first 15 seconds.",
+      "Pair detailed verses with a simple, emotionally clear hook.",
+      "Let guitar response and vocal phrasing create replay value instead of overproduction.",
+      "Use one vivid object or place per section rather than crowding the lyric with symbols.",
+      "Keep hooks natural enough to feel sung by a real person in a small room."
+    ],
+    "hook_design_rules": [
+      "Hooks should be melodic, conversational, warm, or quietly devastating.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse detail and chorus emotional clarity.",
+      "For blues-pop lanes, let guitar and vocal melody answer each other; for folk lanes, let plainspoken lyric carry the hook."
+    ],
+    "energy_arc": {
+      "pattern": "ROOM -> DETAIL -> ACHE -> LIFT -> TURN -> HOME LIGHT",
+      "rules": [
+        "Start with a recognizable guitar, vocal, room tone, piano, or rhythm identity rather than a long empty intro.",
+        "Build intimacy through concrete detail before the first chorus.",
+        "Reveal the plain emotional truth before the final third.",
+        "Let the final section shift energy: warmer, quieter, fuller, bluesier, or more exposed depending on the song family.",
+        "End with a memorable human afterimage rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Soft refrain listeners can sing without dense lyrics",
+      "Guitar-answer phrase that returns like a second voice",
+      "Harmony lift used sparingly for emotional emphasis",
+      "Final plainspoken tag that reframes the song",
+      "Live-room instrumental break that gives the lyric space"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Craig Cardiff, John Mayer, or Hayden imitation rather than an original adjacent singer-songwriter lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, guitar role, rhythm feel, hook type, vocal delivery, emotional posture, structure, or production density.",
+      "If a song is very intimate, confirm it still has a memorable melodic or lyrical hook.",
+      "If a song is blues-pop leaning, confirm guitar craft supports the song rather than becoming empty flash.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Warm modern singer-songwriter cover art with porchlight glow, road-map texture, acoustic guitar details, kitchen-window light, handwritten-note grain, small venue poster warmth, and understated editorial composition. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#E8D8B8",
+      "accent": "#C47A2C",
+      "background": "#1C2430",
+      "porch_amber": "#D9A441",
+      "denim_blue": "#486A86",
+      "forest_green": "#3F5F4B",
+      "tobacco_brown": "#7A4E2D"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "warm minimal singer-songwriter typography, limited words, paper grain, amber/denim contrast, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/Folk/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Porchlight Atlas",
+    "default_album": "Back Porch Weather",
+    "label_name": "Figment Factory",
+    "primary_genre": "Singer/Songwriter",
+    "spotify_genres": [
+      "singer-songwriter",
+      "folk pop",
+      "acoustic pop",
+      "indie folk",
+      "blues rock"
+    ],
+    "youtube_tags_seed": [
+      "singer songwriter",
+      "folk pop",
+      "acoustic pop",
+      "indie folk",
+      "blues guitar",
+      "Porchlight Atlas"
+    ],
+    "apple_music_genres": [
+      "Singer/Songwriter",
+      "Alternative",
+      "Folk"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; heartbreak, nostalgia, family complexity, and lightly mature themes allowed without explicit content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Porchlight Atlas Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

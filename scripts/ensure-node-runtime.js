@@ -13,11 +13,9 @@ if (!allowMismatch && actualNode !== REQUIRED_NODE) {
   console.error(`  Required: v${REQUIRED_NODE}`);
   console.error(`  Current:  v${actualNode}`);
   console.error(`  Node ABI: ${actualModuleVersion}`);
-  console.error(`\nRun one of these from the repo root:`);
-  console.error(`  ./scripts/pancake.sh web`);
-  console.error(`  volta install node@${REQUIRED_NODE} && volta pin node@${REQUIRED_NODE}`);
-  console.error(`\nThen rebuild native modules:`);
-  console.error(`  npm rebuild better-sqlite3 canvas`);
+  console.error(`\nDon't run this command directly. Use the launcher, which pins Node v${REQUIRED_NODE}:`);
+  console.error(`  ./bin/pancakerobot web`);
+  console.error(`  ./bin/pancakerobot test -- test/<file>.test.js`);
   console.error('');
   process.exit(1);
 }
@@ -29,7 +27,7 @@ if (!allowMismatch && actualMajor !== REQUIRED_MAJOR) {
 
 if (!allowMismatch && actualModuleVersion !== EXPECTED_NODE_MODULE_VERSION) {
   console.error(`[Pancake Robot] Node native module ABI must be ${EXPECTED_NODE_MODULE_VERSION}; got ${actualModuleVersion}.`);
-  console.error('Run: npm rebuild better-sqlite3 canvas');
+  console.error('Run: ./bin/pancakerobot install  (rebuilds better-sqlite3 and canvas)');
   process.exit(1);
 }
 

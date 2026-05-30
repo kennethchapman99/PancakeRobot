@@ -1,0 +1,303 @@
+{
+  "brand_name": "Afterimage Relay",
+  "app_title": "Afterimage Relay",
+  "brand_type": "music",
+  "brand_description": "Original intimate electronic indie-pop/downtempo brand blending soft machine rhythms, warm analog synths, trip-hop shadow, cinematic calm, and fragile romantic melancholy. Inspired by broad indietronica, downtempo, and trip-hop moods without copying any real artist, voice, lyrics, melodies, drum programming, arrangements, production, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Fans of intimate electronic indie pop, glitchy romantic melancholy, downtempo beats, trip-hop atmospheres, soft vocal hooks, late-night headphone music, cinematic ambient texture, and restrained songs that still land as memorable pop.",
+    "guardrail": "General streaming audience, 16+. Melancholy, loneliness, longing, romantic distance, memory, insomnia, urban isolation, and emotional ambiguity are allowed. Avoid explicit sexual detail, graphic violence, hate, slurs, self-harm instruction, drug glorification, or child-directed framing."
+  },
+  "character": {
+    "name": "Afterimage Relay",
+    "core_concept": "A quiet transmission of late-night messages, soft machines, remembered rooms, and fragile human feeling moving through glowing wires.",
+    "fallback_summary": "intimate electronic indie-pop artist blending glitchy warmth, downtempo melancholy, trip-hop shadow, and soft melodic hooks",
+    "clap_name": "none",
+    "personality_traits": [
+      "Tender and emotionally restrained rather than melodramatic",
+      "Precise, textural, and quietly cinematic",
+      "Romantic but distant, as if singing through a signal delay",
+      "Comfortable moving between soft electronic pop and darker downtempo atmosphere",
+      "Melancholic but not hopeless",
+      "Human warmth inside mechanical rhythm"
+    ],
+    "catchphrases": [
+      "Soft signal, human heart",
+      "Send the feeling after midnight"
+    ],
+    "visual_identity": "Minimal nocturnal indie-electronic artwork with soft cream or dark-blue space, blurred city lights, signal lines, paper texture, small glowing shapes, and quiet analog-machine details. Visuals should feel like late-night postcards, old answering machines, train windows, waveform traces, and cinematic haze.",
+    "visual_reference": [
+      "Muted night palette with soft blue, cream, amber, charcoal, and pale pink",
+      "Subtle waveform, envelope, relay, postcard, wire, and window motifs used occasionally, not forced",
+      "Blurred city lights, train windows, rainy glass, room lamps, and quiet streets",
+      "Analog synths, tape machines, answering machines, and small LEDs as background texture",
+      "Minimal indie sleeve design with restrained typography and no crowded text"
+    ]
+  },
+  "music": {
+    "default_style": "intimate electronic indie pop with downtempo, trip-hop, ambient, and soft synth-pop textures",
+    "default_bpm": 92,
+    "default_key": "A Minor",
+    "default_prompt": "Original intimate electronic indie pop with delicate vocal melodies, precise programmed drums, warm analog synths, subtle glitch percussion, airy pads, downtempo bass, and cinematic late-night atmosphere. Vary the lane by song: soft romantic electronic pop, glitchy drum-machine confessionals, darker trip-hop grooves, ambient piano/synth laments, warm nostalgic synth-pop, and sparse nocturnal instrumentals with vocal fragments are all valid. Never imitate, clone, or reference any real artist voice, cadence, lyrics, melody, drum pattern, arrangement, production, persona, or copyrighted work. Create a fresh performance with intimacy, restraint, melancholy, warmth, shadow, and memorable hooks.",
+    "target_length": "2:20-4:10",
+    "min_words": 120,
+    "normal_word_range": "150-320",
+    "first_vocal_by_seconds": 14,
+    "max_instrumental_intro_seconds": 20
+  },
+  "lyrics": {
+    "title_examples": [
+      "Late Reply",
+      "Roomtone",
+      "Paper Lights",
+      "Small Blue Hour",
+      "Sleep Signal"
+    ],
+    "topic_variety": "Use broad topic families: long-distance intimacy, messages sent too late, memory and regret, quiet city nights, love becoming static, loneliness inside technology, fragile optimism, dreamlike travel, emotional distance, and recovery through small private rituals. Do not repeat the same signal, mail, porcelain, machine, rain, or night imagery across songs.",
+    "required_closing": "End with a quiet unresolved image, soft repeated phrase, fading question, intimate confession, or cinematic afterglow; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "electronic_indie_pop_downtempo",
+    "primary_emotional_goal": "Create original songs that feel intimate, melodic, textural, restrained, and quietly devastating, with enough variation to support albums without repeating one soft-electronic formula.",
+    "voice_perspective": "Flexible first-person, direct address, or close observational narration. The narrator can feel tender, distant, regretful, hopeful, numb, romantic, or quietly haunted depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person or second-person, with occasional cinematic third-person distance.",
+      "tone": "Soft, intimate, restrained, lonely, precise, romantic, and quietly surreal; never melodramatic or derivative.",
+      "vocabulary": "Plain emotional language with small tactile details, digital-age intimacy, urban images, and concise poetic turns.",
+      "signature_sounds": [
+        "warm analog synth pads",
+        "crisp programmed drums",
+        "subtle glitch percussion",
+        "soft close vocal layers",
+        "downtempo bass",
+        "ambient piano or bell tones"
+      ],
+      "comedy_mode": "None; occasional dry understatement is allowed but humor should not become a defining feature.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "The Postal Service Give Up-era intimate glitch-pop melancholy",
+      "Moby Porcelain-era cinematic downtempo calm",
+      "Portishead-era trip-hop shadow and noir atmosphere",
+      "soft electronic indie pop",
+      "downtempo ambient pop",
+      "nocturnal trip-hop texture"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, lyrics, melodies, drum programming, synth motifs, sample style, arrangements, album sequencing, persona, or copyrighted material. Use the broad emotional and sonic range as inspiration for an original Afterimage Relay identity.",
+    "allowed_elements": [
+      "intimate soft vocal melodies with subtle harmonies",
+      "precise programmed drums and glitch percussion",
+      "warm analog synth chords and ambient pads",
+      "downtempo basslines and trip-hop shadow",
+      "romantic distance, late messages, memory, and quiet regret",
+      "cinematic piano, bells, or soft electric keys",
+      "minimal hooks that grow through texture instead of volume",
+      "abstract digital imagery anchored by plain emotional lines",
+      "clean or radio-friendly language by default",
+      "space and silence as part of the arrangement"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist vocal style, melody, drum pattern, synth motif, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "overusing the same title examples, signal imagery, mail imagery, porcelain imagery, or invented lore terms",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "glorified drug abuse or instructions for drug use",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be understated but memorable; every song should invent its own hook language.",
+      "Use at least one concrete sensory, room, travel, or object detail in each song to prevent generic melancholy."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid explicit content unless a separate release profile explicitly permits it.",
+      "Emotional darkness is allowed, but the song must not instruct or encourage self-harm, dangerous behavior, or substance abuse."
+    ],
+    "structure_preferences": [
+      "[INTRO TEXTURE] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [HOOK] -> [BRIDGE or BREAKDOWN] -> [FINAL HOOK] -> [OUTRO]",
+      "[COLD VOCAL FRAGMENT] -> [BEAT ENTERS] -> [VERSE] -> [REFRAIN] -> [VERSE] -> [REFRAIN] -> [TEXTURAL OUTRO]",
+      "[AMBIENT INTRO] -> [VERSE 1] -> [PRE-HOOK] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [QUIET TURN] -> [FINAL CHORUS]",
+      "[DRUM MACHINE INTRO] -> [VERSE] -> [HOOK] -> [INSTRUMENTAL BREAK] -> [VERSE] -> [HOOK] -> [FADE IMAGE]"
+    ],
+    "song_family_types": [
+      "Intimate glitch-pop confession with precise drums, soft vocal hook, and romantic distance.",
+      "Cinematic downtempo instrumental-pop hybrid with piano, pads, sparse lyrics, and calm melancholy.",
+      "Dark trip-hop nocturne with heavy low-end, smoky atmosphere, and restrained vocal tension.",
+      "Warm nostalgic synth-pop song with brighter chorus, bittersweet lyric, and gentle pulse.",
+      "Sparse late-night room song with minimal beat, close vocal, and unresolved ending.",
+      "Dream-travel vignette with ambient texture, soft rhythm, and a hook that feels like a memory."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feel: crisp glitch-pop programming, downtempo breakbeat, half-time trip-hop, soft four-on-the-floor pulse, brushed minimal percussion, or near-beatless ambient drift.",
+      "Rotate harmonic bed: analog synth pad, piano loop, electric keys, muted guitar texture, low drone, or bell-like motif.",
+      "Rotate vocal shape: close single vocal, hushed double, airy harmonies, chopped vocal texture, call-back refrain, or nearly spoken intimate verse.",
+      "Rotate texture: clean digital intimacy, tape-worn warmth, rain-glass haze, noir low-end, bright synth-pop shimmer, or ambient blur.",
+      "Use occasional instrumental breaks, but not every song; breaks should feel like emotional space, not filler."
+    ],
+    "tempo_energy_lanes": [
+      "64-76 BPM: very slow downtempo lament, cinematic calm, sparse lyric density.",
+      "77-90 BPM: trip-hop shadow, heavy low-end, restrained vocal tension.",
+      "91-104 BPM: intimate glitch-pop pulse, soft hook, balanced verse and chorus.",
+      "105-118 BPM: brighter synth-pop movement, bittersweet but more kinetic.",
+      "119-128 BPM: rare dance-adjacent release, still intimate and emotionally shaded."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: vocal fragment, drum-machine pickup, ambient pad, piano motif, field-like texture, or immediate bass pulse.",
+      "Every song should vary at least three major variables: tempo, beat feel, vocal delivery, hook type, emotional posture, structure, or production texture.",
+      "Do not always build to a bigger final chorus; sometimes end smaller, blurrier, darker, or nearly instrumental.",
+      "Use glitches and electronic artifacts as emotional punctuation, not constant decoration.",
+      "Avoid identical verse lengths, chorus density, bridge placement, and outro fades across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: soft sung chorus, tiny repeated refrain, melodic question, whispered callback, chopped vocal motif, or instrumental hook.",
+      "Do not reuse the same hook rhythm, title placement, or melodic contour across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: longing, regret, numbness, tenderness, distance, surrender, or fragile hope.",
+      "Use repetition for intimacy, but change harmony, texture, silence, or lyric detail on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: unsent message, room memory, train-window scene, late-night confession, detached observer, dream logic, or direct romantic address.",
+      "Do not make every song about messages, technology, or distance; those are lanes, not the whole brand.",
+      "When lyrics become abstract, include one plain human sentence that clarifies the emotional center.",
+      "When lyrics become romantic, avoid cliché and include a specific object, place, or small action.",
+      "When lyrics become dark, keep the tone restrained and avoid glamorizing collapse."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same signal, relay, mail, machine, porcelain, rain, train, window, or night imagery across every song.",
+      "Do not force specific numbers, symbols, objects, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as waking up, checking a phone, hearing rain, riding a train, or staring through glass.",
+      "Do not reuse the same chorus cadence, drum pattern, synth motif, or emotional conclusion across multiple tracks.",
+      "Keep Afterimage Relay identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible electronic-pop track that establishes intimacy and texture without using the darkest lane first.",
+      "Sequence brighter glitch-pop tracks beside trip-hop or ambient pieces so the project breathes.",
+      "Use one or two nearly instrumental or minimal tracks as atmosphere pivots, not filler.",
+      "Place the most emotionally direct song after a more textural or detached track for contrast.",
+      "Save the darkest trip-hop or most cinematic downtempo track for the late-middle of the album.",
+      "End with either a soft unresolved refrain, a calm instrumental afterimage, or a quiet human line over fading texture."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable synth, vocal, piano, or drum-machine motif within the first 15 seconds.",
+      "Pair delicate verses with a simple emotional refrain.",
+      "Let silence, texture, and small changes create replay value.",
+      "Use one vivid object or room detail per section rather than crowding the lyric with symbols.",
+      "Keep hooks memorable without making them overly obvious or chant-like."
+    ],
+    "hook_design_rules": [
+      "Hooks should be soft, memorable, emotionally precise, or texturally unforgettable.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse intimacy and hook openness.",
+      "For trip-hop lanes, let bass and atmosphere carry part of the hook; for glitch-pop lanes, let rhythm and melody carry it."
+    ],
+    "energy_arc": {
+      "pattern": "GLOW -> PULSE -> MESSAGE -> DISTANCE -> RETURN -> AFTERIMAGE",
+      "rules": [
+        "Start with a recognizable texture, drum-machine figure, synth shape, piano motif, or close vocal idea.",
+        "Build emotional intimacy through restraint before adding layers.",
+        "Reveal the plain emotional truth before the final third.",
+        "Let the final section shift energy: warmer, darker, smaller, blurrier, or more open depending on the song family.",
+        "End with a memorable afterimage, not a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Soft refrain listeners can hum quietly without dense lyrics",
+      "A tiny repeated phrase used as emotional anchor, not slogan",
+      "Instrumental motif that returns like a remembered message",
+      "Final line that reframes the song emotionally",
+      "Subtle backing vocal texture used sparingly for lift"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Postal Service, Moby, or Portishead imitation rather than an original adjacent genre/emotional lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, beat feel, synth texture, hook type, vocal delivery, emotional posture, structure, or production texture.",
+      "If a song is very soft, confirm it still has a memorable hook or motif.",
+      "If a song is dark or trip-hop leaning, confirm it still has human warmth somewhere.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Minimal nocturnal electronic-pop artwork with soft grain, muted night colors, blurred lights, waveform traces, relay lines, analog-machine details, lonely room/window imagery, and restrained typography. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#D8D6C8",
+      "accent": "#7FA7C7",
+      "background": "#F3EBDD",
+      "night_blue": "#1F2D45",
+      "soft_amber": "#D9A441",
+      "dusty_pink": "#C9868D",
+      "trip_hop_green": "#5F7D6B"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit drug imagery, weapons, gore, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "minimal clean indie sleeve typography, limited words, soft contrast, subtle grain, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/Postal/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Afterimage Relay",
+    "default_album": "Late Reply",
+    "label_name": "Figment Factory",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "indietronica",
+      "downtempo",
+      "trip hop",
+      "electropop",
+      "alternative pop"
+    ],
+    "youtube_tags_seed": [
+      "indietronica",
+      "downtempo",
+      "trip hop",
+      "electropop",
+      "ambient pop",
+      "Afterimage Relay"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Electronic",
+      "Pop"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; melancholy and lightly mature themes allowed without explicit content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Afterimage Relay Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

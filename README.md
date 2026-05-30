@@ -148,8 +148,18 @@ Smoke test:
 # Run the one-click magic pipeline
 ./bin/pancakerobot magic "dinosaurs"
 
+# Show the launcher help (commands + Node pinning)
+./bin/pancakerobot --help
+
 # Start the app
 ./bin/pancakerobot web
+
+# Start the app without an ngrok tunnel (local-only URLs)
+PANCAKE_DISABLE_NGROK=true ./bin/pancakerobot web
+
+# Run the test suite (this is the blessed test command)
+./bin/pancakerobot test
+./bin/pancakerobot test -- test/magic-release-browsy-recordings.test.js
 
 # Refresh market research
 ./bin/pancakerobot research
@@ -228,6 +238,84 @@ You can also approve/reject after the fact:
 ./bin/pancakerobot approve SONG_1234567890_abc123
 ./bin/pancakerobot reject SONG_1234567890_abc123 "Too similar to existing song"
 ```
+
+---
+
+## Pancake Robot + Browsy Integration
+
+The Release Cockpit's Magic Release engine drives DistroKid submission, HyperFollow
+capture, and platform-link harvesting through [Browsy](../browsy), a generic
+browser workflow recording/replay service. Pancake Robot owns all release/music
+domain logic and the canonical DistroKid payload; Browsy only consumes runtime
+variables and replays recorded browser steps. DistroKid field logic never lives
+inside Browsy.
+
+### 1. Start the Browsy service
+
+Browsy is a separate local service (default `http://localhost:3001`). Start it in
+the Browsy repo (`/browsy` or `~/browsy`), not from this repo:
+
+```bash
+cd ~/browsy && npm run start   # or the documented Browsy launcher
+```
+
+### 2. Record / import the workflows in Browsy
+
+Workflows must be recorded and deployed inside Browsy. Pancake Robot expects these
+workflow ids (registered under the `pancake-robot` app):
+
+- `distrokid-single-submit`
+- `distrokid-album-submit`
+- `distrokid-hyperfollow-capture`
+- `distrokid-hyperfollow-enrich`
+- `platform-link-harvest`
+
+### 3. Configure Pancake Robot env vars
+
+```bash
+export BROWSY_BASE_URL=http://localhost:3001        # Browsy service URL
+export PANCAKE_BROWSY_APP_ID=pancake-robot           # Browsy app id
+export PANCAKE_BROWSY_MODE=preview                   # default run mode
+export PANCAKE_BROWSY_DRY_RUN=                        # explicit true/false ONLY
+export PANCAKE_BROWSY_POLL_INTERVAL_MS=2000
+export PANCAKE_BROWSY_TIMEOUT_MS=1200000
+```
+
+`PANCAKE_BROWSY_DRY_RUN` is the only switch that forces dry-run. Dry-run is never
+silently inferred from missing config — a live run that cannot reach Browsy is
+recorded as `not_configured`, never as a passing run.
+
+### 4. Run a preview automation
+
+```bash
+./bin/pancakerobot web                               # open the Release Cockpit
+./bin/pancakerobot magic-release:status -- --type single --id SONG_123
+```
+
+In the cockpit, use **Run Browsy dry run** (or the per-task run actions). A dry-run
+writes a clearly-marked `result.json` (`status: dry_run_passed`, `dry_run: true`)
+and submits nothing.
+
+### 5. Where artifacts appear
+
+Each run persists under `output/release-workflows/<campaignId>/<taskKey>/`:
+`workflow-package.json`, `manifest.json`, `distrokid-payload.json`, and
+`result.json`. The campaign run record stores the Browsy run id, workflow id and
+version, status, timestamps, artifact paths, the normalized result, and any error.
+
+### 6. The human approval gate
+
+The `distrokid_final_submit_approval` step is owner `ken` and stays a mandatory
+human gate — no code path clicks DistroKid's final submit without explicit
+approval state. When a live Browsy run pauses for approval it maps to a
+needs-Ken task; nothing is submitted until the operator approves.
+
+### 7. If Browsy is unavailable
+
+A live run against an unreachable Browsy surfaces a `not_configured` /
+blocked status in the campaign (clearly visible in the cockpit's Browsy
+integration panel) instead of a fake success. Start Browsy and rerun, or set
+`PANCAKE_BROWSY_DRY_RUN=true` for an explicit dry run.
 
 ---
 

@@ -526,5 +526,9 @@
     "logo_path": "/logo.png",
     "profile_badge": "Explicit-Optional Duo Hip-Hop",
     "default_dashboard_tab": "songs"
+  },
+  "media": {
+    "default_image_url": "/brand-media/gravl-brand-profile/default-image.png",
+    "default_image_path": ""
   }
 }

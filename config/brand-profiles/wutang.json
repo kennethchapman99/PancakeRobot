@@ -1,0 +1,303 @@
+{
+  "brand_name": "Borough Cipher",
+  "app_title": "Borough Cipher",
+  "brand_type": "music",
+  "brand_description": "Borough Cipher is an original AI-assisted artist brand for gritty East Coast hip-hop, cinematic street rap, crew cyphers, sharp entrepreneurial flexes, dusty boom-bap, cold piano loops, soul chops, tense strings, and hard conversational MC delivery. The sound should feel streetwise, strategic, raw, stylish, and lyrically disciplined without imitating any real artist, crew, voice, cadence, lyrics, flows, beats, samples, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "18+",
+    "description": "Adult listeners who like gritty East Coast hip-hop, boom-bap drums, cinematic street storytelling, sharp business-minded flexes, crew energy, cold piano loops, dusty soul textures, hard punchlines, and multiple MCs trading distinct styles.",
+    "guardrail": "Adult-oriented music. Strong profanity, street pressure, ambition, betrayal, survival, coded rivalry, hustler mentality, and hard competition are allowed. Do not include hate slurs, identity-based attacks, graphic violence, actionable threats, real-person harassment, drug-use instructions, or glamorized harm."
+  },
+  "character": {
+    "name": "Borough Cipher",
+    "core_concept": "A rotating urban rap collective led by a calm strategist MC: street-corner wisdom, business ambition, dusty records, cold rooms, and sharp verses traded like chess moves.",
+    "fallback_summary": "gritty East Coast hip-hop collective blending boom-bap, street strategy, crew cyphers, cinematic grit, and entrepreneurial confidence",
+    "clap_name": "none",
+    "personality_traits": [
+      "Streetwise, observant, and strategic",
+      "Crew-oriented, with contrasting MC voices and handoffs",
+      "Calm under pressure, never cartoonishly violent",
+      "Lyrically sharp, economical, and quotable",
+      "Ambitious and business-minded without sounding corporate",
+      "Cinematic, gritty, and stylish with flashes of dry humor"
+    ],
+    "catchphrases": [
+      "Move quiet, rhyme loud",
+      "Every verse got receipts"
+    ],
+    "visual_identity": "Gritty urban hip-hop artwork with subway tile, rooftop water towers, chessboard shadows, cold streetlights, dusty vinyl texture, ledger paper, gold chain glints, and black-and-cream poster grain. Visuals should feel cinematic, disciplined, underground, and high-stakes without copying any real crew or album imagery.",
+    "visual_reference": [
+      "Subway platforms, rooftops, stairwells, pawn-shop glow, studio booths, and cold street corners",
+      "Black, cream, muted gold, concrete grey, deep green, and brick red palette",
+      "Chess pieces, ledgers, vinyl, cassette labels, and speaker cones as optional texture, not forced",
+      "Crew silhouettes and cypher-circle layouts used occasionally, never as copied cover references",
+      "No celebrity likeness, no copied album layouts, no readable copyrighted logos"
+    ]
+  },
+  "music": {
+    "default_style": "gritty East Coast hip-hop with boom-bap drums, dusty soul texture, cold piano, cinematic strings, crew cyphers, and hard conversational rap",
+    "default_bpm": 92,
+    "default_key": "C# Minor",
+    "default_prompt": "Original gritty East Coast hip-hop with hard boom-bap drums, dusty soul or jazz texture, cold piano loops, cinematic strings, deep bass, DJ cuts, and sharp conversational rap delivery. Vary the lane by song: street-corner cipher, calm hustler strategy track, soulful ambition anthem, grimy crew posse cut, cold piano storytelling record, radio-ready hard hook, and reflective after-the-win confession are all valid. Multiple MC-style voices may appear with distinct rhythm, density, tone, and point of view. Never imitate, clone, or reference any real artist, crew, voice, cadence, flow, lyrics, beat, sample, scratch phrase, arrangement, persona, or copyrighted work. Create a fresh performance with grit, precision, ambition, crew chemistry, restraint, and cinematic tension.",
+    "target_length": "2:20-4:10",
+    "min_words": 220,
+    "normal_word_range": "240-560",
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 14
+  },
+  "lyrics": {
+    "title_examples": [
+      "Corner Ledger",
+      "Cold Stairwell",
+      "Suitcase Math",
+      "Rooftop Terms",
+      "Blue Smoke Receipts"
+    ],
+    "topic_variety": "Use broad topic families: street survival without instructions, business ambition, betrayal and loyalty, crew hierarchy, city memory, quiet luxury, rivalry as chess not gore, family pressure, post-win loneliness, codes of conduct, and turning hard lessons into leverage. Do not repeat the same borough, chess, ledger, corner, stairwell, smoke, crown, sword, or money imagery across songs.",
+    "required_closing": "End with a cold final line, crew handoff, unresolved street image, reflective admission, DJ-cut tag, or abrupt room-silencing phrase; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "gritty_east_coast_hip_hop",
+    "primary_emotional_goal": "Create original hip-hop songs that feel gritty, strategic, quotable, cinematic, crew-driven, and rhythmically locked, with enough variation to support albums without repeating one street-rap formula.",
+    "voice_perspective": "Mostly first-person, direct address, and rotating crew voices. The lead voice should feel calm, controlled, and strategic; other MC-style voices can be grimier, funnier, hungrier, colder, or more reflective.",
+    "character_voice": {
+      "person": "Mostly first-person and second-person, with occasional collective 'we' for crew tracks and cinematic third-person street scenes.",
+      "tone": "Hard, calm, witty, strategic, adult, streetwise, competitive, and occasionally reflective.",
+      "vocabulary": "Adult rap language with profanity allowed; concrete urban detail, coded rivalry, business imagery, dry punchlines, and disciplined internal rhyme.",
+      "signature_sounds": [
+        "dusty boom-bap drums",
+        "cold piano loop",
+        "soul chop texture",
+        "DJ scratch hook",
+        "cinematic string stab",
+        "rotating MC handoffs"
+      ],
+      "comedy_mode": "Dry insults, clever reversals, deadpan flexes, and chess-like threats-as-metaphor; avoid cartoon violence.",
+      "kid_relationship": "Not a children's brand; lyrics are adult-oriented and may include strong profanity."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Wu-Tang Clan-inspired gritty crew energy",
+      "Wu-Tang Clan-inspired raw East Coast boom-bap atmosphere",
+      "early Jay-Z-inspired calm street strategy and entrepreneurial confidence",
+      "classic East Coast cipher energy",
+      "dusty soul-sample-inspired hip-hop texture",
+      "DJ-cut-driven boom-bap"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist or crew names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, cadences, flows, rhyme schemes, slang signatures, lyrics, beats, sample choices, scratch phrases, adlibs, arrangements, personas, mythology, or copyrighted material. Use broad traits—gritty crew contrast, strategic confidence, dusty production, street storytelling, and disciplined wordplay—as inspiration for an original Borough Cipher identity.",
+    "allowed_elements": [
+      "gritty boom-bap drums and dusty texture",
+      "cold piano, soul-chop-style instrumentation, strings, horns, or bass loops created as original phrases",
+      "multiple MC-style verses with distinct flow, tone, and density",
+      "calm strategic flexes and business-minded ambition",
+      "street storytelling without actionable crime instructions",
+      "DJ cuts, scratch hooks, and vocal chops as original textures",
+      "coded rivalry, loyalty tests, and chess-like pressure",
+      "dry humor, hard punchlines, and quotable couplets",
+      "reflective moments after confidence or conflict",
+      "strong profanity and adult language without hate slurs"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist or crew cadence, flow, rhyme scheme, vocal tone, beat, sample, scratch phrase, arrangement, mythology, or persona",
+      "using real artist or crew names in lyrics, titles, audio prompts, or metadata",
+      "sampling language that implies use of copyrighted recordings",
+      "graphic violence, actionable threats, or revenge fantasy",
+      "drug manufacturing, trafficking, or use instructions",
+      "hate slurs or identity-based attacks",
+      "fake dialect, caricatured slang, or cultural stereotyping",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, beat lane, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists and crews are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "If multiple MC-style voices appear, each must have a distinct rhythm, vocabulary density, emotional stance, or role.",
+      "Use at least one concrete street, room, object, clothing, weather, money, family, or body-language detail in each song."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be rapped, sung, or scratched as vocal-like phrases.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Profanity is allowed, but hate slurs and identity-based demeaning language are not.",
+      "Street pressure can be cinematic or metaphorical, but lyrics must not instruct or encourage real-world harm or crime."
+    ],
+    "structure_preferences": [
+      "[DJ or SAMPLE-LIKE INTRO] -> [VERSE 1] -> [HOOK or CUT REFRAIN] -> [VERSE 2] -> [HOOK] -> [GUEST-STYLE VERSE] -> [FINAL HOOK] -> [OUTRO CUT]",
+      "[COLD RAP OPEN] -> [DRUM DROP] -> [VERSE 1] -> [REFRAIN] -> [VERSE 2] -> [BEAT DIP] -> [FINAL VERSE] -> [TAG]",
+      "[PIANO LOOP INTRO] -> [LEAD VERSE] -> [HOOK] -> [CREW VERSE] -> [HOOK] -> [SCRATCH BREAK] -> [FINAL LINE]",
+      "[SOULFUL INTRO] -> [VERSE 1] -> [MELODIC HARD HOOK] -> [VERSE 2] -> [HOOK] -> [REFLECTIVE BRIDGE] -> [FINAL HOOK]"
+    ],
+    "song_family_types": [
+      "Street-corner cipher with two or three distinct MC-style verses, dusty drums, and DJ-cut hook.",
+      "Calm hustler strategy track with cold piano, controlled delivery, and business-minded punchlines.",
+      "Soulful ambition anthem with warm chops, hard drums, and a hook that balances grit with aspiration.",
+      "Grimy posse cut with contrasting vocal textures, sparse hook, and raw basement energy.",
+      "Cinematic storytelling record with street detail, restraint, and a tense unresolved ending.",
+      "Reflective after-the-win confession with quieter production, adult regret, and understated hook."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feel: dusty boom-bap, hard street knock, stripped breakbeat, soulful head-nod, cinematic march, or sparse underground loop.",
+      "Rotate musical bed: cold piano, chopped soul-style keys, string stabs, horn hits, jazz guitar, eerie choir pad, or bassline-led minimalism using original phrases.",
+      "Rotate bass role: sub under drums, melodic upright-like movement, gritty electric bass, sparse low-end drops, or thick looped bass groove.",
+      "Rotate vocal shape: calm lead strategy, hungry guest-style verse, gravelly crew voice, punchline-heavy flow, reflective close vocal, chant hook, or DJ-cut response.",
+      "Use scratches selectively; some songs should foreground DJ craft while others rely on hook, loop, or MC handoff."
+    ],
+    "tempo_energy_lanes": [
+      "78-86 BPM: slow gritty menace, sparse drums, calm controlled delivery.",
+      "87-94 BPM: classic boom-bap pocket, cypher energy, balanced verse density.",
+      "95-102 BPM: sharper street single lane, hook-forward but still gritty.",
+      "103-112 BPM: high-energy posse cut or block pressure, tighter MC handoffs.",
+      "113-120 BPM: rare breakbeat sprint, used for contrast rather than default."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: DJ cut, cold rap line, piano loop, drum break, street-room texture, bassline, or short cinematic sting.",
+      "Every song should vary at least three major variables: tempo, drum feel, musical bed, MC count, hook type, vocal delivery, or scratch function.",
+      "Do not always use three MCs; some tracks should be solo strategy records or two-voice contrasts.",
+      "Do not always use DJ scratches as the hook; sometimes let piano, soul texture, bassline, chant, or melodic refrain carry it.",
+      "Avoid identical verse lengths, crew order, hook density, outro cut style, and punchline cadence across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: DJ-cut phrase, chant refrain, hard melodic hook, bassline hook, spoken mantra, crew response, or no traditional hook.",
+      "Do not reuse the same hook rhythm, title placement, scratch placement, profanity pattern, or cadence shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: pressure, ambition, warning, loyalty, triumph, reflection, or cold restraint.",
+      "Use repetition for grit and memorability, but change cuts, adlibs, backing response, pause placement, or beat drop on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: lead strategist, hungry crew member, older narrator, street observer, rival-address, family-pressure confession, or post-success reflection.",
+      "Do not make every song about money, rivals, or street mythology; those are lanes, not the whole brand.",
+      "When lyrics are competitive, keep menace metaphorical and skill-based rather than graphically violent.",
+      "When lyrics are business-minded, include human stakes so the song does not become generic luxury flexing.",
+      "When lyrics are gritty, include wit, wisdom, or vulnerability so the song has more than hard texture."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same borough, cipher, chess, sword, corner, stairwell, smoke, ledger, crown, or money imagery across every song.",
+      "Do not force specific numbers, objects, symbols, crew lore, martial arts imagery, or luxury references; they are optional background texture only.",
+      "Avoid repeated opening moves such as calling a meeting, stepping into a cipher, counting money, naming a rival, or describing a cold stairwell.",
+      "Do not reuse the same drum break feel, scratch function, MC handoff, hook cadence, or emotional conclusion across multiple tracks.",
+      "Keep Borough Cipher identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible hard boom-bap track that establishes the lead voice, grit, and pocket without using the busiest posse cut first.",
+      "Sequence crew tracks beside solo strategy records and reflective cuts so the album has contrast.",
+      "Use DJ-forward tracks as highlights or transitions, not every-track default.",
+      "Place the most business-minded or luxury-facing track after a grittier street or family-stakes song for grounding.",
+      "Save one high-energy posse cut for the late-middle or final third.",
+      "End with either a cold final line, a reflective after-the-win track, a DJ cut fading out, or a quiet unresolved city image."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable drum hit, piano loop, bass figure, scratch, or opening bar within the first 10 seconds.",
+      "Pair dense verses with a clear hook, cut phrase, or recurring instrumental identity.",
+      "Use pauses, beat drops, and handoffs to create replay value.",
+      "Make at least one line per verse quotable without relying on slurs, shock value, or empty violence.",
+      "Let MC contrast create album depth without losing the core gritty pocket."
+    ],
+    "hook_design_rules": [
+      "Hooks should be hard, minimal, memorable, DJ-cut-driven, chantable, or coldly melodic.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse density and hook clarity.",
+      "For crew lanes, let the hook unify the voices; for strategy lanes, let restraint and repetition create authority."
+    ],
+    "energy_arc": {
+      "pattern": "DROP -> LOCK -> HANDOFF -> PRESSURE -> CUT -> LAST WORD",
+      "rules": [
+        "Start with a recognizable beat, loop, scratch, vocal line, or cinematic texture rather than a long empty intro.",
+        "Build energy through MC control, drum pocket, and handoffs before adding density.",
+        "Include at least one contrast move: beat dip, DJ cut, new MC texture, reflective line, or silence before a punchline.",
+        "Let the final section feel colder, wiser, harder, warmer, or more unresolved depending on the song family.",
+        "End with a memorable last word rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Crew response line for posse cuts",
+      "Short chant phrase for street-single hooks",
+      "DJ-cut response used as a second voice",
+      "Beat-stop punchline moment",
+      "Final tag line that reframes ambition or loyalty"
+    ],
+    "qa_rules": [
+      "Do not include real artist or crew names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Wu-Tang Clan, Q-Tip, or early Jay-Z imitation rather than an original adjacent East Coast hip-hop lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, drum feel, musical bed, hook type, vocal delivery, MC count, scratch function, or emotional posture.",
+      "If a song uses multiple MC-style voices, confirm each has a distinct rhythm, density, tone, or role.",
+      "If a song is gritty or street-focused, confirm it avoids actionable crime instructions and graphic violence.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Gritty cinematic East Coast hip-hop cover art with subway tile, rooftop silhouettes, ledger paper, cold streetlights, dusty vinyl texture, chessboard shadows, gold glints, speaker cones, and underground poster grain. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#E7D8B1",
+      "accent": "#B8892D",
+      "background": "#0C0D0E",
+      "concrete_grey": "#6F7378",
+      "deep_green": "#254737",
+      "brick_red": "#8E342E",
+      "paper_cream": "#EFE2C5"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit drug imagery, weapons as focal point, gore, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words, fake record label logos",
+    "text_overlay_style": "gritty underground hip-hop typography, limited words, black/gold/concrete contrast, distressed poster texture, no dense lyric blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/wutang/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Borough Cipher",
+    "default_album": "Corner Ledger",
+    "label_name": "Figment Factory",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "east coast hip hop",
+      "boom bap",
+      "hardcore hip hop",
+      "underground hip hop",
+      "mafioso rap"
+    ],
+    "youtube_tags_seed": [
+      "east coast hip hop",
+      "boom bap",
+      "hardcore hip hop",
+      "underground hip hop",
+      "street rap",
+      "Borough Cipher"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "Rap",
+      "Alternative Rap"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "explicit adult language allowed; street themes and rivalry allowed without hate slurs, actionable threats, graphic violence, or crime instruction"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Borough Cipher Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

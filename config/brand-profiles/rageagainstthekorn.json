@@ -1,0 +1,303 @@
+{
+  "brand_name": "Pressure Signal",
+  "app_title": "Pressure Signal",
+  "brand_type": "music",
+  "brand_description": "Pressure Signal is an original AI-assisted artist brand for explosive rap-rock, funk-metal, alternative metal, and dark groove-driven heavy music. The sound combines militant rhythm, live-band aggression, shouted rap energy, heavy low-tuned riffs, anxious melodic hooks, industrial texture, and cathartic social anger. It must remain original and never imitate any real artist, voice, cadence, flow, lyrics, riffs, guitar tone, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "18+",
+    "description": "Adult listeners who like aggressive rap-rock, nu metal, alternative metal, funk-metal grooves, political fury, heavy riffs, shouted vocals, dark emotional release, bass-driven tension, and songs that move between protest, paranoia, trauma, defiance, and catharsis.",
+    "guardrail": "Adult-oriented music. Strong profanity, political anger, emotional darkness, alienation, institutional critique, and cathartic rage are allowed. Do not include hate slurs, identity-based attacks, graphic violence, actionable threats, self-harm instruction, drug-use instruction, or harassment of real people."
+  },
+  "character": {
+    "name": "Pressure Signal",
+    "core_concept": "A cracked broadcast from inside the machine: street-level protest, heavy riffs, anxious bodies, and a crowd voice pushing back against pressure.",
+    "fallback_summary": "aggressive rap-rock and alt-metal artist blending protest fury, groove-metal weight, anxious hooks, and cathartic release",
+    "clap_name": "none",
+    "personality_traits": [
+      "Confrontational but purposeful",
+      "Rhythmically locked-in and physically intense",
+      "Political without becoming slogan-only",
+      "Dark and anxious without glamorizing harm",
+      "Able to switch between shouted rap, tense spoken delivery, and melodic release",
+      "Band-forward, live, raw, and pressure-driven"
+    ],
+    "catchphrases": [
+      "Break the static",
+      "Turn pressure into signal"
+    ],
+    "visual_identity": "High-contrast protest-industrial heavy music artwork with cracked concrete, broadcast towers, warning tape, red emergency light, black metal texture, spray-paint marks, distorted waveforms, and live-stage smoke. Visuals should feel urgent, heavy, urban, and defiant without copying any existing band imagery.",
+    "visual_reference": [
+      "Black, concrete grey, warning red, sickly green, and off-white palette",
+      "Broadcast towers, cracked speakers, signal waves, barricades, and stage smoke used occasionally, not forced",
+      "Urban protest-poster texture mixed with industrial metal design",
+      "Live-band energy: drums, bass, guitar amps, cables, sweat, and shadow",
+      "No celebrity likeness, no copied album covers, no hate symbols"
+    ]
+  },
+  "music": {
+    "default_style": "aggressive rap-rock with funk-metal grooves, nu metal weight, alternative metal riffs, industrial texture, and protest energy",
+    "default_bpm": 104,
+    "default_key": "F# Minor",
+    "default_prompt": "Original aggressive rap-rock with live heavy drums, syncopated bass groove, low-tuned guitar riffs, shouted rhythmic vocals, tense spoken-rap verses, melodic or screamed hook release, and occasional industrial noise texture. Vary the lane by song: protest funk-metal anthem, dark nu-metal groove, riff-heavy mosh track, anxious melodic heavy-rock song, stripped spoken tension builder, and explosive crowd-chant closer are all valid. Never imitate, clone, or reference any real artist voice, cadence, flow, lyrics, riff, guitar tone, bassline, drum pattern, arrangement, persona, or copyrighted work. Create a fresh performance with groove, anger, tension, heaviness, political edge, and emotional release.",
+    "target_length": "2:30-4:20",
+    "min_words": 140,
+    "normal_word_range": "170-420",
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 14
+  },
+  "lyrics": {
+    "title_examples": [
+      "Pressure Map",
+      "Static Law",
+      "Crowd Teeth",
+      "Red Siren Room",
+      "Faultline Hymn"
+    ],
+    "topic_variety": "Use broad topic families: institutional pressure, media noise, working-class frustration, surveillance anxiety, personal rage, body panic, betrayal, resistance, community power, trauma turning into movement, and refusing numbness. Do not repeat the same signal, siren, machine, cage, teeth, riot, or pressure imagery across songs.",
+    "required_closing": "End with a hard final phrase, chant fragment, unresolved warning, sudden cutoff, exposed emotional line, or feedback tail; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "aggressive_rap_rock_alt_metal",
+    "primary_emotional_goal": "Create original heavy songs that feel physical, rhythmic, angry, anxious, politically charged, and cathartic, with enough variation to avoid one-note rage.",
+    "voice_perspective": "Mostly first-person, direct address, or collective 'we.' The narrator can be a protest voice, cornered individual, crowd witness, anxious body, or defiant antagonist depending on the lane.",
+    "character_voice": {
+      "person": "First-person, second-person confrontation, and collective 'we' for crowd/protest moments.",
+      "tone": "Furious, rhythmic, urgent, street-level, wounded, defiant, and controlled; never derivative or cartoonishly macho.",
+      "vocabulary": "Plain hard language, political images, bodily tension, machine metaphors, concrete details, and chant-ready phrases; profanity allowed without hate slurs.",
+      "signature_sounds": [
+        "syncopated low-tuned riff",
+        "funk-metal bass movement",
+        "shouted rhythmic verse",
+        "melodic heavy hook",
+        "industrial noise hit",
+        "crowd-chant response"
+      ],
+      "comedy_mode": "Minimal; occasional bitter irony or sarcastic political bite is allowed.",
+      "kid_relationship": "Not a children's brand; lyrics are adult-oriented and may include strong profanity."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Rage Against the Machine-inspired protest rap-rock urgency",
+      "Rage Against the Machine-inspired funk-metal rhythm lock",
+      "Korn Issues-era dark groove-metal anxiety",
+      "nu metal emotional heaviness",
+      "alternative metal catharsis",
+      "industrial-tinged rap-rock aggression"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, screams, flows, cadence, lyrics, riffs, guitar tones, basslines, drum patterns, arrangements, album sequencing, persona, or copyrighted material. Use broad traits—political intensity, groove, heavy emotional release, rhythm control, and dark tension—as inspiration for an original Pressure Signal identity.",
+    "allowed_elements": [
+      "shouted rap verses and spoken rhythmic pressure",
+      "low-tuned riffs, syncopated grooves, and heavy bass",
+      "funk-metal rhythmic pocket and stop-start dynamics",
+      "dark nu-metal atmosphere and anxious melodic hooks",
+      "political anger framed through concrete human stakes",
+      "crowd chant hooks and call-back refrains",
+      "industrial noise hits, feedback, and distorted transitions",
+      "profane adult language without hate slurs",
+      "personal vulnerability under aggression",
+      "live-band drums with physical mosh energy"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist vocal style, cadence, flow, scream, riff, groove, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "hate slurs or identity-based attacks",
+      "graphic violence or actionable threats",
+      "self-harm instructions or romanticized self-destruction",
+      "drug-use instructions or glamorized addiction",
+      "empty macho posturing with no purpose or emotional stake",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, groove lane, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Anger must have a target, context, or human cost; avoid generic yelling.",
+      "Use at least one concrete social, bodily, room, street, or machine detail in each song."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be shouted, rapped, or sung.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Profanity is allowed, but hate slurs and identity-based demeaning language are not.",
+      "Threat language must remain theatrical, metaphorical, or systemic critique and must not encourage real-world harm."
+    ],
+    "structure_preferences": [
+      "[RIFF INTRO] -> [VERSE 1] -> [PRE-HOOK] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BREAKDOWN] -> [FINAL CHANT] -> [OUTRO]",
+      "[COLD VOCAL] -> [BASS GROOVE] -> [VERSE] -> [HOOK] -> [VERSE] -> [HOOK] -> [NOISE BREAK] -> [FINAL HOOK]",
+      "[DRUM/BASS INTRO] -> [RAP VERSE] -> [CHANT REFRAIN] -> [HEAVY SECTION] -> [RAP VERSE] -> [BREAKDOWN] -> [CROWD OUTRO]",
+      "[TEXTURE INTRO] -> [SPOKEN VERSE] -> [RIFF DROP] -> [CHORUS] -> [BRIDGE] -> [DOUBLE-TIME RAP] -> [FINAL CHORUS]"
+    ],
+    "song_family_types": [
+      "Protest funk-metal anthem with locked bass groove, shouted rap verses, and chantable chorus.",
+      "Dark nu-metal groove track with anxious vocal texture, heavy riff repetition, and melodic release.",
+      "Riff-heavy mosh song with stop-start dynamics, hard profanity, and physical crowd energy.",
+      "Spoken tension builder that starts sparse and erupts into full-band catharsis.",
+      "Melodic heavy-rock confession with personal trauma, low-end pressure, and huge final chorus.",
+      "Industrial rap-rock closer with noise breaks, crowd chant fragments, and abrupt ending."
+    ],
+    "production_variation_matrix": [
+      "Rotate riff feel: syncopated funk-metal, low-tuned chug, eerie single-note motif, wah-like rhythmic guitar, distorted bass-led groove, or open-chord anthem lift.",
+      "Rotate drum feel: live hard rock pocket, militant march, half-time stomp, frantic mosh section, dry hip-hop break, or industrial percussion layer.",
+      "Rotate vocal shape: shouted rap, tense spoken verse, melodic heavy chorus, gang chant, whispered pressure line, or screamed final accent used sparingly.",
+      "Rotate texture: raw rehearsal-room grit, polished heavy single, industrial metal haze, protest-poster urgency, dark bedroom panic, or festival-stage release.",
+      "Use breakdowns selectively; each breakdown should change the emotional or political pressure, not just add heaviness."
+    ],
+    "tempo_energy_lanes": [
+      "78-88 BPM: slow heavy dread, half-time stomp, anxious vocal space.",
+      "89-104 BPM: groove-metal pocket, funk-metal bass movement, chant-ready hooks.",
+      "105-118 BPM: driving rap-rock urgency, protest momentum, hard snare attack.",
+      "119-132 BPM: mosh-forward heavy rock, faster riff energy, explosive chorus lift.",
+      "133-150 BPM: rare panic sprint or double-time section, used briefly for impact."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: isolated riff, bass groove, feedback swell, shouted phrase, drum count-in, industrial texture, or cold spoken line.",
+      "Every song should vary at least three major variables: tempo, riff type, vocal delivery, hook type, emotional posture, breakdown placement, or production texture.",
+      "Do not always use a shouted chant chorus; rotate melodic heavy hook, spoken refrain, gang response, instrumental riff hook, or no traditional chorus.",
+      "Use silence, dropouts, and stop-start hits as rhythmic weapons, not filler.",
+      "Avoid identical verse lengths, breakdown timing, riff density, and outro tag style across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: crowd chant, melodic heavy chorus, shouted slogan-like phrase, spoken mantra, bass-led riff hook, or call-back response.",
+      "Do not reuse the same hook rhythm, profanity pattern, title placement, or cadence shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: uprising, panic, refusal, exposure, solidarity, disgust, or release.",
+      "Use repetition for force, but change gang vocals, silence, riff density, harmony, or drum intensity on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: protest narrator, cornered worker, anxious body, media critic, survivor, collective crowd, or direct confrontation with a system.",
+      "Do not make every song about revolution, machines, or rage; those are lanes, not the whole brand.",
+      "When lyrics are political, make the stakes human and concrete rather than abstract slogans.",
+      "When lyrics are personal or trauma-focused, avoid glamorizing collapse and include survival tension.",
+      "When lyrics are aggressive, keep targets systemic, fictional, metaphorical, or self-critical rather than harassing real people."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same pressure, signal, siren, machine, cage, riot, teeth, fire, or broadcast imagery across every song.",
+      "Do not force specific numbers, symbols, objects, slogans, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as yelling a command, naming an enemy, starting with sirens, or declaring war.",
+      "Do not reuse the same riff feel, chant cadence, breakdown trick, curse pattern, or emotional conclusion across multiple tracks.",
+      "Keep Pressure Signal identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with a groove-heavy track that establishes live-band force and vocal identity without using the heaviest breakdown first.",
+      "Sequence protest tracks beside personal/anxious tracks so the project has more than one emotional gear.",
+      "Use mosh-forward songs as peaks, not the entire album posture.",
+      "Place the most vulnerable melodic-heavy song after a hard political or riff-driven track for contrast.",
+      "Save one major crowd-chant or industrial closer for the late-middle or finale.",
+      "End with either a hard cutoff, feedback trail, collective chant fragment, or quiet line that exposes the human cost."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable riff, bass groove, vocal phrase, or drum hit within the first 10 seconds.",
+      "Pair intense verses with a clearer hook or riff motif.",
+      "Use rhythm, silence, and stop-start motion to make the song physically memorable.",
+      "Make at least one line per verse concrete enough to quote without relying on generic anger.",
+      "Let vocal contrast create replay value: rap pressure, chant release, melodic break, or spoken threat-as-metaphor."
+    ],
+    "hook_design_rules": [
+      "Hooks should be chantable, riff-driven, melodic-heavy, or rhythmically blunt.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse pressure and chorus release.",
+      "For protest lanes, let rhythm and crowd response carry urgency; for dark metal lanes, let melody and low-end carry dread."
+    ],
+    "energy_arc": {
+      "pattern": "WARNING -> GROOVE -> PRESSURE -> BREAK -> ERUPTION -> AFTERSHOCK",
+      "rules": [
+        "Start with a recognizable riff, bassline, drum hit, texture, or vocal spark rather than a long empty intro.",
+        "Build pressure through groove and lyrical focus before the first full release.",
+        "Include at least one break: dropout, spoken turn, noise hit, tempo feel shift, or exposed emotional line.",
+        "Let the final section hit harder, darker, more collective, or more vulnerable depending on the song family.",
+        "End with a memorable aftershock rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Crowd chant for protest or mosh tracks",
+      "Short repeated refusal phrase listeners can shout",
+      "Gang-vocal response used occasionally, not automatically",
+      "Beat-stop or riff-stop line for emphasis",
+      "Final chant, feedback, or spoken tag that reframes the anger"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Rage Against the Machine or Korn imitation rather than an original adjacent heavy rap-rock lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, riff type, groove feel, hook type, vocal delivery, emotional posture, breakdown placement, or production texture.",
+      "If a song is political, confirm it has concrete human stakes and is not just slogans.",
+      "If a song is dark or trauma-focused, confirm it avoids self-harm instruction or romanticized collapse.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "High-contrast protest-industrial rap-rock artwork with cracked concrete, distorted signal waves, barricade texture, stage smoke, black metal grain, warning red accents, and aggressive poster typography. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#D6D1C7",
+      "accent": "#C1121F",
+      "background": "#0A0A0A",
+      "concrete_grey": "#6F7378",
+      "warning_red": "#E21B2D",
+      "sick_green": "#667A3A",
+      "smoke_white": "#E8E1D4"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "aggressive protest-poster typography, limited words, black/red/concrete contrast, distressed print texture, no dense lyric blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/rageagainstthekorn/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Pressure Signal",
+    "default_album": "Pressure Map",
+    "label_name": "Figment Factory",
+    "primary_genre": "Rock",
+    "spotify_genres": [
+      "rap rock",
+      "nu metal",
+      "alternative metal",
+      "funk metal",
+      "industrial rock"
+    ],
+    "youtube_tags_seed": [
+      "rap rock",
+      "nu metal",
+      "alternative metal",
+      "funk metal",
+      "heavy rock",
+      "Pressure Signal"
+    ],
+    "apple_music_genres": [
+      "Rock",
+      "Metal",
+      "Alternative"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "explicit adult language allowed; political anger and dark themes allowed without hate slurs, actionable threats, or self-harm instruction"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Pressure Signal Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

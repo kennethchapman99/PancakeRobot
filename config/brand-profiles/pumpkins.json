@@ -1,0 +1,303 @@
+{
+  "brand_name": "Glass Orchard",
+  "app_title": "Glass Orchard",
+  "brand_type": "music",
+  "brand_description": "Glass Orchard is an original AI-assisted artist brand for emotionally huge alternative rock: dreamy walls of guitar, bruised melodic vocals, romantic gloom, distorted catharsis, acoustic vulnerability, gothic piano shadows, and widescreen album-scale drama. The sound can be heavy, fragile, beautiful, bitter, mystical, or explosive without imitating any real artist, voice, lyrics, melodies, guitar tones, riffs, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Listeners who like 1990s-inspired alternative rock, dream-pop haze, shoegaze-adjacent guitars, grunge-era intensity, gothic ballads, orchestral rock flourishes, wounded romance, and songs that move from whispery intimacy to towering distortion.",
+    "guardrail": "Suitable for general streaming audiences ages 16+. Allow melancholy, alienation, romantic obsession, insecurity, anger, spiritual unease, and dramatic emotional intensity. Avoid explicit sexual detail, graphic violence, hate, slurs, self-harm instruction, drug glorification, or content aimed at children."
+  },
+  "character": {
+    "name": "Glass Orchard",
+    "core_concept": "A haunted garden of loud guitars, moonlit bedrooms, cracked mirrors, and fragile voices turning private ache into towering alternative-rock songs.",
+    "fallback_summary": "dreamy heavy alternative-rock artist blending distortion, vulnerability, gothic romance, and melodic catharsis",
+    "clap_name": "none",
+    "personality_traits": [
+      "Romantic, wounded, and dramatic without becoming parody",
+      "Fragile in verses and enormous in choruses",
+      "Comfortable with beauty, bitterness, mysticism, and noise",
+      "Album-minded and cinematic rather than single-formula",
+      "Emotionally direct but wrapped in dreamlike imagery",
+      "Restless across heavy rock, acoustic confession, piano gloom, and electronic shadow"
+    ],
+    "catchphrases": [
+      "Soft heart, loud sky",
+      "Bloom through the feedback"
+    ],
+    "visual_identity": "Moody alternative-rock artwork with moonlit flowers, cracked glass, silver-black distortion, violet dusk, candlelit rooms, worn paper texture, and romantic gothic atmosphere. Visuals should feel dramatic, beautiful, noisy, and haunted without copying any existing album art.",
+    "visual_reference": [
+      "Moonlit gardens, cracked mirrors, old bedrooms, candlelight, and soft stage haze",
+      "Muted black, silver, violet, cream, deep red, and dusky blue palette",
+      "Distorted floral silhouettes and guitar-amp texture used occasionally, not forced",
+      "Worn zine paper, faded theater poster, and dreamlike rock-cover atmosphere",
+      "No celebrity likeness, no copied cover layouts, no dense typography"
+    ]
+  },
+  "music": {
+    "default_style": "dreamy heavy alternative rock with shoegaze textures, grunge-era distortion, gothic piano, acoustic vulnerability, and orchestral rock drama",
+    "default_bpm": 96,
+    "default_key": "E Minor",
+    "default_prompt": "Original emotionally huge alternative rock with layered distorted guitars, dreamy clean arpeggios, melodic bass, live-feeling drums, vulnerable expressive vocals, and dramatic shifts between intimacy and catharsis. Vary the lane by song: heavy guitar anthem, dreamy shoegaze haze, acoustic confession, gothic piano ballad, orchestral rock epic, bitter mid-tempo rocker, and shadowy electronic-acoustic lament are all valid. Never imitate, clone, or reference any real artist voice, vocal timbre, cadence, lyrics, melody, guitar riff, chord progression, arrangement, production, persona, or copyrighted work. Create a fresh performance with romantic gloom, distortion, beauty, ache, and melodic force.",
+    "target_length": "2:30-5:00",
+    "min_words": 130,
+    "normal_word_range": "160-380",
+    "first_vocal_by_seconds": 14,
+    "max_instrumental_intro_seconds": 22
+  },
+  "lyrics": {
+    "title_examples": [
+      "Violet Static",
+      "Glass Garden",
+      "Soft Machine Heart",
+      "Moonburn",
+      "Ashes in Bloom"
+    ],
+    "topic_variety": "Use broad topic families: doomed romance, adolescent memory, spiritual emptiness, jealousy and tenderness, alienation in crowded rooms, private rage, beauty inside decay, night drives, fame or performance as loneliness, grief turning into power, and dreamlike self-reinvention. Do not repeat the same moon, glass, flower, machine, angel, ash, star, or bedroom imagery across songs.",
+    "required_closing": "End with an unresolved image, final emotional lift, whispered admission, distorted refrain, or quiet collapse; avoid tidy moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "dreamy_heavy_alternative_rock",
+    "primary_emotional_goal": "Create original alternative-rock songs that feel vulnerable, massive, romantic, noisy, and cinematic, with enough variation to support albums without repeating one guitar-wall formula.",
+    "voice_perspective": "Flexible first-person, direct address, or dreamlike observer. The narrator can be wounded, jealous, devotional, furious, lonely, mystical, tender, or resigned depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person or second-person, with occasional mythic or cinematic third-person distance.",
+      "tone": "Vulnerable, intense, romantic, bitter, dreamlike, dramatic, and emotionally exposed; never derivative.",
+      "vocabulary": "Plain emotional confession mixed with gothic, celestial, floral, and broken-machine imagery used sparingly rather than as constant motifs.",
+      "signature_sounds": [
+        "layered distorted guitars",
+        "dreamy clean arpeggios",
+        "melodic bass movement",
+        "big live-feeling drums",
+        "gothic piano or strings",
+        "fragile-to-fierce vocal dynamics"
+      ],
+      "comedy_mode": "None; occasional dry bitterness or self-lacerating irony is allowed, but the brand is emotionally serious.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Smashing Pumpkins Siamese Dream-era layered guitar catharsis",
+      "Smashing Pumpkins Mellon Collie-era widescreen emotional drama",
+      "Smashing Pumpkins Adore-era gothic electronic-acoustic melancholy",
+      "1990s alternative rock intensity",
+      "dream-pop and shoegaze guitar atmosphere",
+      "gothic piano-rock balladry"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, vocal tone, phrasing, lyrics, melodies, guitar riffs, chord progressions, drum patterns, arrangements, album sequencing, persona, or copyrighted material. Use broad emotional and sonic traits—layered guitars, fragility, grandeur, romantic gloom, and dynamic contrast—as inspiration for an original Glass Orchard identity.",
+    "allowed_elements": [
+      "layered distorted guitar walls and clean arpeggio contrast",
+      "fragile verse vocals that open into huge choruses",
+      "melancholic but memorable vocal melodies",
+      "gothic piano, strings, bells, or synth shadows",
+      "dream-pop haze and shoegaze-adjacent texture",
+      "lyrics about romance, alienation, jealousy, memory, and self-reinvention",
+      "dynamic builds from bedroom intimacy to full-band catharsis",
+      "abstract images anchored by plain emotional lines",
+      "acoustic or electronic detours within an alternative-rock identity",
+      "clean or radio-friendly language by default"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist vocal style, melody, riff, chord progression, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "overusing the same title examples, moon imagery, glass imagery, flower imagery, or invented lore terms",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "glorified drug abuse or instructions for drug use",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be melodic and emotionally forceful, but every song should invent its own hook language.",
+      "Use at least one concrete sensory, room, weather, body-language, or object detail in each song to prevent generic dramatic writing."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid explicit content unless a separate release profile explicitly permits it.",
+      "Emotional darkness is allowed, but the song must not instruct or encourage self-harm, dangerous behavior, or substance abuse."
+    ],
+    "structure_preferences": [
+      "[INTRO TEXTURE] -> [VERSE 1] -> [PRE-CHORUS] -> [CHORUS] -> [VERSE 2] -> [CHORUS] -> [BRIDGE or SOLO] -> [FINAL CHORUS] -> [OUTRO]",
+      "[GUITAR INTRO] -> [VERSE] -> [CHORUS] -> [VERSE] -> [CHORUS] -> [QUIET BREAKDOWN] -> [LOUD FINAL SECTION]",
+      "[PIANO or ACOUSTIC INTRO] -> [VERSE 1] -> [REFRAIN] -> [VERSE 2] -> [REFRAIN] -> [INSTRUMENTAL SWELL] -> [FINAL REFRAIN]",
+      "[ELECTRONIC SHADOW INTRO] -> [VERSE] -> [HOOK] -> [VERSE] -> [HOOK] -> [DISTORTED TURN] -> [CATHARTIC OUTRO]"
+    ],
+    "song_family_types": [
+      "Heavy guitar anthem with layered distortion, urgent drums, and a soaring wounded chorus.",
+      "Dreamy mid-tempo rocker with clean arpeggios, hazy guitars, and romantic melancholy.",
+      "Gothic piano or acoustic ballad with restrained percussion, intimate vocal, and dark atmosphere.",
+      "Widescreen orchestral rock epic with dynamic sections, strings or bells, and album-track ambition.",
+      "Shadowy electronic-acoustic lament with drum machine pulse, soft synths, and fragile vocals.",
+      "Bitter fast alt-rock burst with raw guitars, concise hook, and cathartic release."
+    ],
+    "production_variation_matrix": [
+      "Rotate guitar roles: clean arpeggio, layered fuzz wall, acoustic strum, feedback swell, tremolo shimmer, or single-note lead motif.",
+      "Rotate rhythm feel: slow ballad sway, mid-tempo rock pulse, driving eighth-note urgency, half-time heaviness, electronic drum-machine pulse, or loose live-band push.",
+      "Rotate harmonic beds: minor-key guitar progression, suspended chords, gothic piano, string pad, synth drone, or bass-led minimalism.",
+      "Rotate vocal shape: intimate close vocal, fragile high-register melody, huge layered chorus, whispered bridge, raw final take, or restrained spoken-sung verse.",
+      "Use solos, instrumental swells, or noise breaks selectively; they should serve the emotional arc rather than appear by default."
+    ],
+    "tempo_energy_lanes": [
+      "62-76 BPM: gothic ballad or acoustic lament, heavy air, slow emotional burn.",
+      "77-92 BPM: brooding mid-tempo, dreamy guitar haze, restrained verses and wide choruses.",
+      "93-108 BPM: classic alternative-rock momentum with guitar lift and melodic urgency.",
+      "109-126 BPM: driving distorted anthem, sharper drums, cathartic chorus impact.",
+      "127-150 BPM: raw fast burst or finale energy, used sparingly for contrast."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: clean guitar figure, feedback swell, piano motif, acoustic strum, electronic pulse, cold vocal, or drum entrance.",
+      "Every song should vary at least three major variables: tempo, guitar texture, vocal delivery, hook type, emotional posture, structure, or electronic/acoustic balance.",
+      "Do not always resolve with a huge final chorus; sometimes end with a quiet fragment, feedback tail, piano echo, or abrupt cutoff.",
+      "Use orchestral, gothic, or electronic elements as contrast, not constant decoration.",
+      "Avoid identical verse lengths, chorus density, bridge placement, and distortion timing across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: soaring chorus, repeated fragile refrain, one-line mantra, melodic question, instrumental guitar hook, or explosive final phrase.",
+      "Do not reuse the same hook rhythm, title placement, or melodic contour across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: longing, jealousy, surrender, defiance, grief, devotion, collapse, or release.",
+      "Use repetition for emotional gravity, but change harmony, volume, texture, lyric detail, or guitar density on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: intimate confession, address to a lover, haunted memory, jealous inner monologue, mythic self-image, quiet prayer, or observer of a broken room.",
+      "Do not make every song about doomed romance, angels, stars, or decay; those are lanes, not the whole brand.",
+      "When lyrics become abstract or mystical, include one plainspoken human sentence to anchor the song.",
+      "When lyrics become romantic, avoid cliché and include tension, imperfection, or distance.",
+      "When lyrics become angry, keep the emotion personal and poetic rather than making actionable threats."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same moon, glass, flower, angel, star, machine, bedroom, ash, or carnival imagery across every song.",
+      "Do not force specific numbers, symbols, objects, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as waking up, staring at the ceiling, watching rain, or addressing a lost lover.",
+      "Do not reuse the same chorus cadence, guitar texture, distortion arc, or emotional conclusion across multiple tracks.",
+      "Keep Glass Orchard identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible guitar-driven song that defines the emotional world without exhausting the largest catharsis.",
+      "Sequence heavy tracks beside ballads, dreamier pieces, or electronic-acoustic shadows so the album breathes.",
+      "Use long or orchestral songs as emotional peaks, not filler.",
+      "Place the most vulnerable acoustic or piano song after a louder song for contrast.",
+      "Save one major distorted finale or widescreen epic for late in the sequence.",
+      "End with either a quiet unresolved image, a final wall of sound, or a stripped vocal that feels like the lights going out."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable guitar, piano, vocal, or distortion motif within the first 18 seconds.",
+      "Pair poetic verses with a simpler emotional chorus or refrain.",
+      "Let dynamics create replay value: hush, lift, rupture, bloom, and afterglow.",
+      "Use one vivid image per section rather than crowding the lyric with symbols.",
+      "Keep hooks melodic enough to remember without making them obvious or childish."
+    ],
+    "hook_design_rules": [
+      "Hooks should be melodic, emotionally loaded, or texturally unforgettable.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse intimacy and chorus size.",
+      "For heavy lanes, let melody and distortion carry the hook; for ballad lanes, let vulnerability and space carry it."
+    ],
+    "energy_arc": {
+      "pattern": "HUSH -> ACHE -> BLOOM -> FRACTURE -> FLOOD -> AFTERGLOW",
+      "rules": [
+        "Start with a recognizable texture, guitar figure, piano motif, drum pulse, or vocal idea rather than a long empty intro.",
+        "Build tension through restraint before giving the full chorus or distortion wall.",
+        "Reveal the plain emotional truth before the final third.",
+        "Let the final section shift energy: bigger, quieter, stranger, or more cathartic depending on the song family.",
+        "End with a memorable afterimage, not a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Melodic refrain listeners can hum without needing dense lyrics",
+      "A short repeated phrase used as emotional anchor, not slogan",
+      "Instrumental guitar or piano motif that returns like a memory",
+      "Final line that reframes the song emotionally",
+      "Crowd-like backing texture used rarely and only for cathartic songs"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Smashing Pumpkins imitation rather than an original adjacent genre/emotional lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, guitar texture, acoustic/electronic balance, hook type, vocal delivery, emotional posture, structure, or production texture.",
+      "If a song is abstract or gothic, confirm it has a plain emotional center.",
+      "If a song is loud or cathartic, confirm it has restraint somewhere before the release.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Moody 1990s-inspired alternative-rock sleeve art with moonlit florals, cracked glass, muted violet and silver tones, worn poster texture, candlelit interiors, dreamy distortion, and restrained gothic romance. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#D8D1BC",
+      "accent": "#7C5FA3",
+      "background": "#17151C",
+      "moon_silver": "#C8CCD0",
+      "deep_violet": "#4B355F",
+      "dried_rose": "#A85C68",
+      "candle_gold": "#D8A84E"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "distressed alternative-rock typography, limited words, silver/violet contrast, worn poster texture, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/pumpkins/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Glass Orchard",
+    "default_album": "Violet Static",
+    "label_name": "Figment Factory",
+    "primary_genre": "Alternative",
+    "spotify_genres": [
+      "alternative rock",
+      "dream pop",
+      "shoegaze",
+      "grunge",
+      "gothic rock"
+    ],
+    "youtube_tags_seed": [
+      "alternative rock",
+      "dream pop",
+      "shoegaze",
+      "grunge",
+      "gothic rock",
+      "Glass Orchard"
+    ],
+    "apple_music_genres": [
+      "Alternative",
+      "Rock",
+      "Indie Rock"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; melancholy and lightly mature themes allowed without explicit content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Glass Orchard Studio",
+    "logo_path": "/figment-factory-logo.png"
+  }
+}

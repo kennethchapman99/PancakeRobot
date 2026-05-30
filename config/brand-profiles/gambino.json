@@ -1,0 +1,302 @@
+{
+  "brand_name": "Figment Factory",
+  "app_title": "Figment Factory",
+  "brand_type": "music",
+  "brand_description": "Figment Factory is an original AI-assisted music brand for eclectic, song-forward alternative hip hop, funk, soul, R&B, and indie-rap releases. The sound can move from sharp rap confidence to vulnerable melodic confession, from retro-funk grooves to arena-sized emotional rock moments, while remaining fully original and never imitating any real artist, voice, flow, lyrics, melodies, beats, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Listeners who like genre-fluid hip hop, alternative R&B, funk grooves, clever rap, cinematic hooks, emotional pop-rock edges, and songs that can shift between funny, cool, wounded, theatrical, and explosive.",
+    "guardrail": "Suitable for general streaming audiences ages 16+. Allow lightly mature themes, insecurity, ambition, partying, romance, alienation, and emotional intensity. Avoid explicit sexual detail, graphic violence, hate, slurs, self-harm instruction, drug glorification, or content framed for children."
+  },
+  "character": {
+    "name": "Figment Factory",
+    "core_concept": "A surreal music factory where clever rap, oddball theatre, retro funk, emotional R&B, and huge melodic release are assembled into original songs.",
+    "fallback_summary": "genre-fluid alt-hip-hop and R&B brand with wit, groove, theatre, vulnerability, and left-field hooks",
+    "clap_name": "none",
+    "personality_traits": [
+      "Clever and observant without sounding smug",
+      "Theatrical in flashes, but grounded in real emotion",
+      "Comfortable being funny, anxious, romantic, arrogant, and vulnerable in different songs",
+      "Genre-restless: rap, funk, R&B, indie rock, synth-pop, and soul can all appear",
+      "Emotionally direct when the hook lands",
+      "Playful with structure and texture without becoming inaccessible"
+    ],
+    "catchphrases": [
+      "Built weird, sung true",
+      "Make the strange thing catchy"
+    ],
+    "visual_identity": "Retro-futurist hand-drawn factory artwork with a friendly ghost-like figure, black factory silhouette, warm cream paper texture, orange/red sunset shapes, music notes, studio gear, and bold geometric typography. Visual world should feel like indie label art, surreal music theatre, and warm analog soul.",
+    "visual_reference": [
+      "Cream paper grain with black silhouette shapes and orange/red warmth",
+      "Factory chimneys turning smoke into notes and melodic shapes",
+      "Friendly surreal ghost figure as optional background mascot, not required in every image",
+      "Studio machines, reels, keys, samplers, waveform screens, and stage-like lighting",
+      "Retro-futurist indie poster design with limited text and strong composition"
+    ]
+  },
+  "music": {
+    "default_style": "genre-fluid alternative hip hop with funk, soul, R&B, indie rock, and theatrical pop edges",
+    "default_bpm": 104,
+    "default_key": "A Minor",
+    "default_prompt": "Original genre-fluid alternative hip hop with sharp rap sections, melodic R&B hooks, retro funk/soul groove, occasional indie-rock or synth-pop lift, and a cinematic emotional arc. Vary the lane by song: witty rap bangers, falsetto-like funk/R&B grooves, vulnerable melodic confessionals, bright anxious singalong tracks, and explosive rock-edged finales are all valid. Never imitate, clone, or reference any real artist voice, cadence, flow, lyrics, melody, beat, arrangement, persona, or copyrighted work. Create a fresh artist performance with groove, wit, theatricality, vulnerability, and strong hooks.",
+    "target_length": "2:00-3:30",
+    "min_words": 160,
+    "normal_word_range": "180-420",
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 12
+  },
+  "lyrics": {
+    "title_examples": [
+      "Velvet Static",
+      "Basement Halo",
+      "Almost Famous",
+      "Neon Apology",
+      "Last Song at the Party"
+    ],
+    "topic_variety": "Use broad topic families: ambition and insecurity, outsider confidence, friendship and loyalty, romance with distance or regret, party energy with anxious undertones, fame and performance as a mask, growing up without feeling ready, surreal city-night imagery, and emotional release after pretending to be fine. Do not repeat the same images, slogans, or title language across songs.",
+    "required_closing": "End with a memorable emotional turn, cinematic final image, unresolved question, or stripped-back refrain; avoid neat moral lessons or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "genre_fluid_alternative_hip_hop",
+    "primary_emotional_goal": "Create original songs that feel smart, catchy, strange, vulnerable, and performance-ready, with enough variation to support full albums without repeating one formula.",
+    "voice_perspective": "Flexible first-person, direct address, or scene-based storytelling; the narrator can be funny, exposed, cocky, heartbroken, or theatrical depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person or second-person, with occasional cinematic third-person scene framing.",
+      "tone": "Clever, candid, stylish, restless, emotionally exposed, occasionally absurd, never derivative.",
+      "vocabulary": "Modern and conversational with flashes of dense rhyme, surreal metaphor, punchline wit, and plain emotional confession.",
+      "signature_sounds": [
+        "rubbery bass",
+        "retro-funk guitar or keys",
+        "tight rap drums",
+        "stacked melodic hooks",
+        "wide cinematic synths",
+        "occasional rock-edged guitars"
+      ],
+      "comedy_mode": "Dry, self-aware, character-driven, and brief; punchlines should reveal insecurity, ego, or social awkwardness rather than become novelty jokes.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Childish Gambino Camp-era theatrical rap confidence",
+      "Childish Gambino Redbone-era retro-funk falsetto energy",
+      "Childish Gambino Sober-era bright R&B-pop melancholy",
+      "Childish Gambino 3005-era anxious singalong warmth",
+      "Childish Gambino Sweatpants-era sharp rap bravado",
+      "Childish Gambino Lithonia-era explosive melodic rock emotion"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, flow, cadence, lyrics, melodies, beats, arrangements, album sequencing, persona, adlibs, or copyrighted material. Use the broad emotional and genre range as inspiration for an original sound.",
+    "allowed_elements": [
+      "sharp rap verses with melodic or sung hooks",
+      "retro funk basslines and warm soul/R&B harmony",
+      "bright synth-pop or indie-pop lift when the song needs openness",
+      "theatrical rap confidence balanced by insecurity",
+      "party songs with anxious or emotional undertones",
+      "falsetto-like melodic energy described generically, not as a real-artist soundalike",
+      "rock-edged final choruses or explosive emotional climaxes",
+      "clever punchlines that serve character and story",
+      "cinematic scene details and surreal city imagery",
+      "clean or radio-friendly language by default"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist cadence, flow, melody, beat, adlib, persona, or arrangement",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "overusing the same title examples, factory imagery, ghost imagery, or invented lore terms",
+      "graphic violence or revenge fantasy",
+      "explicit sexual content",
+      "glorified drug abuse or instructions for drug use",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be memorable and song-like, but every song should invent its own hook language.",
+      "Use at least one concrete sensory or scene detail in each song to prevent generic emotional writing."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be sung or spoken.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Avoid explicit content unless a separate release profile explicitly permits it.",
+      "Emotional darkness is allowed, but the song must not instruct or encourage self-harm, dangerous behavior, or substance abuse."
+    ],
+    "structure_preferences": [
+      "[INTRO] -> [VERSE 1] -> [PRE-HOOK] -> [HOOK] -> [VERSE 2] -> [HOOK] -> [BRIDGE or BREAK] -> [FINAL HOOK] -> [OUTRO]",
+      "[COLD HOOK] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [RAP BREAK] -> [FINAL HOOK] -> [TAG]",
+      "[INTRO VAMP] -> [VERSE] -> [REFRAIN] -> [VERSE] -> [BIG CHORUS] -> [BREAKDOWN] -> [EXPLOSIVE FINAL CHORUS]",
+      "[VERSE 1] -> [HOOK] -> [VERSE 2] -> [HOOK] -> [BEAT SWITCH] -> [FINAL VERSE] -> [SHORT OUTRO]"
+    ],
+    "song_family_types": [
+      "Theatrical rap banger with punchlines, bounce, and a confident but self-aware narrator.",
+      "Retro-funk/R&B groove with warm bass, falsetto-like melodic lift, and romantic unease.",
+      "Bright anxious singalong with a simple emotional refrain and tight rhythmic verses.",
+      "Sharp minimalist rap track with darker humor, status tension, and crisp drum focus.",
+      "Explosive melodic rock-rap finale with vulnerability, big drums, and a cathartic final chorus.",
+      "Sparse late-night confession with soft keys, restrained drums, and direct emotional writing."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feels: tight rap bounce, funk pocket, crisp synth-pop pulse, half-time emotional drums, minimalist clap/snare pattern, or rock-edged live-kit lift.",
+      "Rotate harmonic beds: rubbery bass and guitar, Rhodes or Wurlitzer, synth pads, piano ballad shapes, fuzzy indie guitars, or sparse sub-bass minimalism.",
+      "Rotate vocal shape: rap-heavy verses, sung chorus, half-sung conversational delivery, layered gang-like hook, intimate close vocal, or explosive final vocal stack.",
+      "Rotate texture: clean pop polish, analog tape warmth, dry rap-room focus, neon synth sheen, sweaty funk band feel, or distorted arena outro.",
+      "Use occasional beat switches or genre pivots, but only when they reveal a new emotional state."
+    ],
+    "tempo_energy_lanes": [
+      "76-86 BPM: sparse confession, heavy emotional space, minimal drums, close vocal.",
+      "87-96 BPM: rap-forward pocket, punchlines, tension, darker bounce.",
+      "97-108 BPM: funk/R&B groove, melodic hooks, playful movement.",
+      "109-122 BPM: bright singalong, synth-pop lift, party energy with emotional shadow.",
+      "123-145 BPM: rock-edged or double-time finale energy, used sparingly for catharsis."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: cold vocal, bass riff, synth swell, drum pickup, fake-live room noise, or immediate chorus.",
+      "Every song should vary at least three major variables: tempo, drum feel, vocal delivery, hook type, emotional posture, arrangement shape, or instrumentation.",
+      "Do not always resolve with a bigger final chorus; sometimes end with a dry punchline, stripped vocal, distorted outro, or unresolved chord.",
+      "Use theatrical transitions sparingly; spoken tags, crowd texture, or abrupt cuts should feel purposeful, not routine.",
+      "Avoid identical verse lengths and chorus density across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: sung chorus, chantable refrain, anxious one-line mantra, falsetto-like melodic phrase, call-back response, or explosive rock chorus.",
+      "Do not reuse the same hook rhythm, title placement, or phrase shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: seduction, denial, panic, flex, confession, nostalgia, release, or surrender.",
+      "Use repetition for catchiness, but shift harmony, backing vocals, lyric detail, or drum intensity on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: ego monologue, romantic address, outsider comedy, fame-as-mask reflection, friendship loyalty, anxious party narrator, or cinematic observer.",
+      "Do not make every song about fame, parties, or heartbreak; those are lanes, not the whole brand.",
+      "When the narrator flexes, add a crack in the armor before the song ends.",
+      "When the song is vulnerable, include one unexpected witty line to preserve personality.",
+      "When using surreal imagery, anchor it with a plainspoken emotional sentence."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same factory, ghost, sunset, basement, party, neon, or fame imagery across every song.",
+      "Do not force specific numbers, symbols, objects, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as waking up, leaving a party, staring at a phone, or driving at night.",
+      "Do not reuse the same rhyme family, chorus cadence, or emotional conclusion across multiple tracks.",
+      "Keep Figment Factory identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with a song that immediately shows genre range: either rap confidence with melody or funk groove with lyrical bite.",
+      "Follow high-energy rap tracks with melodic or reflective tracks so the project feels dimensional.",
+      "Use one or two left-field experiments as turning points, not as filler.",
+      "Place the biggest emotional or rock-edged catharsis late in the album after the narrator has earned it.",
+      "End with either a vulnerable comedown, a cinematic unresolved image, or a huge melodic release that still leaves ambiguity."
+    ],
+    "earworm_stack": [
+      "Land a strong vocal identity or groove within the first 12 seconds.",
+      "Pair detailed, clever verses with a simpler emotional hook.",
+      "Let bass movement or a short melodic motif make the track recognizable even before the chorus.",
+      "Use contrast between theatrical rap personality and plain emotional confession.",
+      "Keep the hook memorable without making it childish or overly repetitive."
+    ],
+    "hook_design_rules": [
+      "Hooks should be singable, rhythmic, or emotionally explosive.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse density and hook clarity.",
+      "For funk/R&B lanes, let groove and melody carry part of the hook; for rap lanes, let phrasing and attitude carry it."
+    ],
+    "energy_arc": {
+      "pattern": "SPARK -> STRUT -> CRACK -> LIFT -> TURN -> AFTERGLOW",
+      "rules": [
+        "Start with an identifiable groove, vocal idea, or texture rather than a long empty intro.",
+        "Use early confidence or charm to pull the listener in.",
+        "Reveal vulnerability, anxiety, or emotional contradiction before the final third.",
+        "Let the final section shift energy: bigger, weirder, softer, or more cathartic depending on the song family.",
+        "End with a memorable aftertaste, not a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Short chantable refrain for rap bangers",
+      "Melodic phrase that listeners can hum without needing dense lyrics",
+      "Adlib responses that reveal humor, doubt, or confidence",
+      "Crowd-like or stage-like background texture used occasionally, not by default",
+      "Final tag line or repeated phrase that reframes the song emotionally"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Childish Gambino imitation rather than an original adjacent genre/emotional lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, drum feel, hook type, vocal delivery, emotional posture, structure, instrumentation, or production texture.",
+      "If a song is funny or cocky, confirm it still has an emotional crack or human detail.",
+      "If a song is vulnerable, confirm it has one sharp, specific image rather than generic sadness.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    }
+  },
+  "visuals": {
+    "style": "Retro-futurist hand-drawn music factory artwork with cream paper grain, black silhouette architecture, warm orange/red sunset shapes, music notes emerging from smoke, surreal friendly ghost imagery, and bold geometric typography. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#F3E8C8",
+      "accent": "#F05A28",
+      "background": "#F7EFD2",
+      "sun_red": "#D9412E",
+      "warm_orange": "#F28C28",
+      "deep_blue": "#30495C",
+      "soft_gold": "#E8B85B"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit drug imagery, weapons, gore, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "bold geometric display typography, limited words, strong black/orange contrast, clean poster-like spacing"
+  },
+  "media": {
+    "default_image_url": "/brand-media/gambino/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Figment Factory",
+    "default_album": "Velvet Static",
+    "label_name": "Figment Factory",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "alternative hip hop",
+      "alternative r&b",
+      "funk",
+      "indie hip hop",
+      "pop rap"
+    ],
+    "youtube_tags_seed": [
+      "alternative hip hop",
+      "alternative r&b",
+      "funk rap",
+      "indie rap",
+      "original music",
+      "Figment Factory"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "R&B/Soul",
+      "Alternative"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; lightly mature themes allowed without explicit content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Figment Factory Studio",
+    "logo_path": "/Gambino.png"
+  }
+}

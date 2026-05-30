@@ -39,8 +39,8 @@ test('multi-track manifest ensures Number of songs before filling track 2 fields
 
   assert.equal(result.ok, true);
   assert.deepEqual(events, [
-    'release_title',
     'ensure:2',
+    'release_title',
     'track_title_track_1',
     'track_title_track_2',
   ]);
