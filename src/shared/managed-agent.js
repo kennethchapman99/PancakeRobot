@@ -47,7 +47,11 @@ function readPositiveInt(value, fallback) {
 
 function getClient() {
   if (!_client) {
-    _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const baseURL = process.env.ANTHROPIC_BASE_URL || undefined;
+    if (baseURL) {
+      console.log(chalk.yellow(`[managed-agent] ANTHROPIC_BASE_URL is set to "${baseURL}" — all Anthropic API calls will use this override instead of https://api.anthropic.com`));
+    }
+    _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, baseURL });
   }
   return _client;
 }
@@ -206,6 +210,22 @@ function hashAgentDefinition(agentDef, model) {
 }
 
 /**
+ * Emit a structured diagnostic line for a direct-call failure.
+ * Never logs raw key values — only presence (boolean) and masked indicator.
+ */
+function logDirectCallDiagnostics(label, { model, err }) {
+  const apiKeyPresent = Boolean(process.env.ANTHROPIC_API_KEY);
+  const baseUrlOverride = process.env.ANTHROPIC_BASE_URL ? ` base_url=${process.env.ANTHROPIC_BASE_URL}` : '';
+  const errClass = err?.constructor?.name || 'Error';
+  const errStatus = err?.status != null ? ` status=${err.status}` : '';
+  const causeMsg = err?.cause?.message ? ` cause="${err.cause.message}"` : '';
+  console.log(chalk.red(
+    `  provider=anthropic model=${model}${baseUrlOverride} api_key_present=${apiKeyPresent}` +
+    `\n  error_class=${errClass}${errStatus} message="${err?.message}"${causeMsg}`
+  ));
+}
+
+/**
  * Run a noTools agent using client.messages.create directly.
  * Sessions API is for tool-using agents with environments — for pure text
  * generation, direct messages.create is simpler, faster, and more reliable.
@@ -213,11 +233,16 @@ function hashAgentDefinition(agentDef, model) {
 async function runAgentDirect(agentName, agentDef, task, options = {}) {
   const color = AGENT_COLORS[agentName] || chalk.white;
   const label = color.bold(`[${agentName.toUpperCase()}]`);
-  const client = getClient();
   const model = agentDef.model || 'claude-sonnet-4-6';
   const maxTokens = readPositiveInt(options.maxTokens ?? agentDef.maxTokens, DEFAULT_DIRECT_MAX_TOKENS);
   const maxRetries = readPositiveInt(options.maxRetries ?? agentDef.maxRetries, 0);
   const retryDelayMs = readPositiveInt(options.retryDelayMs ?? agentDef.retryDelayMs, DEFAULT_DIRECT_RETRY_DELAY_MS);
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error(`${agentName} direct call aborted: ANTHROPIC_API_KEY is not set. Check your .env file.`);
+  }
+
+  const client = getClient();
   let lastError;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -307,6 +332,7 @@ async function runAgentDirect(agentName, agentDef, task, options = {}) {
     } catch (err) {
       lastError = err;
       console.log(chalk.red(`\n${label} DIRECT CALL FAILED: ${err.message}`));
+      logDirectCallDiagnostics(label, { model, err });
 
       try {
         logError({

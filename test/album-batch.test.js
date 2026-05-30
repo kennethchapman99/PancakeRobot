@@ -54,6 +54,7 @@ const {
 const {
   validateAlbumPlan,
   normalizeAlbumPlan,
+  generateAlbumPlan,
 } = await import('../src/agents/album-orchestrator.js');
 const {
   runMagicPipelineService,
@@ -619,4 +620,44 @@ test('album resume persists provider auth/config errors in album latest event', 
   assert.match(album.shared_orchestration.latest_error, /Could not resolve authentication method/);
   assert.equal(album.shared_orchestration.latest_event.type, 'album_resume_complete');
   assert.equal(songs[0].pipeline_stage, 'album_track_failed');
+});
+
+test('generateAlbumPlan reports missing ANTHROPIC_API_KEY before any network attempt', async () => {
+  const savedKey = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+  try {
+    await generateAlbumPlan({ brandProfile: FAKE_BRAND, numberOfSongs: 2 });
+    assert.fail('expected generateAlbumPlan to throw');
+  } catch (err) {
+    assert.ok(
+      err.message.includes('ANTHROPIC_API_KEY'),
+      `Error message should mention ANTHROPIC_API_KEY; got: "${err.message}"`
+    );
+    assert.ok(
+      err.message.includes('.env'),
+      `Error message should mention .env; got: "${err.message}"`
+    );
+  } finally {
+    if (savedKey !== undefined) process.env.ANTHROPIC_API_KEY = savedKey;
+    else delete process.env.ANTHROPIC_API_KEY;
+  }
+});
+
+test('runAlbumBatch records orchestration failure in album record before lyricist stage', async () => {
+  clearBrandInterpretationCache();
+  const events = [];
+  const result = await runAlbumBatch({
+    brandProfileId: 'fake-brand',
+    numberOfSongs: 2,
+    brandLoader: fakeBrandLoader,
+    planGenerator: async () => { throw new Error('Synthetic orchestrator connection error'); },
+    isTest: true,
+    onEvent: async (e) => events.push(e),
+  }).catch(err => ({ threw: err.message }));
+
+  assert.ok(result.threw, 'expected runAlbumBatch to reject when planGenerator fails');
+  assert.match(result.threw, /Synthetic orchestrator connection error/);
+  // No track_started event should have been emitted — failure is pre-lyricist
+  assert.equal(events.filter(e => e.type === 'track_started').length, 0);
+  assert.ok(events.some(e => e.type === 'album_progress' && e.stage === 'orchestrating'));
 });

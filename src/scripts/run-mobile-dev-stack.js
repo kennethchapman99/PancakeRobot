@@ -103,6 +103,7 @@ async function startAutoTunnel(staticNgrokUrl) {
   console.error('[dev:mobile] No public tunnel is available; falling back to local-only mode.');
   if (errors.length) console.error(`[dev:mobile] Tunnel errors: ${errors.join(' | ')}`);
   console.error('[dev:mobile] Local-only fallback: PANCAKE_DISABLE_NGROK=true ./bin/pancakerobot');
+  console.error('[dev:mobile] Cloudflare tunnel unavailable; local app continues. Album generation and API calls do not require a tunnel.');
   return `http://localhost:${WEB_PORT}`;
 }
 
