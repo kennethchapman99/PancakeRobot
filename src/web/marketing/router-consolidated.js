@@ -1,5 +1,5 @@
 import express from 'express';
-import { renderMarketingDashboard, postOutreachRun, postInboxScan, postReleaseBaseImage, postBuildReleaseMarketingPack } from './controllers/dashboard-controller.js';
+import { postOutreachRun, postInboxScan, postReleaseBaseImage, postBuildReleaseMarketingPack } from './controllers/dashboard-controller.js';
 import { renderOutletsPage } from './controllers/outlets-controller.js';
 import {
   renderNewRelease,
@@ -68,7 +68,7 @@ export function registerMarketingRouter(app) {
   router.get('/songs/:id/release-audio', renderReleaseAudioSelector);
   router.post('/songs/:id/release-audio', postSelectReleaseAudio);
 
-  router.get('/marketing', renderMarketingDashboard);
+  router.get('/marketing', (req, res) => res.redirect(301, '/releases'));
   router.post('/marketing/outreach-run', postOutreachRun);
   router.post('/marketing/agents/inbox-scan', postInboxScan);
   router.post('/marketing/inbox-scan', postInboxScan);
