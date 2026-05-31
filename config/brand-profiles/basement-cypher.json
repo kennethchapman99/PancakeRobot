@@ -184,7 +184,106 @@
       "pattern": "",
       "rules": []
     },
-    "participation_patterns": []
+    "participation_patterns": [],
+    "vocal_performance_engine": {
+      "priority": "Basement Cypher's vocal identity lives or dies on the collision between four genuinely distinct MC voices — the listener must always feel they are hearing a specific persona in the booth, not a generic rapper filling a verse slot.",
+      "vocal_textures": [
+        "Razor Atlas: a coiled, controlled tension in the chest voice that suddenly releases into a multisyllabic chain — like a spring-loaded mechanism clicking open mid-bar",
+        "Professor Velvet: a warm, mid-low conversational register that sounds like a man leaning back in a studio chair, unhurried, letting rhymes arrive rather than chase",
+        "Saint Lo-Fi: clean boom-bap enunciation with a slight rasp on hard consonants — every word lands like a couplet chiseled into stone, not shouted",
+        "Q-Nova Strange: a bouncy, slightly ahead-of-the-beat delivery with jazz phrasing — syllables bent slightly off the grid as if the MC is improvising over a changes-based chord chart",
+        "Collective layering: when two or more personas trade bars back-to-back, the vocal texture contrast must be audible within two lines — no blending into a single undifferentiated rap voice"
+      ],
+      "timing_behaviors": [
+        "Razor Atlas deliberately clusters four to six syllables into a tight rhythmic burst, then hits a hard single-syllable word on a downbeat as punctuation — the pause after that word is load-bearing",
+        "Professor Velvet rides slightly behind the snare, conversational and relaxed, then snaps exactly onto the beat on the punchline word to land emphasis without raising volume",
+        "Saint Lo-Fi uses a metronomic couplet structure where the end-rhyme lands dead-center on the snare — the flow feels architectural, each bar a clean brick laid on the last",
+        "Q-Nova Strange deliberately displaces the rhyme syllable by a half-beat, landing it just after the expected grid point — the effect is loose and swinging but never sloppy",
+        "Across all personas, tempo switch-ups within a single track require the MC to adjust their syllabic density visibly: tighter phrasing in the faster section, longer vowels and held pauses in the slower section"
+      ],
+      "adlib_behaviors": [
+        "Razor Atlas uses short sharp breath-cut interjections — a half-word, a grunt, or a cut syllable — placed rhythmically as if the adlib itself is a snare hit, never decorative",
+        "Professor Velvet uses rare, warm, under-the-breath affirmations — a quiet 'yeah,' or a low chuckle — only when a line genuinely earns it, never as filler",
+        "Saint Lo-Fi avoids adlibs almost entirely, letting the silence between bars function as the response — when one does appear, it is a single plainspoken word that echoes the couplet's theme",
+        "Q-Nova Strange scatters short jazz-inflected vocalizations — a bent syllable, a quick tongue-roll, or a syncopated repeat of a single word — that feel improvised within the cypher moment",
+        "DJ scratch responses count as sonic adlibs for the collective: a turntable cut that answers a punchline replaces a vocal adlib and must feel timed like one"
+      ],
+      "avoid": [
+        "Any persona sliding into a melodic sung hook or trap-style Auto-Tuned refrain — even briefly — which collapses all four voices into a single generic contemporary sound",
+        "Razor Atlas slipping into shock-value profanity chains without rhythmic purpose — every hard word must land on a beat and advance the verse, not substitute for craft",
+        "Professor Velvet over-explaining his imagery with clarifying follow-up lines — the image should do the work; a second line that unpacks it kills the effect",
+        "Q-Nova Strange drifting into pure wordplay nonsense where lines lose meaning — his surreal vocabulary must still point at something real even when it sounds cosmic",
+        "Any persona using hype-man stack adlibs in the background throughout a verse — this is a cypher, not a stadium performance; intimacy and rawness must survive"
+      ]
+    },
+    "performance_conceit_bank": [
+      "Razor Atlas builds a multisyllabic rhyme chain that runs unbroken for six to eight syllables across a line break, completing the chain's final rhyme at the very start of the next bar — the listener realizes the chain finished a beat after it lands",
+      "Professor Velvet opens a verse with a mundane declarative sentence that sounds almost too plain, then uses the next three bars to recontextualize it until the opening line reveals a second meaning the listener missed — no announcement, no wink",
+      "Saint Lo-Fi delivers a couplet where both lines end on the same single-syllable word but with opposite emotional weight — the repetition is the turn, not an accident",
+      "Q-Nova Strange bends the flow into a jazz triplet pattern for exactly one bar in the middle of a verse, then snaps back to the 4/4 grid — the triplet bar should feel like a brief hallucination inside an otherwise structured cypher",
+      "During a DJ scratch break, one MC delivers a single bar as if completing the scratch's sentence — the transition between turntable cut and vocal line is seamless enough that the scratch and the rap feel like one continuous utterance",
+      "At a tempo switch-up, the MC who was rapping before the switch pauses for one full bar of drums only, then re-enters in the new tempo as if they had been counting the whole time — the re-entry is the punchline of the tempo change",
+      "Two personas split a single quatrain by alternating lines rather than full verses — the handoff is mid-thought, forcing both voices to complete each other's rhyme logic rather than deliver independent statements",
+      "Razor Atlas uses a sudden drop to near-whisper on the most violent or emotionally exposed line of a verse — no increase in volume for the hard truth, only a decrease — making the listener lean in rather than flinch back"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Late-Night Solo Booth",
+        "description": "A single persona carries all verses and the hook with no handoffs — the track feels like one MC working through a single idea over multiple passes, with the hook functioning as a return to the central image rather than a chorus break. Razor Atlas or Saint Lo-Fi are the natural fits; Professor Velvet can carry this lane when the story is long enough."
+      },
+      {
+        "name": "Live Cypher Round",
+        "description": "All four personas trade single verses or half-verses in sequence with no repeated hook structure — the track is pure verse rotation, the energy builds through contrast rather than chorus release, and the DJ scratch work between handoffs is the structural glue rather than a produced bridge."
+      },
+      {
+        "name": "Tempo Flip Journey",
+        "description": "The track is built explicitly around one or more internal BPM or feel shifts — not a breakdown, but a genuine structural change in tempo or rhythmic grid. Each section belongs to a different persona whose natural flow style matches the tempo: Q-Nova Strange owns the syncopated shift, Saint Lo-Fi anchors the return to the main groove. The scratching intensifies at every transition point."
+      },
+      {
+        "name": "Instrumental Showcase Break",
+        "description": "A full section — at least sixteen bars — is devoted to a DJ scratch performance or a live instrumental passage where the MCs are absent or drop to single-line punctuation only. The instrumental must carry Basement Cypher's sonic identity without vocal support, built on the dusty drum palette, warm bassline, and jazz-funk texture established by the collective's default sound."
+      },
+      {
+        "name": "Two-Voice Collision",
+        "description": "Only two of the four personas appear on the track, chosen specifically because their vocal textures create maximum contrast — Razor Atlas and Professor Velvet for tension-versus-ease, or Saint Lo-Fi and Q-Nova Strange for clarity-versus-cosmic swing. The track never feels incomplete; the two voices are enough because each carries the load of the absent two."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used all four personas, the next track must use two or fewer — the collective's tendency is to default to full-roster rotation, which dulls individual voice contrast across an album.",
+      "If the previous track held a steady 92 BPM throughout, the next track must include at least one internal tempo or feel shift, because the profile owner has explicitly identified tempo switch-ups as a core trait that must appear regularly, not occasionally.",
+      "If the previous track's hook was a repeated title phrase delivered by one MC, the next track's hook must use a different structural device — a DJ scratch return, a two-voice call-and-response, or a purely instrumental refrain — to prevent the album from sounding like a single song repeated.",
+      "If the previous track featured heavy profanity for rhythmic effect, the next track must find its edge through density of rhyme craft and image rather than hard language — the collective's failure mode is using swearing as a substitute for compression when the creative energy dips.",
+      "If the previous track opened with drums and an immediate first verse, the next track must open differently — a scratch intro, a spoken half-bar, an instrumental passage, or a cold entry mid-line — to prevent the album's openings from sounding identical.",
+      "If the previous track's dominant persona was Razor Atlas's compressed multisyllabic style, the next track must foreground Professor Velvet's slower storytelling or Q-Nova Strange's syncopated looseness, because Razor Atlas is the collective's default center of gravity and will dominate if not deliberately rotated."
+    ],
+    "anti_generic_rules": [
+      "Do not write a hook that is simply the song title repeated four times over a held chord — Basement Cypher's hooks must have rhythmic architecture, internal rhyme, or a scratch-based structural element that earns the repetition rather than filling space with a title loop.",
+      "Do not give every verse the same syllabic density — the collective's four personas have genuinely different compression rates, and writing all three verses at the same words-per-bar rate collapses the cypher into one undifferentiated voice.",
+      "Do not insert a generic hype-man response on every bar — the collective's intimacy comes from a private basement setting, not a crowd-facing stadium performance; adlibs must be sparse, rhythmically precise, and persona-specific.",
+      "Do not use the word 'streets' as a default signifier of authenticity — Razor Atlas uses concrete nouns like brick, ledger, and ink; Professor Velvet uses sensory imagery like vinyl and neon; defaulting to 'streets' is the generator's shortcut around these specific vocabularies.",
+      "Do not end a track with a fade-out over a repeated hook — Basement Cypher tracks must end with a deliberate structural choice: a cold stop on a final punchline, a DJ scratch that answers the last bar, or a spoken half-line that closes the session.",
+      "Do not smooth out the rough edges of the boom-bap production texture in the lyrical prompt — the vinyl crackle, hard snare, and dusty drum palette are not cosmetic details; they are the emotional environment the lyrics must inhabit, and any lyric that sounds too polished breaks the session's intimacy.",
+      "Do not write Q-Nova Strange's cosmic vocabulary as mere decoration — every surreal or multilingual word he uses must connect to a real emotional or narrative point in the verse, or his lane collapses into the generic 'weird rapper' cliché that has no specific identity.",
+      "Do not write all profanity in the same flat tone — swearing in this collective must carry rhythmic weight or emotional specificity; a hard word landing on a snare hit has a different function than the same word used as a filler transition, and the generator must honor that distinction."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use the same MC persona as the lead voice on two consecutive tracks — rotate the center of gravity across Razor Atlas, Professor Velvet, Saint Lo-Fi, and Q-Nova Strange.",
+      "Do not use the same hook structure two tracks in a row — if one track uses a vocal title-phrase refrain, the next must use a scratch-based, instrumental, or two-voice call-and-response hook.",
+      "Do not use the same internal tempo or feel-shift pattern twice — if one track shifts from slow to fast, the next shift must go fast to slow, or use a triplet-feel insertion rather than a full BPM change.",
+      "Do not anchor two consecutive tracks in the same key center or the same dominant chord color — the dusty minor palette can be varied through modal inflections, flat-seven movements, or jazz-borrowed chords without leaving the overall sonic identity.",
+      "Do not use the same DJ scratch placement strategy on back-to-back tracks — if one track uses scratching as verse punctuation, the next must use it as a hook replacement, an intro device, or a bridge fill.",
+      "Do not open two consecutive tracks with the same entry type — rotate between cold vocal drop, scratch intro, instrumental passage, spoken half-bar, and drums-only runway.",
+      "Do not feature the same two-persona pairing in back-to-back two-voice tracks — if Razor Atlas and Professor Velvet share a track, the next two-voice track must use a different combination.",
+      "Do not write two consecutive verses that rely on the same dominant imagery field — if one track is built on brick-and-ink urban concrete imagery, the next must draw from a different vocabulary cluster: sensory warmth, cosmic abstraction, or moral plainspokenness."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify which of the four personas is the primary voice on this track and explain what emotional or narrative pressure has pushed that persona to the front rather than any other.",
+      "The brief must describe exactly where the tempo switch-up or internal feel shift occurs on this track — which bar, what triggers it, and which persona re-enters after the shift — so the structural break is intentional rather than incidental.",
+      "The brief must identify the specific DJ scratch moment on this track: where it falls, what rhetorical or emotional function it serves in the song's arc, and whether it replaces a vocal adlib, closes a verse, or acts as the hook's spine.",
+      "The brief must state a specific image or concrete noun drawn from the lead persona's vocabulary list that the track is built around, confirming that the central lyrical world is specific to that voice rather than borrowed from one of the other three personas.",
+      "The brief must describe how profanity is used on this track — whether it is load-bearing rhythmic punctuation, emotional release, or deliberately absent — so the generator does not default to a uniform swearing register across all tracks.",
+      "The brief must specify what makes this track's hook structurally different from the hook on the immediately preceding track, naming the prior hook's device and the new device chosen to replace it."
+    ]
   },
   "visuals": {
     "style": "Premium hip-hop album art: underground, mysterious, adult, cinematic or stylized illustrated, with strong composition, expressive typography, vinyl/turntable/mic/cypher cues, and no children's cartoon defaults",

@@ -233,7 +233,111 @@
       "include_funny_long_word": false,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "vocal_performance_engine": {
+      "priority": "Soundhead's vocal is irreplaceable because it holds two states simultaneously — clinical detachment and barely-suppressed emotional collapse — and the tension between those states is the performance, not a stylistic choice.",
+      "vocal_textures": [
+        "A dry, slightly nasal mid-range delivery that sounds like the singer is recounting something painful with deliberate flatness, as if showing emotion would be admitting defeat.",
+        "A falsetto that enters not as a showpiece but as a fracture — the voice slipping upward when the emotional weight becomes too heavy for the chest register to carry.",
+        "A compressed, almost whispered verse tone that sits close to the ear, intimate and slightly airless, as though the room is small and the walls are listening.",
+        "A raw, throat-forward shout in cathartic peaks that strips away any polish — imperfect, urgent, and slightly desperate rather than polished rock belting.",
+        "A layered multi-vocal texture in choruses where a second or third vocal layer doesn't harmonize conventionally but doubles slightly off, creating a ghosted, uncertain unison.",
+        "A spoken-near-sung half-delivery in bridges or breakdowns where pitch becomes unstable on purpose, sitting between speech and melody as if the narrator is losing the thread."
+      ],
+      "timing_behaviors": [
+        "Phrases often begin slightly late relative to the beat, entering after a beat of empty space so the vocal feels like it arrived reluctantly rather than on cue.",
+        "Line endings frequently trail off mid-syllable or drop in volume so the last word almost disappears, leaving the lyric unresolved and the listener leaning in.",
+        "Rhythmic phrasing in verses crowds syllables together in quick bursts then breaks into wide space, mirroring the character's anxiety — thoughts arriving in rushes, then silence.",
+        "The chorus vocal sometimes anticipates the chord change by a half-beat, creating a forward-leaning urgency that feels less composed and more like something escaping.",
+        "In quieter tracks, rubato-style stretching of key syllables slows time around the most emotionally loaded words, treating them like objects the singer doesn't want to put down."
+      ],
+      "adlib_behaviors": [
+        "Short exhaled consonant sounds or breath-catch syllables at the end of phrases — not words, just the trace of a word — that function as punctuation the lyric didn't provide.",
+        "A single repeated word or half-phrase echoed quietly under the main vocal during the second or third chorus, as though the singer is still processing the line after delivering it.",
+        "Pitch slides that begin on a held note and drift downward without resolving, implying resignation without stating it.",
+        "A barely audible count-in, inhale, or murmured phrase at the very top of a song that makes the recording feel caught rather than performed.",
+        "An unexpected upward inflection on a line that ends a thought, turning a statement into a question and destabilizing what seemed like a conclusion."
+      ],
+      "avoid": [
+        "Smooth, controlled vibrato-heavy belting that signals vocal power or showmanship — Soundhead's voice is not a showcase; it's a carrier of unease.",
+        "Bright, front-of-mouth pop vowels that make the delivery feel cheerful or polished; the tone should stay in the back of the throat and carry weight.",
+        "Rhythmically perfect on-the-beat phrasing that removes the sense of emotional hesitation — robotic precision destroys the performance.",
+        "Melisma or vocal runs that draw attention to technique rather than feeling — any ornamentation must feel involuntary, not intentional.",
+        "Chest-voice yelling that slides into stadium rock bravado; even the loudest moment should sound like someone breaking rather than someone commanding."
+      ]
+    },
+    "performance_conceit_bank": [
+      "The narrator delivers the chorus in a flat, near-affectless tone as if reciting something memorized rather than felt — then in the final repeat, a single word cracks and the emotion floods out of nowhere.",
+      "The verse vocal is sung so close to spoken that pitch is almost incidental; the melody only fully emerges in the chorus, making the chorus feel like the voice finally giving itself permission.",
+      "A backing vocal tracks the lead at the same pitch but with a slightly different lyric — not a harmony, not an echo, but a second voice saying something different at the same time, creating a split consciousness effect.",
+      "The bridge strips the vocal to a single dry, unprocessed track — no reverb, no double — while the arrangement fills with texture, so the voice sounds exposed and alone inside the sound.",
+      "A single line in the verse is sung in the second person where everything else is first person, suddenly addressing a 'you' before retreating back — the pronoun shift lands like an accusation.",
+      "The final chorus begins without the full band re-entering, leaving the vocal briefly unanchored against a single guitar or drone before the rest of the arrangement returns, making the re-entry feel like rescue.",
+      "A key emotional word in the hook is never fully sung — it's exhaled, or cut short by a consonant stop — so the listener completes it mentally, making the hook land harder than if it were clearly delivered.",
+      "The vocal in the outro drops to a near-inaudible murmur of the hook melody while the music continues at full intensity, as though the singer has retreated inward while the world keeps going."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Brittle Signal",
+        "description": "Tracks where the guitar work is bright, clean, and slightly brittle — thin strings, suspended chords, ringing overtones — while the vocal is dry and restrained, and the emotion lives in the gap between the prettiness of the sound and the bleakness of what is being said."
+      },
+      {
+        "name": "Machine Warmth",
+        "description": "Electronic pulse and processed texture carry the main groove while a live, imperfect vocal and a single organic guitar provide the humanity; the tension is between the precision of the machine and the fragility of the person inside it, and the song never fully resolves which one wins."
+      },
+      {
+        "name": "Controlled Collapse",
+        "description": "A song built for a single cathartic rupture: restrained and almost uncomfortably held-in for the first two-thirds, then a distorted guitar swell, louder drums, and a raw vocal release that sounds unplanned even though the whole structure was designed to reach it."
+      },
+      {
+        "name": "Late Room",
+        "description": "Quiet, sparse, and stripped to near-acoustic texture with small electronic details at the edges — a hiss, a pad, a barely audible pulse — and a vocal that sounds like someone talking to themselves at 3am, too tired to perform and too awake to sleep."
+      },
+      {
+        "name": "Anxious Propulsion",
+        "description": "Driving mid-to-upper tempo with a restless, slightly too-fast-for-comfort drum groove, choppy guitar motion, and a vocal that rushes slightly ahead of the beat as if the narrator can't contain the thought long enough to deliver it cleanly."
+      },
+      {
+        "name": "Strange Refrain",
+        "description": "A track with an unconventional or asymmetric structure where the most emotionally clear moment is a short repeated phrase — almost a chant or an incantation — surrounded by stranger, more dissonant sections that make the refrain feel like a lifeline rather than a chorus."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a distorted guitar as its primary emotional release mechanism, the next track must find release through a different element — a vocal break, a sudden silence, a synth swell, or an abrupt stop — not another guitar crescendo.",
+      "If the previous track's verse was sung in compressed half-spoken delivery, the next track's verse must open with a different vocal posture: falsetto, raw chest voice, layered multi-vocal, or a melodically committed sung phrase.",
+      "Do not allow two consecutive tracks to share the same energy arc shape; if one track moves from quiet to loud to collapse, the next must invert, sustain tension without full release, or begin at its emotional peak and decay.",
+      "Rotate the guitar's role between tracks: rhythm texture, melodic lead, ambient drone, or absence — never let the guitar perform the same structural function in two adjacent songs.",
+      "If the previous lyric's central image was physical or environmental, the next lyric's central image should be interior, relational, or conceptual — preventing the album from becoming a sequence of bleak landscapes.",
+      "The ending of each track must differ in type from the ending of the one before it: a hard stop cannot follow a hard stop; a quiet fade cannot follow a quiet fade; an unresolved chord must not follow another unresolved chord."
+    ],
+    "anti_generic_rules": [
+      "Do not allow the default atmospheric-rock template — clean verse, distorted chorus, quiet bridge, bigger final chorus — to run unchallenged; Soundhead's most specific failure mode is producing a structurally competent but emotionally predictable arc that sounds like any well-made alternative track.",
+      "Do not let electronic texture become wallpaper; every synth pad, glitch, or pulse must have an emotional assignment — it should feel like dread, or comfort, or malfunction, not simply like production polish.",
+      "Do not allow the lyrics to default to the alienation-machine-city cluster of images on every track; Soundhead's second most common failure mode is reducing the entire emotional range to a single dystopian register when the brand is capable of intimacy, bitterness, dark romance, and fragile hope.",
+      "Do not resolve every track with a moment of release or catharsis; Soundhead's identity includes songs that end without relief, and forcing a climactic payoff onto every track flattens the emotional landscape of the album.",
+      "Do not smooth out the vocal performance into clean, well-produced competence; if the voice sounds too refined or centered, it has lost the specific quality — the controlled instability — that defines Soundhead's delivery.",
+      "Do not use the guitar riff intro as the default song opening; it is one option among several, and overusing it reduces Soundhead's sonic range to a single launching posture.",
+      "Do not allow the hook to become a slogan or an affirmation; Soundhead's hooks should feel discovered rather than declared, and any hook that sounds like a motivational statement or a genre calling-card has drifted into generic territory.",
+      "Do not produce a lyric where every image is abstract and unanchored; Soundhead's voice requires at least one plainly specific detail per section — a fabric, a temperature, a time of day, a sound — to prevent the song from evaporating into atmospheric blur."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use a clean-guitar arpeggio intro on more than two tracks per album; rotate toward electronic drone, cold vocal, feedback, drum entrance, or near-silence as opening gestures.",
+      "Do not use falsetto as the primary emotional signifier in consecutive tracks; when falsetto appears, it should register as a surprise relative to recent tracks.",
+      "Do not end more than two tracks with a sustained reverb or feedback tail; vary endings with hard stops, isolated single notes, brief spoken or murmured fragments, or complete silence.",
+      "Do not make the snare sound identical across the album; drum texture — the tightness, the room sound, the presence of electronic layering — should shift between lanes to prevent the album from feeling like one continuous session.",
+      "Do not use the 'quiet verse, loud chorus' dynamic structure as the default shape for more than two adjacent tracks; some tracks should maintain a consistent dynamic level, and some should begin loud and thin out.",
+      "Do not repeat the same second-person address ('you') conceit in consecutive tracks; rotate perspective across the album so the narrator's relationship to the listener and the subject keeps shifting.",
+      "Do not repeat a mid-song breakdown to ambient texture in more than two tracks on the same album; it becomes a formula rather than a disruption.",
+      "Do not allow the album to accumulate more than two tracks in a row where the tempo, emotional tone, and lyrical register are all in the same lane — force a shift in at least one variable before moving to the next track."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify a single vocal conceit unique to this track — describing what the voice does at a structurally specific moment and why it is unexpected relative to the rest of the song — and this conceit must not repeat the mechanism used in the prior track's brief.",
+      "The brief must identify which album mode lane this track belongs to and name at least one specific production element that makes this track's version of that lane distinct from any other track already placed in the same lane.",
+      "The brief must describe the emotional posture of the narrator at the start of the song and state whether that posture changes by the end — and if it does not change, it must explain what remains unresolved and why that stillness is intentional.",
+      "The brief must specify the guitar's structural role in this track — whether it is the primary melodic voice, a rhythmic texture, an ambient drone, or deliberately absent — and confirm this role is different from the role it played in the immediately preceding track.",
+      "The brief must name the one concrete sensory or environmental detail that anchors the lyric — a specific texture, sound, temperature, time, or object — and confirm it has not been used as a central anchor image in any other track on the same album.",
+      "The brief must describe how this track ends and confirm the ending type differs from the ending of the track that precedes it on the album, specifying what kind of afterimage — emotional, sonic, or lyrical — the listener is left with."
+    ]
   },
   "visuals": {
     "style": "Atmospheric indie-rock poster art with cream paper grain, black silhouettes, muted signal colors, analog broadcast distortion, abstract waves, lonely industrial landscapes, damaged typography, and restrained surrealism. Polished enough for streaming artwork; not photorealistic.",

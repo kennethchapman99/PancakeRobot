@@ -187,6 +187,106 @@
     "forbidden_elements": [],
     "render_safety": [],
     "required_elements": [],
-    "qa_rules": []
+    "qa_rules": [],
+    "vocal_performance_engine": {
+      "priority": "The irreplaceable quality is the sense of a real room full of friends singing together — no voice sounds isolated or produced-away from the others, and the interplay between the male and female leads feels like a conversation overheard, not a performance staged.",
+      "vocal_textures": [
+        "A slightly breathy, warm female lead that sounds like she's smiling while singing — not performed happiness, but genuine delight leaking into the tone",
+        "A male vocal that sits in a mid-range chest voice with just a hint of roughness, like someone who sings well but doesn't take it too seriously",
+        "Unison chorus moments where 3-4 voices lock together with small timing imperfections that make the blend feel human and spontaneous",
+        "A half-spoken, half-sung delivery style for verses where the rhythm of the lyric lands like natural speech before flowering into melody on the hook",
+        "Layered background harmonies that feel shouted from the back of the room rather than precision-stacked in a recording booth",
+        "Call-and-response passages where one voice throws a short phrase and another catches it with a variation — not echo, but answer"
+      ],
+      "timing_behaviors": [
+        "Slightly ahead-of-the-beat phrasing on verse lines, creating a tumbling, eager quality — like the words can't wait to come out",
+        "Deliberate rhythmic locking with handclaps or stomps on pre-chorus lines, where the vocal syllables land exactly with the body percussion to feel communal",
+        "A held-back, behind-the-beat placement on the final word of a chorus line that adds weight and allows the singalong crowd to catch up",
+        "Short melodic phrases in the bridge that fracture into staggered entrances — male starts a beat early, female completes the phrase — creating a relay-race feel",
+        "Occasional spoken interjections dropped between sung lines with zero reverb or processing, landing like someone in the room just added something"
+      ],
+      "adlib_behaviors": [
+        "Brief wordless syllables — 'hey,' 'oh,' 'mm-hmm' — placed in the spaces between vocal phrases rather than layered over them, so they feel like reactions, not decoration",
+        "A short laugh or exhale caught at the end of a take, left in the final mix to signal that making this song was genuinely fun",
+        "Whistle or hum fragments that echo the main hook melody in an offhand way, as if someone wandered into the room still singing the song",
+        "Background voices occasionally finishing each other's rhymes half a beat behind, like friends who've heard the song enough times to know what comes next",
+        "A sharp two-syllable clap-vocal combination — voices and hands hitting the same accent — used once per song as a punctuation moment, not a repeated device"
+      ],
+      "avoid": [
+        "Pristine pitch-corrected vocal stacks that feel assembled rather than sung together in the same space",
+        "Any vocal run or melisma that draws attention to technical skill — this character never shows off",
+        "A solo male vocal performing an entire verse without any female vocal texture or background presence — isolation breaks the collective identity",
+        "Ironic detachment or cool-kid flatness in delivery — every line should feel like it means something small and true to the person singing it",
+        "Operatic or theatrical vowel shaping that makes the singers sound trained rather than joyfully amateur-ish in spirit"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The lead vocal drops to near-whisper for exactly one line in the second verse — not for sadness, but to draw the listener in as if sharing a secret detail about the story — then snaps back to full voice on the next beat without transition",
+      "Two voices begin a pre-chorus in tight unison, then deliberately split into a third and fifth interval on the last word, letting the harmony bloom out of what sounded like one voice",
+      "A counting-in moment — '1, 2, 3, go!' or similar — is delivered in character by the male or female vocal before a section break, not as a studio countdown but as an in-song signal that something fun is starting",
+      "The chorus melody is sung straight the first time, then on the final repeat one voice ornaments a single note with a gentle upward scoop while the other holds the original pitch, creating a brief two-part moment from what was a unison line",
+      "A lyric in the bridge is delivered entirely in rhythmic speech — no pitch, just cadence — while the instrumental continues underneath, making the section feel like a porch-side storytelling interlude before the song returns",
+      "Background voices echo the title word of the song in a low, warm hum under the final chorus — not loud enough to be a feature, just present enough to feel like the song is resonating in the room",
+      "One line in the song is sung by what sounds like the whole group at once — including voices that haven't appeared before — arriving suddenly and then disappearing, as if everyone in earshot joined for just that moment",
+      "The male and female vocals trade every other word on a single hook phrase rather than alternating full lines, creating a rapid back-and-forth that sounds like playful interruption and makes the lyric impossible to attribute to just one person"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Porch Anthem",
+        "description": "Full ensemble energy with maximum vocal density — handclaps, stomps, and group harmonies all present, BPM at or above default, chorus built to be sung by ten people at once; this is the lane where every element of the Bright Porch Parade identity shows up simultaneously and the song sounds like a gathering"
+      },
+      {
+        "name": "Small Adventure",
+        "description": "Stripped to two or three instruments with a conversational verse-forward structure; the story in the lyric drives the track rather than the production, and the vocal delivery is closer to spoken narrative than pop performance — the collective fades to one or two voices telling something that happened"
+      },
+      {
+        "name": "Toy-Box Shimmer",
+        "description": "Glockenspiel, toy piano, or melodica takes the melodic lead while vocals sit underneath rather than on top; the song feels like it's made of found objects, with percussion that sounds improvised and a tempo that bounces rather than marches — bright and slightly eccentric, leaning into the 'unexpected instruments' promise"
+      },
+      {
+        "name": "Warm Evening Wind-Down",
+        "description": "Slower tempo, acoustic guitar arpeggios instead of strums, soft harmonies that blend rather than trade, and a lyrical focus on stillness or endings — not sad, but quiet-happy, the feeling of a good day concluding; this lane proves the character can be tender without abandoning its core warmth"
+      },
+      {
+        "name": "Brass Parade",
+        "description": "Trumpet or trombone accents elevate a track into celebratory procession territory; the rhythm section is more deliberate and march-adjacent, vocals have a slight chest-voice swagger, and the song feels like it's moving through a street rather than sitting on a porch — still joyful but outward-facing and kinetic"
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used handclaps as a rhythmic feature, the next track must move that role to stomps, body percussion, or a struck non-drum object — handclaps cannot appear as a primary rhythmic device in back-to-back tracks",
+      "If the previous track opened with full ensemble vocals on the first line, the next track must open with a solo voice or an instrumental bar before any vocals enter — the collective must not announce itself the same way twice in a row",
+      "If the previous track's emotional arc moved from low energy to high energy (slow build to big chorus), the next track must either maintain a consistent energy level throughout or begin at peak energy and sustain it — no two consecutive build-to-payoff arcs",
+      "If the previous track leaned on acoustic guitar as the melodic-color instrument, the next track must place that role on a non-string instrument — glockenspiel, brass, toy piano, or whistling — so the timbral palette shifts between adjacent songs",
+      "If the previous track featured a male-led verse with female harmony, the next track must reverse the lead structure or use true unison to avoid a repeated vocal hierarchy across the sequence",
+      "No two consecutive tracks may share the same structural conceit in their bridge — if one track uses a spoken-word bridge, the next must use a purely instrumental or a sung-only bridge"
+    ],
+    "anti_generic_rules": [
+      "Do not default to the ukulele-and-claps template as the only texture — the ukulele is one option among many, not the automatic signature of this style for Bright Porch Parade, and overuse flattens the handmade identity into a formula",
+      "Do not write chorus lyrics that are pure abstract positivity words ('shine,' 'rise,' 'light the way,' 'we are one') — every Bright Porch Parade chorus should anchor its joy to a specific small image, object, or moment that earns the feeling rather than declaring it",
+      "Do not stack every layer of the production from the first bar — the arrangement must breathe in, with at least one section that is noticeably sparser than the chorus, or the handmade quality disappears under density",
+      "Do not make the male and female vocals feel like a featured duet of equals performing for an audience — they should feel like two people in a group who happen to be singing closest to the microphone, with other voices always nearby",
+      "Do not resolve every song into a triumphant final chorus at maximum volume — Bright Porch Parade's emotional world includes quiet landings, sudden stops, and fade-outs mid-phrase that feel natural rather than unfinished",
+      "Do not use the word 'together' or the phrase 'we can do it' as a lyrical stand-in for actual specificity — the collective spirit must be shown through shared imagery and vocal texture, not stated through generic unity language",
+      "Do not produce a track where every rhythmic accent lands on the beat — at least one recurring rhythmic element per song (a vocal, a clap, a bass note) should sit slightly off the grid to preserve the human, spontaneous feel that defines this character",
+      "Do not allow the song to sound like background music for a commercial or a retail environment — every track must have at least one moment of surprise, structural irregularity, or timbral quirk that would make a casual listener pause and notice something unexpected"
+    ],
+    "do_not_repeat_across_album": [
+      "The specific unexpected instrument that carries the melodic color (glockenspiel, toy piano, melodica, brass, whistling) — rotate to a different option on each track rather than defaulting to the same one",
+      "The opening vocal configuration — do not begin consecutive tracks with the same combination of who sings first and whether it is solo, duet, or ensemble",
+      "The spoken or half-spoken delivery conceit — if one track uses a rhythmic speech section, that device should not appear in the next two tracks",
+      "The structural position of the handclap or stomp feature — it should appear in a different section (intro, pre-chorus, bridge, outro) each time it is used across the album",
+      "The specific small-world subject matter of the lyric — if one track is about a road trip, the next must focus on a different micro-universe (a kitchen, a backyard, a rainy window, a neighborhood walk) so the album builds a varied map of everyday life",
+      "The male-female vocal ratio per verse — alternate between male-heavier, female-heavier, and balanced-unison verses across the album rather than defaulting to the same split every time",
+      "The tempo feel — even if BPM stays near the default, the rhythmic subdivision should shift between tracks (a track that feels like it bounces in triplets should not follow a track with the same triplet bounce)",
+      "The position of the surprise or timbral quirk moment — ensure each track hides its 'wait, what was that?' element in a different structural location (intro, second verse, bridge, outro) so the album never feels predictable in where it breaks expectations"
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify the single small concrete image or physical object that anchors the emotional world of this particular track — not an abstract theme like 'friendship' but a tangible detail like 'a folded paper map' or 'a screen door that sticks' — and explain how that image appears in or shapes the lyric.",
+      "The brief must describe which specific unexpected instrument carries the melodic color role in this track and explain why that instrument fits the emotional or narrative tone of this song rather than simply listing it as an available option.",
+      "The brief must define how the male and female vocal relationship behaves in this track differently from the prior track — whether they trade lines, sing in unison, answer each other, or one leads while the other textures — so the collective identity sounds fresh rather than patterned.",
+      "The brief must name the one structural or production moment in this track that is designed to surprise a listener who has already heard the rest of the album — describing what it does, where it occurs, and why it earns its unexpectedness within Bright Porch Parade's established world.",
+      "The brief must specify the energy arc pattern for this track — where it starts, how it moves through each section, and how it resolves — in a way that is demonstrably different from the arc pattern of the immediately preceding track.",
+      "The brief must describe the lyrical specificity test for the chorus: identify the one line in the chorus that could only belong to this song and could not be swapped into any other Bright Porch Parade track without changing the meaning, and explain what makes that line irreplaceable."
+    ]
   }
 }

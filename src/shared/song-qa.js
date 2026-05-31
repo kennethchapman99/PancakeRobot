@@ -236,6 +236,83 @@ function buildPreRenderFailureMarkdown(report) { return `# Pre-Render QA Failed 
 function arrayify(value) { if (Array.isArray(value)) return value.filter(Boolean); return value ? [String(value)] : []; }
 function inferMinimumDurationSeconds(targetLength = '') { const match = String(targetLength).match(/(\d+):(\d{2})/); if (!match) return null; return Number(match[1]) * 60 + Number(match[2]); }
 
+export function runPerformanceBriefQACheck({ prompt = '', performanceBrief = null, profile = BRAND_PROFILE }) {
+  const sw = profile?.songwriting || {};
+  const failures = [];
+  const warnings = [];
+  const checks = [];
+  const pass = (check, detail) => checks.push({ check, passed: true, detail });
+  const fail = (check, detail) => { failures.push(`${check}: ${detail}`); checks.push({ check, passed: false, detail }); };
+  const warn = (check, detail) => { warnings.push(`${check}: ${detail}`); checks.push({ check, passed: true, warning: detail }); };
+
+  const normalizedPrompt = normalizeForMatch(prompt);
+
+  // If profile has enriched performance fields, a brief must be present.
+  if (sw.vocal_performance_engine || sw.performance_conceit_bank?.length) {
+    if (!performanceBrief) {
+      fail('Performance brief present', 'Profile has enriched performance fields but no performance brief was generated');
+    } else {
+      pass('Performance brief present', 'Brief was generated for enriched profile');
+
+      // The audio prompt must reference something from the brief.
+      const vocalConceitWords = (performanceBrief.vocal_conceit || '').toLowerCase().split(/\s+/).filter(w => w.length > 4);
+      const briefInPrompt = vocalConceitWords.some(w => normalizedPrompt.includes(w));
+      if (!briefInPrompt) {
+        warn('Performance brief consumed by prompt', 'Audio prompt does not appear to reference the vocal conceit from the performance brief');
+      } else {
+        pass('Performance brief consumed by prompt', 'Vocal conceit terms found in audio prompt');
+      }
+    }
+  } else {
+    pass('Performance brief', 'Legacy profile without enriched fields — brief not required');
+  }
+
+  // Check for generic-only prompt language.
+  const genericOnlyIndicators = ['energetic', 'feel-good', 'upbeat', 'catchy', 'powerful', 'anthemic'];
+  const genericHits = genericOnlyIndicators.filter(term => normalizedPrompt.includes(term));
+  const specificIndicators = ['vocal conceit', 'adlib', 'double-time', 'breath', 'attack', 'pocket', 'hook behavior', 'sonic oddity'];
+  const specificHits = specificIndicators.filter(term => normalizedPrompt.includes(term));
+  if (genericHits.length > 3 && specificHits.length === 0) {
+    warn('Anti-generic prompt check', `Prompt uses ${genericHits.length} generic genre adjectives (${genericHits.join(', ')}) with no performance-specific language`);
+  } else {
+    pass('Anti-generic prompt check', specificHits.length > 0 ? `Performance-specific language present: ${specificHits.join(', ')}` : 'Prompt passed generic check');
+  }
+
+  // Check that real artist names are not leaking into the prompt.
+  const ARTIST_LEAK_PATTERNS = [/\bdoechii\b/i, /\bradiohead\b/i, /\bkendrick\b/i, /\bkendrick lamar\b/i, /\beminem\b/i, /\bdrake\b/i, /\bkanye\b/i];
+  for (const pattern of ARTIST_LEAK_PATTERNS) {
+    if (pattern.test(normalizedPrompt)) {
+      fail('Artist name leak', `Real artist name detected in prompt: ${pattern.source}`);
+    }
+  }
+  if (!failures.some(f => f.startsWith('Artist name leak'))) {
+    pass('Artist name leak check', 'No known real artist names found in prompt');
+  }
+
+  // Check vocal performance engine fields are consumed when present.
+  if (sw.vocal_performance_engine) {
+    const vpe = sw.vocal_performance_engine;
+    const vpeTerms = [
+      ...(vpe.vocal_textures || []),
+      ...(vpe.timing_behaviors || []),
+      ...(vpe.adlib_behaviors || []),
+    ].flatMap(t => t.toLowerCase().split(/\s+/).filter(w => w.length > 4));
+    const vpeInPrompt = vpeTerms.some(w => normalizedPrompt.includes(w));
+    if (!vpeInPrompt) {
+      warn('Vocal performance engine consumed', 'Profile has vocal_performance_engine but no VPE terms appear in the audio prompt');
+    } else {
+      pass('Vocal performance engine consumed', 'VPE terms found in audio prompt');
+    }
+  }
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    warnings,
+    checks,
+  };
+}
+
 export function runPostRenderAudioQACheck({ songId, songDir, title, audioFilePath, minDurationSeconds = MIN_FULL_SONG_DURATION_SECONDS }) {
   const failures = [], warnings = [], checks = [];
   const pass = (check, detail) => checks.push({ check, passed: true, detail });

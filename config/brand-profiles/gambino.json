@@ -232,7 +232,111 @@
       "include_funny_long_word": false,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "vocal_performance_engine": {
+      "priority": "This character's voice is non-replaceable because it lives in the gap between overeducated rap precision and raw emotional blurting — it can pivot mid-verse from a carefully stacked internal rhyme scheme to a plain spoken confession that lands harder than the cleverness did.",
+      "vocal_textures": [
+        "Conversational rap delivery that tightens into dense syllabic stacking on punchline lines, then loosens back to spoken-word plainness within the same verse",
+        "Falsetto-adjacent melodic lifts used not for vocal showboating but to signal emotional exposure — the voice cracks upward when the narrator stops pretending to be fine",
+        "A dry, slightly detached spoken or near-spoken cadence in verses that makes the melodic chorus feel like a genuine emotional rupture rather than a planned transition",
+        "Warm baritone chest-voice humming or low melodic murmur beneath verses, as if the narrator is thinking out loud before committing to a full lyric",
+        "Controlled restraint punctuated by sudden full-voice commitment — the character holds back for two bars then lands one line with full chest and diction, making that line feel shouted without actually shouting",
+        "Mid-word pitch inflection on key emotional nouns — the voice bends slightly on words like 'fine,' 'home,' 'enough' to signal that those words mean more than they appear to"
+      ],
+      "timing_behaviors": [
+        "Slightly behind-the-beat delivery on rap verses that feels relaxed and conversational, then snaps on-grid for punchline payoffs to make them land harder",
+        "Deliberate half-bar pauses mid-sentence — the narrator stops, lets the beat breathe, then finishes the thought, which makes the completion feel earned rather than automatic",
+        "Rushing the last syllable of a bar into the downbeat of the next as a forward-momentum device, particularly in high-energy or defensive sections where the narrator is overexplaining",
+        "Metric modulation effect in hooks — singing across the bar line so the melodic phrase doesn't resolve exactly where the drum does, creating tension between groove and melody",
+        "Sudden rhythmic doubling for emphasis — dropping into double-time phrasing for one or two lines when the narrator wants to overwhelm or bury something with words, then returning to pocket"
+      ],
+      "adlib_behaviors": [
+        "Short, self-aware parenthetical asides — the character mutters a sardonic one-word comment under their breath after a boastful line, puncturing the ego in real time rather than waiting for a verse break",
+        "Quiet melodic hums or wordless tones between rap sections that function as emotional ellipses — the narrator isn't done feeling something but doesn't have words for it yet",
+        "A dry audible exhale or near-laugh after a line that reveals insecurity dressed as confidence, signaling that the narrator knows exactly how fragile that claim sounds",
+        "Occasional echo of the last word of a sung hook in a lower, flatter voice — not for harmony, but to deflate the emotional peak slightly, as if the character is walking back the vulnerability they just showed",
+        "Whispered repetition of one word from the chorus during an instrumental break, almost too quiet to hear, anchoring the emotional core of the track without restating it fully"
+      ],
+      "avoid": [
+        "Generic trap ad-libs — no 'skrrt,' 'ayy,' or hype-man shout patterns that suggest a different genre identity entirely",
+        "Overworked melismatic runs on melodic hooks that shift the character from emotionally raw to technically performative — this voice confesses, it does not audition",
+        "Monotone lecture-rap delivery where every bar sits at the same pitch and energy level, removing the dynamic contrast that makes the character's plainspoken lines feel like revelations",
+        "Aggressive punch-in ad-lib stacking that buries the main vocal under a wall of doubles — the character should sound like one person thinking out loud, not a booth full of hype",
+        "Safe, crowd-pleasing falsetto that resolves cleanly and leaves the listener comfortable — melodic lifts should feel slightly unsteady or emotionally risky, not polished and reassuring"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The narrator begins a verse rapping with full technical confidence and escalating rhyme complexity, then stops completely and delivers the emotional core of the bar in plain unrhymed speech — the absence of craft signals that something true just arrived.",
+      "A melodic hook is introduced in a low, almost inaudible murmur in the first chorus, then returns in the final chorus with full chest voice and doubled instrumentation — the same words now feel like they cost something to say.",
+      "The character addresses the listener directly in second person mid-verse — 'you know exactly what I mean' — then immediately retreats to first person as if catching themselves being too honest, creating an intimacy that the song itself tries to walk back.",
+      "A single repeated note is sung or spoken between dense rap sections, functioning as a verbal comma — the character lands on one word at a fixed pitch and lets it ring before continuing, giving the listener a breath and the narrator a visible pause to collect themselves.",
+      "The outro strips the arrangement to just voice and one instrument, and the character speaks rather than raps or sings — a confession or observation delivered in a register that feels accidentally overheard rather than performed.",
+      "The punchline of a boastful verse is immediately undercut by the narrator laughing at themselves mid-breath — a small audible break in composure that reveals the joke was partly on them the whole time.",
+      "A melodic phrase from the hook is fragmented and scattered across the rap verse as partial quotations — a syllable here, a rhythmic ghost of the melody there — so that when the chorus arrives fully formed, it feels like something the verse was trying to say and couldn't.",
+      "The character switches abruptly from rapid dense-syllable flow to extremely slow, spaced-out delivery on the line that matters most — the tempo of speech drops to force the listener to stay with that line longer than any other in the song."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Velvet Brag",
+        "description": "Confidence that eats itself — the character flexes with genuine wit and stylish delivery, but the arrangement stays slightly too warm and intimate for a real brag track, and by the bridge the armor has visibly slipped. Rubbery funk bass, tight snare, and a falsetto-edge hook that sounds like reassurance rather than triumph."
+      },
+      {
+        "name": "Anxious Bright",
+        "description": "Uptempo and melodically infectious on the surface, with a synth-pop or indie-funk lift, but the lyric is running from something — the narrator uses rhythm and catchiness as a defense mechanism. Hooks feel celebratory; verses reveal the party is a coping strategy."
+      },
+      {
+        "name": "Cold Confession",
+        "description": "Sparse, late-night, almost uncomfortably direct. Minimal drums or no drums at all, soft keys, a voice that isn't performing. The narrator drops the cleverness entirely and says the thing plainly. No punchlines. The discomfort is the point."
+      },
+      {
+        "name": "Theatre of One",
+        "description": "The song is a character study or dramatic monologue — the narrator plays a version of themselves that is heightened, slightly absurd, or self-mythologizing. Arrangement includes cinematic or theatrical textures: key changes, dynamic swells, a sense that this is a stage. The comedy and the tragedy coexist without resolving."
+      },
+      {
+        "name": "Pocket Funk Unease",
+        "description": "Retro groove, warm bass, melodic vocal movement — but the lyric is about romantic ambivalence, social friction, or the specific awkwardness of almost having something. The feel is smooth; the subject is not. The contrast between the groove's ease and the narrator's unease is the emotional engine."
+      },
+      {
+        "name": "Fracture Finale",
+        "description": "Built to release — a slower build through tension-heavy verses into a final section that goes harder instrumentally and vocally than anything earlier in the track. Rock-edged guitars or heavy drums arrive late. The narrator stops being careful. Used sparingly, once per album cycle, not as a default emotional climax."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a dense internal-rhyme rap verse as its primary vehicle, the next track must lead with a melodic or sung section before any rap appears — do not stack two rap-forward verses back to back across adjacent songs.",
+      "If the previous track was emotionally confessional and sparse, the next must introduce either comedic self-awareness, rhythmic bounce, or a theatrical conceit — the character cannot be vulnerable twice in a row without at least one deflection in between.",
+      "If a falsetto-edge or melodic-lift hook was used in the prior song, the following song's hook must be primarily rhythmic, rap-cadence-based, or spoken-tone rather than sung — melodic hooks are not the default resolution for every track.",
+      "Do not open two consecutive songs with the narrator in the same emotional posture — if one opens defensive and cocky, the next must open exposed, observational, or comedically self-deflating.",
+      "If the prior track resolved with a cathartic final chorus or explosive ending, the next track must end quietly, dryly, or ambiguously — the album cannot keep escalating to the same emotional ceiling.",
+      "Rotate the primary instrument that carries the groove identity: if one track is defined by a rubbery bass riff, the next should be defined by keys, a drum pattern, a guitar texture, or a synth movement — no two adjacent tracks should have the same groove anchor."
+    ],
+    "anti_generic_rules": [
+      "Do not default to a polished melodic hook every time the song reaches the chorus — this character's most powerful moments often happen in a single unadorned line mid-verse, and the chorus can be rhythmic, half-spoken, or deliberately anticlimactic.",
+      "Do not write 'smart rap about being smart' — the narrator's intelligence must be in service of a specific emotional situation or social observation, not a performance of cleverness for its own sake.",
+      "Avoid the genre-fluid trap of using every available element in every song — not every track needs rap, R&B hook, funk groove, and indie lift all at once. Restraint in lane selection makes individual songs more distinctive.",
+      "Do not resolve emotional ambivalence with a triumphant final chorus — this character's emotional signature is contradiction held in tension, not problems solved by a big singalong ending.",
+      "Avoid generic 'introspective rapper' imagery — no skylines, no empty arenas, no looking in mirrors, no unnamed women who represent lost innocence. Anchor every abstract emotion in a specific, strange, or unexpected concrete detail.",
+      "Do not let the wit become a mask that never drops — if the song is funny for two verses and then tries to go emotional in the bridge, the transition must be earned by showing the crack earlier, not suddenly announced.",
+      "Avoid writing the narrator as either fully confident or fully broken — the character's specific failure mode is performing confidence while the doubt is audible underneath, and that tension must be present in every song in some form.",
+      "Do not use theatrical or surreal imagery as decoration — every strange metaphor or absurdist detail must be emotionally load-bearing, connecting to a real feeling the narrator is trying to say sideways."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not open more than one song with a bass riff or groove establishing the feel before the vocal enters — vary the intro type across tracks so that not every song announces itself the same way.",
+      "Do not use falsetto-edge melodic lifts as the emotional peak of more than two songs on any album — when overused, this character's most vulnerable sound becomes an expected technique rather than a rupture.",
+      "Do not end more than one song per album with a stripped-back or spoken confession outro — if used more than once, it stops feeling like the narrator finally dropping the performance and starts feeling like a formula.",
+      "Rotate the drum feel: tight rap pocket, loose live-room snare, programmed funk bounce, half-time heavy, and minimal or no drums should each appear on different tracks — do not anchor every song to the same snare sound.",
+      "Do not use the same internal rhyme density level across consecutive verses — dense syllabic stacking and loose conversational flow must alternate so that the clever-versus-plain contrast stays meaningful.",
+      "Do not deploy the self-aware punchline-that-undercuts-the-narrator more than once per album as a structural device — if it appears in every song, the character's self-awareness becomes a tic rather than a revelation.",
+      "Avoid using retro-funk bass and warm vintage keys together as the primary texture in more than two songs — they are one lane's signature, not the album's default production environment.",
+      "Do not let the narrator address an unnamed romantic partner as the primary subject in more than two songs — vary the target of address to include self-directed monologue, social comedy, friendship, or abstract observation."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify the exact emotional contradiction the narrator is holding in this track — not a mood label like 'sad' or 'confident,' but the specific tension between what the narrator is performing and what is audible underneath that performance.",
+      "The brief must identify which of the six album mode lanes this track occupies and explain one concrete way this song differs from any prior track in that same lane, so that the lane does not collapse into a repeated formula.",
+      "The brief must describe one specific concrete sensory or situational detail — a place, object, texture, or moment — that anchors the song's central metaphor so the generator cannot default to abstract emotional language without a physical image to attach it to.",
+      "The brief must specify how the vocal delivery changes between the verse and the hook on this specific track — not as a general instruction to vary energy, but as a description of what emotional state shift the change in delivery is enacting for this narrator in this song.",
+      "The brief must confirm that the song's opening move — the first sound, phrase, or vocal gesture the listener encounters — has not been used as an opening move on any other track in the current batch, and must name what makes this entry point distinct.",
+      "The brief must state explicitly what the song does NOT resolve — which question, tension, or emotional contradiction the narrator leaves open at the end — so that the generator does not default to a satisfying emotional conclusion that contradicts this character's signature ambivalence."
+    ]
   },
   "visuals": {
     "style": "Retro-futurist hand-drawn music factory artwork with cream paper grain, black silhouette architecture, warm orange/red sunset shapes, music notes emerging from smoke, surreal friendly ghost imagery, and bold geometric typography. Polished enough for streaming artwork; not photorealistic.",

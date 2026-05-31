@@ -27,6 +27,7 @@ import {
 import {
   ALBUM_PLAN_VERSION,
   generateAlbumPlan,
+  extractTrackAlbumContext,
 } from '../agents/album-orchestrator.js';
 import {
   getCachedBrandInterpretation,
@@ -487,6 +488,15 @@ async function defaultTrackPipeline({
   const inheritedContext = formatInheritedAlbumContext({ plan, track, brandInterpretation });
   const topic = `${track.title} — ${track.concept}\n\nALBUM CONTEXT (inherited from album plan ${plan.plan_version}, do not rerun):\n${inheritedContext}`;
 
+  // Extract structured album context for the performance brief layer.
+  const albumContext = extractTrackAlbumContext(plan, track);
+
+  // Build prior-track summaries for the performance brief so adjacent-track
+  // conceit repetition can be avoided. Only include completed tracks so far.
+  const priorTracks = (plan.tracks || [])
+    .filter(t => Number(t.track_number) < Number(track.track_number) && t.assigned_conceit)
+    .map(t => ({ track_number: t.track_number, title: t.title, assigned_conceit: t.assigned_conceit, emotional_role: t.emotional_role }));
+
   const previousAlbumScope = process.env.PIPELINE_ALBUM_ID;
   delete process.env.PIPELINE_ALBUM_ID; // per-track costs go to song, not album-shared
   try {
@@ -495,6 +505,8 @@ async function defaultTrackPipeline({
       existingSongId: songId,
       brandId: brandProfileId,
       pipelineStage: 'song_only',
+      albumContext,
+      priorTracks,
       onEvent,
       logger,
     });
@@ -510,7 +522,7 @@ async function defaultTrackPipeline({
 }
 
 function formatInheritedAlbumContext({ plan, track }) {
-  return [
+  const lines = [
     `Album title: ${plan.album_title}`,
     `Album theme: ${plan.album_theme}`,
     `Release positioning: ${plan.release_positioning}`,
@@ -521,7 +533,12 @@ function formatInheritedAlbumContext({ plan, track }) {
     `Music style direction: ${track.music_style_prompt}`,
     `Lyric direction: ${track.lyric_direction}`,
     `Provider prompt seed: ${track.provider_prompt_seed}`,
-  ].join('\n');
+  ];
+  if (plan.primary_lane) lines.push(`Album primary lane: ${plan.primary_lane}`);
+  if (plan.contaminating_lane) lines.push(`Album contaminating lane: ${plan.contaminating_lane}`);
+  if (track.album_lane) lines.push(`Track lane: ${track.album_lane}`);
+  if (track.assigned_conceit) lines.push(`Assigned performance conceit: ${track.assigned_conceit}`);
+  return lines.join('\n');
 }
 
 function estimateBrandInterpretationSavings(trackCount) {
