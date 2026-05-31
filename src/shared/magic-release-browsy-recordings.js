@@ -40,12 +40,17 @@ import {
   getLocalAppBaseUrl,
   isLocalOnlyMode,
 } from './public-url.js';
+import {
+  buildDistroKidAlbumWorkflowContext,
+  DISTROKID_TARGET_URL,
+  validateDistroKidAlbumWorkflowContext,
+} from './automation-workflow-presets.js';
 
 // Stable, app/workflow-scoped persistent auth profile name. Combined with the
 // Browsy appId (pancake-robot) this yields the persistent profile path
 // output/auth-profiles/pancake-robot/distrokid — reused across launches.
 const DISTROKID_AUTH_PROFILE_ID = 'distrokid';
-const DISTROKID_UPLOAD_URL = 'https://distrokid.com/new/';
+const DISTROKID_UPLOAD_URL = DISTROKID_TARGET_URL;
 
 // Generic auth-preflight rules Pancake hands to Browsy for DistroKid workflows.
 // These describe the "automation browser bounced to Google SSO / login" and the
@@ -83,7 +88,7 @@ const WORKFLOW_NAMES = Object.freeze({
 // SPEC BUILDER (pure — no network/DB)
 // ─────────────────────────────────────────────
 
-export function buildBrowsyRecordingSpecForTask({ campaign, task, release = null, config = getBrowsyConfig() } = {}) {
+export function buildBrowsyRecordingSpecForTask({ campaign, task, release = null, config = getBrowsyConfig(), workflowContext = null } = {}) {
   if (!task) throw new Error('A Magic Release task is required to build a Browsy recording spec.');
   const workflowId = String(task.source_workflow_id || '').trim();
   if (!workflowId) {
@@ -100,7 +105,7 @@ export function buildBrowsyRecordingSpecForTask({ campaign, task, release = null
   const base = { appId, appName, workflowId, workflowName: WORKFLOW_NAMES[workflowId] || workflowId, releaseType, releaseId };
 
   if (/distrokid-(album|single)-submit/.test(workflowId)) {
-    return { supported: true, reason: '', workflowId, spec: distrokidSubmitSpec({ base, releaseTabUrl, single: /single/.test(workflowId) }) };
+    return { supported: true, reason: '', workflowId, spec: distrokidSubmitSpec({ base, releaseTabUrl, single: /single/.test(workflowId), workflowContext, config }) };
   }
   if (/hyperfollow-capture/.test(workflowId)) {
     return { supported: true, reason: '', workflowId, spec: hyperfollowCaptureSpec({ base, releaseTabUrl }) };
@@ -122,49 +127,64 @@ export function buildBrowsyRecordingSpecForTask({ campaign, task, release = null
   };
 }
 
-function distrokidSubmitSpec({ base, releaseTabUrl, single }) {
-  return {
-    ...base,
-    recordingSetup: {
-      authProfileId: DISTROKID_AUTH_PROFILE_ID,
-      authPreflight: { targetUrl: DISTROKID_UPLOAD_URL, rules: DISTROKID_AUTH_PREFLIGHT_RULES },
-      tabs: [
-        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
-        { id: 'distrokidUpload', title: 'DistroKid Upload', url: DISTROKID_UPLOAD_URL, siteId: 'distrokid', requiresAuth: true, authProfileId: DISTROKID_AUTH_PROFILE_ID, role: 'target' },
-      ],
-    },
-    payloadSchema: {
-      type: 'object',
-      required: ['album', 'tracks'],
-      properties: {
-        album: {
-          type: 'object',
-          required: ['title', 'artistName', 'releaseDate'],
-          properties: {
-            title: { type: 'string', title: 'Album title' },
-            artistName: { type: 'string', title: 'Artist name' },
-            releaseDate: { type: 'string', title: 'Release date' },
-            artworkPath: { type: 'string', title: 'Artwork file path' },
-          },
+function distrokidSubmitSpec({ base, releaseTabUrl, single, workflowContext = null, config = getBrowsyConfig() }) {
+  const context = workflowContext || (single ? null : buildDistroKidAlbumWorkflowContext({ browsyBaseUrl: config.baseUrl }));
+  const targetUrl = context?.targetUrl || DISTROKID_UPLOAD_URL;
+  const inputSchema = context?.inputSchema || {
+    type: 'object',
+    required: ['album', 'tracks'],
+    properties: {
+      album: {
+        type: 'object',
+        required: ['title', 'artistName', 'releaseDate'],
+        properties: {
+          title: { type: 'string', title: 'Album title' },
+          artistName: { type: 'string', title: 'Artist name' },
+          releaseDate: { type: 'string', title: 'Release date' },
+          artworkPath: { type: 'string', title: 'Artwork file path' },
         },
-        tracks: {
-          type: 'array',
-          minItems: 1,
-          items: {
-            type: 'object',
-            required: ['title'],
-            properties: {
-              title: { type: 'string', title: 'Track title' },
-              audioPath: { type: 'string', title: 'Audio file path' },
-              trackNumber: { type: 'number', title: 'Track number' },
-            },
+      },
+      tracks: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          required: ['title'],
+          properties: {
+            title: { type: 'string', title: 'Track title' },
+            audioPath: { type: 'string', title: 'Audio file path' },
+            trackNumber: { type: 'number', title: 'Track number' },
           },
         },
       },
     },
+  };
+  return {
+    ...base,
+    workflowRef: context?.workflowRef || `${base.appId}.${base.workflowId}`,
+    sourceApp: context?.sourceApp || base.appId,
+    targetUrl,
+    packageId: context?.packageId || null,
+    inputSchema,
+    requiredAssets: context?.requiredAssets || [
+      { path: 'album.artworkPath', type: 'file', label: 'Album artwork', required: true },
+      { path: 'tracks[].audioPath', type: 'file', label: 'Track audio files', required: true },
+    ],
+    samplePayload: context?.samplePayload || null,
+    derivedVariables: context?.derivedVariables || { numberOfSongs: 'tracks.length' },
+    bindingHints: context?.bindingHints || [],
+    recordingSetup: {
+      authProfileId: DISTROKID_AUTH_PROFILE_ID,
+      authPreflight: { targetUrl, rules: DISTROKID_AUTH_PREFLIGHT_RULES },
+      tabs: [
+        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
+        { id: 'distrokidUpload', title: 'DistroKid Upload', url: targetUrl, siteId: 'distrokid', requiresAuth: true, authProfileId: DISTROKID_AUTH_PROFILE_ID, role: 'target' },
+      ],
+    },
+    payloadSchema: inputSchema,
     fileBindings: [
-      { id: 'artworkPath', label: 'Album artwork', source: 'payload.album.artworkPath', required: true },
-      { id: 'trackAudioFiles', label: 'Track audio files', source: 'payload.tracks[].audioPath', required: true },
+      { id: 'coverArtPath', label: 'Album artwork', source: 'payload.album.coverArtPath', binding: 'album.coverArtPath', required: true },
+      { id: 'trackAudioFiles', label: 'Track audio files', source: 'payload.tracks[].audioPath', binding: 'tracks[].audioPath', required: true },
     ],
     expectedOutputs: [
       { id: 'distrokidReviewState', label: 'DistroKid review state', required: true },
@@ -246,9 +266,9 @@ function linkHarvestSpec({ base, releaseTabUrl }) {
 // LIFECYCLE
 // ─────────────────────────────────────────────
 
-export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, autoLaunch = true, config = getBrowsyConfig() } = {}) {
+export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, autoLaunch = true, config = getBrowsyConfig(), workflowContext = null } = {}) {
   const { campaign, task } = loadBrowsyTask(campaignId, taskKey);
-  const built = buildBrowsyRecordingSpecForTask({ campaign, task, config });
+  const built = buildBrowsyRecordingSpecForTask({ campaign, task, config, workflowContext });
   if (!built.supported) {
     const error = new Error(built.reason);
     error.code = 'unsupported_recording_workflow';
@@ -257,6 +277,36 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
 
   const callbackUrl = buildCallbackUrl(campaign, taskKey);
   const tabs = built.spec?.recordingSetup?.tabs || [];
+  const targetTab = tabs.find(tab => tab.role === 'target') || tabs[tabs.length - 1];
+  const targetUrl = built.spec?.targetUrl || targetTab?.url || '';
+
+  if (/distrokid-album-submit/.test(built.workflowId)) {
+    const validation = validateDistroKidAlbumWorkflowContext({
+      ...workflowContext,
+      targetUrl,
+      inputSchema: built.spec?.inputSchema,
+      samplePayload: built.spec?.samplePayload,
+    });
+    logRecording(campaign, taskKey, validation.ok ? 'success' : 'error', validation.ok ? 'Setup validation passed.' : `Setup validation failed: ${validation.errors.join('; ')}`, {
+      workflowId: built.workflowId,
+      targetUrl,
+      validation,
+    });
+    if (!validation.ok) {
+      const recording = createReleaseBrowsyRecording({
+        campaign_id: campaign.id,
+        task_id: task.id,
+        task_key: taskKey,
+        release_type: campaign.release_type,
+        release_id: campaign.release_id,
+        workflow_id: built.workflowId,
+        recording_status: 'setup_incomplete',
+        browsy_base_url: config.baseUrl,
+        last_error: validation.errors.join('; '),
+      });
+      return { ok: false, error: validation.errors.join('; '), validation, recording };
+    }
+  }
 
   // Validate tab spec before hitting Browsy — a missing/empty tabs array means
   // the spec builder has a bug; fail loudly rather than opening a blank recorder.
@@ -285,6 +335,9 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     callbackUrl,
     tabCount: tabs.length,
     tabUrls: tabs.map(t => t.url),
+    targetUrl,
+    inputSchema: Boolean(built.spec?.inputSchema),
+    samplePayload: Boolean(built.spec?.samplePayload),
   });
 
   // Local-only guard: refuse to record against ngrok URLs (stale tunnel URLs in a
@@ -307,7 +360,16 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     return { ok: false, error: guardError.message, localOnlyBlocked: true, recording };
   }
 
-  const started = await startBrowsyRecordingSession({ ...built.spec, callbackUrl, config });
+  logRecording(campaign, taskKey, 'info', 'Recording context sent to Browsy.', {
+    workflowId: built.workflowId,
+    workflowRef: built.spec?.workflowRef,
+    targetUrl,
+    releaseId: built.spec?.releaseId,
+    packageId: built.spec?.packageId,
+    bindingHints: (built.spec?.bindingHints || []).map(item => item.path || item),
+  });
+
+  const started = await startBrowsyRecordingSession({ ...built.spec, callbackUrl, callbackMetadata: { campaignId: campaign.id, taskKey }, config });
   if (!started.ok) {
     const recording = createReleaseBrowsyRecording({
       campaign_id: campaign.id,

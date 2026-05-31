@@ -86,6 +86,10 @@ import {
 import { markSongSubmittedToDistroKid } from '../shared/distrokid-release.js';
 import { buildCanonicalDistroKidPayload } from '../shared/distrokid-payload.js';
 import {
+  buildDistroKidAlbumWorkflowContext,
+  DISTROKID_ALBUM_WORKFLOW_ID,
+} from '../shared/automation-workflow-presets.js';
+import {
   buildDistroKidUploadInvocation,
   hasConfirmedDistroKidAuth,
   captureHyperFollowLink,
@@ -348,6 +352,77 @@ app.get('/releases/:type/:id', (req, res) => {
     focus: String(req.query.focus || 'all'),
     actionFeedback: feedbackMessage ? { level: feedbackLevel, message: feedbackMessage } : null,
   });
+});
+
+app.get('/releases/:type/:id/automation-setup', (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).render('404', { message: 'Release not found' });
+  const targetUrl = String(req.query.target_url || '').trim() || undefined;
+  const context = buildDistroKidAlbumWorkflowContext({
+    cockpit,
+    browsyBaseUrl: cockpit.distrokidBrowsyWorkflow?.baseUrl || '',
+    targetUrl,
+    releaseId: cockpit.id,
+  });
+  logReleaseCockpitEvent(cockpit.type, cockpit.id, 'automation_setup', 'info', 'Automation Setup Wizard opened.', {
+    workflowId: context.workflowId,
+    targetUrl: context.targetUrl,
+  });
+  logReleaseCockpitEvent(cockpit.type, cockpit.id, 'automation_setup', 'info', 'DistroKid workflow preset loaded.', {
+    workflowId: context.workflowId,
+    variables: context.bindingHints.map(item => item.path),
+  });
+  logReleaseCockpitEvent(cockpit.type, cockpit.id, 'automation_setup', context.validation.ok ? 'success' : 'warning',
+    context.validation.ok ? 'Release payload analyzed — setup validation passed.' : `Release payload analyzed — setup validation failed: ${context.validation.errors.join('; ')}`,
+    {
+      releaseDate: context.samplePayload.album.releaseDate || null,
+      coverArtPath: context.samplePayload.album.coverArtPath || null,
+      trackCount: context.samplePayload.tracks.length,
+      trackAudioPaths: context.samplePayload.tracks.map(track => track.audioPath),
+      validation: context.validation,
+    });
+  res.render('releases/automation-setup', {
+    cockpit,
+    context,
+    actionFeedback: req.query.error ? { level: 'error', message: String(req.query.error) } : null,
+  });
+});
+
+app.post('/releases/:type/:id/automation-setup/start-recording', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    if (cockpit.type !== 'album') throw new Error('DistroKid Album Submit setup is only available for album releases.');
+    const state = getMagicReleaseState(cockpit.type, cockpit.id) || createMagicReleaseCampaign({ releaseType: cockpit.type, releaseId: cockpit.id });
+    const targetUrl = String(req.body?.target_url || '').trim();
+    const workflowContext = buildDistroKidAlbumWorkflowContext({
+      cockpit,
+      browsyBaseUrl: cockpit.distrokidBrowsyWorkflow?.baseUrl || '',
+      targetUrl,
+      releaseId: cockpit.id,
+    });
+    if (!workflowContext.validation.ok) {
+      logReleaseCockpitEvent(cockpit.type, cockpit.id, 'automation_setup', 'failed', `Recording launch blocked: ${workflowContext.validation.errors.join('; ')}`, workflowContext.validation);
+      throw new Error(workflowContext.validation.errors.join('; '));
+    }
+    const result = await startMagicReleaseBrowsyRecording({
+      campaignId: state.campaign.id,
+      taskKey: 'distrokid_submit_dry_run',
+      autoLaunch: true,
+      workflowContext,
+    });
+    if (!result.ok) throw new Error(result.error || 'Recording launch failed.');
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'automation_setup', 'success', 'Recording started from Automation Setup Wizard.', {
+      workflowId: DISTROKID_ALBUM_WORKFLOW_ID,
+      recordingId: result.recording?.id,
+      targetUrl: workflowContext.targetUrl,
+    });
+    return respondReleaseAction(req, res, cockpit, 'Recording started from Automation Setup Wizard.', { level: 'success', anchor: 'automation' });
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'automation_setup', 'failed', `Recording launch failed: ${error.message}`);
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, { error: error.message, level: 'error' }));
+  }
 });
 
 app.post('/releases/:type/:id/actions/release-date', (req, res) => {
