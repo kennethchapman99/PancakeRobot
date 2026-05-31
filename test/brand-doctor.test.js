@@ -275,7 +275,7 @@ test('8. Audio analysis artifact has expected fields and is written to disk', as
     assert.ok('rms_energy_mean' in m, 'Has rms_energy_mean');
     assert.ok('clipping_detected' in m, 'Has clipping_detected');
   } else {
-    assert.ok(typeof a.raw.reason === 'string', 'Failed analysis has reason string');
+    assert.ok(typeof a.raw.error === 'string', 'Failed analysis has error string');
   }
 
   const analysisFile = path.join(ARTIFACTS_DIR, session.id, 'analysis.json');
