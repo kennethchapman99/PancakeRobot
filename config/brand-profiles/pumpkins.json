@@ -233,7 +233,106 @@
       "include_funny_long_word": false,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "vocal_performance_engine": {
+      "priority": "This character's voice is irreplaceable because it oscillates between a bruised whisper that feels overheard and a cathedral-scale howl that feels inescapable, often within the same song, creating the sensation that the singer is both confessing to no one and screaming to everyone at once.",
+      "vocal_textures": [
+        "A breathy, slightly nasal mid-range delivery on verses that sounds like speaking through gauze — intimate and slightly muffled, as if the words are being thought rather than sung",
+        "A layered unison vocal stack in choruses where multiple slightly-detuned takes of the same melody are stacked to create a singular oversized voice that feels more like a weather system than a person",
+        "A falsetto-edge break on emotionally exposed lines — not a full falsetto, but a voice cracking at the ceiling of its chest register, leaving a raw seam audible to the listener",
+        "A low, almost spoken incantation mode in pre-choruses or bridges where melody is barely implied and rhythmic syllable placement carries the drama",
+        "A distorted or saturation-kissed lead vocal in climactic sections where the voice itself sounds like it has been run through the same signal chain as the guitars, merging human and electric"
+      ],
+      "timing_behaviors": [
+        "Phrases arrive slightly behind the beat on verses — not sloppily, but with the unhurried weight of someone choosing each word after a pause — then snap forward and land on the beat or slightly ahead in the chorus for impact",
+        "Syllables in long-vowel words are stretched beyond comfortable duration, then the final consonant is clipped short and dry, creating a push-pull tension within a single word",
+        "Melodic phrases in the chorus sometimes begin a half-beat earlier than expected, overlapping with the final guitar chord of the previous bar and creating a sense of emotional urgency that can't wait",
+        "Rests are used aggressively — a full beat of silence inside a sung phrase is left open rather than filled, letting the guitar or ambient room noise fill the gap with texture"
+      ],
+      "adlib_behaviors": [
+        "A soft exhale or near-voiceless sigh is placed at the end of heavy chorus phrases — not as a breath cue but as an emotional period, like the body releasing what the words couldn't hold",
+        "A doubled version of the last word in a chorus line appears at a lower volume one octave down, ghosting the main melody and giving the hook a shadow it didn't ask for",
+        "In the outro or final chorus, a single repeated syllable or short phrase is layered in free rhythm against the main vocal, creating a liturgical or incantatory second voice",
+        "Occasional wordless hums or open-vowel tones are tucked beneath the bridge vocal — not harmonies, but a droning under-breath that thickens the emotional air without adding new melodic information"
+      ],
+      "avoid": [
+        "Melismatic runs, vocal gymnastics, or any display of technical agility that would shift attention from emotional weight to vocal virtuosity",
+        "Clean, perfectly centered pop vocal production with no grain, breath, or saturation — this character's voice should always carry some evidence of the body producing it",
+        "Conversational or playful vocal delivery; even lighter moments should carry a trace of melancholy or longing in the tone color",
+        "Anthemic chest-voice stadium shouting without textural layering — the loud moments must feel like they cost something, not like confident proclamation",
+        "Upward-inflecting phrases that turn statements into questions — this character's melodic lines fall or resolve flatly; they do not seek approval"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The verse is sung in near-monotone on a single repeated pitch with only small deviations, then the chorus melody suddenly opens into a wide melodic arc spanning an octave and a half — the contrast makes the chorus feel like a door kicked open.",
+      "The lead vocal is doubled with a version processed through amp speaker simulation so it sounds simultaneously like a human voice and a guitar signal, blurring the instrument-to-voice boundary in a moment of peak emotional intensity.",
+      "A single lyric line in the bridge is delivered in two different emotional registers back to back — first in the whisper mode, then immediately repeated in the layered howl — as if the character is arguing with themselves about whether they mean it.",
+      "The vocal melody in the hook deliberately avoids the root note of the chord, sitting on the seventh or the suspended fourth, creating a sense of unresolved longing that the chord beneath it refuses to solve.",
+      "The pre-chorus features the vocal panned hard left without the usual center-anchoring double, creating spatial isolation that makes the singer sound physically alone before the chorus brings the full stereo image back.",
+      "During a quiet section, the reverb tail on the vocal is left abnormally long — several seconds — so the character's previous phrase is still audibly decaying in the room while a new phrase begins, making the song feel haunted by its own recent past.",
+      "A spoken-word insert of one or two sentences, delivered in flat affect with no melodic contour, is placed inside an otherwise sung section — the absence of melody makes it land with more emotional specificity than any sung line around it."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Siamese Wall",
+        "description": "Dense, multi-layered guitar tracks using both buzzing overdriven rhythm guitars and clean arpeggios running simultaneously in separate stereo positions, with drums that hit with physical weight rather than programmed precision. Vocals sit in the center layered with themselves, the emotional core smothered in controlled noise. This lane is the character at their most overwhelmingly present — grief or desire rendered as a force of physics."
+      },
+      {
+        "name": "Melancholy Cathedral",
+        "description": "Orchestral rock mode where strings or bells replace or augment guitar rhythm parts, the tempo is deliberate and patient, and the vocal melody is the widest and most hymn-like the character ever gets. Piano anchors the low end while guitars handle texture rather than riff. This is the character in mythic self-reflection — not intimate, not explosive, but vast and mournful like a landscape."
+      },
+      {
+        "name": "Adore Mode",
+        "description": "Sparse electronic architecture — drum machine pulses with no live kit, minimalist synth pads replacing guitar walls, and a vocal that is exposed and unguarded with almost no production armor. Melodies are gentle but harmonically strange. This lane is the character stripped of their noise weaponry, which makes their emotional vulnerability more unsettling than any distortion."
+      },
+      {
+        "name": "Gish Rawness",
+        "description": "A grungier, less polished version of the heavy lane where guitar tones are fuzzier and less sculpted, the bass is more prominent and melodic, and the drums have room-mic looseness. Vocals are less stacked and more exposed, with energy that feels captured rather than constructed. This lane is the character at their most physical and least controlled."
+      },
+      {
+        "name": "Gothic Acoustic",
+        "description": "Acoustic guitar played with fingerpicking or deliberate strumming forms the entire harmonic world, with at most a lone piano or cello added as a second voice. No drums or only very soft brushed percussion. The vocal is recorded dry or with minimal reverb so every breath is audible. This lane forces the character's lyric writing to carry the full emotional weight with no sonic spectacle to lean on."
+      },
+      {
+        "name": "Bitter Mid-Tempo Haze",
+        "description": "A mid-paced lane with hazy, slightly out-of-phase clean electric guitars, a melodic bass line that creates its own countermelody, and a vocal that rides the line between detachment and eruption. Choruses gain distortion but never fully explode — the catharsis is held back on purpose, creating a sense of emotional pressure that the song never fully releases."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous song used stacked unison vocal layers in its chorus, the next song must either use a single exposed lead vocal or a harmony interval approach — never two consecutive tracks relying on the same chorus vocal mass strategy.",
+      "If the previous song resolved with a climactic distortion flood, the next song must end with restraint: a fragment, a piano echo, a single guitar harmonic, or a sudden cutoff — this character's tendency to always build to a wall must be interrupted deliberately.",
+      "If the previous song's verses were sparse and whispered, the following song's verses must have more rhythmic or instrumental activity — switching from empty-room intimacy to a busier low-dynamic texture prevents the album from settling into a single verse mood.",
+      "Track sequencing must alternate the primary emotional posture: a song of longing or devotion must not be followed by another song of longing or devotion; rotate through jealousy, resignation, rage, mystical distance, or tender confusion before returning.",
+      "If the previous song used piano as the primary harmonic instrument, the next song must be guitar-led — and vice versa — preventing the character from defaulting to one instrument family as a comfort zone across multiple adjacent tracks.",
+      "After any song using drum-machine or electronic pulse as its rhythmic foundation, the following song must use a live-feel kit with room ambience — the character's electronic and organic identities must be held in contrast, not allowed to blur into a permanent setting."
+    ],
+    "anti_generic_rules": [
+      "Glass Orchard's specific failure mode is defaulting to a single formula: clean arpeggio verse, distortion chorus, one quiet bridge, then chorus again — every song must interrupt this structure in at least one structural location by adding an unexpected section, collapsing a section, or refusing to deliver the expected chorus.",
+      "Do not allow every song to reach emotional catharsis through volume alone; some songs must find their emotional peak in a moment of sudden quiet, an unexpected harmonic choice, or a lyric that lands harder than any guitar swell.",
+      "The generator will default to moon, glass, and flower imagery as this character's visual language — enforce a maximum of one of these image families per song and require the remaining imagery to be sourced from a completely different sensory register such as temperature, pressure, sound, or bodily sensation.",
+      "Guitar distortion in the chorus is this character's most comfortable move and will appear automatically if not overridden — at least one song per album mode must reach its emotional peak through clean or nearly clean guitar tone rather than saturation.",
+      "This character tends to repeat the same emotional trajectory of wounded narrator addressing a lost relationship — enforce rotation so that at least every third song's narrator has a different emotional posture entirely, such as cold observation, dark humor, spiritual questioning, or self-directed anger rather than outward-directed longing.",
+      "The generator will default to a 4/4 backbeat with kick on one and three and snare on two and four across all lanes — push against this with syncopated or off-kilter drum patterns, half-time feels, or sections where the kick pattern is irregular enough to create rhythmic unease.",
+      "Choruses will default to rising melodic contour because it feels triumphant — this character's most distinctive moments often come from chorus melodies that descend or plateau, making the emotional weight fall rather than lift, which is more honest to the brand's aesthetic of ache over victory."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use the guitar feedback swell intro on more than one song per album; rotate into piano motif, cold vocal entrance, acoustic strum, electronic pulse, or drum-only opening for subsequent tracks.",
+      "Do not use the pre-chorus as a volume and density build-up on every song — sometimes let the pre-chorus drop texture and let silence or a single instrument carry the anticipation.",
+      "Do not apply the same reverb depth and room size to the vocal across all tracks; alternate between dry and intimate, mid-room presence, and cathedral-scale distance to prevent the album from having a single acoustic identity.",
+      "Do not allow the bass to play root-note-only patterns across consecutive songs; rotate between melodic counterpoint bass lines, rhythmically syncopated bass figures, and foundation-only bass to vary the low-end personality.",
+      "Do not end more than two consecutive songs with a fade or a chorus repeat loop; alternate endings must include abrupt cutoffs, single-instrument codas, spoken fragments, or held single notes.",
+      "Do not use the same key center or mode family on adjacent tracks; rotate between minor, Dorian, Phrygian, and occasional major-but-dark tonalities to prevent the album from sounding harmonically static.",
+      "Do not deploy the stacked unison vocal chorus texture on more than three songs per album cycle, and never on adjacent tracks.",
+      "Do not use a two-bar repeated guitar riff as the primary verse engine on consecutive songs; vary by using chord-based strumming, arpeggiated figures, single-note lines, or riff-free ambient pad textures across different tracks."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify a single concrete physical or sensory detail — a texture, a temperature, a sound from a specific location — that anchors the lyric's imagery and has not appeared in any previously generated song on this album.",
+      "The brief must state which album mode lane this song occupies and must name at least one structural decision that differentiates this song's architecture from the last song generated in the same lane.",
+      "The brief must describe the specific emotional posture of the narrator in this song — wounded, cold, devotional, furious, mystical, resigned, or another distinct state — and confirm it has not been used in the immediately preceding track.",
+      "The brief must identify which vocal conceit from the performance conceit bank will be deployed in this song and at which structural moment it appears, and must confirm this conceit was not used in the prior track.",
+      "The brief must specify how the song ends — whether with cathartic flood, quiet fragment, abrupt cutoff, instrumental tail, or something else — and must explain why that ending is the correct emotional resolution for this specific song rather than a default choice.",
+      "The brief must name the primary instrument that carries the verse harmonic identity and confirm it differs from the instrument that carried the verse harmonic identity in the immediately preceding song."
+    ]
   },
   "visuals": {
     "style": "Moody 1990s-inspired alternative-rock sleeve art with moonlit florals, cracked glass, muted violet and silver tones, worn poster texture, candlelit interiors, dreamy distortion, and restrained gothic romance. Polished enough for streaming artwork; not photorealistic.",

@@ -374,6 +374,58 @@ function validateSongwriting(songwriting, profilePath) {
       }
     }
   }
+
+  // Optional enriched performance-identity fields (all backward-compatible).
+  if (songwriting.vocal_performance_engine !== undefined) {
+    validateVocalPerformanceEngine(songwriting.vocal_performance_engine, profilePath);
+  }
+  if (songwriting.album_mode_lanes !== undefined) {
+    validateAlbumModeLanes(songwriting.album_mode_lanes, profilePath);
+  }
+  for (const key of ['song_differentiation_rules', 'anti_generic_rules', 'do_not_repeat_across_album', 'hidden_brief_requirements', 'performance_conceit_bank']) {
+    const val = songwriting[key];
+    if (val !== undefined && !(Array.isArray(val) && val.length === 0)) {
+      validateStringArray(val, `${profilePath} songwriting.${key}`);
+    }
+  }
+}
+
+function validateVocalPerformanceEngine(engine, profilePath) {
+  if (!engine || typeof engine !== 'object' || Array.isArray(engine)) {
+    throw new Error(`${profilePath} songwriting.vocal_performance_engine must be an object`);
+  }
+  for (const key of ['vocal_textures', 'timing_behaviors', 'adlib_behaviors', 'avoid']) {
+    if (engine[key] !== undefined) {
+      validateStringArray(engine[key], `${profilePath} songwriting.vocal_performance_engine.${key}`);
+    }
+  }
+  for (const key of ['priority']) {
+    if (engine[key] !== undefined && typeof engine[key] !== 'string') {
+      throw new Error(`${profilePath} songwriting.vocal_performance_engine.${key} must be a string`);
+    }
+  }
+}
+
+function validateAlbumModeLanes(lanes, profilePath) {
+  if (!Array.isArray(lanes) || lanes.length === 0) {
+    throw new Error(`${profilePath} songwriting.album_mode_lanes must be a non-empty array`);
+  }
+  for (const [idx, lane] of lanes.entries()) {
+    if (!lane || typeof lane !== 'object' || Array.isArray(lane)) {
+      throw new Error(`${profilePath} songwriting.album_mode_lanes[${idx}] must be an object`);
+    }
+    if (typeof lane.name !== 'string' || !lane.name.trim()) {
+      throw new Error(`${profilePath} songwriting.album_mode_lanes[${idx}].name must be a non-empty string`);
+    }
+    if (typeof lane.description !== 'string' || !lane.description.trim()) {
+      throw new Error(`${profilePath} songwriting.album_mode_lanes[${idx}].description must be a non-empty string`);
+    }
+  }
+}
+
+export function hasEnrichedPerformanceFields(profile) {
+  const sw = profile?.songwriting || {};
+  return !!(sw.vocal_performance_engine || sw.performance_conceit_bank?.length > 0 || sw.album_mode_lanes?.length > 0);
 }
 
 function normalizeSafeProfileId(profileId = DEFAULT_PROFILE_ID) {

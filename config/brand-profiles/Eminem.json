@@ -233,7 +233,111 @@
       "include_funny_long_word": false,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "vocal_performance_engine": {
+      "priority": "Cipher Engine is non-replaceable because it fuses machine-precise syllable stacking with sudden human fractures — moments where the verbal velocity drops into a raw, almost conversational line that lands harder than anything fast around it.",
+      "vocal_textures": [
+        "Compressed, teeth-forward attack on dense rhyme clusters — consonants hit like percussion before vowels open up",
+        "A sudden drop to near-spoken word delivery mid-verse, flat and dry, like someone reading a police report about their own life",
+        "Controlled breathlessness at the end of long multi-syllabic runs — the audible edge of physical limit as an emotional signal",
+        "Cold sarcastic detachment on punchlines — delivery slows by half a beat, voice drops a register, no sell, just statement",
+        "Crowd-address register that widens the vowels and lifts the chin — public narrator mode, angrier and more declarative than verse mode",
+        "Private-mode confessional texture — slightly rougher, less polished, like the track was recorded once and kept raw"
+      ],
+      "timing_behaviors": [
+        "Deliberately delays the punchline word by a half-beat, letting the rhyme set up hang before detonating it",
+        "Switches to double-time inside a single-time verse without warning, then snaps back — uses the transition itself as emphasis",
+        "Holds a phrase just past where breath feels comfortable, so the next line arrives slightly starved and urgent",
+        "Drops completely off the beat for one or two plainspoken words, then re-enters on the one with force",
+        "Uses rhythmic silence — a full beat of nothing — as a full stop after a devastating line rather than filling the space"
+      ],
+      "adlib_behaviors": [
+        "Short sharp exhale through the nose after a punchline — not a laugh, more like satisfying a bet with yourself",
+        "Quiet 'yeah' or 'right' tucked under the last word of a verse, stated like a private confirmation rather than a hype call",
+        "A single cold repetition of the last syllable of a devastating word, as an echo that dares the listener to argue",
+        "Rare but precise use of a bitter half-laugh — not comedic, more like recognition that something is absurd and painful simultaneously",
+        "Breath catch before entering an extremely fast section — not hidden, let it be audible as a signal that something is about to break"
+      ],
+      "avoid": [
+        "Generic hype adlibs that could belong to any rap performance — Cipher Engine does not perform for a crowd, it performs at a problem",
+        "Sustained melodic singing on main verses — melodic elements belong in hooks or stripped interludes, not stacked across whole verses",
+        "Constant maximum aggression with no dynamic variation — monotone fury flattens the identity; the contrast is the identity",
+        "Polished radio-smooth vocal processing — compression and presence are fine, but over-produced warmth undermines the bruised-machine character",
+        "Self-congratulatory speed announcements in the vocal itself — the speed should be evident, not narrated"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The Gear Drop: verse begins at a moderate, almost conversational pace — deceptively plain — then accelerates mid-bar into a dense rhyme avalanche, so the speed feels earned rather than announced",
+      "The Receipt Line: after an extended metaphor or rant, the verse ends with one hyper-literal, zero-metaphor sentence that names exactly what just happened in blunt human terms, undercutting the artifice",
+      "The Self-Interruption: mid-flow, the narrator cuts themselves off with a short sardonic aside — a parenthetical dark joke — then resumes the verse at higher intensity, as if the interruption released pressure",
+      "The Slow Autopsy: in a protest or confessional lane, the entire verse is delivered in that near-spoken flat register, each word placed with surgical patience, no rush, letting the content do all the violence",
+      "The Trap Door Hook: the hook begins as if it will be anthemic and chantable, then the final line of the hook pivots to something unexpectedly quiet, specific, or painful — pulling the floor out on the fourth bar",
+      "The Echo Court: a key accusation or observation from verse one reappears verbatim in verse three, but with different surrounding lines that completely recontextualize its meaning",
+      "The Comma Bomb: a line that appears to end with a natural breath pause instead continues for twice as long as expected, with the real punchline buried past where most listeners stopped tracking",
+      "The Gear Freeze: at peak density, the beat strips to almost nothing — kick and one element — and the vocal delivery slows to half speed for exactly two bars before everything crashes back"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Velocity Court",
+        "description": "Technical showcase lane where the emotional stakes are precision and pride — but every fast section must contain at least one line with genuine personal or social meaning; speed without a target is forbidden here"
+      },
+      {
+        "name": "Bare Concrete",
+        "description": "Stripped slow-to-mid tempo lane where production is minimal and every syllable has weight — Cipher Engine's dark humor is drier here, confessional lines hit without armor, and the bruise under the machine is fully exposed"
+      },
+      {
+        "name": "Protest Signal",
+        "description": "Public-address lane with march-tempo pulse and chantable hooks — the narrator shifts from personal 'I' to collective 'we' or accusatory 'you all', and cinematic tension replaces wordplay density as the primary weapon"
+      },
+      {
+        "name": "Comic Knife",
+        "description": "Dark humor lane where absurdist exaggeration escalates across each verse until the joke becomes something uncomfortably real — the punchlines are precise but the emotional rug pull is the actual point"
+      },
+      {
+        "name": "Cipher Collapse",
+        "description": "Recovery and vulnerability lane — verse delivery is aggressive but the hook breaks open; the production may include something unexpectedly melodic or textural that would not appear in any other lane"
+      },
+      {
+        "name": "Open Signal",
+        "description": "Collaboration-aware lane where verse density is high but the hook architecture leaves breathing room — the narrator's voice pulls back slightly in the hook to create contrast space, as if aware another energy is entering"
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track was built on speed and density, the next track must lead with menace, restraint, or emotional exposure — not another velocity showcase, regardless of how well the last one worked",
+      "No two consecutive tracks may share the same intro type, hook structure, and primary emotional posture simultaneously — at minimum two of these three must rotate",
+      "If a song used dark humor as its primary mode, the following song must treat its subject with sincerity first, reserving any comedic element for contrast rather than leading tone",
+      "After a protest-lane track where the narrator addresses a crowd or system, the next track must return to intimate first-person or private second-person address to prevent the voice from becoming permanently public-mode",
+      "If the previous track's hook was chantable and repetitive for urgency, the next hook must be structurally asymmetrical, surprising in length, or built on a pivot rather than repetition",
+      "After any track that ends with emotional resolution or catharsis, the next opening must feel unresolved — beginning mid-argument, mid-thought, or mid-scene rather than a clean new start"
+    ],
+    "anti_generic_rules": [
+      "Cipher Engine's specific failure mode is defaulting to 'I rap fast and you cannot keep up' as the entire song concept — this is the first idea to reject; technical skill must always serve a distinct emotional or narrative mission",
+      "Do not let the dark humor lane become a series of disconnected insult punchlines with no accumulating tension — each joke should escalate a situation or reveal something true; empty cleverness is the generic failure here",
+      "Do not produce a protest track that is only generically angry — the protest voice must name a specific mechanism, situation, or hypocrisy, not just express that the system is broken",
+      "The confessional lane fails when vulnerability is performed at arm's length — if the narrator is 'admitting' something, the delivery must feel genuinely exposed, not packaged as strength-through-vulnerability branding",
+      "Do not let the stripped or slow lane become an excuse for simpler rhyme schemes — Cipher Engine's precision and density must persist even at low tempo; slowness is an emotional choice, not a technical downgrade",
+      "Avoid producing a hook that is only the song title repeated over a simple melodic loop — hooks must have internal motion, a pivot, a tonal shift, or a line that reframes the verse content",
+      "Do not stack technical multisyllabic rhyme that is phonetically impressive but semantically empty — every dense section must contain at least one idea that would survive being extracted and quoted in plain speech",
+      "The character's self-awareness and dark humor must never become a shield that prevents real emotional stakes from landing — if every moment of vulnerability is immediately undercut by a joke, the brand loses its bruise"
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use the same tempo lane for more than two consecutive tracks — the range from slow battle pocket to extreme speed exists to force variety, not to find a comfortable default and stay",
+      "Do not open more than one track per album with a rapid-fire verse entry — vary intros with cold spoken lines, stripped drum pickups, ambient texture breaks, or silence before the first word",
+      "Do not use the same hook resolution type more than once per album — rotate between chantable repetition, pivot-line surprises, melodic lifts, near-spoken flat statements, and abrupt cut endings",
+      "Do not anchor consecutive tracks to the same production texture — tense minor strings, hard snare pressure, bass-forward menace, sparse piano, and noise-textured beats should rotate, never stack",
+      "Do not repeat the same emotional conclusion archetype — defiance, collapse, bitter humor, public accusation, and quiet resolution should each appear at most once per project as a closing posture",
+      "Do not reuse the same fast-rap structural trick — double-time mid-verse, triple-rhyme run, breath-catch escalation, and syllable avalanche are individual tools to deploy sparingly and in different song contexts",
+      "Do not let the same type of plainspoken emotional line appear in the same verse position across multiple tracks — if the gut-punch plain line closes verse two on one track, it must appear elsewhere structurally on the next",
+      "Do not repeat the same adlib behavior in the same song position across more than one track — the cold echo, the exhale, the quiet confirmation, and the half-laugh each belong to specific moments, not default slots"
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify the exact emotional fracture point for this track — the specific moment where Cipher Engine's machine precision breaks and the human bruise surfaces, including where in the song structure this occurs and what triggers it.",
+      "The brief must identify which of Cipher Engine's specific failure modes is most likely for this particular song concept and include a concrete instruction for how the track avoids defaulting to it.",
+      "The brief must describe the pacing architecture of this specific track — where it slows, where it accelerates, where it holds silence, and why each shift serves the emotional mission rather than simply demonstrating technical range.",
+      "The brief must specify a hook design that has not appeared on any prior track in this session, naming what makes the hook's internal structure distinct — its length asymmetry, its pivot line, its tonal shift, or its relationship to the verse that precedes it.",
+      "The brief must identify the one plainspoken, zero-metaphor line that anchors this track's emotional center, stating what it says and where in the song it appears so the generator does not bury it under density or omit it in favor of wordplay.",
+      "The brief must specify whether the narrator's voice is in battle mode, public protest mode, private confessional mode, or dark comic mode for each section of the track — and must flag any section where the mode shifts, explaining why that shift is earned rather than arbitrary."
+    ]
   },
   "visuals": {
     "style": "Gritty technical-rap cover art with monochrome contrast, warning red accents, cassette/tape textures, typewriter or notebook details, engine/cipher diagrams, concrete walls, smoke, kinetic typography, and cinematic urban lighting. Polished enough for streaming artwork; not photorealistic.",

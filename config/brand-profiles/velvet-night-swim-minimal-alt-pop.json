@@ -153,5 +153,105 @@
   "guardrails": {
     "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
     "brand_safe": true
+  },
+  "songwriting": {
+    "vocal_performance_engine": {
+      "priority": "This character's vocal is non-replaceable because it withholds — it delivers emotional weight through subtraction, as if the singer is narrating something she is still deciding whether to admit.",
+      "vocal_textures": [
+        "A dry, close-mic whisper-chest hybrid where consonants land harder than vowels, giving words a blunt, almost tactile feel",
+        "A controlled mid-register that sits just below full projection, creating the sense of speaking privately in a loud room",
+        "A momentary vocal creak or catch on emotionally loaded syllables, used once per song at maximum and never telegraphed",
+        "A flat, almost affect-less tone on observational lines that suddenly deepens on the final word, landing like a punchline with no smile",
+        "A slight nasal compression on rising melodic phrases that makes optimism sound suspicious",
+        "A breathy release on phrase endings only in verses, which contracts to a clean, unsentimental cutoff in the chorus"
+      ],
+      "timing_behaviors": [
+        "Sits behind the beat by a consistent half-syllable on verses, then locks to the downbeat exactly on the first word of each chorus — the shift feels like stepping into light",
+        "Swallows the last syllable of a line approximately one beat early, creating white space the listener fills with their own meaning",
+        "Stretches a single interior vowel mid-phrase instead of the expected final note, making the melody feel unresolved before it resolves",
+        "Delivers two-line couplets with the second line starting before the listener expects it, as if impatient with her own pause",
+        "Sits perfectly on the grid for exactly one verse to establish trust, then begins drifting as the song's tension builds"
+      ],
+      "adlib_behaviors": [
+        "A barely audible exhale of breath — not a sigh, not a laugh — placed in the silence between the last chorus line and the outro, as if the song just confirmed something she suspected",
+        "A single repeated word from the hook whispered under the final bar of the bridge, overlapping the main vocal by a half-beat, creating a ghost of the lyric",
+        "An occasional low hum on a note not in the chord, used only in pre-choruses, as if she is thinking out loud",
+        "A sharp quiet inhale captured on mic before the most emotionally loaded verse line, used no more than once per track",
+        "A very short, near-spoken echo of the last word of the chorus placed in the right channel only, never centered, audible only on headphones"
+      ],
+      "avoid": [
+        "Melisma or any run of more than two adjacent notes on a single syllable — this character does not ornament, she undercuts",
+        "Vocal layering that creates a choir or ensemble feel — harmonies must be a single ghosted voice, distant, never warm or full",
+        "Any delivery that sounds like it is performing sadness rather than containing it — no trembling vibrato or breathy fragility used for effect",
+        "Shouted or belted climaxes — if the chorus needs more intensity, the voice gets quieter and more precise, not louder",
+        "Upward inflections at the end of declarative lines — this character states, she does not ask"
+      ]
+    },
+    "performance_conceit_bank": [
+      "In the second verse only, the vocal drops to a near-spoken register for a single four-bar stretch, as if the song briefly stops being a song and becomes a confidence told in a car — then returns to melody without announcement",
+      "The title phrase of the song is never sung on the melody it first appears on — every subsequent repetition lands on a different pitch or rhythm, so the phrase keeps shifting in meaning rather than anchoring it",
+      "A line in the bridge is split across two breaths in an unexpected place, mid-word, as if the singer ran out of air at the exact moment the lyric became too honest",
+      "The pre-chorus vocal is delivered at the same dynamic level as the verse — no build — so the chorus arrival is registered only by the production opening up, not by the voice growing",
+      "One line in the song is sung entirely on a monotone single pitch, surrounded by melodic movement, creating a moment that sounds like a read or a verdict rather than a lyric",
+      "The outro repeats a line from the verse, not the chorus, and the second time it is sung it is missing one word from the original — the absence is never filled and never explained",
+      "A question posed in the lyric is left unanswered not just lyrically but melodically — the phrase ends on a note that does not resolve to the tonic, and the track ends before it resolves"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Observatory",
+        "description": "Velvet Night Swim watches a social scene from the outside — a party, a group chat, a school hallway — and catalogs it with detached precision. Vocals are most measured and flat here. Production is most skeletal: only kick, one synth texture, and voice. The danger of over-observation is the point."
+      },
+      {
+        "name": "Trespass",
+        "description": "A track where the character enters the emotional scene instead of watching it — longing tips into action, desire becomes uncomfortable, private ambition surfaces. Vocal timing loosens slightly. A second low synth element enters. The track should feel like crossing a line the character will not name."
+      },
+      {
+        "name": "Static Archive",
+        "description": "A memory is being reconstructed from partial evidence — a detail of light, a fragment of a sentence, a smell. Production loops a small motif obsessively but each loop has a tiny, barely audible variation. The vocal is most breathy here, as if the memory is slightly out of focus."
+      },
+      {
+        "name": "Cold Ceremony",
+        "description": "A ritual of ordinary youth — a birthday, a graduation photo, a last night in a town — rendered with the gravity of myth and the flatness of someone who has already processed the feeling. The chorus is the most musically structured of any lane, but the vocal delivers it as if reciting, not celebrating."
+      },
+      {
+        "name": "Undertow",
+        "description": "The most sonically dense lane for this character, which means one additional textural element — a low string pad or filtered guitar — joins the core kit. Emotion is still controlled but the restraint is visibly costing something. Lyrics are more elliptical, syntax breaks down slightly near the end."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used finger snaps as the primary rhythmic element, the next track must replace them with a different dry percussive source — a muted rim, a hand clap with heavy room stripped out, or pure silence — never repeat the same percussive signature back-to-back",
+      "If the previous track's emotional posture was observational and cool, the next track must introduce one element of visible wanting or discomfort — even if the lyric still withholds naming it — so no two consecutive tracks read as flat",
+      "If the previous track's chorus was its most melodically expansive moment, the following track must have a chorus that is melodically equal to or simpler than its verse, forcing differentiation through lyrical payload rather than melodic lift",
+      "Avoid using the same synth bass movement — sustained root note, descending walk, or rhythmic pulse — on consecutive tracks; the low-end behavior must rotate so the two tracks feel physically different when listened sequentially",
+      "If the previous track placed its emotional climax in the bridge, the next track must either eliminate the bridge entirely or place its emotional climax in the final verse, so the album does not train the listener to wait for the same structural moment",
+      "Consecutive tracks must not open with the same combination of elements — if the previous track opens with voice alone, the next must open with at least one production element present before the vocal enters"
+    ],
+    "anti_generic_rules": [
+      "This character's default failure mode is producing a track that sounds like ambient sad-girl pop with no distinguishing architecture — every track must have at least one moment of unexpected structural choice, such as a chorus that arrives eight bars earlier than expected or a bridge that refuses to crescendo",
+      "The generator will default to lyrics about rain, mirrors, and unnamed 'you' pronouns as emotional shorthand — Velvet Night Swim requires a specific, concrete image from the physical world of youth (a convenience store, a phone screen in a dark car, a specific piece of clothing) as the emotional anchor of every song",
+      "The generator tends to soften the character's observational coldness with a redemptive emotional turn in the outro — this character does not resolve, she stops; the song must be allowed to end on unresolved feeling without a consoling final line",
+      "The generator will reach for reverb as a proxy for nocturnal atmosphere — this character's atmosphere is built from proximity and dryness, not wash; excessive reverb on the vocal is a failure of character, not a stylistic choice",
+      "Generic sparse pop defaults to a predictable verse-pre-chorus-chorus structure with identical chorus repetitions — this character must vary at least one element of the chorus the second time it appears, whether a stripped production element, an altered lyric, or a different vocal take",
+      "The generator defaults to emotional accessibility — lyrics that explain their own metaphors — Velvet Night Swim leaves the connection between image and feeling unstated, trusting the listener to do the work; any lyric that explains what it means must be cut",
+      "When the generator runs out of melodic ideas it repeats the hook four times in the outro — this character's outros are shorter than expected and end before the listener wants them to, because she leaves first"
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use a finger snap pattern as the sole percussive element in more than two tracks on any album — rotate to rim taps, body percussion, processed breath, or pure silence before returning",
+      "Do not open more than two tracks with the vocal entering within the first four bars — allow instrumental-only openings of varying lengths to establish that the voice arrives on its own terms",
+      "Do not use the same low synth bass behavior — sustained, walking, or pulsed — more than twice consecutively; the bass movement must rotate across the album",
+      "Do not use the word 'night' or 'dark' or any direct synonym for nocturnal atmosphere in the lyric of more than one track per album — the nocturnal quality must be produced by imagery and production, not named",
+      "Do not place the emotional peak of more than two tracks in the bridge — vary where the highest-stakes moment falls structurally across the album",
+      "Do not use the same vocal double or ghost technique — panned whisper echo, low hum underlay, or dry mono shadow — on consecutive tracks; each technique must rest for at least two tracks before returning",
+      "Do not allow the BPM to remain at exactly 88 for more than two consecutive tracks — vary within the 78–96 range so the album does not feel metronomically locked to a single pulse",
+      "Do not use a metaphor drawn from water — swimming, drowning, tides, rivers — in consecutive tracks, even though it is native to this character's name; space these images deliberately across the album"
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify a single concrete physical object or location from the social world of youth that anchors the lyric's central image, and explain why this specific object carries emotional weight in the context of this particular song — not as decoration but as the track's emotional logic.",
+      "The brief must describe the specific emotional posture this track's vocal occupies — whether it is observing, wanting, remembering, or containing — and how that posture differs from the posture of the immediately preceding track on the album.",
+      "The brief must identify which structural surprise this track deploys — such as an early chorus, an absent bridge, a repeated verse replacing the expected outro, or a chorus that strips rather than builds on its second appearance — and confirm it has not been used in the prior two tracks.",
+      "The brief must specify how adlib placement and type on this track differs from the previous track, naming the exact adlib behavior to be used and the precise structural location where it appears.",
+      "The brief must articulate what this track withholds — what feeling or conclusion the lyric approaches but never states — and confirm that the outro does not resolve or explain this withholding before the track ends.",
+      "The brief must confirm which do-not-repeat elements from the album accumulator are being deliberately rested on this track, and identify which of the five album mode lanes this track occupies and why that lane has not been overused in the current album sequence."
+    ]
   }
 }

@@ -53,6 +53,8 @@ async function runMagicPipelineServiceInner({
   mode = 'human_review',
   pipelineStage = process.env.MAGIC_PIPELINE_STAGE || process.env.MAGIC_SONG_PIPELINE_STAGE || MAGIC_PIPELINE_STAGES.SONG_ONLY,
   allowRegeneration = false,
+  albumContext = null,
+  priorTracks = [],
   onEvent = null,
   logger = console,
 } = {}) {
@@ -121,6 +123,8 @@ async function runMagicPipelineServiceInner({
       draftPayload: existingDraftPayload,
       passLabel: songOnlyGate ? 'Magic Song-Only Pass' : 'Magic Pass 1/2',
       stopAfterAudio: songOnlyGate,
+      albumContext,
+      priorTracks,
       logger,
       emit,
       modules,
@@ -411,6 +415,8 @@ async function runSongBuildPass({
   stopAfterAudio = false,
   forceRegenerate = false,
   confirmPaidRerender = false,
+  albumContext = null,
+  priorTracks = [],
   logger,
   emit,
   modules,
@@ -431,6 +437,8 @@ async function runSongBuildPass({
       researchReport,
       revisionNotes,
       existingLyrics,
+      albumContext,
+      priorTracks,
     });
     totalCost += lyricsResult.costUsd || 0;
   }

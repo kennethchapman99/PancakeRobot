@@ -148,5 +148,107 @@
   "guardrails": {
     "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
     "brand_safe": true
+  },
+  "songwriting": {
+    "vocal_performance_engine": {
+      "priority": "Static Postcards' vocal is irreplaceable because it sounds like someone composing a message they will never send — precise word choices, held back emotion, and the specific intimacy of speaking to one absent person rather than performing for a crowd.",
+      "vocal_textures": [
+        "A thin, slightly breathy mid-register that sounds like the voice is being recorded in a small room with the window cracked — present but also slightly removed",
+        "Occasional vocal fry on the trailing edge of phrases, specifically on words that carry regret or finality, as if the thought costs something to finish",
+        "A clean, unadorned chest tone that brightens only on the highest note of the chorus hook — the rest stays conversational and close",
+        "A subtle nasal quality that surfaces mid-verse, making lines feel more like thinking aloud than performing",
+        "Micro-dynamic shifts between syllables — certain words land softer than expected, as if the singer reconsidered the volume while saying them"
+      ],
+      "timing_behaviors": [
+        "Lands the first syllable of a new thought slightly early — before the beat expects it — creating a sense of urgency in otherwise quiet passages",
+        "Stretches the penultimate word of key lines by half a beat, leaving a breath-sized silence before the final word lands on the downbeat",
+        "Delivers lists of small details (objects, places, times) as if reading from a found note — each item equally weighted, no theatrical emphasis",
+        "Occasionally lets a line resolve a full beat late, sitting on silence after the synth pad has already moved on, as if the singer got lost in the image they just described",
+        "Sings backing harmonies slightly ahead of the lead vocal — giving the chorus a layered, overlapping feeling, like two memories surfacing at once"
+      ],
+      "adlib_behaviors": [
+        "Breathed near-words at the end of choruses — not quite lyrics, not quite sighs — that sound like an incomplete second thought",
+        "A single repeated background syllable (a soft 'oh' or 'yeah') that enters quietly in the second chorus and never escalates, as if acknowledging something rather than celebrating it",
+        "Whispered restatements of a key noun from the verse, placed low in the mix during the bridge — heard only on close listening",
+        "A brief, unprocessed vocal hum that appears once in the outro, connecting the electronic texture to something human and imperfect",
+        "Trailing 'mm' sounds after question-phrased lines, as if the singer is sitting with the unanswered question rather than moving past it"
+      ],
+      "avoid": [
+        "Runs, riffs, or melismatic flourishes — this character never shows off the voice; any ornamentation would break the intimacy",
+        "Belt vocals or chest-voice power notes that push past the song's emotional ceiling — the character stays within a restrained dynamic range",
+        "Aggressive consonant attack or percussive vocal delivery — every word here is handled carefully, not punched",
+        "Oversaturated vocal reverb that turns the voice into atmosphere — this character stays close and locatable in the mix",
+        "Call-and-response or crowd-energy phrasing — nothing in this character's delivery suggests an audience is present"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The vocal drops to near-speech volume for exactly one line at the peak of the chorus — not a breakdown, but a sudden privacy, as if the most important thing is said quietest",
+      "A single word in the second verse is sung to a completely different note than the melodic pattern established — a small, deliberate wrong turn that makes the surrounding melody feel more honest",
+      "The hook is delivered twice in the outro: once with full production, then again a cappella with only room noise underneath, so the listener hears the song's skeleton without warning",
+      "A lyric that contains a direct address ('you left the kettle on' or 'you always did that') is sung with no vibrato and no production effect — bone dry, as if the singer forgot the mic was on",
+      "The title phrase is withheld until the final chorus and delivered at a lower pitch than expected, landing like a quiet conclusion rather than a climactic reveal",
+      "Two consecutive lines share the same opening three words but diverge at the fourth, the repetition creating a diary-entry quality — as if the singer is trying different ways to say the same unsayable thing",
+      "A verse melody is sung twice: first in the expected register, then reprised in the bridge an octave lower, making the same lyric feel younger the first time and older the second",
+      "The vocal trails off mid-phrase in the pre-chorus — the synth finishes the melodic idea the voice started — so the instrument completes the thought the singer couldn't"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Signal Loss",
+        "description": "Tracks where the central emotional subject is communication that failed — messages unsent, connections that dropped, conversations replayed too late. Production leans into glitchy micro-edits and degraded signal textures; vocals stay clean against the imperfect backdrop to heighten the contrast between intention and transmission."
+      },
+      {
+        "name": "Room Inventory",
+        "description": "Tracks built from an accumulation of physical objects and small spatial details — what a room contains, what a drawer held, what the light looked like at a specific hour. Arrangement is sparse and deliberate; each sound introduced is meant to function like an object placed carefully on a table."
+      },
+      {
+        "name": "Transit Window",
+        "description": "Tracks anchored to movement through space while the emotional subject stays still — trains, airports, backseat windows, arriving somewhere that no longer means what it did. Drum machine pulse mimics momentum; synth pads swell and thin like passing scenery."
+      },
+      {
+        "name": "Weather Report",
+        "description": "Tracks that use weather and seasonal shift as emotional infrastructure, not as decoration. The production temperature changes — warmer pads in winter songs, colder, more open mixes in summer songs — so the listener feels the season rather than being told it."
+      },
+      {
+        "name": "Delayed Admission",
+        "description": "Tracks structured around a realization the narrator arrives at late — the song's movement is the process of understanding something that was already true. Verse and chorus carry different emotional registers, the chorus arriving not as a lift but as an acceptance."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a lyric anchored to an interior space (a room, a drawer, a window), the next track must anchor its central image to an exterior or transit space — Static Postcards tends to default to indoor stillness, and consecutive tracks must not both inhabit the same spatial register.",
+      "If the previous track's vocal was conversational and near-speech throughout, the next track must introduce at least one moment where the melody becomes unexpectedly structured and singable — to prevent the album from collapsing into a single emotional flatness.",
+      "If the previous track resolved with an emotionally open or ambiguous ending, the next track must arrive at a concrete, closed emotional statement — this character's failure mode is accumulating ambiguity until the album feels unresolved as a whole.",
+      "Consecutive tracks must not share the same drum machine pattern as their foundational pulse — the kick-snare or kick-hihat relationship must be perceptibly different, even if both tracks are mid-tempo, because Static Postcards tends to default to the same programmed groove.",
+      "If the previous track featured a prominent arpeggio as the melodic engine, the next track must not open with an arpeggio — lead instead with a pad texture, a single bell accent, or a vocal-first entrance to prevent the album from sounding like one continuous arpeggio sequence.",
+      "No two consecutive tracks may use the same lyrical time frame — if the prior track was set in the past tense and addressed a memory, the following track must operate in the present tense or an unresolved in-between, so the album contains temporal movement rather than backward-only motion."
+    ],
+    "anti_generic_rules": [
+      "Do not open a track with an eight-bar synth intro that simply introduces the main pad texture — Static Postcards has a tendency to produce pleasant, meandering introductions that establish atmosphere without establishing tension; every intro must begin with a specific detail, image, or incomplete musical idea that the track then resolves.",
+      "Do not write a chorus that describes the emotional state abstractly ('I feel lost,' 'I don't know who I am') — this character's entire voice depends on arriving at emotion through concrete, specific physical detail; generic emotional naming destroys the character's reason for existing.",
+      "Do not allow the bridge to become a key change and energy lift — Static Postcards' failure mode is defaulting to a conventional bridge arc where the production swells and the vocalist raises intensity; the bridge in this character's world should reframe rather than escalate.",
+      "Do not stack more than two layers of synth pad simultaneously in a verse — this character's intimacy depends on space in the arrangement; over-layering pads produces a wash that buries the voice and removes the sense of a small, specific room.",
+      "Do not write lyrics that use weather or seasons as mood decoration without grounding them in a specific memory or event — 'it was raining' is not a Static Postcards lyric; 'it was raining the way it always did on that street by four' is.",
+      "Do not allow the vocal to feel like it is delivering lyrics to a listener — every line must feel addressed to a specific absent person or addressed as private notation; the moment the vocal performs for an audience, the character's intimacy collapses.",
+      "Do not resolve the outro with a clean fade of the main synth texture — this character tends to end by repeating the most comfortable sonic element; endings must introduce at least one element of incompleteness: a note that doesn't resolve, a vocal fragment that stops mid-word, or a drum pattern that drops a beat early.",
+      "Do not use more than one direct simile per song — Static Postcards' language works through accumulation of specific images, not through comparison; overuse of simile makes the songwriting feel generic and distanced from the character's observational mode."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use a glassy arpeggio as the lead melodic hook on more than two consecutive tracks — rotate to a single sustained note sequence, a melodic bassline, or a vocal-melody-only hook on alternating tracks.",
+      "Do not repeat the same drum machine pattern template (kick on 1 and 3, snare on 2 and 4 at 118 BPM) as the unvaried backbone — introduce half-time feels, irregular hi-hat patterns, or dropped beats to prevent a metronome-like uniformity across the album.",
+      "Do not use the word 'remember' in more than one lyric per album — Static Postcards tends toward this word as an emotional shortcut; rotate to 'still,' 'again,' 'used to,' or embed the memory in an image rather than naming the act of remembering.",
+      "Do not place the first vocal entrance at bar 9 on every track — vary the vocal entry across tracks: some begin with voice in bar 1, some delay to bar 5, one may begin a cappella before any production enters.",
+      "Do not use the same warm analog pad timbre as the harmonic foundation for every chorus — rotate to a colder, more electric pad texture on at least every third track to prevent the album from feeling tonally monochrome.",
+      "Do not structure every track as verse-verse-chorus-verse-chorus-bridge-chorus — introduce at least two tracks on an album that use non-standard structures: a track that is entirely verses building to a single unrepeated chorus, or a track where the chorus only appears once.",
+      "Do not use rain, windows, or train stations as the primary image anchor in more than two tracks per album — Static Postcards tends to gravitate to these three images instinctively; rotate to hotel rooms, parking lots, phone screens, empty kitchens, or late-night transit maps.",
+      "Do not leave the bass entirely to a synth pad on every track — introduce at least one track where a melodic bass sequence carries the harmonic movement, and at least one track where the low end is almost entirely absent to create dynamic contrast across the album.",
+      "Do not end every track with a long reverb tail on the final synth note — vary closings with a dry cut, a vocal fragment with no reverb, or a drum machine click that stops mid-bar to create a sense of interruption rather than dissolution."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must identify the specific absent person or entity being addressed in this song — not a type or category, but a singular implied relationship (an old roommate, a former version of oneself, a city left behind) — and confirm that the lyric never names this person directly.",
+      "The brief must specify one concrete physical object that anchors the song's central emotional image, and explain how that object appears or is implied in both the verse and the outro without being used identically in both moments.",
+      "The brief must describe how the vocal delivery in this track's bridge differs from the vocal delivery used in the prior track's bridge — specifying a distinct conceit, dynamic choice, or structural placement that prevents the two bridges from feeling like the same emotional gesture.",
+      "The brief must state which album mode lane this track inhabits and articulate one production or lyrical choice that makes it distinct from another track in the same lane on this album.",
+      "The brief must specify the temporal frame of the song — whether the narrator is speaking from inside a memory, from the present looking backward, from an imagined future, or from a moment of transition — and confirm that the lyric's verb tenses are consistent with that frame throughout.",
+      "The brief must identify one element from the song's arrangement that will be withheld until a specific structural moment, and explain why its delayed arrival creates meaning rather than simply creating dynamics."
+    ]
   }
 }

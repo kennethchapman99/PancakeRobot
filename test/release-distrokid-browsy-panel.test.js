@@ -144,8 +144,9 @@ test('album release detail renders the Browsy DistroKid workflow panel with all 
   assert.match(html, /Browsy DistroKid workflow/);
   assert.match(html, /pancake-robot\.distrokid-album-submit/);
   assert.match(html, /data-distrokid-browsy-readiness/);
-  // One-click primary action; Launch Recorder is no longer a primary happy-path control.
-  assert.match(html, /Start Recording Browser/);
+  // Authoring starts in the setup wizard; the cockpit no longer blindly launches the recorder.
+  assert.match(html, /Open Automation Setup Wizard/);
+  assert.doesNotMatch(html, /Start Recording Browser/);
   assert.doesNotMatch(html, /<button[^>]*>Launch Recorder<\/button>/);
   assert.match(html, /Stop Recording/);
   assert.match(html, /Import Recording/);
@@ -187,18 +188,19 @@ test('scaffold-only contract is labelled distinctly with Run Live disabled but V
   assert.match(html, /View Contract/);
 });
 
-// 4. Ready contract state enables Run Live.
-test('ready contract enables Run Live', async () => {
+// 4. Ready contract state enables Preview but keeps Run Live gated until preview passes.
+test('ready contract enables Preview and keeps Run Live gated until preview passes', async () => {
   const songId = seedSong();
   seedRecording('single', songId, { contract: completeContract('distrokid-single-submit') });
 
   const wf = buildReleaseCockpitViewModel('single', songId).distrokidBrowsyWorkflow;
   assert.equal(wf.readinessLabel, 'ready');
-  assert.equal(wf.runLiveEnabled, true);
+  assert.equal(wf.runPreviewEnabled, true);
+  assert.equal(wf.runLiveEnabled, false);
   assert.match(wf.nextStep.headline, /Workflow contract is ready/);
 
   const html = await fetchDetailHtml('single', songId);
-  assert.doesNotMatch(html, /data-distrokid-browsy-run-live[^>]*disabled/);
+  assert.match(html, /data-distrokid-browsy-run-live[^>]*disabled/);
 });
 
 // 5. Missing + incomplete contract states.
@@ -210,10 +212,10 @@ test('missing state shows clear message and disabled Run Live', async () => {
   assert.equal(wf.readinessLabel, 'missing');
   assert.equal(wf.hasRecording, false);
   assert.equal(wf.runLiveEnabled, false);
-  assert.match(wf.nextStep.headline, /No Browsy workflow has been recorded for this release flow yet/);
+  assert.match(wf.nextStep.headline, /automation is not ready/);
 
   const html = await fetchDetailHtml('single', songId);
-  assert.match(html, /No Browsy workflow has been recorded/);
+  assert.match(html, /DistroKid Album Submit automation is not ready/);
   assert.match(html, /View Contract/);
   assert.match(html, /Refresh Contract/);
   assert.match(html, /data-distrokid-browsy-run-live[^>]*disabled/);
@@ -277,7 +279,7 @@ test('unreachable Browsy surfaces an unavailable status, not a blank cockpit', a
 test('recording lifecycle states map to the correct next-step guidance', () => {
   const started = seedSong();
   seedRecording('single', started, { contract: null, recording_status: 'setup_ready' });
-  assert.match(buildReleaseCockpitViewModel('single', started).distrokidBrowsyWorkflow.nextStep.headline, /Start recording to open the browser recorder/);
+  assert.match(buildReleaseCockpitViewModel('single', started).distrokidBrowsyWorkflow.nextStep.headline, /Automation setup exists/);
 
   const active = seedSong();
   seedRecording('single', active, { contract: null, recording_status: 'recording' });
@@ -305,7 +307,7 @@ test('lifecycle buttons post to the expected magic-release routes', async () => 
   });
   const html = await fetchDetailHtml('single', songId);
   const base = `/releases/single/${songId}/magic-release`;
-  assert.ok(html.includes(`action="${base}/recordings/start"`), 'start route');
+  assert.ok(html.includes(`/releases/single/${songId}/automation-setup`), 'setup wizard route');
   assert.ok(html.includes(`action="${base}/recordings/${recId}/launch"`), 'launch route');
   assert.ok(html.includes(`action="${base}/recordings/${recId}/stop"`), 'stop route');
   assert.ok(html.includes(`action="${base}/recordings/${recId}/import"`), 'import route');

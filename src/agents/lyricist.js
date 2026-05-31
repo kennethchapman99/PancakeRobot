@@ -7,8 +7,9 @@
  */
 
 import { runAgent, parseAgentJson } from '../shared/managed-agent.js';
-import { loadBrandProfile } from '../shared/brand-profile.js';
+import { loadBrandProfile, hasEnrichedPerformanceFields } from '../shared/brand-profile.js';
 import { sanitizeLyricsForQA, stripEmojis, getLyricConventions } from '../shared/song-qa.js';
+import { generatePerformanceBrief } from './performance-brief.js';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -41,16 +42,45 @@ export const LYRICIST_DEF = {
   system: `You are the head songwriter for ${BRAND_NAME}. Follow the active brand profile exactly, but treat profile examples, lore, numbers, reference artists, and catchphrases as guidance rather than reusable lyric inventory unless the user explicitly requests them. Do not import characters, references, sound effects, structures, genre rules, or motifs from unrelated brands. Output valid production-ready JSON only. Never wrap JSON in markdown fences.`,
 };
 
-export async function writeLyrics({ songId, topic, researchReport, revisionNotes, existingLyrics }) {
+export async function writeLyrics({
+  songId,
+  topic,
+  researchReport,
+  revisionNotes,
+  existingLyrics,
+  albumContext = null,
+  priorTracks = [],
+  briefGenerator = generatePerformanceBrief,
+}) {
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
+
+  // Generate hidden performance brief when the profile has enriched fields.
+  let performanceBrief = null;
+  let briefCostUsd = 0;
+  if (hasEnrichedPerformanceFields(BRAND_PROFILE)) {
+    try {
+      const briefResult = await briefGenerator({
+        brandProfile: BRAND_PROFILE,
+        albumContext,
+        priorTracks,
+        topic,
+      });
+      performanceBrief = briefResult.brief;
+      briefCostUsd = briefResult.costUsd || 0;
+      fs.writeFileSync(join(songDir, 'performance-brief.json'), JSON.stringify(performanceBrief, null, 2));
+    } catch (err) {
+      console.warn(`[LYRICIST] Performance brief generation failed (non-fatal): ${err.message}`);
+    }
+  }
+
   let result = { costUsd: 0 };
   let songData = null;
   let qaRevisionNotes = revisionNotes;
   let lastFailure = null;
 
   for (let attempt = 1; attempt <= LYRICIST_MAX_ATTEMPTS; attempt++) {
-    const lyricsTask = buildLyricsTask({ topic, researchReport, revisionNotes: qaRevisionNotes, existingLyrics });
+    const lyricsTask = buildLyricsTask({ topic, researchReport, revisionNotes: qaRevisionNotes, existingLyrics, performanceBrief });
     result = await runAgent('lyricist', LYRICIST_DEF, lyricsTask, { maxTokens: LYRICIST_MAX_TOKENS, maxRetries: 1, retryDelayMs: LYRICIST_RETRY_DELAY_MS });
     let parsedSongData;
     try { parsedSongData = parseAgentJson(result.text); }
@@ -89,20 +119,32 @@ export async function writeLyrics({ songId, topic, researchReport, revisionNotes
   const lyricsContent = formatLyricsMarkdown(songData);
   const lyricsPath = join(songDir, 'lyrics.md');
   fs.writeFileSync(lyricsPath, lyricsContent);
-  const audioPromptContent = formatAudioPrompt(songData);
+  const audioPromptContent = formatAudioPrompt(songData, performanceBrief);
   const audioPromptPath = join(songDir, 'audio-prompt.md');
   fs.writeFileSync(audioPromptPath, audioPromptContent);
   fs.writeFileSync(join(songDir, 'lyrics-data.json'), JSON.stringify(songData, null, 2));
   console.log(`\nLyrics saved to ${lyricsPath}`);
   console.log(`Audio prompt saved to ${audioPromptPath}`);
-  return { songData, lyricsPath, audioPromptPath, title: songData.title || topic, lyricsText: lyricsContent, audioPromptText: audioPromptContent, costUsd: result.costUsd || 0 };
+  return {
+    songData,
+    lyricsPath,
+    audioPromptPath,
+    title: songData.title || topic,
+    lyricsText: lyricsContent,
+    audioPromptText: audioPromptContent,
+    costUsd: (result.costUsd || 0) + briefCostUsd,
+    performanceBrief,
+  };
 }
 
-export function buildLyricsTask({ topic, researchReport, revisionNotes, existingLyrics }) {
+export function buildLyricsTask({ topic, researchReport, revisionNotes, existingLyrics, performanceBrief = null }) {
   const existingLyricsContext = existingLyrics ? `\n\nEXISTING LYRICS TO REVISE:\n\`\`\`\n${existingLyrics}\n\`\`\`\nRevise based on the feedback below. Keep what works and fix what is requested.` : '';
   const revisionContext = revisionNotes ? `\n\n${existingLyrics ? 'EDITOR FEEDBACK' : 'REVISION NOTES'}:\n${revisionNotes}\nAddress all specific concerns.` : '';
+  const briefContext = performanceBrief ? formatPerformanceBriefSection(performanceBrief) : '';
+  const vpeContext = formatVocalPerformanceEngineSection();
+  const antiGenericContext = formatAntiGenericSection();
   return `${existingLyrics ? 'Revise' : 'Write'} a complete, production-ready song for the active ${BRAND_NAME} brand on this topic: "${topic}"
-${existingLyricsContext}${revisionContext}
+${existingLyricsContext}${revisionContext}${briefContext}${vpeContext}${antiGenericContext}
 
 PROFILE SEED SAFETY:
 - The active brand profile is creative guidance, not a lyric ingredient list.
@@ -156,6 +198,40 @@ ${formatStructurePreferences()}
 
 Output valid JSON only. No markdown fences. No trailing commas. Do not stop until the final closing } has been written:
 ${formatOutputSchema()}`;
+}
+
+function formatPerformanceBriefSection(brief) {
+  if (!brief) return '';
+  return `
+
+HIDDEN PERFORMANCE BRIEF — FOLLOW THIS PRECISELY (this defines the song's identity):
+- Vocal conceit: ${brief.vocal_conceit}
+- Flow movement: ${brief.flow_movement}
+- Hook behavior: ${brief.hook_behavior}
+- Adlib personality: ${brief.adlib_personality}
+- Sonic oddity: ${brief.sonic_oddity}
+- Emotional contradiction: ${brief.emotional_contradiction}
+- Must avoid vs previous tracks: ${brief.avoid_vs_previous_tracks}
+
+These are not suggestions. The vocal conceit, hook behavior, and sonic oddity must be recognizable within 10 seconds of the song. Do not default to a standard genre arrangement.`;
+}
+
+function formatVocalPerformanceEngineSection() {
+  const vpe = SONGWRITING.vocal_performance_engine;
+  if (!vpe) return '';
+  const lines = ['', 'VOCAL PERFORMANCE ENGINE (apply this identity to delivery descriptions and audio prompt):'];
+  if (vpe.priority) lines.push(`Priority: ${vpe.priority}`);
+  if (vpe.vocal_textures?.length) lines.push(`Vocal textures: ${vpe.vocal_textures.join(', ')}`);
+  if (vpe.timing_behaviors?.length) lines.push(`Timing behaviors: ${vpe.timing_behaviors.join(', ')}`);
+  if (vpe.adlib_behaviors?.length) lines.push(`Adlib behaviors: ${vpe.adlib_behaviors.join(', ')}`);
+  if (vpe.avoid?.length) lines.push(`Vocal delivery to AVOID: ${vpe.avoid.join(', ')}`);
+  return lines.join('\n');
+}
+
+function formatAntiGenericSection() {
+  const antiGeneric = SONGWRITING.anti_generic_rules;
+  if (!antiGeneric?.length) return '';
+  return `\n\nANTI-GENERIC RULES (these override genre defaults):\n${antiGeneric.map(r => `- ${r}`).join('\n')}`;
 }
 
 function formatTitleRules() {
@@ -237,12 +313,64 @@ ${lyrics}
 `;
   return md;
 }
-function formatAudioPrompt(songData) { const ap = songData.audio_prompt || {}; const lyrics = sanitizeLyricsForQA(songData.lyrics || ''); const titleGuidance = LYRIC_CONVENTIONS.title_usage_required ? `Profile requires title usage: ${LYRIC_CONVENTIONS.title_usage} / ${LYRIC_CONVENTIONS.title_usage_location}` : 'Title usage is optional; do not force the exact title into opening or chorus unless natural'; let prompt = `# Audio Generation Prompt\n\n`; prompt += `## Song: ${songData.title || 'Untitled'}\n\n`; prompt += `## Music Specs\n\n`; prompt += `**Style:** ${ap.tempo_bpm || MUSIC_DEFAULT_BPM} BPM, ${ap.genre || MUSIC_DEFAULT_STYLE}\n`; prompt += `**Instrumentation:** ${ap.instrumentation || MUSIC_DEFAULT_PROMPT}\n`; prompt += `**Energy:** ${ap.energy || 'profile-aligned'}\n`; prompt += `**Mood:** ${ap.mood || MUSIC_DEFAULT_STYLE}\n`; prompt += `**Voice Style:** ${ap.voice_style || 'profile-aligned'}\n`; prompt += `**Structure:** ${ap.structure_note || 'profile-compatible structure chosen by the songwriter'}\n`; prompt += `**Target Length:** ${ap.target_length || MUSIC_TARGET_LENGTH}\n`; if (LYRIC_CONVENTIONS.vocal_timing === 'fast' || LYRIC_CONVENTIONS.allow_instrumental_intro === false) {
-    prompt += `**First Vocal By:** ${ap.first_vocal_by_seconds ?? FIRST_VOCAL_BY_SECONDS} seconds
-`;
-    prompt += `**Max Instrumental Intro:** ${ap.max_instrumental_intro_seconds ?? MAX_INSTRUMENTAL_INTRO_SECONDS} seconds
-`;
+function formatAudioPrompt(songData, performanceBrief = null) {
+  const ap = songData.audio_prompt || {};
+  const lyrics = sanitizeLyricsForQA(songData.lyrics || '');
+  const titleGuidance = LYRIC_CONVENTIONS.title_usage_required
+    ? `Profile requires title usage: ${LYRIC_CONVENTIONS.title_usage} / ${LYRIC_CONVENTIONS.title_usage_location}`
+    : 'Title usage is optional; do not force the exact title into opening or chorus unless natural';
+  let prompt = `# Audio Generation Prompt\n\n`;
+  prompt += `## Song: ${songData.title || 'Untitled'}\n\n`;
+  prompt += `## Music Specs\n\n`;
+  prompt += `**Style:** ${ap.tempo_bpm || MUSIC_DEFAULT_BPM} BPM, ${ap.genre || MUSIC_DEFAULT_STYLE}\n`;
+  prompt += `**Instrumentation:** ${ap.instrumentation || MUSIC_DEFAULT_PROMPT}\n`;
+  prompt += `**Energy:** ${ap.energy || 'profile-aligned'}\n`;
+  prompt += `**Mood:** ${ap.mood || MUSIC_DEFAULT_STYLE}\n`;
+  prompt += `**Voice Style:** ${ap.voice_style || 'profile-aligned'}\n`;
+  prompt += `**Structure:** ${ap.structure_note || 'profile-compatible structure chosen by the songwriter'}\n`;
+  prompt += `**Target Length:** ${ap.target_length || MUSIC_TARGET_LENGTH}\n`;
+  if (LYRIC_CONVENTIONS.vocal_timing === 'fast' || LYRIC_CONVENTIONS.allow_instrumental_intro === false) {
+    prompt += `**First Vocal By:** ${ap.first_vocal_by_seconds ?? FIRST_VOCAL_BY_SECONDS} seconds\n`;
+    prompt += `**Max Instrumental Intro:** ${ap.max_instrumental_intro_seconds ?? MAX_INSTRUMENTAL_INTRO_SECONDS} seconds\n`;
   } else {
-    prompt += `**Vocal Timing:** profile-driven; instrumental openings are allowed when genre-appropriate
-`;
-  } prompt += `**Title Usage:** ${ap.title_usage || titleGuidance}\n`; prompt += `**Render Safety:** Provider lyrics should contain only singable words after sanitization; no visible section labels, stage directions, or emoji.\n`; if (ap.special_notes) prompt += `**Special Notes:** ${ap.special_notes}\n`; prompt += `\n---\n\n## Full Lyrics\n\n${lyrics}\n`; return prompt; }
+    prompt += `**Vocal Timing:** profile-driven; instrumental openings are allowed when genre-appropriate\n`;
+  }
+  prompt += `**Title Usage:** ${ap.title_usage || titleGuidance}\n`;
+  prompt += `**Render Safety:** Provider lyrics should contain only singable words after sanitization; no visible section labels, stage directions, or emoji.\n`;
+
+  // Inject vocal performance engine identity into the audio prompt.
+  const vpe = SONGWRITING.vocal_performance_engine;
+  if (vpe) {
+    prompt += `\n## Vocal Performance Identity\n\n`;
+    if (vpe.priority) prompt += `**Priority:** ${vpe.priority}\n`;
+    if (vpe.vocal_textures?.length) prompt += `**Vocal Textures:** ${vpe.vocal_textures.join(', ')}\n`;
+    if (vpe.timing_behaviors?.length) prompt += `**Timing Behaviors:** ${vpe.timing_behaviors.join(', ')}\n`;
+    if (vpe.adlib_behaviors?.length) prompt += `**Adlib Behaviors:** ${vpe.adlib_behaviors.join(', ')}\n`;
+  }
+
+  // Inject performance brief — the per-song conceit must be in the audio prompt.
+  if (performanceBrief) {
+    prompt += `\n## Performance Brief (Required)\n\n`;
+    prompt += `**Vocal Conceit:** ${performanceBrief.vocal_conceit}\n`;
+    prompt += `**Flow Movement:** ${performanceBrief.flow_movement}\n`;
+    prompt += `**Hook Behavior:** ${performanceBrief.hook_behavior}\n`;
+    prompt += `**Adlib Personality:** ${performanceBrief.adlib_personality}\n`;
+    prompt += `**Sonic Oddity:** ${performanceBrief.sonic_oddity}\n`;
+    prompt += `**Emotional Contradiction:** ${performanceBrief.emotional_contradiction}\n`;
+  }
+
+  // Anti-generic negative guidance.
+  const antiGeneric = SONGWRITING.anti_generic_rules;
+  if (antiGeneric?.length) {
+    prompt += `\n## Anti-Generic Rules (apply to audio render)\n\n`;
+    for (const rule of antiGeneric) prompt += `- ${rule}\n`;
+  }
+  // Add vocal avoid list as negative-prompt style guidance.
+  if (vpe?.avoid?.length) {
+    prompt += `\n**Do NOT produce:** ${vpe.avoid.join('; ')}\n`;
+  }
+
+  if (ap.special_notes) prompt += `\n**Special Notes:** ${ap.special_notes}\n`;
+  prompt += `\n---\n\n## Full Lyrics\n\n${lyrics}\n`;
+  return prompt;
+}

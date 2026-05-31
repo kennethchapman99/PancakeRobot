@@ -233,7 +233,111 @@
       "include_funny_long_word": false,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "vocal_performance_engine": {
+      "priority": "Borough Cipher's lead voice is non-replaceable because it fuses glacial calm with surgical punchline precision — the MC never sounds rushed or emotional, yet every bar lands with the weight of a final decision.",
+      "vocal_textures": [
+        "Low-register, chest-forward delivery with minimal melodic inflection — words land flat and authoritative, like a statement of fact in a boardroom with no windows",
+        "Dense internal rhyme clusters delivered at even pace so the complexity reveals itself on second listen rather than demanding attention on the first",
+        "Grimy supporting MC texture that sits slightly rougher and higher in the throat — more friction, less patience, contrasting the lead's smoothness",
+        "Dry, almost spoken-word pocket at slow tempos where the voice occupies the spaces between kick and snare rather than riding the downbeat",
+        "Collective chant texture on crew hooks — voices layered but not harmonized, unison but with individual grain still audible, like a corner crowd agreeing",
+        "Cold breath-before-the-bar technique: a slight, deliberate pause before a punchline that makes the silence itself feel strategic"
+      ],
+      "timing_behaviors": [
+        "Lands key nouns and verbs slightly behind the beat at slow tempos, giving the impression the MC already said it and the track is catching up",
+        "Accelerates syllable density mid-bar to create internal pressure, then releases on the last two words as if the point was never in doubt",
+        "Uses a rhythmic gear shift at the third line of a verse — settling into a tighter, choppier cadence after two smoother opening lines — to signal escalating stakes",
+        "Drops to near-spoken delivery at the most complex punchline so the listener can catch every word without the beat competing",
+        "On crew handoffs, the new MC enters one beat early or one beat late relative to the phrase, creating a jagged human seam rather than a clean programmed transition"
+      ],
+      "adlib_behaviors": [
+        "Sparse, cold confirmations dropped after a punchline — a single clipped exhale or a quiet word repeated once, never shouted",
+        "Crew-voice adlibs that comment on the lead's bars with dry skepticism or wordless agreement, as if the cypher is a conversation with an audience already in the room",
+        "A recurring pattern of half-word cut adlibs — the first syllable of a phrase clipped by a DJ scratch or beat hit — so the adlib becomes a rhythmic event rather than decoration",
+        "Silence used as an adlib: the beat continues, no voice, and the absence carries the cocky implication that nothing needs to be added",
+        "Occasional low, deadpan repetition of a single word from the previous bar — not for emphasis, but as a chess-player restating a threat to make sure it was heard"
+      ],
+      "avoid": [
+        "Hype-shout adlibs or high-energy exclamations that break the strategic calm — this character's authority comes from restraint, not volume",
+        "Melodic singing or sung-rap transitions that soften the hard conversational register this character lives in",
+        "Rushed syllable stacking that sounds technically impressive but emotionally empty — density must serve meaning, not replace it",
+        "Generic braggadocio phrasing with no concrete image, chess move, or human detail anchoring the flex",
+        "Vocal affectations or dialect caricatures from other regional rap traditions — this voice is cold, Northern, specific, and disciplined in its plainspokenness"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The lead MC delivers an entire verse as a series of conditional statements — 'if this, then that' logic chains — so the song feels like a slow, inevitable trap closing rather than a brag",
+      "A second MC-style voice enters mid-verse on a completely different rhythmic grid — shorter bars, harder stops — creating a collision of two tempos before the hook resolves the tension",
+      "The hook is delivered in a single flat tone with no vocal variance, forcing all the emotion onto the drum hit that follows each phrase rather than the voice itself",
+      "One verse is structured as a monologue addressed to an unnamed person in the room — second-person, intimate, never raising the voice — so the menace is entirely in the specificity of what the narrator knows",
+      "The final bar of a verse lands in near-silence after the drums drop out, with only a faint piano note or bass resonance underneath, so the last word echoes in empty space",
+      "A crew verse uses three voices in sequence but each MC finishes the previous MC's sentence, so the verses form one continuous thought broken into three different mouths",
+      "The lead voice delivers the hook twice: first stripped and dry over sparse drums at the top, then again at the end over the full beat — identical words, completely different emotional weight",
+      "One verse uses a deliberate stutter-step cadence where every third bar is one syllable shorter than expected, creating a rhythmic limp that makes the next full bar feel like a landing"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Cold Council",
+        "description": "Solo lead MC over a single repeating piano loop and minimal kick-snare, delivering a slow strategic address to no one and everyone — no crew voices, no scratches, production stripped to essentials so every word is load-bearing"
+      },
+      {
+        "name": "Corner Parliament",
+        "description": "Two or three MC-style voices rotating in short bursts over dusty boom-bap, with a DJ-cut hook that acts as moderator — the track feels like an unresolved argument between equals with the same goal"
+      },
+      {
+        "name": "Basement Summit",
+        "description": "Raw posse-cut energy with lo-fi drum texture, near-zero reverb, sparse soul chop, and multiple contrasting vocal registers — grimier, looser, and more physical than the strategy lanes, as if the meeting moved to a different room"
+      },
+      {
+        "name": "Ledger Night",
+        "description": "Mid-tempo cinematic track with string stabs and cold bass, one or two voices trading observations rather than competing — tone shifts between ambition and exhaustion within the same verse"
+      },
+      {
+        "name": "Hard Single",
+        "description": "Hook-forward structure with a chantable or scratch-driven refrain, sharper tempo, and concise verses designed for immediate replay — still gritty, but sequenced for maximum first-listen impact"
+      },
+      {
+        "name": "After-Hours Confession",
+        "description": "Quieter, slower, reflective lane where the lead voice lowers its guard fractionally — production uses warm low-end and distant room sound instead of cold piano, and the lyrical angle is regret or adult complexity rather than competition"
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a cold piano loop as its primary melodic bed, the next track must build its identity around a different sonic anchor — dusty horn chop, bass figure, string stab, or drum-texture-only minimalism",
+      "If the previous track was a multi-MC cypher with rotating voices, the next track must be a solo or two-voice record so the album does not normalize the crew format into wallpaper",
+      "If the previous track ended with a resolved, hard final statement, the next track must end in tension, ambiguity, or quiet — the Borough Cipher catalog fails when every song lands the same way",
+      "If the previous track was hook-forward and radio-leaning, the next track must prioritize verse density and wit over hook catchiness, shifting the listener's attention back to the lyric",
+      "No two consecutive tracks should share the same tempo lane, drum feel, and MC count simultaneously — at least two of those three variables must change between adjacent songs",
+      "If the previous track's emotional core was competitive or menacing, the next track must introduce a different primary emotion — ambition with doubt, post-success fatigue, crew loyalty tension, or dry humor — to prevent the album from becoming one-dimensional"
+    ],
+    "anti_generic_rules": [
+      "Do not default to a chess metaphor, a cold stairwell image, or a cipher-as-throne concept every time the generator needs a hook concept — these are Borough Cipher's specific clichés, not its identity",
+      "Do not generate a verse that is structurally just a list of abstract flexes without a single human anchor — Borough Cipher's authority comes from concrete detail, not from stacking synonyms for dominance",
+      "Do not generate a drum-heavy posse cut and call it variety — crew energy is one lane, not proof of range; the generator must work as hard on solo introspective tracks as on cypher cuts",
+      "Do not resolve every competitive lyric with a knockout metaphor or a winner-takes-all statement — the strategist persona is more interesting when it operates through implication, not declaration",
+      "Do not let the 'collective' framing become a crutch where all songs sound like committee decisions — the lead voice must have a distinct interior life that the crew format cannot fully contain",
+      "Do not use cinematic strings and deep bass as generic 'epic' seasoning — they must serve a specific emotional function in the track, and that function must differ from the last time they appeared",
+      "Do not generate a hook that is just the song title repeated three times over a scratch — repeat-title hooks are a last resort, not a default for tracks where the generator cannot find a stronger conceit",
+      "Do not let every verse open with the narrator establishing position or calling attention to the room — Borough Cipher's failure mode is beginning every song by announcing itself rather than simply being itself"
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use a cold piano loop as the primary melodic bed on more than two tracks per album — rotate to horn chop, soul vocal fragment, bass-led minimal bed, or drum-texture-only environments",
+      "Do not use a three-MC rotating verse structure on consecutive tracks — vary MC count so solo and two-voice formats carry equal weight in the sequencing",
+      "Do not use a DJ scratch as the primary hook mechanism on more than two tracks per album — let piano, chant, bassline, spoken refrain, or near-silence carry the hook on other songs",
+      "Do not let the strategist lead voice open every track — rotate intro ownership to a crew MC, a beat drop, a street-room texture, or a cold bassline entering before any voice",
+      "Do not end more than two tracks with a cold final punchline dropped into silence — vary outros with unresolved street texture, a last scratch cut, a fading string stab, or crew voices dispersing",
+      "Do not use chess, ledger, crown, cipher, or corner imagery in more than one song per release batch — these are occasional spice, not the recurring wallpaper of every track",
+      "Do not pair every slow tempo with a cold piano and every fast tempo with a tighter cypher format — scramble the tempo-texture relationships so the album surprises on each listen",
+      "Do not let every song's emotional conclusion land on confidence or control — at least two tracks per album must end in ambiguity, quiet doubt, or something unfinished"
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify which MC-style voice owns this track's emotional center and how that voice's rhythm or vocabulary differs from any voice used on the immediately preceding track in the sequence.",
+      "The brief must identify a single concrete human detail — a specific object, physical sensation, weather condition, money form, or piece of clothing — that anchors the song's central metaphor and has not appeared in the prior three tracks.",
+      "The brief must describe how the hook on this track is structurally or sonically distinct from the hook on the last hook-forward song in the batch, specifying whether it is chantable, scratch-driven, melodic, near-silent, or refrain-based and why that choice serves this particular song.",
+      "The brief must name the specific emotional lane this track occupies and confirm it does not duplicate the primary emotional lane of either adjacent track in the album sequence.",
+      "The brief must specify what the production bed's primary identity is on this track beyond drums, and must confirm that identity differs from the primary melodic or textural anchor used on the previous track.",
+      "The brief must state whether this track uses a resolved or unresolved ending and explain how that choice creates contrast with the ending type of the track that precedes it in the sequence."
+    ]
   },
   "visuals": {
     "style": "Gritty cinematic East Coast hip-hop cover art with subway tile, rooftop silhouettes, ledger paper, cold streetlights, dusty vinyl texture, chessboard shadows, gold glints, speaker cones, and underground poster grain. Polished enough for streaming artwork; not photorealistic.",

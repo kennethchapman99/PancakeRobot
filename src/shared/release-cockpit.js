@@ -180,7 +180,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const magicRelease = summarizeMagicReleaseForCockpit(type, release.id);
   const browsyIntegration = magicRelease ? summarizeBrowsyIntegration(type, release.id) : null;
   const browsyRecordings = magicRelease ? summarizeMagicReleaseBrowsyRecordings({ campaignId: magicRelease.campaignId }) : null;
-  const distrokidBrowsyWorkflow = summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState, distrokidArtwork });
+  const distrokidBrowsyWorkflow = summarizeDistroKidBrowsyWorkflow({ type, releaseId: release.id, browsyRecordings, packageState, distrokidArtwork, magicRelease });
   const liveSubmitApproval = summarizeLiveSubmitApproval(magicRelease);
   const brandProfile = resolveReleaseBrandProfile(release.brandProfileId);
   const headerArtwork = resolveReleaseHeaderArtwork({ assetState, brandProfile });
@@ -1124,7 +1124,7 @@ function distrokidAuthState(recordingPhase) {
   }
 }
 
-function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState, distrokidArtwork }) {
+function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordings, packageState, distrokidArtwork, magicRelease = null }) {
   const config = getBrowsyConfig();
   const workflowId = type === 'album'
     ? BROWSY_WORKFLOW_IDS.distrokidAlbumSubmit
@@ -1145,7 +1145,9 @@ function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState
     configured,
     baseUrl: config.baseUrl,
     payloadReadiness,
+    setupWizardUrl: `/releases/${encodeURIComponent(type)}/${encodeURIComponent(releaseId)}/automation-setup`,
   };
+  const previewPassed = Boolean((magicRelease?.tasks || []).find(task => task.task_key === DISTROKID_SUBMIT_TASK_KEY && task.status === 'complete'));
 
   if (!configured) {
     return {
@@ -1153,6 +1155,8 @@ function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState
       hasRecording: Boolean(item?.hasRecording),
       ready: false,
       runLiveEnabled: false,
+      runPreviewEnabled: false,
+      previewPassed,
       readinessSeverity: 'unavailable',
       readinessLabel: 'unavailable',
       readinessSummary: 'Browsy is not configured or cannot be reached.',
@@ -1167,6 +1171,7 @@ function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState
       recordingSessionId: item?.recordingSessionId || null,
       recordingStatus: item?.recordingStatus || null,
       wizardUrl: item?.wizardUrl || null,
+      setupWizardUrl: base.setupWizardUrl,
       recorderUrl: item?.recorderUrl || null,
       importedWorkflowRef: item?.importedWorkflowRef || null,
       lastError: item?.lastError || null,
@@ -1182,6 +1187,8 @@ function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState
       hasRecording: false,
       ready: false,
       runLiveEnabled: false,
+      runPreviewEnabled: false,
+      previewPassed,
       readinessSeverity: 'missing',
       readinessLabel: 'missing',
       readinessSummary: 'No Browsy workflow has been recorded for this release flow yet.',
@@ -1196,6 +1203,7 @@ function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState
       recordingSessionId: null,
       recordingStatus: null,
       wizardUrl: null,
+      setupWizardUrl: base.setupWizardUrl,
       recorderUrl: null,
       importedWorkflowRef: null,
       lastError: null,
@@ -1241,7 +1249,9 @@ function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState
     workflowName: item.workflowName || workflowName,
     hasRecording: Boolean(item.hasRecording),
     ready: Boolean(item.ready),
-    runLiveEnabled: Boolean(item.ready),
+    runPreviewEnabled: Boolean(item.ready),
+    runLiveEnabled: Boolean(item.ready && previewPassed),
+    previewPassed,
     readinessSeverity: item.readinessSeverity,
     readinessLabel,
     readinessSummary: item.readinessSummary,
@@ -1256,6 +1266,7 @@ function summarizeDistroKidBrowsyWorkflow({ type, browsyRecordings, packageState
     recordingSessionId: item.recordingSessionId,
     recordingStatus: item.recordingStatus,
     wizardUrl: item.wizardUrl,
+    setupWizardUrl: base.setupWizardUrl,
     recorderUrl: item.recorderUrl,
     importedWorkflowRef: item.importedWorkflowRef,
     lastError: item.lastError,
@@ -1270,9 +1281,9 @@ function distrokidBrowsyNextStep(label, missingAreas = [], lastError = null) {
     case 'unavailable':
       return { headline: 'Browsy is not configured or cannot be reached.', cta: 'Refresh Contract', detail: 'Set the Browsy base URL and start the Browsy server, then refresh the contract.' };
     case 'ready':
-      return { headline: 'Workflow contract is ready.', cta: 'Run Preview / Run Live', detail: 'Contract recorded and complete. Live run still stops at the human submit gate.' };
+      return { headline: 'Workflow contract is ready.', cta: 'Run Preview', detail: 'Contract recorded and complete. Run Live remains gated until preview passes and live approval requirements are satisfied.' };
     case 'recording_started':
-      return { headline: 'Start recording to open the browser recorder.', cta: 'Start Recording Browser', detail: 'A Browsy recording session exists but the recorder browser is not open yet — relaunch it.' };
+      return { headline: 'Automation setup exists; review it before launching the recorder.', cta: 'Open Automation Setup Wizard', detail: 'A Browsy recording session exists, but the setup wizard remains the canonical place to validate context before recording.' };
     case 'recording_active':
       return { headline: 'Recorder browser opened. Complete the DistroKid flow, then stop recording.', cta: 'Stop Recording', detail: 'Finish the DistroKid steps in the recorder browser, then stop the recording.' };
     case 'recording_stopped':
@@ -1297,7 +1308,7 @@ function distrokidBrowsyNextStep(label, missingAreas = [], lastError = null) {
       return { headline: 'Last Browsy recording action failed.', cta: 'Retry', detail: lastError || 'Check the cockpit run history for the error.' };
     case 'missing':
     default:
-      return { headline: 'No Browsy workflow has been recorded for this release flow yet.', cta: 'Start Recording', detail: 'Start a Browsy recording, capture the DistroKid workflow, then import it to publish a contract.' };
+      return { headline: 'DistroKid Album Submit automation is not ready.', cta: 'Open Automation Setup Wizard', detail: 'Configure and validate the reusable Browsy workflow before opening a recording browser.' };
   }
 }
 

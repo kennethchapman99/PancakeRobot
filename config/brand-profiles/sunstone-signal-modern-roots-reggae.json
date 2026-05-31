@@ -157,5 +157,105 @@
   "media": {
     "default_image_url": "/brand-media/sunstone-signal-modern-roots-reggae/default-image.png",
     "default_image_path": ""
+  },
+  "songwriting": {
+    "vocal_performance_engine": {
+      "priority": "Sunstone Signal's vocal is non-replaceable because it carries the physical weight of sunlight and earth simultaneously — warm in the upper register, rooted and unhurried in the low, always sounding like someone who has earned their optimism rather than inherited it.",
+      "vocal_textures": [
+        "A mid-register chest voice with a subtle rasp on held notes, like sun-warmed wood grain — present but never rough",
+        "A honeyed falsetto break used sparingly on ascending chorus peaks, landing with a gentle release rather than a dramatic flourish",
+        "A near-spoken murmur in pre-choruses that pulls listeners close before the groove opens up beneath them",
+        "A rounded, slightly rounded vowel shape on long melodic phrases that feels like breath circulating rather than projection",
+        "A low-vibrato hum on transitional lines between sections, creating a sense of gathering energy rather than filling space"
+      ],
+      "timing_behaviors": [
+        "Consistently lands the lyric's first stressed syllable just behind the one-drop snare hit, creating a lean-back feel even on uptempo lines",
+        "Extends the final consonant of a phrase into the dub space rather than cutting it, letting the delay carry the thought forward",
+        "Uses rhythmic displacement on the second verse's opening line — arriving a half-beat late to signal the track is deepening",
+        "Drops into a near-rubato delivery for a single internal line per song, then snaps back to the groove as if the moment of reflection is over",
+        "Syncs phrasing to the bass note landing rather than the downbeat, giving the vocal a rolling, sea-swell sense of timing"
+      ],
+      "adlib_behaviors": [
+        "Drops a soft, breathy affirmation syllable — never a word, just a tone — in the gap left by the skank guitar between vocal lines",
+        "Uses a low melodic hum as a call-and-response to the organ bubble, as if two parts of the same voice are agreeing with each other",
+        "Allows a single exhaled laugh-breath — not performative, just real — to appear once per song when a lyric lands on an unexpected image",
+        "Adds a brief falsetto shadow of the hook's last word, half a beat after it lands, like an echo the singer produced themselves",
+        "Inserts a quiet, ascending three-note melodic phrase on the outro as the groove fades, as if sending the song off rather than closing it down"
+      ],
+      "avoid": [
+        "Forceful rasp or grit that signals strain — Sunstone Signal's pressure is absorbed, not performed",
+        "Melismatic runs that draw attention to vocal acrobatics rather than serving the lyric's emotional arc",
+        "Any hint of adopted accent or exaggerated vowel shaping that reads as stylistic costume rather than natural delivery",
+        "Aggressive vibrato on sustained notes — the character's vibrato is restrained and appears only as a natural taper at phrase ends",
+        "Declarative chest-voice shouting on chorus peaks — the chorus should feel like an opening up, not an escalation of force"
+      ]
+    },
+    "performance_conceit_bank": [
+      "On the bridge, the vocal drops to near-speech cadence and delivers two lines with almost no melodic movement — flat, direct, confessional — before the melody returns, making the chorus feel like re-emerging into light after stepping inside",
+      "The hook's key word is sung once at full dynamic, then repeated at roughly 60% volume directly after, as if the singer is tasting the word again rather than hammering it home",
+      "A single verse line is delivered in two halves with an unexpected quarter-rest pause in the middle — the pause lands on the lyric's emotional hinge, letting the listener fill the silence with their own feeling",
+      "The pre-chorus uses a descending melodic shape that ends lower than where it began, creating a momentary sense of settling before the chorus lifts — the emotional movement is downward-then-released rather than building-then-exploding",
+      "One verse is delivered almost entirely in the lower octave with minimal melodic variation, making the first falsetto moment later in the song feel like the sun appearing from behind cloud",
+      "The outro vocal repeats the hook but omits every other word, leaving gaps the instrumentation and listener's memory fill in — the voice becomes a skeleton of the song's full body",
+      "On the second chorus, the vocal enters a full beat later than the first chorus, letting the groove breathe alone briefly — a move that makes the chorus feel chosen rather than automatic"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Golden Anchor",
+        "description": "Full-band warmth with the bassline as the emotional center — Sunstone Signal at its most community-facing, where the lyric is about togetherness and the production wraps around the listener like late-afternoon heat. Horns are present and conversational. Drums are patient one-drop. The vocal is mid-register and generous."
+      },
+      {
+        "name": "Pressure Hymn",
+        "description": "Slower tempo, stripped arrangement — organ and bass carry the weight while drums sit further back. Lyrics move into personal resilience rather than collective celebration. The vocal is more exposed, the falsetto appears earlier, and the dub space is used for emotional punctuation rather than groove decoration."
+      },
+      {
+        "name": "Open Road Stepper",
+        "description": "Rockers groove with forward momentum — this is the festival-crowd lane, where the skank is prominent, the tempo finds the upper edge of the project's BPM range, and the lyric is about movement, freedom, and forward motion. The vocal is more rhythmically locked and percussive in its phrasing than in other lanes."
+      },
+      {
+        "name": "Dub Garden",
+        "description": "Instrumental-adjacent — the vocal is minimal, fragmented, and drenched in dub delay. A single repeated phrase becomes the lyrical core. The mix prioritizes texture, space, and the interplay of bass and percussion. This lane exists to give the album breath and to let the production speak as loudly as the singer."
+      },
+      {
+        "name": "Sunrise Acoustic",
+        "description": "Guitar-forward, nearly bare production — the warmth comes from wood and voice rather than studio layering. The vocal sits closest to its natural state here, with the least processing. Lyrics are intimate and specific, often addressing a single person or moment rather than a community or movement."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the preceding track featured a full horn section response, the following track must either remove horns entirely or reduce them to a single sustained note held beneath the vocal — no two consecutive tracks should share the same horn role",
+      "If the previous song's chorus arrived at the expected moment, the next song must delay the first chorus by at least an extra eight bars, using the extended intro or a second pre-chorus to create a different sense of arrival",
+      "Sunstone Signal's default tendency is to place the emotional peak in the chorus — at least every third track must locate its most affecting moment in the bridge or a stripped final verse instead",
+      "If two consecutive tracks share a similar BPM, they must differ in drum pattern character: one uses one-drop and the other uses rockers or a half-time feel, so the rhythmic identity feels distinct in the body not just on paper",
+      "Lyric perspective must rotate: if one track addresses a community or 'we,' the next must shift to either second-person direct address or a specific third-person narrative, preventing the album from feeling like a series of anthems with no intimacy",
+      "The bass role must change between consecutive tracks — if the previous track used the bass melodically with prominent fills, the next must lock the bass into a more repetitive foundational role, and vice versa"
+    ],
+    "anti_generic_rules": [
+      "Sunstone Signal must never default to the 'sunlight metaphor as resolution' closing line — the sun-as-hope image is part of the brand's world, so when it appears it must arrive in an unexpected syntactic position or paired with an image that complicates rather than completes it",
+      "The word 'rise' used as a final declarative hook ending is this character's most specific failure mode — replace it with a concrete physical action, a question, or a sensory image that carries the same uplift without the stock-phrase reflex",
+      "Generic roots reggae generation defaults to a lyric structure of problem-in-verse and resolution-in-chorus — Sunstone Signal must regularly use choruses that deepen the question rather than answering it, or that celebrate process rather than arrival",
+      "The organ bubble must never be used as wallpaper — each appearance must have a specific rhythmic relationship to the vocal line it sits beneath, either mirroring, countering, or punctuating rather than filling space generically",
+      "Dub delay must be applied selectively and with intention — the failure mode for this character is using dub texture as atmosphere rather than as a structural tool that creates meaning in specific moments",
+      "Stock affirmation vocabulary — words like 'strong,' 'free,' 'jah,' 'irie,' 'blessed' used as lyric padding — must be caught before output; every affirmation must be earned by a specific preceding image or narrative moment in the lyric",
+      "The chorus melody must not default to the most obvious scale-degree resolution for the key — Sunstone Signal's melodic identity lives in slightly unexpected interval choices that feel inevitable only after they land, not before",
+      "A uniform sunny production sheen across all tracks is this project's most likely album-level failure — at least one production element per track must carry texture, grit, or space that complicates the warmth rather than simply amplifying it"
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use the same vocal entry point for the verse across more than two consecutive tracks — the voice must arrive differently: after a bass hit, after silence, mid-phrase, or over a held organ chord",
+      "Do not repeat the same adlib syllable type in the same song section position across tracks — if a breathy affirmation appeared between chorus lines on the last track, it must not appear in that position again until at least two tracks have passed",
+      "Do not repeat the same horn arrangement shape — if the prior track used horns in a two-note response pattern, the next horn appearance must be a held pad, a single melodic phrase, or a rhythmic stab, not another two-note response",
+      "Do not use the skank guitar in the same rhythmic subdivision two tracks in a row — vary between on-the-offbeat, a muted double-stroke, or a delayed-entry skank that arrives after the first bar rather than opening the groove",
+      "Do not anchor two consecutive tracks to the same lyric perspective or emotional register — a community-facing anthem must not follow another community-facing anthem without at least one introspective or second-person track between them",
+      "Do not let the bass use the same primary rhythmic motif across more than two tracks — the rolling pattern, the locked root note, and the melodic fill must rotate so no single bass personality defines the project",
+      "Do not place the falsetto break at the same structural position in more than two tracks — if it appeared at the chorus peak last time, it must next appear on the bridge, a verse's emotional hinge, or the outro",
+      "Do not use dub delay as the primary outro device on consecutive tracks — alternate between a full dub fadeout, a clean band resolution, and a vocal-only fade so the project's endings feel varied in their emotional release"
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify a single concrete real-world image — a texture, a place, a physical sensation — that the lyric of this track is built outward from, and that image must not have appeared in any prior track brief on this album.",
+      "The brief must describe exactly how this track's chorus differs structurally or emotionally from the previous track's chorus — whether it answers where the last one questioned, celebrates where the last one grieved, or arrives early where the last one was withheld.",
+      "The brief must name the specific vocal conceit unique to this track from the performance conceit bank, explain where in the song's structure it will occur, and confirm it was not used in the immediately preceding track.",
+      "The brief must specify which album mode lane this track occupies and articulate one production or lyric choice that would be present in a generic version of that lane but is being deliberately replaced or avoided here.",
+      "The brief must address the bass role for this specific track — whether melodic, foundational, or fill-forward — and confirm it differs from the bass role used in the track directly before it.",
+      "The brief must identify the emotional resolution strategy for this track: whether the song arrives at an answer, deepens a question, suspends the listener in ambiguity, or hands resolution back to the listener through lyric incompleteness — and confirm this strategy was not used in the same way on the immediately prior track."
+    ]
   }
 }

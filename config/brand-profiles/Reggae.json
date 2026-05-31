@@ -233,7 +233,110 @@
       "include_funny_long_word": false,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "vocal_performance_engine": {
+      "priority": "Yardline Sound's vocal identity is built on urban warmth meeting riddim-locked rhythmic precision — a voice that feels like it grew up between the corner store and the shoreline, equally at home in a melodic lovers-rock float and a chant-heavy dancehall lean, without ever sounding like it is doing an impression of either world.",
+      "vocal_textures": [
+        "A mid-range chest-forward tone with just enough gravel to feel street-earned, smoothing into falsetto only at emotional peaks — never as a default.",
+        "Rhythmic spoken-sung passages where the vocal sits slightly behind the one-drop pulse, creating a lazy-confident lean that rewards repeat listening.",
+        "Short breathy inhales left audible before chorus lifts, giving the performance a live-body feel rather than a polished studio ghost.",
+        "A communal choir-grit quality on chant hooks — as if the whole block is singing, not a solo booth vocal layered over itself.",
+        "Dry, close-mic'd verses that open up into natural reverb on the chorus, sonically mirroring the move from street-corner intimacy to open-air release.",
+        "Occasional half-spoken bridge deliveries where rhythm carries more weight than pitch, keeping the voice grounded in urban storytelling rather than pure melody showcase."
+      ],
+      "timing_behaviors": [
+        "Lands key syllables fractionally ahead of the snare on conscious verses to create urgency, then relaxes behind the beat on romantic or reflective lines to signal emotional shift.",
+        "Holds the final consonant of hook phrases slightly longer than natural speech rhythm, making the word stick in the listener's body before the bassline fills the silence.",
+        "Uses a two-bar rhythmic setup where the first bar is dense with syllables and the second bar is sparse — a fill-and-breathe pattern that gives the groove room to be heard.",
+        "Drops into near-spoken cadence on bridge lines, then re-enters the chorus with a sudden melodic rise that feels earned rather than manufactured.",
+        "Syncopates chant hooks against a straight-four rather than riding the riddim, creating a push-pull tension that makes the groove feel alive."
+      ],
+      "adlib_behaviors": [
+        "Short exhaled 'yeah' or 'true' placed in the bar after a lyric lands its point — not decorative, but confirmatory, as if the narrator is agreeing with their own testimony.",
+        "A quick low hum or melodic sigh in dub-space gaps, filling echo trails with human breath rather than letting the delay feel mechanical.",
+        "Rare use of a single repeated phrase in the outro — spoken lower and quieter than the song's main vocal, like a thought left burning after the music cools.",
+        "Call-and-response with a backing vocal line using a contrasting dynamic — main voice drops in volume while the response rises, reversing the expected energy hierarchy.",
+        "Occasional rhythmic mouth-percussion or tongue-click woven into a verse bar as texture, not as a separate produced element — suggesting the vocalist is their own rhythm section in lean moments."
+      ],
+      "avoid": [
+        "Forced patois orthography or phonetic spelling that caricatures rather than channels reggae vocal tradition — if it reads as parody on the page, it sounds like parody in the ear.",
+        "Melismatic vocal runs borrowed from soul or R&B that pull the voice away from reggae's rhythmic backbone into a showy vocal gymnastic mode that doesn't belong to this character.",
+        "Shouted or over-compressed hooks that erase the warmth in favor of generic hype-track energy — Yardline Sound's power comes from groove and message, not volume.",
+        "Constant vibrato on sustained notes, which softens the urban edge and makes the performance feel like a wedding singer covering reggae rather than a street-born artist living it.",
+        "Opening every song with the same rising-melodic vocal pickup on beat one — this character's entries should vary: sometimes mid-bar, sometimes spoken, sometimes chant-led, sometimes breathed in from silence."
+      ]
+    },
+    "performance_conceit_bank": [
+      "In the final pre-chorus bar, the lead vocal strips to a single sustained note while the bass and percussion continue underneath — the contrast makes the chorus entry feel like a door swinging open rather than a wall being hit.",
+      "A verse delivers its most politically charged image in plain flat monotone, no melodic ornament, forcing the words to carry themselves — then the hook arrives with full warm melody, making joy feel like the answer to the truth just spoken.",
+      "The hook lyric is introduced quietly by a low backing voice in the second verse before the lead takes it over in the chorus — when the full chorus arrives, it feels like the whole street already knew the words.",
+      "One song builds a full verse entirely out of two-syllable rhythmic cells — short, brick-laid phrasing — then the bridge suddenly opens into long, unhurried lines, changing the song's breathing pattern without changing the tempo.",
+      "A dub break drops the vocal to a single whispered phrase looped twice, with heavy delay swallowing the second repetition — the effect is a voice disappearing into its own echo, making the song feel like a transmission from somewhere distant.",
+      "In a lovers-rock groove, the narrator sings directly to a silent second person in the verse, then switches to first-person plural in the chorus — the shift from 'you' to 'we' lands as the emotional climax of the entire song.",
+      "A reggae-rock song places the most urgent lyric line in the quietest dynamic moment — voice drops, guitar drops, only bass and rim shot hold — creating a pocket of tension before the full-band lift returns."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Corner Gospel",
+        "description": "Roots-conscious tracks where Yardline Sound's voice carries the weight of community testimony — slow-burning one-drop grooves, organ-heavy arrangements, and verses that build an argument image by image before the chorus delivers the plain emotional truth. Every song in this lane earns its uplift; nothing is declared without first being witnessed."
+      },
+      {
+        "name": "Riddim City",
+        "description": "Dancehall-adjacent urban bounce where the vocal is a rhythmic instrument first and a melody second — chant hooks, syncopated syllable stacks, and tighter drum programming that brings the energy of a street corner turned block party. These tracks prioritize the lock between voice and groove over lyrical depth."
+      },
+      {
+        "name": "Warm Distance",
+        "description": "Lovers-rock and island-soul territory where the narrator occupies a specific emotional geography — longing, loyalty under strain, or reunion across distance — with smooth bass movement, soft organ, and vocal lines that breathe rather than push. Romance here is grounded and sometimes complicated, never frictionless."
+      },
+      {
+        "name": "Festival Horizon",
+        "description": "Reggae-rock singalong mode where Yardline Sound's collective identity comes forward — bigger guitars, open reverb on the drums, and chorus constructions built for a crowd to carry without the vocal. These songs have one real-world pressure they're releasing, not just generic celebration."
+      },
+      {
+        "name": "Echo Quarter",
+        "description": "Late-night dub and atmospheric territory where the vocal is sparse, delay is structural, and the bass does most of the emotional work. These tracks are not instrumental experiments — they still have a lyric core — but the production space around the voice is as important as the words inside it."
+      },
+      {
+        "name": "Barefoot Dispatch",
+        "description": "Acoustic and minimal island-soul reflections where percussion is reduced to hand and brush, the vocal sits dry and close, and the song's emotional honesty has nowhere to hide. These tracks serve as the album's moments of stillness and should never be clustered — one or two maximum per project."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a chant-led hook, the next track must lead its hook with a melodic phrase — never place two chant-primary hooks in succession, because Yardline Sound's specific failure mode is chant repetition masking as variety.",
+      "If the previous track resolved emotionally with uplift and communal energy, the next track must begin from a more intimate or uncertain emotional position — Yardline Sound's conscious lane can default to a string of anthems that flatten into one another without this rule.",
+      "No two consecutive tracks should share both a tempo lane and an intro type — varying only one while keeping the other creates a sameness the listener will feel even if they cannot name it.",
+      "If the previous track featured a full dub-break production device, the next track must withhold the dub effect until at least the second half, preventing dub echo from becoming a sonic wallpaper rather than a contrast moment.",
+      "After any lovers-rock or romantic groove track, the following song must shift narrator posture entirely — moving to community voice, street observation, or defiant first-person rather than continuing in romantic address.",
+      "Yardline Sound's default failure mode is bass-forward organ-heavy reggae-pop with a positive hook — if three consecutive songs share those three traits, the fourth must be stripped back to bass-only or acoustic foundation regardless of mood."
+    ],
+    "anti_generic_rules": [
+      "Yardline Sound will default to sunrise-over-the-water imagery when an emotional transition needs a metaphor — every time this happens, replace it with a specific urban or physical detail from street level: a bus stopping, a door left open, a light changing, rain on pavement.",
+      "Yardline Sound's conscious lyrics will default to freedom and unity as abstract nouns — force every social statement to arrive through a single human scene or observation first, with the abstraction implied rather than named.",
+      "The brand will default to 86 BPM moderate bounce for any song that doesn't have a strong lane assignment — every track must be assigned a specific tempo lane before writing begins, not settled into a middle default.",
+      "Yardline Sound's hooks will default to a rising third or fifth melodic interval with a positive noun at the apex — vary hook architecture by using rhythmic-cell hooks, falling melodic lines, or hooks that land on an incomplete thought requiring the verse to resolve them.",
+      "The brand will default to four-square verse-chorus-verse-chorus-bridge-chorus structure without considering whether the song's emotional arc benefits from it — at least one track per project must use a non-standard form: verse-chorus-dub-half verse, or intro-chant-verse-chorus-fade, or two-part form without a traditional bridge.",
+      "Yardline Sound will default to drums entering on bar one — experiment with entries where the drum arrives late (bar three or four of the intro), where percussion is only hand and rim for the first full verse, or where the full kit is withheld until the second chorus.",
+      "The brand will default to warm major-key harmony — include at least one track per project that lives in a minor or modal tonality without it feeling like a departure or a sadness track; Yardline Sound's street confidence works in darker harmonic spaces too.",
+      "Yardline Sound's adlibs will default to English-language affirmatives — explore rhythmic vocal sounds, melodic humming, and breath-based texture in adlib slots before reaching for verbal confirmation."
+    ],
+    "do_not_repeat_across_album": [
+      "The dub-break structural device where vocals drop entirely and delay swallows the mix — use once per project maximum, and never in the same song position (mid-song drop vs. pre-outro drop are still too similar if used twice).",
+      "The specific vocal entry of a quiet low-register spoken opening line before the groove enters — once this is used, subsequent tracks must enter through groove first, vocal second, or through chant, or through falsetto pickup.",
+      "A bassline pattern that descends step-wise over four beats as a primary hook identity — once used, all subsequent bassline hooks must move in a contrasting shape: arpeggiated, syncopated, or holding on a single note with rhythmic variation.",
+      "The structural move of withholding the chorus until after the second verse — use this delayed-reveal form once per project; repeating it removes its power and makes the album feel like it always arrives late to its own point.",
+      "Organ-bubble-plus-guitar-skank as the primary textural identity in the first sixteen seconds of an intro — after the first track that leads this way, subsequent intros must lead with a different element: bass alone, percussion alone, vocal, horn, or dub echo.",
+      "A call-and-response between lead vocal and a choir-texture backing vocal in the final chorus — this is Yardline Sound's most powerful emotional escalation device and must not appear in more than two songs per project, and never in back-to-back tracks.",
+      "The lyrical device of ending a verse on an unanswered question that the chorus resolves — powerful once, formulaic twice, invisible three times.",
+      "The horn stab used as a rhythmic accent on the offbeat throughout the full chorus — this should be a special-deployment texture, not a default chorus garnish repeated across every upbeat track on a project."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify a single concrete location or physical environment — not a genre setting, but a real-world place detail such as a specific type of street, room, weather condition, or time of day — that anchors the lyric and distinguishes it from any other track on the same project.",
+      "The brief must describe how the hook on this track is architecturally different from the hook on the immediately preceding track in the sequence, addressing melodic shape, rhythmic density, or lyrical completion versus open-ended phrasing.",
+      "The brief must state which vocal entry type begins this song and confirm it has not been used in either of the two tracks immediately before it in the project sequence.",
+      "The brief must identify the single emotional tension or unresolved pressure in this song's lyric — not the resolution, not the message, but the specific friction point that makes the song feel honest rather than slogan-shaped.",
+      "The brief must specify what the dub or production space in this song is doing emotionally, even if dub is minimal or absent — silence, compression, dry close-mic, and stripped arrangement are valid dub-space answers and must be described with intention rather than left as a default.",
+      "The brief must confirm which album mode lane this track occupies and name at least one element from an adjacent lane that will be borrowed to prevent the track from becoming a genre-pure template — for example, a Riddim City track borrowing one structural quality from Warm Distance, or a Corner Gospel track using one production behavior from Echo Quarter."
+    ]
   },
   "visuals": {
     "style": "Modern urban reggae cover art with speaker stacks, streetlight warmth, shoreline glow, sun-faded poster grain, tasteful green-gold-red accents, ocean blue shadows, concrete texture, and dub-system geometry. Polished enough for streaming artwork; not photorealistic.",

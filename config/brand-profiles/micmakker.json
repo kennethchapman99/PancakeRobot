@@ -231,7 +231,113 @@
       "include_funny_long_word": false,
       "include_audio_prompt": true,
       "include_chorus_lines": true
-    }
+    },
+    "vocal_performance_engine": {
+      "priority": "Mic Makker's voice is non-replaceable because it carries casual emotional intelligence — the kind that notices something painful or funny about ordinary life and delivers it like it just occurred to him mid-sentence, never labored, never performed.",
+      "vocal_textures": [
+        "A warm, slightly raspy mid-register that feels like a conversation in a kitchen rather than a booth, with breath audible on intimate lines",
+        "A melodic half-sung delivery on pre-hooks and transitions that blurs the line between rapping and singing without fully committing to either",
+        "A loose, almost spoken cadence on reflective verses that lets syllables land behind the beat like afterthoughts that turn out to matter",
+        "A subtle layer of earnest brightness that enters when the hook hits — not a vocal performance switch, just a gentle lift in energy that feels earned",
+        "Occasional dry flatness on punchlines, where the lack of inflection is the joke",
+        "A textured, slightly grainy quality on the tail of long vowels, as if the voice is wearing a light film of tape hiss even when it isn't"
+      ],
+      "timing_behaviors": [
+        "Rides the back half of beats on introspective verses, letting words arrive a fraction late so they feel thought-out rather than pre-planned",
+        "Accelerates briefly through a cluster of syllables mid-bar before landing hard on the last stressed word, creating a micro-build within a single line",
+        "Drops into half-time feel on emotional peaks — slowing delivery as the instrumental gets fuller — so the contrast reads as weight, not hesitation",
+        "Uses a short, rhythmically natural pause before the hook's first word, letting the groove breathe and making the entry feel inevitable",
+        "Occasionally pulls a single line completely out of pocket in a conversational throwaway rhythm, as if the idea is too real to dress up in meter"
+      ],
+      "adlib_behaviors": [
+        "Quiet exhale or near-silent 'yeah' just under a bar that's landing well — acknowledging his own rhyme without celebrating it",
+        "A dry, one-syllable word of agreement or doubt placed at the end of a sung hook line, as if he's fact-checking himself",
+        "Brief hum or melodic sigh in the instrumental gaps of a bridge, replacing words with feeling",
+        "Occasional second-voice whisper of the last word of a verse — not doubled for power, doubled as an echo of the thought",
+        "A small, self-amused sound — almost a half-laugh — before a line that's about to be more vulnerable than expected"
+      ],
+      "avoid": [
+        "Aggressive ad-lib yelling or hype-man energy that contradicts the character's self-aware, conversational default",
+        "Auto-tuned melodic runs that feel cosmetically applied rather than emotionally motivated",
+        "Pristine, breathy pop-vocal hooks with no grain or weight — too clean erases the dusty warmth that defines the project",
+        "Clipped, staccato triplet flows borrowed from mainstream trap that strip out the jazz-informed pocket this character lives in",
+        "Forced emotional escalation where the voice strains for drama rather than letting the lyric and groove carry the feeling"
+      ]
+    },
+    "performance_conceit_bank": [
+      "Begin a verse in the middle of a thought — no setup, no introduction — as if the listener has been in the room for thirty seconds already and just started paying attention.",
+      "Sing the hook in a register slightly too low for comfort, so it sounds like someone singing to themselves rather than performing; then let it grow into something the listener wants to join by the final chorus.",
+      "Speak one line of a rap verse completely outside of rhythm — flat, declarative, unmetered — so it lands like a confession that broke through the song's structure.",
+      "Use a single repeated melodic phrase as the emotional spine of a track, letting its meaning shift with each appearance as the lyrical context changes around it.",
+      "Write a hook that has two different second lines depending on whether it appears early or late in the song, so attentive listeners catch the change as emotional development.",
+      "Drop the instrumental almost entirely for one bar mid-verse — just voice and a single low note — then let the full groove return so the re-entry feels like the song waking up.",
+      "Let the pre-hook rhyme slightly wrong on purpose — close but not tight — so when the hook resolves cleanly, the listener's ear gets a small satisfying click.",
+      "Deliver the most emotionally loaded line of the song in the flattest, most matter-of-fact tone, trusting the words to carry the weight without vocal underline."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Warm Room",
+        "description": "Unhurried, intimate tracks built around one emotional truth stated plainly and surrounded by layered warmth — Rhodes, soft bass, brushed or programmed drums with breathing room; vocal delivery is low-stakes and conversational, as if the mic is six inches away; hooks are understated and hummable rather than designed to be big; these songs feel like the good part of 2am when things are actually okay"
+      },
+      {
+        "name": "Mind Moving",
+        "description": "Mid-tempo wordplay-forward cuts where the internal logic of the lyrics is the primary pleasure; drums are present but restrained enough to let syllables breathe; the groove rewards re-listening because every bar holds something that didn't land fully the first time; emotional tone is self-aware and slightly amused without becoming a showcase of cleverness for its own sake"
+      },
+      {
+        "name": "Left-Field Pocket",
+        "description": "Tracks that start with an unusual texture or structural idea — a loop that doesn't resolve where expected, a vocal conceit that shifts the genre slightly sideways — but always return to a human emotional center before the song ends; the weirdness is the gateway, not the destination; percussion may be fragmented or off-pattern, but the bass or melodic element stays grounded enough to keep the listener tethered"
+      },
+      {
+        "name": "Outdoor Groove",
+        "description": "Sunlit, mobile, effortlessly rhythmic songs designed for movement — not party-anthem maximalism, but the feeling of being somewhere good and knowing it; vocals are relaxed and slightly playful; hooks feel like something you sang before you realized you were singing; arrangements have space and air, with live-feeling instrument separation and a chorus that doesn't need to get louder to feel bigger"
+      },
+      {
+        "name": "Still Water",
+        "description": "Slower, more fragmented emotional processing tracks where the production itself feels uncertain or searching — delayed percussion entries, chords that hover rather than resolve, vocal layers that don't quite agree with each other; these are not sad-song performances but honest mid-process songs where the narrator hasn't arrived at the answer yet, and the track doesn't pretend otherwise"
+      },
+      {
+        "name": "Dust and Brightness",
+        "description": "Tracks that hold two opposing textures simultaneously — gritty low-end and warm melodic top, confident rhyme delivery and vulnerable lyrical content, uptempo feel and heavy emotional subject — so the tension between elements is itself the emotional experience; these are the songs where the character is most fully himself, not choosing a mood but living in the contradiction"
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a sung hook with a simple repeating melody, the next track must use either a spoken or rhythmically rapped refrain, or a hook structured as a question rather than a statement.",
+      "If the previous track opened with a vocal or lyrical idea within the first four bars, the next track must open with a textural or instrumental element that withholds the voice for at least eight bars.",
+      "If the previous track leaned heavily into introspective, internal-monologue lyrical mode, the next track must shift to scene-based storytelling or direct second-person address to break the inward pull.",
+      "If the previous track used the 87-96 BPM head-nod lane with balanced rap and melody, the next track must move at least one full tempo lane in either direction and adjust drum feel accordingly.",
+      "If the previous track resolved emotionally — ending on clarity, acceptance, or humor — the next track should leave something unresolved or stranger at the close, so the album does not feel like a sequence of tidy conclusions.",
+      "Mic Makker's specific failure mode is letting the warm-room intimacy become sameness; every two tracks must introduce at least one production element that did not appear in either of the prior two songs — a new textural layer, a new rhythmic approach, or a structural idea that hasn't been used yet in the sequence."
+    ],
+    "anti_generic_rules": [
+      "Do not let the warm jazz-soul palette become a comfort-zone wallpaper; every chord choice should serve this specific song's emotional situation, not decorate it with a vibe that signals 'this is thoughtful hip hop'.",
+      "Do not write hooks that summarize the verse's theme with an inspirational reframe; Mic Makker's hooks are emotional distillations, not motivational conclusions — the listener should feel something specific, not be told what to feel.",
+      "Avoid verses that open with 'I remember when' or any variation of nostalgic scene-setting as a default entry point; this character observes the present tense with as much weight as the past.",
+      "Do not use abstract-positive vocabulary — words like 'real,' 'genuine,' 'authentic,' 'grind,' 'hustle,' or 'vision' — as lyrical content; these words describe a posture, not a moment, and this character lives in moments.",
+      "Resist the pull toward making every emotionally heavy track sonically heavy; some of the most difficult feelings in this catalog arrive on tracks with the lightest, most open arrangements, because the contrast is where the weight actually lives.",
+      "Do not confuse 'experimental' with chaotic or difficult-to-follow; Mic Makker's left-field tracks are strange in structure or texture but always emotionally coherent — the listener should feel where the song is going even when they can't predict it.",
+      "Avoid writing clever-rapper voice as the default on wordplay tracks; the intelligence in this character's writing comes from noticing things accurately, not from deploying vocabulary or rhyme complexity as a performance of skill.",
+      "Do not let the character's self-awareness collapse into ironic detachment; sincerity is the engine, and the wit is what makes sincerity bearable — not a shield against it."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use dusty vinyl texture or tape wobble as the primary sonic identifier on consecutive tracks; rotate it as an occasional texture rather than a brand-consistent effect applied by default.",
+      "Do not use a Rhodes piano as the lead harmonic voice on more than two consecutive tracks; rotate to upright-style bass melody, muted guitar, or sparse synth pad as the harmonic anchor.",
+      "Do not open more than two tracks in a row with a groove-first instrumental intro; vary with immediate vocal entry, a single sustained note, or a short spoken moment before the beat arrives.",
+      "Do not end three consecutive tracks with a fading melodic loop; vary closings with a hard stop, a final isolated vocal line, an unresolved chord, or a brief spoken-word exhale.",
+      "Do not use the same rhyme density pattern — bars-per-line ratio, internal rhyme frequency, or multi-syllabic rhyme clustering — across more than two consecutive verses; vary between dense, conversational, and hybrid approaches.",
+      "Do not anchor three consecutive hooks to the same emotional category — longing, confidence, and reflection are all valid but must rotate so no emotional posture becomes the album's default.",
+      "Do not use subtle vocal stacks on every hook; some hooks should be fully solo-voice to create contrast when the stacked-voice texture returns and reads as emotional uplift rather than production habit.",
+      "Do not place the most vulnerable lyrical moment in the bridge on every track; rotate vulnerability placement to verse two, the final hook variation, or a pre-hook so the album's emotional architecture has varied pressure points.",
+      "Do not use a bass-with-bounce feel in the low end of every track; rotate with a more anchored, held bass tone on slower tracks and a more melodic bass voice on left-field cuts.",
+      "Do not let wordplay-forward tracks all occupy the same tempo lane; distribute clever lyrical writing across at least two different BPM families so the album doesn't cluster intelligence into one sonic zone."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify what the narrator's emotional position is at the end of the song and whether it has shifted from the opening — not just what the song is about, but where the character lands, even if that landing is unresolved.",
+      "The brief must describe a specific production texture or sonic detail unique to this track that has not appeared in any prior track on the same project, and explain what emotional function it serves in this song's arrangement.",
+      "The brief must identify the lyrical angle rotation being used — confession, scene, address, monologue, persona, or reflective narrator — and confirm it differs from the angle used in the immediately preceding song.",
+      "The brief must specify how adlib placement and character on this track differs from the prior track, including where in the song adlibs appear and what emotional register they occupy.",
+      "The brief must name the specific tension or contradiction this song holds — between its sonic mood and lyrical content, between its tempo and emotional weight, or between its hook's simplicity and its verse's complexity — and describe how that tension is maintained rather than resolved.",
+      "The brief must confirm which album mode lane this track occupies and explain one concrete way the arrangement, vocal delivery, or lyrical approach will be pushed beyond that lane's default so the song does not become a formula execution of its category."
+    ]
   },
   "visuals": {
     "style": "Retro hand-drawn indie music label artwork: cream paper grain, thick black linework, colored bubble-letter accents, surreal friendly mascot energy, music gear inside a factory silhouette, underground hip hop flyer influence, polished enough for streaming cover art.",

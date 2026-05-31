@@ -395,6 +395,103 @@
       "female-led hook",
       "call-and-response chant",
       "beat switch after second verse"
+    ],
+    "vocal_performance_engine": {
+      "priority": "The non-replaceable core is the friction between two unmistakable poles: a silky, self-possessed female MC whose delivery wraps around a beat like liquid — sensual timing, internal confidence, zero panic — and a gruff male MC who detonates syllables in controlled bursts, shifting from pocket-smooth to machine-dense mid-bar and landing clean every time.",
+      "vocal_textures": [
+        "Female MC: warm, low-mid chest voice with a slow-burning smoothness — never breathy or fragile, more like polished stone than silk; she lets consonants arrive late and lines settle before the next one starts",
+        "Female MC: occasional knife-edge sharpness where a single clipped syllable cuts through a phrase — used once per verse maximum, never repeated back-to-back, functioning like a period at the end of a cold statement",
+        "Male MC: gravel-and-grease baritone that thickens on hard consonants — B, D, K sounds hit with weight, not just air, giving every bar a physical texture like knuckles on a wooden table",
+        "Male MC: compressed, dry rapid-fire delivery where syllables are packed tight but each one remains individually audible — the texture is controlled pressure, not blur, like a typewriter moving fast on a tight spring",
+        "Shared group texture: when both voices stack or trade inside two bars, the contrast should feel like rough concrete next to warm lacquer — the tonal gap is the instrument"
+      ],
+      "timing_behaviors": [
+        "Female MC sits slightly behind the beat on long syllables, creating a dragged cool — she arrives on time emotionally but lets the beat breathe under her words rather than sitting on top of them",
+        "Male MC leads the beat on rapid-fire bursts by an eighth-note, pressing forward against the kick, then snaps back to pocket on the landing line — this push-and-catch creates a slingshot energy unique to his delivery",
+        "Both MCs use a shared rhythmic contract: one always lands on the downbeat of bar 4 cleanly, no matter how tangled the previous three bars were — this creates an anchor the listener expects and trusts",
+        "Female MC uses metric space strategically — half-bar rests mid-verse feel like a dare, not a gap; silence reads as attitude rather than hesitation",
+        "Male MC's pace escalation follows a three-phase shape: normal conversational pocket for 4 bars, compressed syllable density for 4 bars, then full-burst rapid-fire for 2 bars maximum before a clean single-syllable landing word"
+      ],
+      "adlib_behaviors": [
+        "Female MC's adlibs are understated and slightly dry — a single murmured 'uh-huh' or 'yeah' after a particularly cold bar, delivered like someone who knows they just said something and doesn't need to announce it",
+        "Male MC's adlibs are short physical exclamations — 'hah', 'run it', 'lock' — placed after burst sections like a boxer exhaling after a combination, not decorative but functional as breath-and-punctuation",
+        "Crew-shared call adlibs ('check', 'bring it back', 'cut it') appear only at section transitions and feel like a room responding together, not a producer tag — maximum once per transition",
+        "Neither MC uses adlibs as constant filler between every line; silence is more characteristic of this act than chatter, making every adlib count as a micro-event",
+        "When the female MC responds to the male MC's bar with a brief counter-adlib or word echo, she drops the pitch slightly and slows the rhythm — a one-word push-back that reframes his energy without competing with it"
+      ],
+      "avoid": [
+        "Avoid making the female MC breathy, high-pitched, or melodically hook-driven — her power is low-register cool and sharp wit, not pop-adjacent sweetness",
+        "Avoid making the male MC's rapid-fire sections unintelligible or purely percussive — every syllable in a burst must be a real word with real meaning, or the technical identity collapses",
+        "Avoid blending the two vocal personas into a single undifferentiated group sound — if a listener cannot tell within two bars which MC is performing, the core identity has failed",
+        "Avoid upward inflections and questioning tones on statement bars — both MCs deliver assertions, not requests; rising cadences belong nowhere in this act's vocabulary",
+        "Avoid giving either MC an ad-lib style that belongs to hype-man culture — there is no hype man here, only two MCs with distinct roles and a shared room"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The Velvet Interruption: the female MC is mid-bar and the male MC cuts in with a single sharp word that completes her rhyme instead of her — she doesn't repeat it, she continues the next line as if she expected the theft",
+      "The Pressure Drop: the male MC is in full rapid-fire burst and the beat drops to a single kick-and-bass loop underneath him — no pads, no scratch — forcing the syllable density to carry the entire sonic weight of the track for four bars before the full beat snaps back",
+      "The Cold Read: the female MC delivers a two-bar observation about the room, the session, or the craft in a near-monotone with zero melodic inflection, then the male MC responds with three bars of rapid syllables as if he needed that many words to process one sentence",
+      "The Rewind Tag: a scratch cut replays the last two words of the female MC's verse-closing line, and the male MC enters over the scratched echo as if the turntable just handed him a thread to pull",
+      "The Slow-Motion Punchline: the male MC has been accelerating for six bars and then delivers the punchline at exactly half his previous tempo — a single dragged line that hits harder because everything before it was fast",
+      "The Instrument Heckle: a spice instrument — single horn stab, wood flute trill, or kalimba run — responds to the female MC's sharpest line like a second voice in the room agreeing or mocking, placed so precisely it sounds like the instrument was there for the session",
+      "The Pocket Transfer: the female MC is holding a smooth mid-tempo pocket and hands off the last syllable of her line directly to the first syllable of the male MC's burst — no gap, no breath — creating the sensation that two voices are one exhale split into two speeds"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Basement Architecture",
+        "description": "Tracks in this lane prioritize structural complexity over energy escalation — multiple voice-swap sections, a scratch motif that returns transformed, and the female MC taking a full counter-verse rather than a hook role; the feeling is two craftspeople showing blueprints, not performing for an audience"
+      },
+      {
+        "name": "Velvet Pressure",
+        "description": "Tracks where the female MC leads and the male MC's rapid-fire bursts are used sparingly as punctuation — the dominant texture is low, smooth, and confident; percussion is minimal in the first half and builds through hi-hat and snare density rather than bass swell"
+      },
+      {
+        "name": "Full Burst Protocol",
+        "description": "Tracks designed around the male MC's maximum syllable-density capability — he carries the verse architecture while the female MC's role shifts to sharp two-bar counters and hook anchoring; spice instruments are forbidden here so the syllable texture has no competition"
+      },
+      {
+        "name": "Crew Reference",
+        "description": "Tracks that invoke the broader session crew through call-and-response chants, group-voiced hooks, and room-sound ambience — both MCs step back from technical showboating and the chemistry of the collective becomes the instrument"
+      },
+      {
+        "name": "Scratch-Led Narrative",
+        "description": "Tracks where turntable scratching is not an accent but a recurring structural element — scratch phrases open sections, answer bars, and close the track; both MCs write to the turntable rather than around it, treating the scratch as a third voice with its own personality"
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track featured the male MC's rapid-fire burst as its climax, the next track must place its climax in a structural position the burst has not occupied — such as the opening sixteen bars or a mid-song dropout moment — so the burst's impact is not predicted by position",
+      "If the previous track used a spice instrument as its defining accent, the next track must either use a different spice instrument or remove the spice instrument entirely and rely on scratch texture to fill that tonal space",
+      "If the previous track was female-MC-led with the male MC in a punctuation role, the following track must give the male MC at least one full uninterrupted verse that does not serve as a setup for her response",
+      "No two consecutive tracks may open with the same device — if one opens with a scratch cut and vocal tag, the next must open differently, whether with an instrument lick, a beat-only cold bar, or the female MC's voice alone before the full beat drops",
+      "If the previous track used a chant-style hook, the next track must use a non-chant hook form — single repeated phrase, call-and-response split between both MCs, or no traditional hook at all with a rhythmic tag instead",
+      "The BPM and key may both remain in their defaults, but the groove feel must shift — if the previous track had a heavy downbeat emphasis, the next must lead with off-beat or syncopated snare placement so the drum personality reads as a different room"
+    ],
+    "anti_generic_rules": [
+      "Do not default to the female MC as the hook singer — her primary identity is MC first, and if she sings a hook it must feel like a deliberate power choice, not a default gender assignment; her bars must appear in at least one verse before any hook role is assigned to her",
+      "Do not default to having both MCs rap in the same syllabic density for an entire track — the contrast between her smooth low-tempo command and his compressed rapid-fire is the engine; if both are rapping at similar speed, the character identity has been lost",
+      "Do not use turntable scratching as decoration — every scratch phrase must respond to a specific lyrical moment, open or close a section, or echo a specific word from a prior bar; scratching placed randomly between verses is a production cliché this act does not use",
+      "Do not resolve every track with a clean triumphant ending — this act lives in a basement session world where tracks end on a replayable tag, an unresolved handoff, or a crew echo that hangs in the room; closure is not the goal, continuation is",
+      "Do not give the male MC's rapid-fire sections lyric content that is pure speed-flex without meaning — every burst must advance a bar's argument, tell something specific, or land a punchline; syllable density without semantic content is the specific failure mode of this character's rapid-fire voice",
+      "Do not use luxury imagery, designer references, or cash-stack flexing as the substance of a verse — this act's world is the craft of the session, the room, the sound, the structure; wealth signaling is a borrowed costume that makes this character unrecognizable",
+      "Do not make both MCs equally aggressive in the same bar — one is always cooler than the other in any given moment; the temperature difference between them is the personality of the duo"
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use the same spice instrument in back-to-back tracks — rotate between wood flute, electric guitar stab, horn stab, and kalimba so no single accent becomes a signature crutch",
+      "Do not open consecutive tracks with the female MC's voice — vary opening voice ownership across the album so neither MC becomes the default entrance point",
+      "Do not use the Pressure Drop conceit (beat strip to single kick under rapid-fire burst) more than twice on an album, and never in consecutive tracks",
+      "Do not repeat the same adlib word or phrase as the track's dominant crew tag — rotate among 'locked', 'run it', 'check', 'cut it', 'bring it back', and 'one more' so no single tag defines the whole project",
+      "Do not use the same hook structure type more than twice across the album — rotate between chant, call-and-response, single repeated phrase, rhythmic tag, and scratch-cut vocal motif",
+      "Do not place the male MC's maximum-density burst section in the same structural position (same verse, same bar count from the top) in consecutive tracks — vary whether it hits early, mid-song, or as a final escalation",
+      "Do not use the same drum feel — heavy downbeat, syncopated snare, rolling triplet hi-hat — in more than two consecutive tracks without a deliberate contrast track between them",
+      "Do not let the female MC's voice role default to hook anchor across more than two consecutive tracks — alternate between full counter-verse, lyric-assist, sharp two-bar flip, and hook lead so her range stays demonstrated"
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify which of the two MCs carries the greater verse weight on this track and articulate a concrete reason rooted in the track's emotional or structural concept, not just a rotation default.",
+      "The brief must describe a specific vocal conceit or performance trick unique to this track that has not been used on any prior track in the same project, naming what the voice does, at which structural point, and why it serves this song's identity.",
+      "The brief must state explicitly what the spice instrument or scratch element does on this track — including the specific moment it enters, what lyrical or emotional event it responds to, and whether it returns or appears only once.",
+      "The brief must define the energy arc for this specific track using at least three named sections and describe what changes between each section — not just labeling verse and chorus but specifying how the vocal temperature, syllable density, or instrumental texture shifts.",
+      "The brief must address how the female MC's role on this track differs from her role on the immediately preceding track, specifying whether she leads, counters, anchors a hook, or delivers a bar-flip moment and why that role serves this song's distinct identity.",
+      "The brief must identify the track's ending device — whether replayable tag, unresolved handoff, scratch callback, crew echo, or speed landing — and explain why that specific ending device fits the emotional logic of this track rather than a different one from the rotation."
     ]
   },
   "visuals": {

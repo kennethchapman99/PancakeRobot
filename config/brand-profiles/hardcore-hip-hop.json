@@ -182,5 +182,105 @@
   "guardrails": {
     "originality": "Use named references only as broad genre signals. Do not copy melodies, lyrics, arrangements, vocal signatures, cover art, names, slogans, or distinctive production choices from existing artists.",
     "brand_safe": false
+  },
+  "songwriting": {
+    "vocal_performance_engine": {
+      "priority": "Borough Cipher's vocal identity is locked in the collision between surgical syllabic precision and controlled menace — every bar feels like it was planned three moves ahead and delivered on the exhale of a threat that already landed.",
+      "vocal_textures": [
+        "Dry, slightly graveled mid-range with no vibrato — commanding authority without reaching for warmth",
+        "Compressed street-level urgency that stays below a shout but carries the weight of one — tension held in the chest, not the throat",
+        "Cipher-energy layering where a second voice doubles key punchline syllables a half-beat behind for emphasis, not harmony",
+        "Strategic whisper-to-punch dynamic: a line delivered at near-conversational volume immediately followed by a line that hits with full projection, creating whiplash impact",
+        "Hard consonant percussion — 't', 'k', and 'p' sounds weaponized as rhythmic hits inside bars, making the voice itself function as a snare accent"
+      ],
+      "timing_behaviors": [
+        "Riding slightly ahead of the kick on the first bar of a verse then snapping exactly on-grid by bar three, creating a tension-and-lock feel",
+        "Deliberate single-syllable drops into pocket — landing one word per bar on the downbeat with full weight while the rest of the bar flows around it",
+        "Late-entry verse opens: sitting out the first beat of bar one before entering, letting the instrumental motif breathe and then cutting through it",
+        "Internal rhyme acceleration: doubling the syllable density in the back half of a bar as the rhyme scheme completes, creating a closing-trap effect",
+        "Pause-and-resume punching: a full beat of silence mid-bar before the punchline lands, treating the silence as part of the delivery"
+      ],
+      "adlib_behaviors": [
+        "Short exhaled confirmation sounds — a clipped 'hah' or 'yeah' placed after a punchline that functions as the MC co-signing their own bar, not crowd-pleasing filler",
+        "Crew echo adlibs where a second voice repeats only the final word or two of a key line at lower volume, reinforcing the cipher dynamic without cluttering the mix",
+        "Strategic count-in mutters before verse two or three — a barely-audible 'let's go' or number call that signals the collective is still locked in",
+        "Dry laugh or single-breath exhale after a particularly precise technical bar — understated self-acknowledgment, never celebratory or showy",
+        "Name-drop of the collective identity buried in the ad lib layer — 'Borough' or 'cipher' whispered once per track in a low-mix adlib, branding without announcing"
+      ],
+      "avoid": [
+        "Melodic ad libs or sung licks — any vocal ornament that softens the controlled aggression into approachability",
+        "Screamed or strained delivery that breaks the composed menace — the character's power comes from restraint, not volume peaks",
+        "Rapid-fire triplet flows with no weight — speed without gravity erases the deliberate, strategic identity",
+        "Generic hype-man call-and-response that sounds borrowed from stadium rap — Borough Cipher's crew energy is intimate and coded, not arena-wide",
+        "Overly smooth or polished vocal tone that removes the dry grit — any production gloss that makes the voice sound commercially processed rather than street-level precise"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The Cipher Pass: the verse is structured as if three different voices in a cypher are each given exactly four bars, with tonal shifts in delivery (slightly different register, dryness, or pace) between each rotation, even if a single MC is performing all parts — making the track feel like a collective document.",
+      "The Controlled Detonation: a verse builds with measured, almost conversational delivery for eight bars, then the final two bars compress twice the syllables and double the intensity before snapping back to calm — the explosion is contained inside the verse, not telegraphed.",
+      "The Blueprint Read: the hook is delivered as if announcing a tactical plan step by step, each phrase a numbered instruction rather than an emotional plea — confidence through enumeration rather than chest-beating.",
+      "The Instrumental Mirror: the MC replicates the rhythm of the track's main instrumental motif — the piano riff or brass phrase — with syllables, essentially rapping the instrumental hook as words in one bar before breaking back into the verse, fusing the voice with the production.",
+      "The Withheld Punchline: the setup of a punchline is delivered in bar three of a four-bar unit, then bar four is an instrumental bar or a single-word drop, forcing the listener to complete the logical conclusion themselves before the next bar confirms it.",
+      "The Street Annotator: one verse is delivered as if providing commentary on a scene the narrator is watching from a distance — third person, observational, almost journalistic — before the final bar collapses into first person and implicates the narrator directly.",
+      "The Pressure Metric: adlibs are withheld entirely for the first verse, then introduced sparingly in verse two, then stacked on every punchline in verse three — the escalating adlib density signals rising stakes without changing the lyrical tone.",
+      "The Dry Recap Hook: instead of a melodic or chantable hook, the hook is a two-line summary of the verse's argument delivered at half the verse tempo — a tactical briefing rather than a sing-along, making the hook feel earned and strategic."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Cipher Record",
+        "description": "Tracks built entirely around the collective dynamic — multiple verse rotations, crew adlibs foregrounded, hook delivered in unison rather than solo, instrumental motifs that feel like a shared handshake rather than a lead vocal showcase. The cipher IS the structure, not a stylistic choice."
+      },
+      {
+        "name": "Tactical Solo",
+        "description": "A single-narrator track where Borough Cipher's strategic confidence becomes almost monologue-like — the instrumental strips to essentials, adlibs disappear, and every bar is a precision argument. The track feels like one mind working through a problem in real time."
+      },
+      {
+        "name": "Cinematic Block",
+        "description": "The production expands with layered minor-key strings, deep ambient texture, and a slower BPM pocket that lets the storytelling breathe — but the vocals stay clipped and controlled, creating tension between the epic soundscape and the composed, street-level delivery."
+      },
+      {
+        "name": "Pressure Drill",
+        "description": "High-density technical bars, percussion pushed forward, BPM nudged up, punchlines compressed closer together — a track that functions as a skills demonstration without ever breaking the controlled aggression identity. No hooks, just verses rotating with increasing intensity."
+      },
+      {
+        "name": "Borough Atmosphere",
+        "description": "Minimal drums, heavy bass texture, smoky ambient instrumentation — a track where the sound design does the heavy lifting and the vocal delivery becomes sparse and deliberate, each bar given space to echo. The menace comes from what is not said as much as what is."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a piano riff as the instrumental motif, the next track must use a different tonal source — brass, guitar, synth, or scratched texture — to prevent the cinematic minor-key sound from flattening into a single signature.",
+      "If the previous track featured crew-rotation verses, the next track must shift to a single sustained narrator voice with no rotation, ensuring the collective and solo modes alternate rather than stack.",
+      "If the previous track's hook was chantable and syllabically simple, the next track's hook must use the Dry Recap or Blueprint Read conceit — no two consecutive tracks should share the same hook delivery style.",
+      "If the previous track's drums were pushed forward and percussion-heavy, the next track must pull the drums back into a supporting role and allow the bass texture or instrumental motif to carry the energy — preventing every track from hitting identically.",
+      "Borough Cipher's tendency is to default to 90 BPM boom-bap for every track — each new track brief must specify whether the pocket is pushed slightly faster, pulled slightly slower, or restructured with a half-time feel to avoid tempo sameness across the album.",
+      "If the previous track withheld adlibs for tension, the next track must deploy adlibs from bar one — the adlib vocabulary must be actively rotated rather than applied uniformly."
+    ],
+    "anti_generic_rules": [
+      "Borough Cipher does not open verses with generic stance-setting lines like 'listen up' or 'pay attention' — every verse must open mid-thought, as if the argument is already in progress when the listener arrives.",
+      "The instrumental hook must never be a stock minor-key piano loop that sounds unattributed — it must have a specific rhythmic or tonal quirk that makes it identifiable on repeat listens: a syncopated rest, an unexpected resolution, a textural layer beneath the melody.",
+      "The crew hook must never devolve into shouted affirmations or generic repetition of the track title — it must carry lyrical content, even if brief, that adds a layer of meaning to the verse it follows.",
+      "Borough Cipher's controlled aggression must be expressed through lyrical precision and strategic imagery, not through a raised vocal register — if the generator defaults to louder-equals-harder, the output is wrong for this character.",
+      "Punchlines must not rely on generic street-wealth imagery (cars, jewelry, money counts) as the primary vehicle — Borough Cipher's imagery is strategic, cipher-coded, and observational. Material signifiers are used sparingly and only when they serve a specific lyrical point.",
+      "The track must never have a generic trap hi-hat roll or drill percussion pattern inserted to modernize the sound — this character's modernity comes from clean mix clarity and lyrical density, not from borrowing contemporary percussion signatures that conflict with the boom-bap identity.",
+      "Do not default to a standard verse-hook-verse-hook-bridge-hook song structure for every track — Borough Cipher's album must include tracks with no hook, tracks where the hook arrives only once at the end, and tracks built entirely on verse rotation."
+    ],
+    "do_not_repeat_across_album": [
+      "The same instrumental motif source (e.g., piano) must not anchor more than two tracks in sequence — rotate through brass, strings, synth, guitar, and scratched textures across the album.",
+      "The Controlled Detonation conceit (quiet build then compressed explosion at verse end) must not appear in more than two tracks without a full lane change between uses.",
+      "The crew-rotation verse structure must alternate with solo and tactical formats — no more than two consecutive crew-rotation tracks.",
+      "The same adlib vocabulary ('hah', exhale, crew echo) must not appear identically on every track — at least two tracks per album must strip adlibs entirely to create contrast.",
+      "The hook delivery mode must rotate across the album: chantable hook, Dry Recap hook, Blueprint Read hook, and instrumental-only hook should each appear at least once.",
+      "The late-entry verse open (sitting out beat one) must not be used in more than three tracks — vary with on-beat entries and mid-bar entries to prevent the timing behavior from becoming a tic.",
+      "Minor-key tonality is the default and must not be the key signature of every single track — at least one track per album should explore a modal or ambiguous tonality that creates a different emotional color without abandoning the dark character.",
+      "The Street Annotator conceit (third-person observation collapsing to first person) must not be used in back-to-back tracks — it loses its impact if it becomes the default narrative mode."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify which performance conceit from the bank is being activated on this track and explain in one sentence why it fits the track's lyrical argument — not simply assign the conceit as a label.",
+      "The brief must define the specific instrumental motif source and describe one rhythmic or tonal quirk that makes it distinct from the motifs used on the two preceding tracks in the sequence.",
+      "The brief must address how adlib placement on this track differs from the prior track — specifying whether adlibs are withheld, introduced early, stacked on punchlines, or limited to the hook — so that the adlib texture is intentionally varied rather than applied by default.",
+      "The brief must identify which album mode lane this track occupies and state one structural or vocal element that distinguishes it from the last track recorded in the same lane.",
+      "The brief must specify a street-level or cipher-coded image that anchors the track's central metaphor — one that has not appeared in any prior track on this album and that can be developed across multiple verses rather than exhausted in a single bar.",
+      "The brief must state the hook delivery mode for this track and confirm it has not been used in the immediately preceding track, ensuring hook variety is maintained as an active creative decision rather than an accidental outcome."
+    ]
   }
 }
