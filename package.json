@@ -26,6 +26,7 @@
     "new": "node src/orchestrator.js --new",
     "magic": "node src/scripts/run-magic-pipeline-service.js",
     "profile": "node src/scripts/profile-cli.js",
+    "brand-doctor": "node src/scripts/brand-doctor-cli.js",
     "magic-release:create": "node src/scripts/magic-release-cli.js create",
     "magic-release:plan": "node src/scripts/magic-release-cli.js plan",
     "magic-release:run-next": "node src/scripts/magic-release-cli.js run-next",

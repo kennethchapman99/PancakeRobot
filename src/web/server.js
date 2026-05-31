@@ -54,6 +54,7 @@ import {
 } from '../shared/brand-profile.js';
 import { generateThumbnails } from '../agents/creative-manager.js';
 import { registerMarketingRouter } from './marketing/router-consolidated.js';
+import { registerBrandDoctorRouter } from './brand-doctor/router.js';
 import { startDailySocialScheduler } from '../shared/social/daily-social-scheduler.js';
 import { clearSongBaseImages, getSongCatalogMarketingSummary, scanMarketingPack, scanSongBaseImage } from '../shared/song-catalog-marketing.js';
 import {
@@ -323,6 +324,9 @@ app.use((req, res, next) => {
 
 // ── MARKETING ROUTER ────────────────────────────────────────────
 registerMarketingRouter(app);
+
+// ── BRAND DOCTOR ROUTER ─────────────────────────────────────────
+registerBrandDoctorRouter(app);
 
 // ── DASHBOARD ──────────────────────────────────────────────────
 app.get('/', (req, res) => {
