@@ -105,7 +105,7 @@ export function listBrandProfiles() {
   const defaultProfile = loadBrandProfileById(DEFAULT_PROFILE_ID);
   const profiles = [{
     id: DEFAULT_PROFILE_ID,
-    name: defaultProfile.brand_name || defaultProfile.character?.name || 'Default profile',
+    name: defaultProfile.display_name || defaultProfile.brand_name || defaultProfile.character?.name || 'Default profile',
     path: DEFAULT_PROFILE_PATH,
     isDefault: true,
   }];
@@ -128,7 +128,7 @@ export function listBrandProfiles() {
 
       profiles.push({
         id,
-        name: profile.brand_name || id,
+        name: profile.display_name || profile.brand_name || id,
         path: profilePath,
         isDefault: false,
       });

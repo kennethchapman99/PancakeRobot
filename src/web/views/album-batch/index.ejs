@@ -21,7 +21,7 @@
         <label class="block text-sm font-bold text-zinc-900">Brand Profile</label>
         <select name="brandProfileId" required class="mt-2 w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm">
           <% profiles.forEach(profile => { %>
-            <option value="<%= profile.id %>" <%= profile.id === activeBrandId ? 'selected' : '' %>><%= profile.brand_name || profile.id %></option>
+            <option value="<%= profile.id %>" <%= profile.id === activeBrandId ? 'selected' : '' %>><%= profile.name || profile.id %></option>
           <% }) %>
         </select>
       </div>

@@ -330,7 +330,11 @@ test('a failed launch route writes an object-style cockpit log with correct rele
     recording_status: 'setup_ready',
     recording_session_id: 'sess_unreachable',
   });
-  // Browsy is not running on the default port in tests → launch fails and must be logged.
+  // The launch will fail regardless of whether Browsy is running:
+  // - Browsy unreachable → error log (network failure)
+  // - Browsy running but not authenticated → warning log (auth preflight blocks the launch)
+  // - Browsy running and authenticated → error log (recording session 'sess_unreachable' not found)
+  // In every case a browsy_recording log must be written with the correct release identifiers.
   const server = await startServer();
   try {
     const { port } = server.address();
@@ -343,8 +347,8 @@ test('a failed launch route writes an object-style cockpit log with correct rele
     server.close();
   }
   const logs = getReleaseCockpitLogs('single', songId, { limit: 50 });
-  const errorLog = logs.find(l => l.action === 'browsy_recording' && l.status === 'error');
-  assert.ok(errorLog, 'expected a browsy_recording error log for the failed launch');
-  assert.equal(errorLog.release_id, songId);
-  assert.equal(errorLog.release_type, 'single');
+  const failLog = logs.find(l => l.action === 'browsy_recording' && ['error', 'warning'].includes(l.status));
+  assert.ok(failLog, 'expected a browsy_recording failure log (error or warning) for the failed launch');
+  assert.equal(failLog.release_id, songId);
+  assert.equal(failLog.release_type, 'single');
 });

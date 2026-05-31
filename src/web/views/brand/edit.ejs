@@ -24,6 +24,7 @@ window.brandEditor = function() {
     defaultImage: initialDefaultImage,
 
     // Brand basics
+    display_name:        p.display_name || '',
     brand_name:          p.brand_name || '',
     brand_description:   p.brand_description || '',
     audience_age_range:  p.audience?.age_range || '',
@@ -80,6 +81,7 @@ window.brandEditor = function() {
       const o = this.original;
       return {
         ...o,
+        display_name:      this.display_name,
         brand_name:        this.brand_name,
         brand_description: this.brand_description,
         media: { ...(o.media || {}),
@@ -314,6 +316,10 @@ window.brandEditor = function() {
       <h2 class="font-bold text-zinc-800">Brand Basics</h2>
     </div>
     <div class="px-6 py-5 space-y-4">
+      <div>
+        <label class="field-label">Display Name <span class="field-hint">— label shown in the UI and profile pickers; not used in generation</span></label>
+        <input type="text" x-model="display_name" class="field-input" placeholder="defaults to Brand Name if left blank">
+      </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="field-label">Brand Name</label>

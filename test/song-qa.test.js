@@ -21,7 +21,7 @@ import { qaBlocksApproval } from '../src/shared/approval-gate.js';
 
 const dirtyLyrics = `# Something Went Wrong Again
 
-**Key Hook:** Something Went Wrong Again
+**Core Line:** Something Went Wrong Again
 **Physical Action:** wobble your pancake pan
 **Word Count:** ~160
 
@@ -161,6 +161,18 @@ test('clean adult ballad lyrics pass provider sanitizer', () => {
   assert.doesNotMatch(result.lyrics, /\[[^\]]+\]/);
 });
 
+test('provider sanitizer strips bold metadata labels not in the whitelist', () => {
+  const futureLabelDoc = `# Some Title\n\n**Vibe Tag:** introspective synth ballad\n**Color Mood:** copper and dusk\n\n---\n\nWe are copper wire in a quiet house\nConnected still but no current comes through`;
+  const result = sanitizeLyricsForProvider(futureLabelDoc, {
+    forbiddenElements: [],
+    blockBrandContamination: false,
+  });
+
+  assert.deepEqual(result.residualIssues, []);
+  assert.doesNotMatch(result.lyrics, /Vibe Tag\s*:|Color Mood\s*:/i);
+  assert.match(result.lyrics, /We are copper wire in a quiet house/);
+});
+
 test('MiniMax provider lyric payload is capped before API submission', () => {
   const longLyrics = Array.from({ length: 500 }, (_, i) => `line ${i} blood sweat and bars we put it in the work`).join('\n');
   const constrained = constrainProviderLyricsLength(longLyrics, 1200);
@@ -239,4 +251,5 @@ test('pre-render QA failures can be reported while provider payload stays clean'
   assert.ok(body.lyrics.length <= MINIMAX_PROVIDER_LYRICS_MAX_CHARS);
   assert.doesNotMatch(body.lyrics, /\[[^\]]+\]/);
   assert.doesNotMatch(body.lyrics, /music slows|vocals start|sfx|spoken|sound effect/i);
+  assert.doesNotMatch(body.lyrics, /Core Line\s*:|Word Count\s*:|Physical Action\s*:/i);
 });

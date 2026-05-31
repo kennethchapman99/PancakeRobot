@@ -210,6 +210,16 @@ test('Browsy result ingestion maps smart links and client_action_requests into n
   assert.ok(tasks.some(task => task.task_key === 'select_release_master_audio' && task.status === 'needs_ken'));
 });
 
+test('Browsy result ingestion rejects a malformed callback with a clear error', async () => {
+  await assert.rejects(ingestBrowsyResult({ resultPath: undefined }), /requires a result_path/);
+  await assert.rejects(ingestBrowsyResult({ resultPath: '   ' }), /requires a result_path/);
+  await assert.rejects(ingestBrowsyResult({ resultPath: path.join(os.tmpdir(), `${uniqueId('missing')}.json`) }), /result file not found/);
+
+  const badJsonPath = path.join(os.tmpdir(), `${uniqueId('badjson')}.json`);
+  fs.writeFileSync(badJsonPath, '{ not valid json');
+  await assert.rejects(ingestBrowsyResult({ resultPath: badJsonPath }), /not valid JSON/);
+});
+
 test('visual library import and recommendation prefer reusable assets before custom generation', () => {
   const songId = seedSong(uniqueId('MAGIC_VISUAL_SINGLE'), {
     title: 'Robot Pancake Parade',

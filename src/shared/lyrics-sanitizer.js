@@ -15,7 +15,12 @@ const ANY_BRACKETED_PAYLOAD = /\[[^\]]+\]/u;
 const PARENTHETICAL_FRAGMENT = /\(([^)]*)\)/gu;
 const WHOLE_LINE_EMPHASIS = /^\s*(?:\*{1,3}|_{1,3}|`{1,3})([^*_`\n]{3,})(?:\*{1,3}|_{1,3}|`{1,3})\s*$/u;
 const MARKDOWN_ARTIFACT_LINE = /^\s*(?:#{1,6}\s+|[-*_]{3,}\s*$|```|>\s+)/u;
-const LYRIC_METADATA_LINE = /^\s*(?:\*{1,3})?(?:key hook|physical action|word count|song|style|instrumentation|energy|mood|voice style|structure|target length|first vocal by|max instrumental intro|exact title usage|render safety|special notes|full lyrics|music specs)(?:\*{1,3})?\s*:/iu;
+const LYRIC_METADATA_LINE = /^\s*(?:\*{1,3})?(?:key hook|core line|notable lines?|physical action|word count|song|style|instrumentation|energy|mood|voice style|structure|target length|first vocal by|max instrumental intro|exact title usage|render safety|special notes|full lyrics|music specs)(?:\*{1,3})?\s*:/iu;
+// Generic structural fallback: any bold/emphasis-wrapped label ending in a colon
+// (e.g. "**Core Line:**", "**Word Count:**"). Catches renamed/new QA-doc header
+// fields without needing them in the whitelist above. Real lyric lines do not lead
+// with an emphasis-wrapped "Label:" token.
+const BOLD_LABEL_LINE = /^\s*(\*{1,3}|_{1,3})[^*_\n]{1,40}:\s*\1/u;
 const PROMPT_ARTIFACT_LINE = /^\s*(?:\[\s*LYRICIST\s*\]|write a complete|output valid json|```|\{|\}|"?lyrics"?\s*:|"?audio_prompt"?\s*:)/iu;
 const SPEAKER_OR_CUE_LABEL = /^\s*(?:kids?|children|crowd|choir|group|spoken|sfx|sound\s*effect|stage|producer|director)\s*:/iu;
 const PRODUCTION_CUE_WORDS = /\b(?:vocals?\s+start|start\s+vocals?|music\s+slows?|music\s+speeds?|music\s+stops?|drop\s+it|sfx|sound\s*effects?|spoken|stage\s+direction|production\s+note|instrumental|non-vocal|tempo|bpm|key\s*:|glitch(?:y)?|warping|robot\s+voice|malfunction\s+sequence|call[-\s]?and[-\s]?response|audience\s+participation|hands?\s+up|clap(?:ping|s)?|stomp(?:ing|s)?|wiggle(?:s|ing)?|bounce|jump|dance\s+break)\b/iu;
@@ -58,7 +63,7 @@ export function sanitizeLyricsForProvider(lyrics = '', options = {}) {
       return;
     }
 
-    if (LYRIC_METADATA_LINE.test(trimmed)) {
+    if (LYRIC_METADATA_LINE.test(trimmed) || BOLD_LABEL_LINE.test(trimmed)) {
       removed.push(removedItem(index, original, 'lyric metadata line'));
       return;
     }
@@ -152,7 +157,7 @@ export function findProviderLyricPayloadIssues(lyrics = '', options = {}) {
   if (INLINE_MARKDOWN_PAYLOAD.test(text) || text.split('\n').some(line => MARKDOWN_ARTIFACT_LINE.test(line.trim()))) {
     issues.push('markdown remains in provider lyrics payload');
   }
-  if (text.split('\n').some(line => LYRIC_METADATA_LINE.test(line.trim()))) {
+  if (text.split('\n').some(line => LYRIC_METADATA_LINE.test(line.trim()) || BOLD_LABEL_LINE.test(line.trim()))) {
     issues.push('lyric metadata remains in provider lyrics payload');
   }
   if (text.split('\n').some(line => SPEAKER_OR_CUE_LABEL.test(line.trim()))) {

@@ -184,7 +184,18 @@ export async function runMagicReleaseTask({ campaignId, taskKey, dryRun = false 
 }
 
 export async function ingestBrowsyResult({ resultPath, campaignId = null, taskKey = null } = {}) {
-  const result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+  // System boundary: Browsy posts this callback with a local result file path.
+  // Validate explicitly so a malformed callback yields a clear error instead of a
+  // cryptic "path must be a string" / ENOENT / SyntaxError.
+  const cleanPath = typeof resultPath === 'string' ? resultPath.trim() : '';
+  if (!cleanPath) throw new Error('Browsy result ingest requires a result_path.');
+  if (!fs.existsSync(cleanPath)) throw new Error(`Browsy result file not found: ${cleanPath}`);
+  let result;
+  try {
+    result = JSON.parse(fs.readFileSync(cleanPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`Browsy result file is not valid JSON (${cleanPath}): ${error.message}`);
+  }
   const campaign = campaignId
     ? upsertReleaseCampaign({ id: campaignId })
     : ensureCampaignForRelease(result.entity_type, result.entity_id);
@@ -199,7 +210,7 @@ export async function ingestBrowsyResult({ resultPath, campaignId = null, taskKe
     task_key: task.task_key,
     status: nextStatus.status,
     result: result,
-    result_path: resultPath,
+    result_path: cleanPath,
     source_workflow_id: result.workflow_id,
     source_run_id: result.run_id || null,
     reason: nextStatus.reason || task.reason,
@@ -208,7 +219,7 @@ export async function ingestBrowsyResult({ resultPath, campaignId = null, taskKe
   });
   if (result.captured_outputs) applyCapturedOutputs(campaign, result.captured_outputs, result);
   for (const request of result.client_action_requests || []) {
-    createNeedsKenTaskFromActionRequest(campaign, task, request, resultPath, result);
+    createNeedsKenTaskFromActionRequest(campaign, task, request, cleanPath, result);
   }
   addReleaseCockpitLog({
     releaseType: campaign.release_type,
@@ -218,7 +229,7 @@ export async function ingestBrowsyResult({ resultPath, campaignId = null, taskKe
     message: `Browsy result ingested for ${result.workflow_id}.`,
     payload: {
       taskKey: task.task_key,
-      resultPath,
+      resultPath: cleanPath,
       workflowStatus: result.status,
       workflowRef: result.workflow_id,
       runId: result.run_id || null,

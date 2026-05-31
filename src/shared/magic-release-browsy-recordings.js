@@ -340,6 +340,17 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     browsy_base_url: config.baseUrl,
   });
 
+  // Browsy accepted the start but returned no addressable session id — there is
+  // nothing we can launch, stop, or import. Fail loudly here instead of letting
+  // launchBrowsyRecordingSession throw a cryptic "recordingSessionId is required"
+  // deeper in the client and stranding the row at setup_ready.
+  if (!recording.recording_session_id) {
+    const errMsg = 'Browsy started a recording but returned no recording session id — cannot launch the recorder.';
+    const updated = updateRecording(recording.id, { recording_status: 'start_failed', last_error: errMsg });
+    logRecording(campaign, taskKey, 'error', errMsg, { recordingId: recording.id });
+    return { ok: false, error: errMsg, recording: updated };
+  }
+
   logRecording(campaign, taskKey, 'success', 'Created Browsy recording session.', {
     recordingId: recording.id,
     recordingSessionId: recording.recording_session_id,
