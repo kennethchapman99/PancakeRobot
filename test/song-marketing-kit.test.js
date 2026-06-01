@@ -132,7 +132,7 @@ test('release-level marketing fields can be explicitly cleared without falling b
   }
 });
 
-test('marketing kit leaves image fallback empty when no song, album, or brand default image exists', { skip: sqliteSkipReason }, () => {
+test('marketing kit falls back to brand default image when no song or album image exists', { skip: sqliteSkipReason }, () => {
   const slug = `song-marketing-kit-default-image-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -143,8 +143,8 @@ test('marketing kit leaves image fallback empty when no song, album, or brand de
 
       upsertSong({ id: 'KIT_DEFAULT_IMAGE', title: 'Default Image Test' });
       const saved = getSongMarketingKit('KIT_DEFAULT_IMAGE');
-      assert.equal(saved.marketing_assets.fallback_image_url, '');
-      assert.equal(saved.image_source.generation_source, null);
+      assert.ok(saved.marketing_assets.fallback_image_url, 'brand default fallback_image_url should be non-empty');
+      assert.equal(saved.image_source.generation_source, 'brand_default_image');
       console.log('OK');
     `], {
       cwd: repoRoot,

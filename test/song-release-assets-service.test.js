@@ -84,9 +84,9 @@ test('clearSongBaseImage deletes disk files and clears release-base-image state'
   assert.equal(refreshedKit.marketing_assets.square_post_url, '');
   assert.equal(refreshedKit.marketing_assets.vertical_post_url, '');
   assert.notEqual(refreshedKit.image_source.generation_source, 'release_base_image');
-  assert.equal(refreshedKit.image_source.generation_source, null);
-  assert.equal(refreshedKit.image_source.source_label, 'Missing');
-  assert.equal(result.warning, 'Release-specific base image cleared. Now using: Missing.');
+  assert.equal(refreshedKit.image_source.generation_source, 'brand_default_image');
+  assert.equal(refreshedKit.image_source.source_label, 'Brand default image');
+  assert.equal(result.warning, 'Release-specific base image cleared. Now using: Brand default image.');
 });
 
 test('Cloudflare image provider is hidden from the canonical image path unless legacy flag is set', { skip: nativeSkipReason }, () => {
