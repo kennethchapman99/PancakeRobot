@@ -398,5 +398,6 @@
   "ui": {
     "sidebar_subtitle": "Glass Orchard Studio",
     "logo_path": "/figment-factory-logo.png"
-  }
+  },
+  "display_name": "Pumpkins"
 }

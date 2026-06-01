@@ -404,5 +404,6 @@
   "ui": {
     "sidebar_subtitle": "Porchlight Atlas Studio",
     "logo_path": "/figment-factory-logo.png"
-  }
+  },
+  "display_name": "Folk"
 }

@@ -627,5 +627,6 @@
   "media": {
     "default_image_url": "/brand-media/gravl-brand-profile/default-image.png",
     "default_image_path": ""
-  }
+  },
+  "display_name": "Gravel Velvet"
 }

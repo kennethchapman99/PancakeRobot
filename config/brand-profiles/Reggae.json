@@ -402,5 +402,6 @@
   "ui": {
     "sidebar_subtitle": "Yardline Sound Studio",
     "logo_path": "/figment-factory-logo.png"
-  }
+  },
+  "display_name": "Reggae"
 }

@@ -442,6 +442,7 @@ function initSchema(db) {
     ['single_priority', 'INTEGER'],
     ['single_visual_asset_id', 'TEXT'],
     ['single_custom_video_requested', 'INTEGER DEFAULT 0'],
+    ['starred', 'INTEGER DEFAULT 0'],
   ];
   for (const [col, type] of newSongCols) {
     if (!songCols.includes(col)) {
@@ -455,6 +456,7 @@ function initSchema(db) {
     ['notes', 'TEXT'],
     ['is_test', 'INTEGER DEFAULT 0'],
     ['release_date', 'TEXT'],
+    ['starred', 'INTEGER DEFAULT 0'],
   ];
   for (const [col, type] of newAlbumCols) {
     if (!albumCols.includes(col)) {
@@ -586,13 +588,13 @@ export function upsertSong(song) {
       'release_recommendation_history_json', 'marketing_inputs_from_ar_json', 'marketing_links_json',
       'marketing_assets_json', 'marketing_readiness_json', 'last_outreach_json', 'is_test',
       'album_id', 'track_number', 'album_role', 'inherited_album_plan_version',
-      'single_priority', 'single_visual_asset_id', 'single_custom_video_requested',
+      'single_priority', 'single_visual_asset_id', 'single_custom_video_requested', 'starred',
     ];
     for (const key of patchable) {
       if (song[key] !== undefined && song[key] !== null) {
         updates[key] = key === 'status'
           ? normalizedStatus
-          : (key === 'is_test' || key === 'single_custom_video_requested' ? (song[key] ? 1 : 0) : song[key]);
+          : (key === 'is_test' || key === 'single_custom_video_requested' || key === 'starred' ? (song[key] ? 1 : 0) : song[key]);
       }
     }
     if (song.marketing_links !== undefined) updates.marketing_links_json = stringifyOptionalJson(song.marketing_links);
@@ -704,11 +706,11 @@ export function updateAlbum(id, fields = {}) {
   const updates = { updated_at: new Date().toISOString() };
   const allowed = [
     'album_title', 'album_theme', 'release_intent', 'number_of_songs',
-    'cost_mode', 'status', 'notes', 'brand_profile_id', 'release_date',
+    'cost_mode', 'status', 'notes', 'brand_profile_id', 'release_date', 'starred',
   ];
   for (const key of allowed) {
     if (fields[key] !== undefined && fields[key] !== null) {
-      updates[key] = key === 'number_of_songs' ? Number(fields[key]) : fields[key];
+      updates[key] = key === 'number_of_songs' ? Number(fields[key]) : (key === 'starred' ? (fields[key] ? 1 : 0) : fields[key]);
     }
   }
   if (fields.shared_orchestration !== undefined) {

@@ -123,7 +123,7 @@ export function listReleaseCockpitEntries() {
       blockerCount: 0,
       trackCount,
       brandProfileId: albumProfileId,
-      brandProfileName: albumBrandProfile?.brand_name || albumProfileId || null,
+      brandProfileName: resolveProfileDisplayName(albumBrandProfile, albumProfileId),
       hyperfollowUrl,
       distributionStatus: summarizePersistedDistributionStatus(tracks),
       starred: Boolean(album.starred),
@@ -147,7 +147,7 @@ export function listReleaseCockpitEntries() {
         blockerCount: 0,
         trackCount: 1,
         brandProfileId: singleProfileId,
-        brandProfileName: singleBrandProfile?.brand_name || singleProfileId || null,
+        brandProfileName: resolveProfileDisplayName(singleBrandProfile, singleProfileId),
         hyperfollowUrl,
         distributionStatus: song.distribution_status || song.status || null,
         starred: Boolean(song.starred),
@@ -980,6 +980,10 @@ function readJsonIfExists(filePath) {
 
 function loadProfile(profileId) {
   return loadBrandProfileById(profileId || DEFAULT_PROFILE_ID);
+}
+
+function resolveProfileDisplayName(profile, fallbackId) {
+  return profile?.display_name || profile?.brand_name || fallbackId || null;
 }
 
 function resolveReleaseBrandProfile(profileId) {

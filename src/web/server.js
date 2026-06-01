@@ -355,6 +355,26 @@ app.get('/releases', (req, res) => {
   });
 });
 
+app.post('/releases/:type/:id/star', (req, res) => {
+  const { type, id } = req.params;
+  const normalizedType = String(type || '').toLowerCase() === 'album' ? 'album' : 'single';
+  try {
+    if (normalizedType === 'album') {
+      const album = getAlbum(id);
+      if (!album) return res.status(404).json({ ok: false, error: 'Release not found' });
+      updateAlbum(id, { starred: album.starred ? 0 : 1 });
+      return res.json({ ok: true, starred: !album.starred });
+    } else {
+      const song = getSong(id);
+      if (!song || song.album_id) return res.status(404).json({ ok: false, error: 'Release not found' });
+      upsertSong({ id, starred: song.starred ? 0 : 1 });
+      return res.json({ ok: true, starred: !song.starred });
+    }
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.get('/releases/:type/:id', (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).render('404', { message: 'Release not found' });

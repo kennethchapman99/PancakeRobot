@@ -403,5 +403,6 @@
   "ui": {
     "sidebar_subtitle": "Midnight Province Studio",
     "logo_path": "/figment-factory-logo.png"
-  }
+  },
+  "display_name": "Lorde"
 }

@@ -402,5 +402,6 @@
   "ui": {
     "sidebar_subtitle": "Afterimage Relay Studio",
     "logo_path": "/figment-factory-logo.png"
-  }
+  },
+  "display_name": "Postal Service"
 }

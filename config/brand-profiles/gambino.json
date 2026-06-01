@@ -402,5 +402,6 @@
   "ui": {
     "sidebar_subtitle": "Figment Factory Studio",
     "logo_path": "/Gambino.png"
-  }
+  },
+  "display_name": "Gambino"
 }

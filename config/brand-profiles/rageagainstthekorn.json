@@ -299,5 +299,6 @@
   "ui": {
     "sidebar_subtitle": "Pressure Signal Studio",
     "logo_path": "/figment-factory-logo.png"
-  }
+  },
+  "display_name": "Rage Against the Korn"
 }
