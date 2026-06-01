@@ -108,6 +108,8 @@ export function listReleaseCockpitEntries() {
     if (tracks.length === 0 && !allowPlannedAlbum) return [];
     const hyperfollowUrl = findPersistedHyperFollowUrl(tracks);
     const trackCount = tracks.length || plannedTrackCount;
+    const albumProfileId = album.brand_profile_id || null;
+    const albumBrandProfile = albumProfileId ? resolveReleaseBrandProfile(albumProfileId) : null;
     return {
       type: 'album',
       id: album.id,
@@ -120,9 +122,11 @@ export function listReleaseCockpitEntries() {
         : `${trackCount} planned track${trackCount === 1 ? '' : 's'}`,
       blockerCount: 0,
       trackCount,
-      brandProfileId: album.brand_profile_id || null,
+      brandProfileId: albumProfileId,
+      brandProfileName: albumBrandProfile?.brand_name || albumProfileId || null,
       hyperfollowUrl,
       distributionStatus: summarizePersistedDistributionStatus(tracks),
+      starred: Boolean(album.starred),
       updatedAt: album.updated_at || album.created_at,
     };
   });
@@ -130,6 +134,8 @@ export function listReleaseCockpitEntries() {
     .filter(song => !song.album_id)
     .map(song => {
       const hyperfollowUrl = findPersistedHyperFollowUrl([song]);
+      const singleProfileId = song.brand_profile_id || null;
+      const singleBrandProfile = singleProfileId ? resolveReleaseBrandProfile(singleProfileId) : null;
       return {
         type: 'single',
         id: song.id,
@@ -140,9 +146,11 @@ export function listReleaseCockpitEntries() {
         stageSummary: '1 track',
         blockerCount: 0,
         trackCount: 1,
-        brandProfileId: song.brand_profile_id || null,
+        brandProfileId: singleProfileId,
+        brandProfileName: singleBrandProfile?.brand_name || singleProfileId || null,
         hyperfollowUrl,
         distributionStatus: song.distribution_status || song.status || null,
+        starred: Boolean(song.starred),
         updatedAt: song.updated_at || song.created_at,
       };
     });
