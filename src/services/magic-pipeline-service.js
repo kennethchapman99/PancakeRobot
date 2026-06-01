@@ -13,6 +13,16 @@ import {
   resolveBrandProfilePath,
 } from '../shared/brand-profile.js';
 import { buildReleaseSelectionRevisionBrief } from '../lib/release-selection/regeneration-brief.js';
+import {
+  normalizeSongGenerationMode,
+  getSongGenerationModeConfig,
+  checkPhaseBudget,
+} from '../shared/generation-cost-config.js';
+import {
+  makeBrandInterpretationSignature,
+  getCachedBrandInterpretation,
+  setCachedBrandInterpretation,
+} from '../shared/brand-interpretation-cache.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '../..');
@@ -23,6 +33,8 @@ export const MAGIC_PIPELINE_STAGES = Object.freeze({
   SONG_ONLY: 'song_only',
   FULL: 'full',
 });
+
+export { normalizeSongGenerationMode, getSongGenerationModeConfig, SONG_GENERATION_MODE_CONFIG } from '../shared/generation-cost-config.js';
 
 export function normalizeMagicPipelineStage(value = process.env.MAGIC_PIPELINE_STAGE || process.env.MAGIC_SONG_PIPELINE_STAGE || MAGIC_PIPELINE_STAGES.SONG_ONLY) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -52,6 +64,7 @@ async function runMagicPipelineServiceInner({
   brandId = process.env.DEFAULT_BRAND_ID || DEFAULT_PROFILE_ID,
   mode = 'human_review',
   pipelineStage = process.env.MAGIC_PIPELINE_STAGE || process.env.MAGIC_SONG_PIPELINE_STAGE || MAGIC_PIPELINE_STAGES.SONG_ONLY,
+  generationMode = process.env.SONG_GENERATION_MODE || 'standard',
   allowRegeneration = false,
   albumContext = null,
   priorTracks = [],
@@ -61,11 +74,32 @@ async function runMagicPipelineServiceInner({
   const cleanTopic = String(topic || '').trim();
   if (!cleanTopic) throw new Error('Magic pipeline requires a topic');
 
+  const cleanGenerationMode = normalizeSongGenerationMode(generationMode);
+  const modeConfig = getSongGenerationModeConfig(cleanGenerationMode);
+
   const cleanPipelineStage = normalizeMagicPipelineStage(pipelineStage);
   const songOnlyGate = cleanPipelineStage === MAGIC_PIPELINE_STAGES.SONG_ONLY;
   const cleanBrandId = String(brandId || DEFAULT_PROFILE_ID).trim();
   const brandProfilePath = resolveBrandProfilePath(cleanBrandId);
   const brandProfile = loadBrandProfileById(cleanBrandId);
+
+  // Brand interpretation cache: reuse across calls for the same brand+revision.
+  const brandSignature = makeBrandInterpretationSignature(brandProfile);
+  let brandInterpretationFromCache = !!getCachedBrandInterpretation(cleanBrandId, brandSignature);
+  if (!brandInterpretationFromCache) {
+    setCachedBrandInterpretation(cleanBrandId, brandSignature, {
+      brand_profile_id: cleanBrandId,
+      signature: brandSignature,
+      summary: {
+        brand_name: brandProfile.brand_name,
+        character_name: brandProfile.character?.name || null,
+        music: brandProfile.music || null,
+        songwriting: brandProfile.songwriting || null,
+        audience: brandProfile.audience || null,
+        lyrics: brandProfile.lyrics || null,
+      },
+    });
+  }
   const defaultDistributor = brandProfile.distribution?.default_distributor || null;
   const appTitle = brandProfile.app_title || brandProfile.brand_name || 'Music Pipeline';
   const runToken = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -91,6 +125,7 @@ async function runMagicPipelineServiceInner({
       ? 'Flow: create song/audio only → stop for human review before scoring, packaging, release assets, social, or publishing\n'
       : 'Flow: create → score advisory → improve once if useful → finalize usable generated songs for human review\n'
     ));
+    logger.log(chalk.dim(`Generation mode: ${cleanGenerationMode} (${modeConfig.label}) — est. max cost $${modeConfig.estimatedMaxCostUsd.toFixed(2)}${brandInterpretationFromCache ? ' · brand interpretation cached' : ''}\n`));
 
     const songId = existingSongId || createMagicSongId();
     const songDir = join(ROOT_DIR, `output/songs/${songId}`);
@@ -129,6 +164,7 @@ async function runMagicPipelineServiceInner({
       emit,
       modules,
       brandId: cleanBrandId,
+      modeConfig,
     });
     totalCost = firstPass.totalCost;
 
@@ -256,6 +292,7 @@ async function runMagicPipelineServiceInner({
           emit,
           modules,
           brandId: cleanBrandId,
+          modeConfig,
         });
         totalCost = secondPass.totalCost;
         finalPass = secondPass;
@@ -421,6 +458,7 @@ async function runSongBuildPass({
   emit,
   modules,
   brandId,
+  modeConfig = null,
 }) {
   let lyricsResult;
 
@@ -439,21 +477,30 @@ async function runSongBuildPass({
       existingLyrics,
       albumContext,
       priorTracks,
+      maxTokensOverride: modeConfig?.lyricistMaxTokens ?? null,
+      modelOverride: modeConfig?.lyricistModel ?? null,
+      skipPerformanceBrief: modeConfig?.skipPerformanceBrief ?? false,
     });
     totalCost += lyricsResult.costUsd || 0;
   }
 
-  await emit({ type: 'pipeline_progress', stage: 'brand_review', line: `${passLabel}: Brand review` });
-  logger.log(chalk.bold(`\n📌 ${passLabel}: Brand review...\n`));
-  const brandReview = await modules.reviewSong({
-    songId,
-    title: lyricsResult.title,
-    topic,
-    lyricsText: lyricsResult.lyricsText,
-    audioPromptText: lyricsResult.audioPromptText,
-  });
-  totalCost += brandReview.costUsd || 0;
-  logger.log(`\nBrand Score: ${chalk.bold(brandReview.scores?.overall || 0)}/100`);
+  let brandReview;
+  if (modeConfig?.skipBrandReview) {
+    logger.log(chalk.dim(`\n📌 ${passLabel}: Brand review skipped (${modeConfig.label} mode)\n`));
+    brandReview = { scores: { overall: null }, approved: true, revision_notes: '', skipped: true };
+  } else {
+    await emit({ type: 'pipeline_progress', stage: 'brand_review', line: `${passLabel}: Brand review` });
+    logger.log(chalk.bold(`\n📌 ${passLabel}: Brand review...\n`));
+    brandReview = await modules.reviewSong({
+      songId,
+      title: lyricsResult.title,
+      topic,
+      lyricsText: lyricsResult.lyricsText,
+      audioPromptText: lyricsResult.audioPromptText,
+    });
+    totalCost += brandReview.costUsd || 0;
+    logger.log(`\nBrand Score: ${chalk.bold(brandReview.scores?.overall || 0)}/100`);
+  }
 
   persistSongState({
     songId,
@@ -501,8 +548,11 @@ async function runSongBuildPass({
   });
 
   if (musicResult.audioFiles?.length > 0) {
-    const reuseNote = musicResult.skipped_existing_audio ? ' (reused existing)' : '';
-    logger.log(chalk.green(`✓ Music generated: ${musicResult.audioFiles.length} audio file(s)${reuseNote}`));
+    if (musicResult.skipped_existing_audio) {
+      logger.log(chalk.green(`✓ Music: reused existing audio (${musicResult.audioFiles.length} file(s)) — MiniMax billing prevented`));
+    } else {
+      logger.log(chalk.green(`✓ Music generated: ${musicResult.audioFiles.length} audio file(s)`));
+    }
   } else if (musicResult.skipped || musicResult.apiError) {
     logger.log(chalk.yellow('⚠ Music generation skipped — manual instructions saved to audio/MUSIC_GENERATION_INSTRUCTIONS.md'));
     if (musicResult.apiError) {

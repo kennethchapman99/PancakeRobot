@@ -6,9 +6,15 @@
  *
  * Safety invariants:
  *   - Profiles are never overwritten without an explicit applyPatch() call.
- *   - Candidate generation is text-only by default; no paid audio renders.
+ *   - Candidate generation is text-only; no audio generation whatsoever.
+ *   - Analyze mode accepts uploaded audio for analysis only; never generates new audio.
+ *   - Tune mode proposes text patches only; never generates new audio.
  *   - Real artist names are stripped from all generation-facing fields.
  *   - Patches validate before applying.
+ *
+ * Audio generation contract: Brand Doctor NEVER calls MiniMax or any paid audio
+ * render API.  Any future change that would add audio generation MUST go through
+ * the confirmPaidRerender=true guard defined in the music generation module.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -459,7 +465,7 @@ export async function proposePatch(sessionId) {
   const systemPrompt = buildPatchSystemPrompt();
   const userPrompt = buildPatchUserPrompt(session, profile);
 
-  const rawText = await callClaude(systemPrompt, userPrompt, 8000, 'brand-doctor-patch');
+  const rawText = await callClaude(systemPrompt, userPrompt, 8000, 'brand-doctor-patch', 'claude-sonnet-4-6');
   const { patch, explanation } = parsePatchJson(rawText);
 
   const safePatch = stripRealArtistNamesFromPatch(patch);
@@ -777,7 +783,7 @@ Return a JSON array, one entry per song:
 
 Return the JSON array only.`;
 
-  const rawText = await callClaude(systemPrompt, userPrompt, 6000, 'brand-doctor-analysis');
+  const rawText = await callClaude(systemPrompt, userPrompt, 6000, 'brand-doctor-analysis', 'claude-sonnet-4-6');
   const cleaned = rawText.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
   const implications = JSON.parse(cleaned);
 
@@ -795,14 +801,14 @@ Return the JSON array only.`;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function callClaude(systemPrompt, userPrompt, maxTokens, agentLabel) {
+async function callClaude(systemPrompt, userPrompt, maxTokens, agentLabel, model = 'claude-haiku-4-5-20251001') {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error(`${agentLabel}: ANTHROPIC_API_KEY is not set`);
   }
 
   const client = getClient();
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model,
     max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],

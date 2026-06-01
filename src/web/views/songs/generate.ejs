@@ -11,12 +11,26 @@ window.pipelineData = function() {
     eventSource: null,
     renderMode: 'paid',
     pipelineMode: 'magic',
+    costMode: 'standard',
+
+    costModeConfig: <%- JSON.stringify(songGenerationModeConfig) %>,
 
     init() {
       const params = new URLSearchParams(window.location.search);
       this.renderMode = params.get('renderMode') === 'free' ? 'free' : 'paid';
       this.pipelineMode = params.get('pipelineMode') === 'standard' ? 'standard' : 'magic';
+      const cm = params.get('costMode');
+      if (cm && this.costModeConfig[cm]) this.costMode = cm;
       if (params.get('autoStart') === '1') this.startPipeline();
+    },
+
+    setCostMode(mode) {
+      if (this.state === 'running') return;
+      if (!this.costModeConfig[mode]) return;
+      this.costMode = mode;
+      const url = new URL(window.location.href);
+      url.searchParams.set('costMode', this.costMode);
+      window.history.replaceState({}, '', url.toString());
     },
 
     setRenderMode(mode) {
@@ -45,13 +59,14 @@ window.pipelineData = function() {
         const res = await fetch('/api/songs/<%= song.id %>/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ renderMode: this.renderMode, pipelineMode: this.pipelineMode })
+          body: JSON.stringify({ renderMode: this.renderMode, pipelineMode: this.pipelineMode, costMode: this.costMode })
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Failed to start pipeline');
         this.jobId = data.jobId;
         this.logs.push(`🪄 Pipeline mode: ${this.pipelineMode === 'magic' ? 'MAGIC PIPELINE / auto-improve once + auto-marketing on publish score' : 'STANDARD PIPELINE / classic generate flow'}`);
-        this.logs.push(`🎛 Render mode selected: ${this.renderMode === 'free' ? 'FREE audition / music-2.6-free' : 'PAID production / music-2.6'}`);
+        this.logs.push(`🎛 Render mode: ${this.renderMode === 'free' ? 'FREE audition / music-2.6-free' : 'PAID production / music-2.6'}`);
+        this.logs.push(`💰 Generation mode: ${this.costMode} — est. max cost $${(this.costModeConfig[this.costMode]?.estimatedMaxCostUsd || 0).toFixed(2)}`);
         this.listenToStream(data.jobId);
       } catch (err) {
         this.state = 'error';
@@ -122,6 +137,19 @@ window.pipelineData = function() {
         ? 'Create the song, run A&R scoring, spend at most one regeneration, and auto-build marketing assets only if it clears publish threshold.'
         : 'Run the existing song pipeline and stop at the normal review/approval flow.';
     },
+
+    get costModeLabel() {
+      const cfg = this.costModeConfig[this.costMode];
+      return cfg ? `${cfg.label} — est. max $${cfg.estimatedMaxCostUsd.toFixed(2)}` : this.costMode;
+    },
+
+    get costModeDescription() {
+      return this.costModeConfig[this.costMode]?.description || '';
+    },
+
+    get isPremiumMode() {
+      return this.costMode === 'premium';
+    },
   };
 };
 </script>
@@ -178,6 +206,38 @@ window.pipelineData = function() {
           🧪 Free
         </button>
       </div>
+    </div>
+
+    <!-- Cost mode selector -->
+    <div class="flex items-center justify-between gap-4 border-t border-zinc-100 pt-4 mt-4">
+      <div>
+        <div class="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1">Generation Mode</div>
+        <div class="text-base font-bold text-zinc-900" x-text="costModeLabel"></div>
+        <div class="text-sm text-zinc-500 mt-1" x-text="costModeDescription"></div>
+      </div>
+      <div class="flex bg-zinc-100 rounded-xl p-1 shrink-0">
+        <button @click="setCostMode('draft')" :disabled="state === 'running'"
+          :class="costMode === 'draft' ? 'bg-sky-500 text-white shadow' : 'text-zinc-500 hover:text-zinc-800'"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50">
+          Draft
+        </button>
+        <button @click="setCostMode('standard')" :disabled="state === 'running'"
+          :class="costMode === 'standard' ? 'bg-zinc-900 text-white shadow' : 'text-zinc-500 hover:text-zinc-800'"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50">
+          Standard
+        </button>
+        <button @click="setCostMode('premium')" :disabled="state === 'running'"
+          :class="costMode === 'premium' ? 'bg-amber-500 text-white shadow' : 'text-zinc-500 hover:text-zinc-800'"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50">
+          Premium
+        </button>
+      </div>
+    </div>
+
+    <!-- Premium warning -->
+    <div x-show="isPremiumMode" class="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+      <span class="shrink-0 mt-0.5">⚠</span>
+      <span><strong>Premium mode</strong> uses the full token budget and runs every agent. Est. max cost $<%= (songGenerationModeConfig?.premium?.estimatedMaxCostUsd ?? 1.50).toFixed(2) %> — use only for final release candidates.</span>
     </div>
 
     <div class="mt-4 flex items-center gap-3">

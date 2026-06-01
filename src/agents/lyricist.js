@@ -51,14 +51,23 @@ export async function writeLyrics({
   albumContext = null,
   priorTracks = [],
   briefGenerator = generatePerformanceBrief,
+  maxTokensOverride = null,
+  modelOverride = null,
+  skipPerformanceBrief = false,
 }) {
+  const effectiveMaxTokens = readPositiveInt(maxTokensOverride, LYRICIST_MAX_TOKENS);
+  const effectiveDef = modelOverride && modelOverride !== LYRICIST_DEF.model
+    ? { ...LYRICIST_DEF, model: modelOverride, maxTokens: effectiveMaxTokens }
+    : { ...LYRICIST_DEF, maxTokens: effectiveMaxTokens };
+
   const songDir = join(__dirname, `../../output/songs/${songId}`);
   fs.mkdirSync(songDir, { recursive: true });
 
   // Generate hidden performance brief when the profile has enriched fields.
+  // Skipped in cost-saving modes (draft) via skipPerformanceBrief=true.
   let performanceBrief = null;
   let briefCostUsd = 0;
-  if (hasEnrichedPerformanceFields(BRAND_PROFILE)) {
+  if (!skipPerformanceBrief && hasEnrichedPerformanceFields(BRAND_PROFILE)) {
     try {
       const briefResult = await briefGenerator({
         brandProfile: BRAND_PROFILE,
@@ -81,7 +90,7 @@ export async function writeLyrics({
 
   for (let attempt = 1; attempt <= LYRICIST_MAX_ATTEMPTS; attempt++) {
     const lyricsTask = buildLyricsTask({ topic, researchReport, revisionNotes: qaRevisionNotes, existingLyrics, performanceBrief });
-    result = await runAgent('lyricist', LYRICIST_DEF, lyricsTask, { maxTokens: LYRICIST_MAX_TOKENS, maxRetries: 1, retryDelayMs: LYRICIST_RETRY_DELAY_MS });
+    result = await runAgent('lyricist', effectiveDef, lyricsTask, { maxTokens: effectiveMaxTokens, maxRetries: 1, retryDelayMs: LYRICIST_RETRY_DELAY_MS });
     let parsedSongData;
     try { parsedSongData = parseAgentJson(result.text); }
     catch (err) {

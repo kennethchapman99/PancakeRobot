@@ -115,6 +115,11 @@ import {
   resumeAlbumBatch,
   runAlbumBatch,
 } from '../services/album-batch-service.js';
+import {
+  normalizeSongGenerationMode,
+  getSongGenerationModeConfig,
+  SONG_GENERATION_MODE_CONFIG,
+} from '../shared/generation-cost-config.js';
 import { getAllAlbums, getAlbum, getSongsForAlbum } from '../shared/db.js';
 import { removeSongsFromAlbum } from '../shared/album-track-membership.js';
 import {
@@ -1538,7 +1543,12 @@ app.get('/songs/:id/generate', (req, res) => {
   const song = getSong(req.params.id);
   if (!song) return res.status(404).render('404', { message: 'Song not found' });
   const job = req.query.job ? pipelineJobs.get(req.query.job) : null;
-  res.render('songs/generate', { song, jobId: req.query.job || null, job: job || null });
+  res.render('songs/generate', {
+    song,
+    jobId: req.query.job || null,
+    job: job || null,
+    songGenerationModeConfig: SONG_GENERATION_MODE_CONFIG,
+  });
 });
 
 // POST: spawn the orchestrator pipeline for a song
@@ -1551,6 +1561,7 @@ app.post('/api/songs/:id/generate', (req, res) => {
   const topic = song.topic || song.title || `${generationProfile.profile.music.default_style} song`;
   const pipelineMode = String(req.body?.pipelineMode || 'standard').trim().toLowerCase() === 'magic' ? 'magic' : 'standard';
   const pipelineFlag = pipelineMode === 'magic' ? '--magic' : '--new';
+  const songGenerationMode = normalizeSongGenerationMode(req.body?.costMode || 'standard');
 
   const spawnedProfileId = generationProfile.id;
   pipelineJobs.set(jobId, {
@@ -1558,6 +1569,7 @@ app.post('/api/songs/:id/generate', (req, res) => {
     logs: [],
     songId: song.id,
     pipelineMode,
+    songGenerationMode,
     spawnedProfileId,
     error: null,
     startedAt: Date.now(),
@@ -1573,6 +1585,7 @@ app.post('/api/songs/:id/generate', (req, res) => {
       REGENERATE_FROM_EXISTING: '1',
       FORCE_COLOR: '0',
       BRAND_PROFILE_PATH: activeProfilePath,
+      SONG_GENERATION_MODE: songGenerationMode,
     },
   });
 
