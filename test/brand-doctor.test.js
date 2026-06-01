@@ -459,6 +459,82 @@ test('15. Marketing nav removed from layout; /marketing redirects to /releases',
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 17. Server startup log does not reference undefined APP_TITLE constant
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('17. server.js startup log uses a literal string, not an undefined APP_TITLE constant', () => {
+  const serverSource = fs.readFileSync(
+    path.join(repoRoot, 'src/web/server.js'), 'utf8'
+  );
+
+  // APP_TITLE must not appear as a bare identifier anywhere in the file
+  // (it was removed from the module-level constants; references would be ReferenceErrors)
+  assert.ok(
+    !serverSource.includes('APP_TITLE'),
+    'APP_TITLE is not referenced in server.js (would be ReferenceError at startup)'
+  );
+
+  // The startup log must be present and use a string literal
+  assert.ok(
+    serverSource.includes("console.log(`\\nFigment Factory UI running at http://localhost:"),
+    'Startup log uses hardcoded Figment Factory string'
+  );
+
+  // getActiveBrandConfig replaces the old frozen constant pattern
+  assert.ok(
+    serverSource.includes('getActiveBrandConfig()'),
+    'getActiveBrandConfig() helper present for dynamic per-request profile loading'
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 18. Brand Doctor analyze route rejects missing audio with a useful 400 response
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('18. Brand Doctor router rejects empty audio submission; analyzeAudio throws on empty paths', async () => {
+  // Static check: route handler guards against zero files
+  const routerSource = fs.readFileSync(
+    path.join(repoRoot, 'src/web/brand-doctor/router.js'), 'utf8'
+  );
+  assert.ok(
+    routerSource.includes("'No audio files provided'"),
+    "Router returns 'No audio files provided' when no files uploaded"
+  );
+  assert.ok(
+    routerSource.includes('status(400)'),
+    'Router responds with HTTP 400 for missing audio'
+  );
+
+  // Service-level: analyzeAudio throws clearly when called with empty array
+  const session = trackSession(createSession({ brandId: TEST_PROFILE_ID, mode: BRAND_DOCTOR_MODES.ANALYZE }));
+  await assert.rejects(
+    () => analyzeAudio(session.id, []),
+    /audioPaths must be a non-empty array/i,
+    'analyzeAudio throws descriptive error on empty paths array'
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 19. analyzeAudio with a non-existent file returns structured error, does not crash
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('19. analyzeAudio with missing file path returns ok:false entry, does not throw', async () => {
+  const session = trackSession(createSession({ brandId: TEST_PROFILE_ID, mode: BRAND_DOCTOR_MODES.ANALYZE }));
+  const fakePath = path.join(repoRoot, 'artifacts/brand-doctor/__nonexistent_test_file__.mp3');
+
+  const result = await analyzeAudio(session.id, [fakePath]);
+
+  assert.ok(Array.isArray(result.audioAnalyses), 'audioAnalyses is array');
+  assert.equal(result.audioAnalyses.length, 1, 'One entry for the attempted file');
+
+  const entry = result.audioAnalyses[0];
+  assert.equal(entry.raw.ok, false, 'raw.ok is false for missing file');
+  assert.ok(typeof entry.raw.error === 'string', 'raw.error is a string');
+  assert.ok(entry.raw.error.length > 0, 'raw.error is non-empty');
+  assert.equal(result.status, SESSION_STATUS.AUDIO_ANALYZED, 'Session still transitions to audio_analyzed');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 16. Release Cockpit still loads and is unaffected
 // ═══════════════════════════════════════════════════════════════════════════════
 
