@@ -7,6 +7,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNTIME_DIR="${PANCAKE_RUNTIME_DIR:-$ROOT_DIR/.pancake-runtime}"
 cd "$ROOT_DIR"
 
+# Zscaler TLS inspection re-signs HTTPS with a root Node doesn't ship. Point Node at
+# the exported Zscaler root so the web server and every pipeline child it spawns can
+# reach the Anthropic API regardless of which shell launched the wrapper.
+if [ -z "${NODE_EXTRA_CA_CERTS:-}" ] && [ -f "$HOME/.certs/zscaler-root.pem" ]; then
+  export NODE_EXTRA_CA_CERTS="$HOME/.certs/zscaler-root.pem"
+fi
+
 cmd="${1:-web}"
 shift || true
 
