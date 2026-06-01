@@ -135,27 +135,25 @@ async function fetchDetailHtml(releaseType, releaseId) {
 }
 
 // 1. Album release detail page renders the Browsy DistroKid workflow panel with every control.
-test('album release detail renders the Browsy DistroKid workflow panel with all lifecycle controls', async () => {
+test('album release detail renders compact Browsy Record Automation entrypoint', async () => {
   const albumId = seedAlbum();
   seedRecording('album', albumId, { contract: completeContract('distrokid-album-submit') });
   const html = await fetchDetailHtml('album', albumId);
 
   assert.match(html, /data-distrokid-browsy-panel/);
-  assert.match(html, /Browsy DistroKid workflow/);
-  assert.match(html, /pancake-robot\.distrokid-album-submit/);
+  assert.match(html, /Browsy automation/);
   assert.match(html, /data-distrokid-browsy-readiness/);
-  // Authoring starts in the setup wizard; the cockpit no longer blindly launches the recorder.
-  assert.match(html, /Open Automation Setup Wizard/);
+  assert.match(html, />Record Automation<\/button>/);
+  assert.match(html, /Release payload readiness/);
   assert.doesNotMatch(html, /Start Recording Browser/);
   assert.doesNotMatch(html, /<button[^>]*>Launch Recorder<\/button>/);
-  assert.match(html, /Stop Recording/);
-  assert.match(html, /Import Recording/);
-  assert.match(html, /Refresh Contract/);
-  assert.match(html, /View Contract/);
-  assert.match(html, /Run Preview/);
-  assert.match(html, /Run Live/);
-  // Payload readiness shown separately from contract readiness.
-  assert.match(html, /Release payload readiness/);
+  assert.doesNotMatch(html, />Stop Recording<\/button>/);
+  assert.doesNotMatch(html, />Import Recording<\/button>/);
+  assert.doesNotMatch(html, />Refresh Contract<\/button>/);
+  assert.doesNotMatch(html, />View Contract<\/a>/);
+  assert.doesNotMatch(html, />Run Preview<\/button>/);
+  assert.doesNotMatch(html, />Run Live<\/button>/);
+  assert.doesNotMatch(html, /Advanced Browsy recording diagnostics/);
 });
 
 // 2. Legacy local preview card has been removed from the DistroKid section.
@@ -183,9 +181,8 @@ test('scaffold-only contract is labelled distinctly with Run Live disabled but V
 
   const html = await fetchDetailHtml('single', songId);
   assert.match(html, /scaffold-only/);
-  assert.match(html, /data-distrokid-browsy-run-live[^>]*disabled/);
-  assert.match(html, /Refresh Contract/);
-  assert.match(html, /View Contract/);
+  assert.doesNotMatch(html, /data-distrokid-browsy-run-live/);
+  assert.match(html, />Record Automation<\/button>/);
 });
 
 // 4. Ready contract state enables Preview but keeps Run Live gated until preview passes.
@@ -200,7 +197,8 @@ test('ready contract enables Preview and keeps Run Live gated until preview pass
   assert.match(wf.nextStep.headline, /Workflow contract is ready/);
 
   const html = await fetchDetailHtml('single', songId);
-  assert.match(html, /data-distrokid-browsy-run-live[^>]*disabled/);
+  assert.doesNotMatch(html, /data-distrokid-browsy-run-live/);
+  assert.match(html, />Record Automation<\/button>/);
 });
 
 // 5. Missing + incomplete contract states.
@@ -216,9 +214,10 @@ test('missing state shows clear message and disabled Run Live', async () => {
 
   const html = await fetchDetailHtml('single', songId);
   assert.match(html, /DistroKid Album Submit automation is not ready/);
-  assert.match(html, /View Contract/);
-  assert.match(html, /Refresh Contract/);
-  assert.match(html, /data-distrokid-browsy-run-live[^>]*disabled/);
+  assert.doesNotMatch(html, />View Contract<\/a>/);
+  assert.doesNotMatch(html, />Refresh Contract<\/button>/);
+  assert.doesNotMatch(html, /data-distrokid-browsy-run-live/);
+  assert.match(html, />Record Automation<\/button>/);
 });
 
 test('incomplete contract lists the missing pieces and keeps Run Live disabled', async () => {
@@ -232,11 +231,8 @@ test('incomplete contract lists the missing pieces and keeps Run Live disabled',
 
   const html = await fetchDetailHtml('single', songId);
   assert.match(html, /Workflow exists but is missing required contract pieces/);
-  assert.match(html, /data-distrokid-browsy-run-live[^>]*disabled/);
-  // Missing pieces rendered as bullet list.
-  for (const area of wf.missingAreas) {
-    assert.ok(html.includes(area), `expected missing area "${area}" in HTML`);
-  }
+  assert.doesNotMatch(html, /data-distrokid-browsy-run-live/);
+  assert.match(html, />Record Automation<\/button>/);
 });
 
 // 6. Failed + unavailable states.
@@ -254,7 +250,7 @@ test('failed recording surfaces the error and a failed readiness state', async (
 
   const html = await fetchDetailHtml('single', songId);
   assert.match(html, /bad selector/);
-  assert.match(html, /data-distrokid-browsy-run-live[^>]*disabled/);
+  assert.doesNotMatch(html, /data-distrokid-browsy-run-live/);
 });
 
 test('unreachable Browsy surfaces an unavailable status, not a blank cockpit', async () => {
@@ -291,7 +287,7 @@ test('recording lifecycle states map to the correct next-step guidance', () => {
 });
 
 // 7. Recording lifecycle buttons route correctly.
-test('lifecycle buttons post to the expected magic-release routes', async () => {
+test('normal release page hides legacy Browsy lifecycle routes and posts Record Automation route', async () => {
   const songId = seedSong();
   const recId = `RBREC_TEST_${Date.now()}`;
   const { campaignId, submitTask } = seedCampaign('single', songId);
@@ -307,13 +303,14 @@ test('lifecycle buttons post to the expected magic-release routes', async () => 
   });
   const html = await fetchDetailHtml('single', songId);
   const base = `/releases/single/${songId}/magic-release`;
-  assert.ok(html.includes(`/releases/single/${songId}/automation-setup`), 'setup wizard route');
-  assert.ok(html.includes(`action="${base}/recordings/${recId}/launch"`), 'launch route');
-  assert.ok(html.includes(`action="${base}/recordings/${recId}/stop"`), 'stop route');
-  assert.ok(html.includes(`action="${base}/recordings/${recId}/import"`), 'import route');
-  assert.ok(html.includes(`action="${base}/recordings/refresh-contract"`), 'refresh-contract route');
-  assert.ok(html.includes(`${base}/recordings/contract?workflow_id=`), 'view-contract route');
-  assert.ok(html.includes(`action="${base}/tasks/${SUBMIT_TASK}/run"`), 'run route');
+  assert.ok(html.includes(`action="${base}/record-automation"`), 'record automation route');
+  assert.ok(!html.includes(`/releases/single/${songId}/automation-setup`), 'setup wizard route hidden');
+  assert.ok(!html.includes(`action="${base}/recordings/${recId}/launch"`), 'launch route hidden');
+  assert.ok(!html.includes(`action="${base}/recordings/${recId}/stop"`), 'stop route hidden');
+  assert.ok(!html.includes(`action="${base}/recordings/${recId}/import"`), 'import route hidden');
+  assert.ok(!html.includes(`action="${base}/recordings/refresh-contract"`), 'refresh-contract route hidden');
+  assert.ok(!html.includes(`${base}/recordings/contract?workflow_id=`), 'view-contract route hidden');
+  assert.ok(!html.includes(`action="${base}/tasks/${SUBMIT_TASK}/run"`), 'run route hidden');
 });
 
 // 8. Object-style logging regression — failed launch via HTTP writes a correctly-keyed cockpit log.

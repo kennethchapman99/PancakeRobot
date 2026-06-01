@@ -220,6 +220,8 @@ export async function startBrowsyRecordingSession({
   fileBindings,
   expectedOutputs,
   humanCheckpoints,
+  completionPolicy,
+  writebackTargets,
   callbackMetadata,
   recorderUrl,
   callbackUrl,
@@ -246,6 +248,8 @@ export async function startBrowsyRecordingSession({
     fileBindings,
     expectedOutputs,
     humanCheckpoints,
+    completionPolicy,
+    writebackTargets,
     callbackMetadata,
     recorderUrl: clean(recorderUrl) || undefined,
     callbackUrl: clean(callbackUrl) || undefined,
@@ -531,12 +535,25 @@ function normalizeRecordingResponse(result, defaultError) {
   }
   const json = result.json || {};
   const recording = json.recording || json;
+  const wizardUrl = clean(json.recordAutomationControl?.href)
+    || clean(json.wizardUrl)
+    || clean(recording.wizardUrl)
+    || null;
+  const recordAutomationControl = json.recordAutomationControl
+    ? {
+        label: clean(json.recordAutomationControl.label) || 'Record Automation',
+        href: clean(json.recordAutomationControl.href) || wizardUrl,
+        action: clean(json.recordAutomationControl.action) || 'open_browsy_new_automation_wizard',
+      }
+    : (wizardUrl ? { label: 'Record Automation', href: wizardUrl, action: 'open_browsy_new_automation_wizard' } : null);
   return {
     ok: true,
     reachable: true,
     status: result.status,
-    recordingSessionId: recording.recordingSessionId || null,
+    recordingSessionId: recording.recordingSessionId || json.recordingSessionId || null,
     recording,
+    wizardUrl,
+    recordAutomationControl,
     active: json.active || null,
     launch: json.launch || recording.launch || null,
     runtime: json.runtime || null,

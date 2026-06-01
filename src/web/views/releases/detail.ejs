@@ -42,6 +42,7 @@
   }[level] || 'border-sky-200 bg-sky-50 text-sky-900');
   const manualHyperfollowFormAction = `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}/actions/hyperfollow`;
   const runHistory = cockpit.runHistory || [];
+  const commandActions = cockpit.commandCenter.primaryActions.filter(action => !['preview', 'live_submit', 'browsy_dry_run'].includes(action.key));
 %>
 
 <div class="p-8 max-w-7xl">
@@ -104,7 +105,7 @@
       <div class="text-xs text-zinc-500">Disabled actions show the exact blocking reason.</div>
     </div>
     <div class="grid gap-3 lg:grid-cols-5">
-      <% cockpit.commandCenter.primaryActions.forEach(action => { %>
+      <% commandActions.forEach(action => { %>
         <form data-action-form method="POST" action="<%= action.url %>" data-confirm="<%= action.confirmation || '' %>">
           <% if (action.key === 'live_submit') { %><input type="hidden" name="confirm" value="true"><% } %>
           <button data-submit-label="Running…" <%= action.enabled ? '' : 'disabled' %> class="flex h-full w-full flex-col justify-between rounded-2xl border px-4 py-4 text-left text-sm font-bold shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-100 <%= buttonClass(action.label, action.enabled) %>">
@@ -217,37 +218,22 @@
                 <div data-distrokid-browsy-panel class="mt-3 rounded-2xl border-2 border-sky-300 bg-sky-50/40 p-4">
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">Primary</span>
-                    <h3 class="text-base font-bold text-zinc-900">Browsy DistroKid workflow</h3>
+                    <h3 class="text-base font-bold text-zinc-900">Browsy automation</h3>
                     <span class="text-xs font-semibold text-zinc-500">(<%= wf.workflowName %>)</span>
                     <span data-distrokid-browsy-readiness class="rounded-full px-2 py-0.5 text-[11px] font-semibold <%= wfBadge(wf.readinessLabel) %>"><%= wf.readinessLabel %></span>
                     <% if (wf.recordingStatus) { %><span class="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-zinc-500">recording: <%= wf.recordingStatus %></span><% } %>
-                    <% const authBadge = { authenticated: 'bg-emerald-100 text-emerald-700', recording_ready: 'bg-emerald-100 text-emerald-700', not_authenticated: 'bg-amber-100 text-amber-700', auth_expired: 'bg-amber-100 text-amber-700', auth_rejected: 'bg-rose-100 text-rose-700', launch_failed: 'bg-rose-100 text-rose-700' }[wf.authState] || 'bg-zinc-100 text-zinc-500'; %>
-                    <% if (wf.authState && wf.authState !== 'unknown') { %><span data-distrokid-browsy-auth-state class="rounded-full px-2 py-0.5 text-[11px] font-semibold <%= authBadge %>">auth: <%= wf.authStateLabel %></span><% } %>
                   </div>
-                  <div class="mt-1 text-xs text-zinc-500">Workflow ref <span class="font-semibold text-zinc-700"><%= wf.workflowRef %></span><% if (wf.importedWorkflowRef) { %> · imported <span class="font-semibold text-zinc-700 break-all"><%= wf.importedWorkflowRef %></span><% } %> · <%= wf.configured ? `Browsy ${wf.baseUrl}` : 'Browsy base URL not configured / unavailable' %></div>
+                  <div class="mt-1 text-xs text-zinc-500"><%= wf.configured ? `Browsy ${wf.baseUrl}` : 'Browsy unavailable or not configured' %></div>
 
                   <div class="mt-2 rounded-xl border px-3 py-2 text-sm <%= wfNote %>">
                     <div class="font-semibold"><%= wf.nextStep.headline %></div>
                     <% if (wf.nextStep.detail) { %><div class="mt-1 text-xs"><%= wf.nextStep.detail %></div><% } %>
-                    <% if ((wf.missingAreas || []).length) { %>
-                      <ul class="mt-2 space-y-1 text-xs">
-                        <% wf.missingAreas.forEach(area => { %><li>• <%= area %></li><% }) %>
-                      </ul>
-                    <% } %>
                   </div>
 
                   <% if (wf.lastError) { %><div class="mt-2 text-xs text-rose-700"><%= wf.lastError %></div><% } %>
 
-                  <div class="mt-3 flex flex-wrap gap-3 text-xs text-zinc-600">
-                    <span class="font-semibold text-zinc-500">Contract:</span>
-                    <span><strong><%= wf.counts.tabs %></strong> tabs</span>
-                    <span><strong><%= wf.counts.recordedSteps %></strong> steps</span>
-                    <span><strong><%= wf.counts.fileUploadBindings %></strong> uploads</span>
-                    <span><strong><%= wf.counts.humanApprovalCheckpoints %></strong> checkpoints</span>
-                  </div>
-
                   <div data-distrokid-payload-readiness class="mt-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600">
-                    <div class="font-semibold text-zinc-700">Release payload readiness <span class="text-zinc-400">(separate from workflow contract readiness)</span></div>
+                    <div class="font-semibold text-zinc-700">Release payload readiness</div>
                     <div class="mt-1 flex flex-wrap gap-3">
                       <% wf.payloadReadiness.indicators.forEach(ind => { %>
                         <span class="<%= ind.ok ? 'text-emerald-700' : 'text-rose-700' %>"><%= ind.ok ? '✓' : '✗' %> <%= ind.label %></span>
@@ -257,50 +243,16 @@
                   </div>
 
                   <div class="mt-3 flex flex-wrap gap-2">
-                    <a href="<%= wfBase %>/recordings/contract?workflow_id=<%= encodeURIComponent(wf.workflowId) %>" target="_blank" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-900">View Contract</a>
-                    <form data-action-form method="POST" action="<%= wfBase %>/recordings/refresh-contract">
+                    <% if (wf.wizardUrl) { %>
+                      <a href="<%= wf.wizardUrl %>" target="_blank" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-900">Open Existing Recording</a>
+                    <% } %>
+                    <form data-action-form method="POST" action="<%= wfBase %>/record-automation">
                       <input type="hidden" name="task_key" value="<%= wf.taskKey %>">
-                      <button data-submit-label="Refreshing…" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-900">Refresh Contract</button>
-                    </form>
-                    <a href="<%= wf.setupWizardUrl %>" class="rounded-xl border border-sky-300 bg-sky-600 px-3 py-2 text-xs font-bold text-white">Open Automation Setup Wizard</a>
-                    <% if (wf.needsAuthSetup) { %>
-                      <form data-action-form method="POST" action="<%= wfBase %>/recordings/auth-setup">
-                        <input type="hidden" name="task_key" value="<%= wf.taskKey %>">
-                        <button data-distrokid-browsy-auth-setup data-submit-label="Opening…" class="rounded-xl border border-amber-300 bg-amber-500 px-3 py-2 text-xs font-bold text-white">Authenticate DistroKid (Open Auth Browser)</button>
-                      </form>
-                      <form data-action-form method="POST" action="<%= wfBase %>/recordings/verify-auth">
-                        <input type="hidden" name="task_key" value="<%= wf.taskKey %>">
-                        <button data-distrokid-browsy-verify-auth data-submit-label="Verifying…" class="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-700">Verify Auth</button>
-                      </form>
-                    <% } %>
-                    <% if (wf.hasRecording && wf.recordingId) { %>
-                      <% if (wf.relaunchNeeded) { %>
-                        <form data-action-form method="POST" action="<%= wfBase %>/recordings/<%= encodeURIComponent(wf.recordingId) %>/launch">
-                          <button data-distrokid-browsy-relaunch data-submit-label="Relaunching…" class="rounded-xl border border-sky-300 bg-white px-3 py-2 text-xs font-bold text-sky-700">Relaunch Recorder</button>
-                        </form>
-                      <% } %>
-                      <% if (wf.wizardUrl) { %><a href="<%= wf.wizardUrl %>" target="_blank" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-900">Open Browsy Session (advanced)</a><% } %>
-                      <form data-action-form method="POST" action="<%= wfBase %>/recordings/<%= encodeURIComponent(wf.recordingId) %>/stop">
-                        <button data-submit-label="Stopping…" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-900">Stop Recording</button>
-                      </form>
-                      <form data-action-form method="POST" action="<%= wfBase %>/recordings/<%= encodeURIComponent(wf.recordingId) %>/import" data-confirm="Import/replace the published Browsy workflow contract from this recording?">
-                        <button data-submit-label="Importing…" class="rounded-xl border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Import Recording</button>
-                      </form>
-                    <% } else { %>
-                      <button type="button" disabled class="rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-xs font-bold text-zinc-400 cursor-not-allowed">Stop Recording</button>
-                      <button type="button" disabled class="rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-xs font-bold text-zinc-400 cursor-not-allowed">Import Recording</button>
-                    <% } %>
-                    <form data-action-form method="POST" action="<%= wfBase %>/tasks/<%= encodeURIComponent(wf.taskKey) %>/run">
-                      <input type="hidden" name="dry_run" value="true">
-                      <button data-submit-label="Running…" <%= wf.runPreviewEnabled ? '' : 'disabled' %> class="rounded-xl border px-3 py-2 text-xs font-bold <%= wf.runPreviewEnabled ? 'border-zinc-300 bg-white text-zinc-900' : 'border-zinc-200 bg-zinc-100 text-zinc-400 cursor-not-allowed' %>">Run Preview</button>
-                    </form>
-                    <form data-action-form method="POST" action="<%= wfBase %>/tasks/<%= encodeURIComponent(wf.taskKey) %>/run" data-confirm="<%= wf.ready ? 'Run the live Browsy DistroKid workflow? It still stops at the human submit gate.' : 'This workflow has no ready contract yet — the run will be blocked. Continue?' %>">
-                      <input type="hidden" name="dry_run" value="false">
-                      <button data-distrokid-browsy-run-live data-submit-label="Running…" <%= wf.runLiveEnabled ? '' : 'disabled' %> class="rounded-xl border px-3 py-2 text-xs font-bold <%= wf.runLiveEnabled ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-zinc-200 bg-zinc-100 text-zinc-400 cursor-not-allowed' %>">Run Live</button>
+                      <button data-submit-label="Opening…" class="rounded-xl border border-sky-300 bg-sky-600 px-3 py-2 text-xs font-bold text-white">Record Automation</button>
                     </form>
                   </div>
                   <% if (!wf.ready) { %>
-                    <div class="mt-2 text-xs text-zinc-500">Run Preview is disabled until an imported workflow has meaningful actions. Run Live is disabled until preview passes and live approval requirements are satisfied.</div>
+                    <div class="mt-2 text-xs text-zinc-500">No live automation can run until Browsy has a reusable, verified workflow contract. Record the workflow first.</div>
                   <% } %>
                 </div>
               <% } %>
@@ -347,7 +299,7 @@
     </div>
   </section>
 
-  <% if (cockpit.browsyRecordings && (cockpit.browsyRecordings.items || []).length) { %>
+  <% if (showBrowsyDebug && cockpit.browsyRecordings && (cockpit.browsyRecordings.items || []).length) { %>
     <% const recBase = `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}/magic-release`; %>
     <% function recBadge(sev) {
          if (sev === 'ready') return 'rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700';

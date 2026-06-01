@@ -41,6 +41,7 @@ const {
 } = await import('../src/shared/magic-release.js');
 const {
   buildBrowsyRecordingSpecForTask,
+  ensureMagicReleaseBrowsyRecordAutomation,
   importMagicReleaseBrowsyRecording,
   launchMagicReleaseBrowsyRecording,
   listMagicReleaseBrowsyRecordings,
@@ -115,6 +116,8 @@ function startFakeBrowsy(options = {}) {
     runStatus: options.runStatus ?? 'completed',
     runOutputs: options.runOutputs ?? {},
     sessionId: 'rec_session_1',
+    startBodies: [],
+    startResponse: options.startResponse ?? null,
     launchBody: options.launchBody ?? { ok: true, recording: { recordingSessionId: 'rec_session_1', status: 'recording' }, launch: { pid: 1234 } },
     // null → endpoint not handled (404, inconclusive). Otherwise the preflight verdict.
     preflight: options.preflight ?? null,
@@ -135,8 +138,9 @@ function startFakeBrowsy(options = {}) {
       return state.importContract ? send(200, { ok: true, contract: state.importContract }) : send(404, { ok: false, error: 'no contract' });
     }
     if (req.method === 'POST' && req.url === '/api/recordings/start') {
-      await readBody(req);
-      return send(201, {
+      const body = await readBody(req);
+      state.startBodies.push(body);
+      return send(201, state.startResponse || {
         ok: true,
         recording: {
           recordingSessionId: state.sessionId,
@@ -276,6 +280,107 @@ test('recording lifecycle: start → launch → stop → import marks the contra
     delete process.env.PANCAKE_BROWSY_BASE_URL;
     delete process.env.PANCAKE_BROWSY_POLL_INTERVAL_MS;
     fake.server.close();
+  }
+});
+
+test('Record Automation uses Browsy recordAutomationControl and sends release context', async () => {
+  const songId = seedReleaseSong(uniqueId('RECAUTO_CTL'));
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  const fake = await startFakeBrowsy({
+    startResponse: {
+      ok: true,
+      recording: { recordingSessionId: 'rec_session_ctl', status: 'setup_ready' },
+      wizardUrl: 'http://wizard/fallback',
+      recordAutomationControl: {
+        label: 'Record Automation',
+        href: 'http://wizard/control',
+        action: 'open_browsy_new_automation_wizard',
+      },
+    },
+  });
+  process.env.PANCAKE_BROWSY_BASE_URL = fake.baseUrl;
+  try {
+    const result = await ensureMagicReleaseBrowsyRecordAutomation({ campaignId: created.campaign.id, taskKey: SUBMIT_TASK });
+    assert.equal(result.ok, true);
+    assert.equal(result.recordAutomationControl.label, 'Record Automation');
+    assert.equal(result.recordAutomationControl.href, 'http://wizard/control');
+    assert.equal(result.wizardUrl, 'http://wizard/control');
+    assert.equal(result.recording.wizard_url, 'http://wizard/control');
+
+    assert.equal(fake.state.startBodies.length, 1);
+    const body = fake.state.startBodies[0];
+    assert.equal(body.appId, 'pancake-robot');
+    assert.equal(body.appName, 'Pancake Robot');
+    assert.equal(body.sourceApp, 'pancake-robot');
+    assert.equal(body.releaseId, songId);
+    assert.equal(body.workflowId, 'distrokid-single-submit');
+    assert.ok(Array.isArray(body.recordingSetup.tabs));
+    assert.ok(body.recordingSetup.tabs.some(tab => tab.siteId === 'pancake-robot' && tab.requiresAuth === false));
+    assert.ok(body.recordingSetup.tabs.some(tab => tab.siteId === 'distrokid' && tab.requiresAuth === true));
+    assert.ok(body.payloadSchema);
+    assert.ok(Array.isArray(body.requiredAssets));
+    assert.ok(Array.isArray(body.fileBindings));
+    assert.ok(Array.isArray(body.expectedOutputs));
+    assert.ok(Array.isArray(body.humanCheckpoints));
+    assert.ok(body.completionPolicy);
+    assert.ok(Array.isArray(body.writebackTargets));
+  } finally {
+    delete process.env.PANCAKE_BROWSY_BASE_URL;
+    fake.server.close();
+  }
+});
+
+test('Record Automation falls back to wizardUrl when Browsy omits recordAutomationControl', async () => {
+  const songId = seedReleaseSong(uniqueId('RECAUTO_FALLBACK'));
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  const fake = await startFakeBrowsy({});
+  process.env.PANCAKE_BROWSY_BASE_URL = fake.baseUrl;
+  try {
+    const result = await ensureMagicReleaseBrowsyRecordAutomation({ campaignId: created.campaign.id, taskKey: SUBMIT_TASK });
+    assert.equal(result.ok, true);
+    assert.equal(result.recordAutomationControl.label, 'Record Automation');
+    assert.equal(result.recordAutomationControl.href, 'http://wizard/rec_session_1');
+    assert.equal(result.wizardUrl, 'http://wizard/rec_session_1');
+  } finally {
+    delete process.env.PANCAKE_BROWSY_BASE_URL;
+    fake.server.close();
+  }
+});
+
+test('Record Automation reuses an existing recording session', async () => {
+  const songId = seedReleaseSong(uniqueId('RECAUTO_EXISTING'));
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  const submitTask = created.tasks.find(t => t.task_key === SUBMIT_TASK);
+  createReleaseBrowsyRecording({
+    campaign_id: created.campaign.id,
+    task_id: submitTask.id,
+    task_key: SUBMIT_TASK,
+    release_type: 'single',
+    release_id: songId,
+    workflow_id: 'distrokid-single-submit',
+    recording_session_id: 'rec_existing',
+    wizard_url: 'http://wizard/existing',
+    recording_status: 'setup_ready',
+  });
+
+  const result = await ensureMagicReleaseBrowsyRecordAutomation({ campaignId: created.campaign.id, taskKey: SUBMIT_TASK });
+  assert.equal(result.ok, true);
+  assert.equal(result.reused, true);
+  assert.equal(result.recordAutomationControl.label, 'Record Automation');
+  assert.equal(result.recordAutomationControl.href, 'http://wizard/existing');
+});
+
+test('Record Automation reports Browsy unavailable without pretending ready', async () => {
+  const songId = seedReleaseSong(uniqueId('RECAUTO_DOWN'));
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  process.env.PANCAKE_BROWSY_BASE_URL = 'http://127.0.0.1:9';
+  try {
+    const result = await ensureMagicReleaseBrowsyRecordAutomation({ campaignId: created.campaign.id, taskKey: SUBMIT_TASK });
+    assert.equal(result.ok, false);
+    assert.equal(result.reachable, false);
+    assert.match(result.error, /fetch failed|ECONNREFUSED|Failed to fetch|connect/i);
+  } finally {
+    delete process.env.PANCAKE_BROWSY_BASE_URL;
   }
 });
 

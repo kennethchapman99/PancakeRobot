@@ -193,6 +193,16 @@ function distrokidSubmitSpec({ base, releaseTabUrl, single, workflowContext = nu
     humanCheckpoints: [
       { id: 'beforeFinalSubmit', label: 'Stop before final submit', beforeAction: 'final_submit', reason: 'Ken approval required before external release submission' },
     ],
+    completionPolicy: {
+      defaultMode: 'dry_run',
+      requireHumanApprovalFor: ['final_submit', 'release', 'payment', 'legal_certification'],
+      liveExecutionRequiresExplicitChoice: true,
+    },
+    writebackTargets: [
+      { id: 'distrokidReviewState', output: 'distrokidReviewState', target: 'release_cockpit.distrokid_preview' },
+      { id: 'distrokidReleaseUrl', output: 'distrokidReleaseUrl', target: 'release_links.distrokid_release_url' },
+      { id: 'submissionStatus', output: 'submissionStatus', target: 'release.distribution_status' },
+    ],
     _meta: { single: Boolean(single) },
   };
 }
@@ -397,7 +407,7 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     workflow_ref: session.workflowRefPreview || null,
     recording_session_id: session.recordingSessionId || started.recordingSessionId || null,
     recording_status: session.status || 'setup_ready',
-    wizard_url: sanitizeStoredUrl(session.wizardUrl),
+    wizard_url: sanitizeStoredUrl(started.recordAutomationControl?.href || started.wizardUrl || session.wizardUrl),
     recorder_url: sanitizeStoredUrl(session.recorderUrl),
     browsy_base_url: config.baseUrl,
   });
@@ -424,9 +434,16 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     annotateTask(task, campaign, {
       reason: 'Browsy recording session started — launch the recorder and record the workflow.',
       suggested_action: 'Launch Browsy recorder, then Stop & Import.',
-      action_url: session.wizardUrl || task.action_url,
+      action_url: started.recordAutomationControl?.href || started.wizardUrl || session.wizardUrl || task.action_url,
     });
-    return { ok: true, recording, session, launched: false };
+    return {
+      ok: true,
+      recording,
+      session,
+      recordAutomationControl: started.recordAutomationControl || null,
+      wizardUrl: started.wizardUrl || recording.wizard_url || null,
+      launched: false,
+    };
   }
 
   // Happy path: immediately launch the recorder so the operator only clicks once.
@@ -443,17 +460,66 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     suggested_action: launchResult.authRequired
       ? 'Open Auth Browser, sign in once, click Verify Auth, then Start Recording.'
       : launchResult.ok ? 'Complete the workflow, then Stop & Import.' : 'Relaunch the recorder or check Browsy.',
-    action_url: session.wizardUrl || task.action_url,
+    action_url: started.recordAutomationControl?.href || started.wizardUrl || session.wizardUrl || task.action_url,
   });
   return {
     ok: launchResult.ok,
     recording: launchResult.recording || recording,
     session,
+    recordAutomationControl: started.recordAutomationControl || null,
+    wizardUrl: started.wizardUrl || recording.wizard_url || null,
     launched: launchResult.ok,
     authRequired: launchResult.authRequired || false,
     authBlocked: launchResult.authBlocked || false,
     launch: launchResult.launch || null,
     error: launchResult.error || null,
+  };
+}
+
+export async function ensureMagicReleaseBrowsyRecordAutomation({ campaignId, taskKey, config = getBrowsyConfig(), workflowContext = null } = {}) {
+  const existing = getLatestReleaseBrowsyRecordingForTask(campaignId, taskKey);
+  if (existing?.wizard_url) {
+    return {
+      ok: true,
+      reused: true,
+      recording: existing,
+      recordAutomationControl: {
+        label: 'Record Automation',
+        href: existing.wizard_url,
+        action: 'open_browsy_new_automation_wizard',
+      },
+      wizardUrl: existing.wizard_url,
+    };
+  }
+
+  const started = await startMagicReleaseBrowsyRecording({
+    campaignId,
+    taskKey,
+    autoLaunch: false,
+    config,
+    workflowContext,
+  });
+  const href = started.recordAutomationControl?.href || started.wizardUrl || started.recording?.wizard_url || null;
+  if (!started.ok || !href) {
+    return {
+      ...started,
+      ok: false,
+      reused: false,
+      error: started.error || 'Browsy did not return a Record Automation wizard URL.',
+      recordAutomationControl: null,
+      wizardUrl: href,
+    };
+  }
+  return {
+    ...started,
+    ok: true,
+    reused: false,
+    recordAutomationControl: started.recordAutomationControl || {
+      label: 'Record Automation',
+      href,
+      action: 'open_browsy_new_automation_wizard',
+    },
+    wizardUrl: href,
   };
 }
 
@@ -810,6 +876,11 @@ export function summarizeMagicReleaseBrowsyRecordings({ campaignId, config = get
       recordingSessionId: recording?.recording_session_id || null,
       recordingStatus: recording?.recording_status || null,
       wizardUrl: recording?.wizard_url || null,
+      recordAutomationControl: recording?.wizard_url ? {
+        label: 'Record Automation',
+        href: recording.wizard_url,
+        action: 'open_browsy_new_automation_wizard',
+      } : null,
       recorderUrl: recording?.recorder_url || null,
       importedWorkflowRef: recording?.imported_workflow_ref || recording?.workflow_ref || null,
       importedAt: recording?.imported_at || null,

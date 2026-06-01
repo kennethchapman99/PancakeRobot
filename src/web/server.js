@@ -146,6 +146,7 @@ import {
   getBrowsyWorkflowContract,
 } from '../shared/browsy-client.js';
 import {
+  ensureMagicReleaseBrowsyRecordAutomation,
   importMagicReleaseBrowsyRecording,
   launchMagicReleaseBrowsyRecording,
   listMagicReleaseBrowsyRecordings,
@@ -362,6 +363,7 @@ app.get('/releases/:type/:id', (req, res) => {
   res.render('releases/detail', {
     cockpit,
     focus: String(req.query.focus || 'all'),
+    showBrowsyDebug: req.query.debug_browsy === '1',
     actionFeedback: feedbackMessage ? { level: feedbackLevel, message: feedbackMessage } : null,
   });
 });
@@ -850,6 +852,38 @@ app.post('/releases/:type/:id/magic-release/recordings/start', async (req, res) 
   } catch (error) {
     if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
     return redirectToRelease(req, res);
+  }
+});
+
+app.post('/releases/:type/:id/magic-release/record-automation', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const state = getMagicReleaseState(cockpit.type, cockpit.id)
+      || createMagicReleaseCampaign({ releaseType: cockpit.type, releaseId: cockpit.id });
+    const taskKey = 'distrokid_submit_dry_run';
+    const workflowContext = cockpit.type === 'album'
+      ? buildDistroKidAlbumWorkflowContext({
+          cockpit,
+          browsyBaseUrl: cockpit.distrokidBrowsyWorkflow?.baseUrl || '',
+          targetUrl: String(req.body?.target_url || '').trim() || undefined,
+          releaseId: cockpit.id,
+        })
+      : null;
+    const result = await ensureMagicReleaseBrowsyRecordAutomation({
+      campaignId: state.campaign.id,
+      taskKey,
+      workflowContext,
+    });
+    if (!result.ok) throw new Error(result.error || 'Browsy could not start a recording session.');
+    const href = result.recordAutomationControl?.href || result.wizardUrl;
+    if (!href) throw new Error('Browsy did not return a Record Automation wizard URL.');
+    if (wantsJson(req)) return res.json(result);
+    return res.redirect(303, href);
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'browsy_record_automation', 'error', `Record Automation unavailable: ${error.message}`);
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    return res.redirect(303, buildReleaseDetailUrl(cockpit.type, cockpit.id, { error: error.message, level: 'error' }));
   }
 });
 
