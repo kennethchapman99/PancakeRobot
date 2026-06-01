@@ -97,10 +97,16 @@
     <div class="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
       <h2 class="text-lg font-bold text-zinc-900 mb-3">Step 1 — Generate Candidate Directions</h2>
       <p class="text-sm text-zinc-500 mb-4">The system will propose 4–6 differentiated creative directions for this brand. <strong>Text-only — no audio renders.</strong></p>
-      <form method="POST" action="/api/brand-doctor/sessions/<%= encodeURIComponent(s.id) %>/candidates">
-        <button type="submit"
-          class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
-          Generate Candidate Directions
+      <form method="POST" action="/api/brand-doctor/sessions/<%= encodeURIComponent(s.id) %>/candidates"
+            x-data="{ loading: false }" @submit="loading = true">
+        <button type="submit" :disabled="loading"
+          :class="loading ? 'opacity-60 cursor-not-allowed bg-indigo-600' : 'bg-indigo-600 hover:bg-indigo-500'"
+          class="text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition inline-flex items-center gap-2">
+          <svg x-show="loading" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          <span x-text="loading ? 'Generating…' : 'Generate Candidate Directions'">Generate Candidate Directions</span>
         </button>
       </form>
     </div>
@@ -195,15 +201,28 @@
       <p class="text-sm text-zinc-500 mb-4">Upload one or more audio files. Local analysis uses ffprobe/ffmpeg — no paid model calls for analysis itself.</p>
 
       <form method="POST" action="/api/brand-doctor/sessions/<%= encodeURIComponent(s.id) %>/analyze"
-        enctype="multipart/form-data" class="space-y-4">
+        enctype="multipart/form-data" class="space-y-4"
+        x-data="{ loading: false }" @submit="loading = true">
         <div>
           <label class="block text-sm font-semibold text-zinc-700 mb-1">Audio Files (MP3, WAV, FLAC, etc.)</label>
           <input type="file" name="audio" multiple accept=".mp3,.wav,.flac,.aac,.m4a,.ogg"
             class="block w-full text-sm text-zinc-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
         </div>
-        <button type="submit"
-          class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
-          Analyze Audio
+        <div x-show="loading" class="text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 flex items-center gap-3">
+          <svg class="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          Uploading and analyzing audio — this may take 30–60 seconds…
+        </div>
+        <button type="submit" :disabled="loading"
+          :class="loading ? 'opacity-60 cursor-not-allowed bg-indigo-600' : 'bg-indigo-600 hover:bg-indigo-500'"
+          class="text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition inline-flex items-center gap-2">
+          <svg x-show="loading" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          <span x-text="loading ? 'Analyzing…' : 'Analyze Audio'">Analyze Audio</span>
         </button>
       </form>
     </div>
@@ -234,7 +253,7 @@
             <div><span class="text-zinc-500">High-energy segments:</span> <%= m.high_energy_segments?.length ?? 0 %></div>
           </div>
           <% } else if (analysis.raw) { %>
-          <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2"><%= analysis.raw.reason || 'Analysis failed or unavailable' %></div>
+          <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2"><%= analysis.raw.error || analysis.raw.reason || 'Analysis failed or unavailable' %></div>
           <% } %>
 
           <% if (impl) { %>
@@ -313,10 +332,23 @@
   <div class="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
     <h2 class="text-lg font-bold text-zinc-900 mb-3">Step 2 — Propose Profile Patch</h2>
     <p class="text-sm text-zinc-500 mb-4">Generate a proposed patch based on your feedback. You will review it before anything is written.</p>
-    <form method="POST" action="/api/brand-doctor/sessions/<%= encodeURIComponent(s.id) %>/propose-patch">
-      <button type="submit"
-        class="bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
-        Propose Profile Patch
+    <form method="POST" action="/api/brand-doctor/sessions/<%= encodeURIComponent(s.id) %>/propose-patch"
+          x-data="{ loading: false }" @submit="loading = true">
+      <div x-show="loading" class="mb-4 text-sm text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 flex items-center gap-3">
+        <svg class="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+        Generating patch — Claude is reviewing your feedback and drafting profile changes…
+      </div>
+      <button type="submit" :disabled="loading"
+        :class="loading ? 'opacity-60 cursor-not-allowed bg-purple-600' : 'bg-purple-600 hover:bg-purple-500'"
+        class="text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition inline-flex items-center gap-2">
+        <svg x-show="loading" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+        <span x-text="loading ? 'Generating…' : 'Propose Profile Patch'">Propose Profile Patch</span>
       </button>
     </form>
   </div>
@@ -396,6 +428,19 @@
     </div>
     <% } else if (!isApplied && !validationOk) { %>
     <div class="mt-5 flex flex-wrap gap-3 border-t border-zinc-100 pt-5">
+      <p class="w-full text-xs text-zinc-500 mb-1">Validation failed. Re-propose asks Claude to try again with stricter artist-name constraints. Reject discards this patch with no changes.</p>
+      <form method="POST" action="/api/brand-doctor/sessions/<%= encodeURIComponent(s.id) %>/propose-patch"
+            x-data="{ loading: false }" @submit="loading = true">
+        <button type="submit" :disabled="loading"
+          :class="loading ? 'opacity-60 cursor-not-allowed bg-purple-600' : 'bg-purple-600 hover:bg-purple-500'"
+          class="text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition inline-flex items-center gap-2">
+          <svg x-show="loading" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          <span x-text="loading ? 'Re-proposing…' : '↻ Re-propose Patch'">↻ Re-propose Patch</span>
+        </button>
+      </form>
       <form method="POST" action="/api/brand-doctor/sessions/<%= encodeURIComponent(s.id) %>/reject">
         <button type="submit"
           class="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-semibold px-6 py-2.5 rounded-lg transition">
