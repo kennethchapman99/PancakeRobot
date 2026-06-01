@@ -222,7 +222,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     subtitle: release.subtitle,
     releaseDate: effectiveReleaseDate,
     brandProfileId: release.brandProfileId,
-    brandProfileName: brandProfile?.brand_name || release.brandProfileId || null,
+    brandProfileName: resolveProfileDisplayName(brandProfile, release.brandProfileId),
     brandProfileLogoUrl: resolveBrandProfileLogoUrl(brandProfile),
     headerArtwork,
     canonicalMediaOwner: assetState.owner,
