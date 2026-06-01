@@ -109,7 +109,11 @@ test('generateMusic returns skipped_existing_audio when valid audio exists and f
   }
 });
 
-test('generateMusic proceeds past existing audio check when forceRegenerate is true (no API key → falls through to skipped)', async () => {
+test('generateMusic with forceRegenerate=true but no confirmPaidRerender reuses existing audio (billing-safe)', async () => {
+  // API contract change: forceRegenerate alone no longer bypasses the existing-audio check.
+  // Both forceRegenerate AND confirmPaidRerender must be true to trigger a paid re-render.
+  // Without confirmPaidRerender the call is treated as an idempotent run to prevent
+  // accidentally billing MiniMax twice for the same track.
   const savedKey = process.env.MINIMAX_API_KEY;
   delete process.env.MINIMAX_API_KEY;
 
@@ -130,10 +134,9 @@ test('generateMusic proceeds past existing audio check when forceRegenerate is t
       forceRegenerate: true,
     });
 
-    // With forceRegenerate=true it bypasses the existing audio check,
-    // then hits the missing API key guard and returns skipped=true
-    assert.equal(result.skipped_existing_audio, undefined, 'should NOT set skipped_existing_audio');
-    assert.equal(result.skipped, true, 'should fall through to api-key-missing skip');
+    // Should return the existing audio rather than proceeding to a paid MiniMax call
+    assert.equal(result.skipped_existing_audio, true, 'should reuse existing audio when confirmPaidRerender is absent');
+    assert.equal(result.skipped, false, 'skipped flag must be false when audio was reused');
   } finally {
     if (savedKey !== undefined) process.env.MINIMAX_API_KEY = savedKey;
     fs.rmSync(songDir, { recursive: true, force: true });

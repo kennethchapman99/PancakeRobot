@@ -3,8 +3,23 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
+
+// Tests that spawn child processes loading better-sqlite3 must be skipped when the
+// native module is compiled for a different Node.js version (e.g. running system node
+// instead of the project-pinned v22.22.2).  Use the same guard pattern as
+// release-selection-agent.test.js.
+const require = createRequire(import.meta.url);
+let sqliteSkipReason = false;
+try {
+  const Database = require('better-sqlite3');
+  const db = new Database(':memory:');
+  db.close();
+} catch (err) {
+  sqliteSkipReason = `better-sqlite3 could not load in this Node runtime: ${err.message.split('\n')[0]}`;
+}
 
 test('outreach link blocks omit blank fields and only include download links for file-needing outreach types', async () => {
   const { buildOutreachLinkBlock } = await import(`../src/shared/song-marketing-kit.js?links=${Date.now()}`);
@@ -77,7 +92,7 @@ test('readiness scoring treats missing marketing fields as warnings instead of b
   assert.ok(readiness.warnings.some(w => /release kit/i.test(w)));
 });
 
-test('release-level marketing fields can be explicitly cleared without falling back to brand defaults', () => {
+test('release-level marketing fields can be explicitly cleared without falling back to brand defaults', { skip: sqliteSkipReason }, () => {
   const slug = `song-marketing-kit-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -117,7 +132,7 @@ test('release-level marketing fields can be explicitly cleared without falling b
   }
 });
 
-test('marketing kit leaves image fallback empty when no song, album, or brand default image exists', () => {
+test('marketing kit leaves image fallback empty when no song, album, or brand default image exists', { skip: sqliteSkipReason }, () => {
   const slug = `song-marketing-kit-default-image-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -145,7 +160,7 @@ test('marketing kit leaves image fallback empty when no song, album, or brand de
   }
 });
 
-test('syncSongMarketingKitFromPack preserves saved marketing links while refreshing assets', () => {
+test('syncSongMarketingKitFromPack preserves saved marketing links while refreshing assets', { skip: sqliteSkipReason }, () => {
   const slug = `song-marketing-kit-sync-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -197,7 +212,7 @@ test('syncSongMarketingKitFromPack preserves saved marketing links while refresh
   }
 });
 
-test('release kit publish flag persists when submitted inside marketing_assets payload', () => {
+test('release kit publish flag persists when submitted inside marketing_assets payload', { skip: sqliteSkipReason }, () => {
   const slug = `song-marketing-kit-publish-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -230,7 +245,7 @@ test('release kit publish flag persists when submitted inside marketing_assets p
   }
 });
 
-test('partial marketing link saves do not wipe previously saved links', () => {
+test('partial marketing link saves do not wipe previously saved links', { skip: sqliteSkipReason }, () => {
   const slug = `song-marketing-kit-partial-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
