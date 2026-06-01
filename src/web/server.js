@@ -44,7 +44,6 @@ import {
   findBrandProfileDefaultImage,
   getBrandProfileMediaDir,
   listBrandProfiles,
-  loadBrandProfile,
   loadBrandProfileById,
   saveBrandProfileById,
   setBrandProfileDefaultImageFile,
@@ -240,12 +239,15 @@ const activeReleaseAutomationRuns = new Map(); // releaseType:releaseId:action -
 
 const app = express();
 const PORT = process.env.WEB_PORT || 3737;
-const BRAND_PROFILE = loadBrandProfile();
-const BRAND_NAME = BRAND_PROFILE.brand_name;
-const APP_TITLE = BRAND_PROFILE.app_title || BRAND_NAME;
-const DEFAULT_AUDIENCE_RANGE = BRAND_PROFILE.audience.age_range;
-const DEFAULT_DISTRIBUTOR = BRAND_PROFILE.distribution.default_distributor || 'Distributor';
-const DISTRIBUTOR_URL = BRAND_PROFILE.distribution.research_default_url || '';
+function getActiveBrandConfig() {
+  const profile = loadBrandProfileById(getActiveProfileId());
+  return {
+    profile,
+    defaultAudienceRange: profile.audience.age_range,
+    defaultDistributor: profile.distribution.default_distributor || 'Distributor',
+    distributorUrl: profile.distribution.research_default_url || '',
+  };
+}
 const SUBMITTED_STATUS = SONG_STATUSES.SUBMITTED_TO_DISTROKID;
 
 // ── Middleware ──────────────────────────────────────────────────
@@ -310,14 +312,15 @@ app.use((req, res, next) => {
   res.locals.treatmentBadgeClass = treatmentBadgeClass;
   res.locals.scoreBandClass = scoreBandClass;
   res.locals.currentPath = req.path;
-  res.locals.brandProfile = BRAND_PROFILE;
+  const activeCfg = getActiveBrandConfig();
+  res.locals.brandProfile = activeCfg.profile;
   res.locals.brandName = 'Figment Factory';
   res.locals.appTitle = 'Figment Factory';
   res.locals.logoPath = '/logo.png';
   res.locals.sidebarSubtitle = 'AI Music Studio';
-  res.locals.defaultAudienceRange = DEFAULT_AUDIENCE_RANGE;
-  res.locals.defaultDistributor = DEFAULT_DISTRIBUTOR;
-  res.locals.distributorUrl = DISTRIBUTOR_URL;
+  res.locals.defaultAudienceRange = activeCfg.defaultAudienceRange;
+  res.locals.defaultDistributor = activeCfg.defaultDistributor;
+  res.locals.distributorUrl = activeCfg.distributorUrl;
   res.locals.submittedStatus = SUBMITTED_STATUS;
   next();
 });
@@ -992,9 +995,9 @@ app.post('/magic-song', async (req, res) => {
     topic,
     status: 'draft',
     concept: topic,
-    target_age_range: DEFAULT_AUDIENCE_RANGE,
+    target_age_range: res.locals.defaultAudienceRange,
     notes: notes || null,
-    distributor: DEFAULT_DISTRIBUTOR,
+    distributor: res.locals.defaultDistributor,
     brand_profile_id: getActiveProfileId(),
   });
 
@@ -1404,7 +1407,7 @@ app.post('/ideas', (req, res) => {
     title: title.trim(),
     concept: concept?.trim() || null,
     hook: hook?.trim() || null,
-    target_age_range: target_age_range || DEFAULT_AUDIENCE_RANGE,
+    target_age_range: target_age_range || res.locals.defaultAudienceRange,
     category: category?.trim() || null,
     mood: mood?.trim() || null,
     educational_angle: educational_angle?.trim() || null,
@@ -1443,7 +1446,7 @@ app.post('/ideas/:id', (req, res) => {
     title: title.trim(),
     concept: concept?.trim() || null,
     hook: hook?.trim() || null,
-    target_age_range: target_age_range || DEFAULT_AUDIENCE_RANGE,
+    target_age_range: target_age_range || res.locals.defaultAudienceRange,
     category: category?.trim() || null,
     mood: mood?.trim() || null,
     educational_angle: educational_angle?.trim() || null,
@@ -1514,11 +1517,11 @@ app.post('/api/ideas/:id/promote', (req, res) => {
     status: 'draft',
     originating_idea_id: idea.id,
     concept: idea.concept || null,
-    target_age_range: idea.target_age_range || DEFAULT_AUDIENCE_RANGE,
+    target_age_range: idea.target_age_range || res.locals.defaultAudienceRange,
     mood_tags: idea.mood ? [idea.mood] : [],
     keywords: idea.tags || [],
     notes: idea.notes || null,
-    distributor: DEFAULT_DISTRIBUTOR,
+    distributor: res.locals.defaultDistributor,
     brand_profile_id: idea.brand_profile_id || getActiveProfileId(),
   });
 
@@ -1870,12 +1873,12 @@ app.get('/songs/:id', (req, res) => {
     songBrandProfileId: songBrand.id,
     songBrandLabel: songBrand.label,
     brandProfile: songBrand.profile,
-    brandName: songBrand.profile.brand_name,
-    appTitle: songBrand.profile.app_title || songBrand.profile.brand_name,
-    logoPath: songBrand.profile.ui?.logo_path || '/logo.png',
-    sidebarSubtitle: songBrand.profile.ui?.sidebar_subtitle || 'Music Studio',
-    defaultDistributor: songBrand.profile.distribution?.default_distributor || DEFAULT_DISTRIBUTOR,
-    distributorUrl: songBrand.profile.distribution?.research_default_url || DISTRIBUTOR_URL,
+    brandName: 'Figment Factory',
+    appTitle: 'Figment Factory',
+    logoPath: '/logo.png',
+    sidebarSubtitle: 'AI Music Studio',
+    defaultDistributor: songBrand.profile.distribution?.default_distributor || res.locals.defaultDistributor,
+    distributorUrl: songBrand.profile.distribution?.research_default_url || res.locals.distributorUrl,
     albumContext,
     distrokidJob,
     distrokidRecentLog: summarizeDistroKidRunLog(song.id),
@@ -2431,10 +2434,10 @@ app.post('/api/songs/:id/publish', (req, res) => {
   updateSongStatus(req.params.id, SUBMITTED_STATUS);
   upsertSong({
     id: req.params.id,
-    distributor: song.distributor || DEFAULT_DISTRIBUTOR,
+    distributor: song.distributor || res.locals.defaultDistributor,
     distributor_submission_date: new Date().toISOString().slice(0, 10),
   });
-  if (url) upsertReleaseLink(req.params.id, DEFAULT_DISTRIBUTOR, url);
+  if (url) upsertReleaseLink(req.params.id, res.locals.defaultDistributor, url);
   const queued = queueSongReleaseAssetBuild(req.params.id, {
     trigger: 'publish',
     formats: DEFAULT_RELEASE_ASSET_FORMATS,
@@ -2798,10 +2801,11 @@ function resolveSongBrandProfile(song) {
         label: `${profile.brand_name || fallbackId} (fallback for missing ${requestedId})`,
       };
     } catch {
+      const fallbackProfile = loadBrandProfileById(DEFAULT_PROFILE_ID);
       return {
         id: DEFAULT_PROFILE_ID,
-        profile: BRAND_PROFILE,
-        label: BRAND_NAME,
+        profile: fallbackProfile,
+        label: fallbackProfile.brand_name || DEFAULT_PROFILE_ID,
       };
     }
   }
@@ -3336,6 +3340,6 @@ export { app };
 if (process.argv[1] === __filename) {
   startDailySocialScheduler();
   app.listen(PORT, () => {
-    console.log(`\n${APP_TITLE} UI running at http://localhost:${PORT}\n`);
+    console.log(`\nFigment Factory UI running at http://localhost:${PORT}\n`);
   });
 }
