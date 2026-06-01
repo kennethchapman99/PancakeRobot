@@ -42,18 +42,19 @@ test('buildLyricsTask includes profile seed safety guidance', () => {
   assert.doesNotMatch(task, /Good title examples for this brand/);
 });
 
-test('collectProfileSeedTerms includes title examples, reference artists, catchphrases, and distinctive lore numbers', () => {
+test('collectProfileSeedTerms includes title examples, reference artists, and catchphrases', () => {
+  // background_lore_number extraction was removed in the profile enrichment refactor (commit 4617972)
   const terms = collectProfileSeedTerms(seedProfile());
   const normalized = terms.map(term => `${term.type}:${term.normalized}`);
 
   assert.ok(normalized.includes('title_example:signal 47'));
   assert.ok(normalized.includes('reference_artist:q tip'));
   assert.ok(normalized.includes('catchphrase:moon key'));
-  assert.ok(normalized.includes('background_lore_number:47'));
   assert.ok(!normalized.includes('title_example:seed safe band'));
 });
 
-test('findProfileSeedOveruse flags exact title examples and distinctive numbers when not requested', () => {
+test('findProfileSeedOveruse flags exact title examples when not requested', () => {
+  // background_lore_number extraction was removed in the profile enrichment refactor (commit 4617972)
   const profile = seedProfile();
   const issues = findProfileSeedOveruse({
     title: 'Signal 47',
@@ -64,7 +65,6 @@ test('findProfileSeedOveruse flags exact title examples and distinctive numbers 
   }, profile, 'rainy rooftop');
 
   assert.ok(issues.some(issue => issue.type === 'title_example' && issue.normalized === 'signal 47'));
-  assert.ok(issues.some(issue => issue.type === 'background_lore_number' && issue.normalized === '47'));
 });
 
 test('findProfileSeedOveruse allows explicitly requested title examples', () => {

@@ -32,21 +32,26 @@ test('profile list includes default profile first', () => {
   assert.equal(profiles[0].name, 'Pancake Robot');
 });
 
-test('custom Sue profile remains selectable but isolated', () => {
+test('non-default brand profiles remain selectable and isolated from the default', () => {
+  // Sue Wong profile (my-new-brand.json) was deleted in May 2026; this test now
+  // verifies the general invariant: at least one non-default profile must exist
+  // and must load cleanly without inheriting the Pancake Robot identity.
   const profiles = listBrandProfiles();
-  const sue = profiles.find((profileSummary) => {
+  const nonDefault = profiles.find((profileSummary) => {
+    if (profileSummary.isDefault) return false;
     try {
       const profile = loadBrandProfileById(profileSummary.id);
-      return profile.character?.name === 'Sue Wong';
+      return typeof profile.character?.name === 'string' && profile.character.name !== 'Pancake Robot';
     } catch {
       return false;
     }
   });
 
-  assert.ok(sue);
+  assert.ok(nonDefault, 'at least one non-default brand profile must be present and loadable');
 
-  const profile = loadBrandProfileById(sue.id);
-  assert.equal(profile.character.name, 'Sue Wong');
+  const profile = loadBrandProfileById(nonDefault.id);
+  assert.ok(profile.character.name, 'non-default profile must have a character name');
+  assert.notEqual(profile.character.name, 'Pancake Robot');
 });
 
 test('runtime config is not the active default profile source', () => {
