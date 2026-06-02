@@ -41,7 +41,7 @@
     "default_prompt": "Original aggressive rap-rock with live heavy drums, syncopated bass groove, low-tuned guitar riffs, shouted rhythmic vocals, tense spoken-rap verses, melodic or screamed hook release, and occasional industrial noise texture. Vary the lane by song: protest funk-metal anthem, dark nu-metal groove, riff-heavy mosh track, anxious melodic heavy-rock song, stripped spoken tension builder, and explosive crowd-chant closer are all valid. Never imitate, clone, or reference any real artist voice, cadence, flow, lyrics, riff, guitar tone, bassline, drum pattern, arrangement, persona, or copyrighted work. Create a fresh performance with groove, anger, tension, heaviness, political edge, and emotional release.",
     "target_length": "2:30-4:20",
     "min_words": 140,
-    "normal_word_range": "170-420",
+    "normal_word_range": "240-480",
     "first_vocal_by_seconds": 8,
     "max_instrumental_intro_seconds": 14
   },
@@ -83,7 +83,7 @@
       "alternative metal catharsis",
       "industrial-tinged rap-rock aggression"
     ],
-    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, screams, flows, cadence, lyrics, riffs, guitar tones, basslines, drum patterns, arrangements, album sequencing, persona, or copyrighted material. Use broad traits—political intensity, groove, heavy emotional release, rhythm control, and dark tension—as inspiration for an original Pressure Signal identity.",
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, screams, flows, cadence, lyrics, riffs, guitar tones, basslines, drum patterns, arrangements, album sequencing, persona, or copyrighted material. Use broad traits\u2014political intensity, groove, heavy emotional release, rhythm control, and dark tension\u2014as inspiration for an original Pressure Signal identity.",
     "allowed_elements": [
       "shouted rap verses and spoken rhythmic pressure",
       "low-tuned riffs, syncopated grooves, and heavy bass",

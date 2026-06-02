@@ -353,6 +353,54 @@ export function validateBrandProfile(profile, profilePath = 'brand profile') {
   validateStringArray(profile.distribution.apple_music_genres, `${profilePath} distribution.apple_music_genres`);
 
   if (profile.songwriting) validateSongwriting(profile.songwriting, profilePath);
+  validateDurationWordRangeConsistency(profile.music, profilePath);
+}
+
+function parseTargetLengthMaxSeconds(targetLength) {
+  if (!targetLength) return null;
+  const parts = String(targetLength).split('-');
+  const maxPart = parts[parts.length - 1].trim();
+  const match = maxPart.match(/^(\d+):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function parseWordRangeMax(wordRange) {
+  if (!wordRange) return null;
+  if (Array.isArray(wordRange)) {
+    const val = Number(wordRange[wordRange.length - 1]);
+    return Number.isFinite(val) && val > 0 ? val : null;
+  }
+  const parts = String(wordRange).split('-');
+  const maxStr = (parts.length >= 2 ? parts[1] : parts[0]).trim();
+  const val = Number(maxStr);
+  return Number.isFinite(val) && val > 0 ? val : null;
+}
+
+export { parseTargetLengthMaxSeconds, parseWordRangeMax };
+
+function validateDurationWordRangeConsistency(music, profilePath) {
+  if (!music) return;
+  if (music.sparse_format === true) return;
+
+  const targetMaxSecs = parseTargetLengthMaxSeconds(music.target_length);
+  const wordMax = parseWordRangeMax(music.normal_word_range);
+
+  if (targetMaxSecs === null || wordMax === null) return;
+
+  if (targetMaxSecs > 240 && wordMax < 450) {
+    throw new Error(
+      `${profilePath}: music.target_length max exceeds 4:00 but music.normal_word_range max (${wordMax}) is under 450. ` +
+      `Songs targeting over 4:00 require at least 450 max words. Increase normal_word_range or set music.sparse_format: true for intentionally sparse formats.`
+    );
+  }
+
+  if (targetMaxSecs > 180 && wordMax < 380) {
+    console.warn(
+      `[BRAND-PROFILE] ${profilePath}: target_length max exceeds 3:00 but normal_word_range max (${wordMax}) is under 380. ` +
+      `Consider increasing normal_word_range or set music.sparse_format: true for intentionally sparse formats.`
+    );
+  }
 }
 
 function validateSongwriting(songwriting, profilePath) {

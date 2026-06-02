@@ -46,7 +46,7 @@
       "fast constant lyrics",
       "forced end rhymes",
       "overly clever rhyme schemes",
-      "phone-screen cliché writing",
+      "phone-screen clich\u00e9 writing",
       "songs built mainly around texts, drafts, cursors, notifications, or apps"
     ]
   },
@@ -109,7 +109,8 @@
       "trap hi-hat overload",
       "overly pristine modern radio production",
       "direct artist imitation"
-    ]
+    ],
+    "sparse_format": true
   },
   "lyrics": {
     "title_examples": [
@@ -225,14 +226,14 @@
   },
   "songwriting": {
     "vocal_performance_engine": {
-      "priority": "Postal v3's voice is non-replaceable because it operates as one more soft texture inside the electronics — not above them — arriving late, leaving early, and trusting silence to finish sentences.",
+      "priority": "Postal v3's voice is non-replaceable because it operates as one more soft texture inside the electronics \u2014 not above them \u2014 arriving late, leaving early, and trusting silence to finish sentences.",
       "vocal_textures": [
         "A dry, close-mic'd whisper-to-chest-voice blend that sounds like the singer is speaking to themselves in a quiet room rather than performing for anyone",
         "Occasional deliberate flatness on held notes, as if the singer is too tired or too honest to add vibrato",
         "A half-spoken quality on key phrases where pitch is suggested but not fully committed, sitting between speech and song",
         "Thin upper-register moments used once per track at most, sounding fragile rather than powerful, as if the voice barely made it there",
         "Breath and room noise left in, so the vocal feels recorded on the spot rather than cleaned up afterward",
-        "Gentle pitch inconsistency on repeated phrases — not out of key, but subtly different each time, as though the singer is thinking it through again"
+        "Gentle pitch inconsistency on repeated phrases \u2014 not out of key, but subtly different each time, as though the singer is thinking it through again"
       ],
       "timing_behaviors": [
         "Entering a bar or two after the expected downbeat, letting the instrumental establish itself first and refusing to compete with a new texture",
@@ -243,40 +244,40 @@
       ],
       "adlib_behaviors": [
         "A barely audible exhale or soft hum between sections, not mixed loud, that signals emotional state without adding a lyric",
-        "A one or two syllable mumbled agreement or acknowledgment — something close to 'yeah' or 'hmm' — used once in a song, tucked under the instrumental decay",
+        "A one or two syllable mumbled agreement or acknowledgment \u2014 something close to 'yeah' or 'hmm' \u2014 used once in a song, tucked under the instrumental decay",
         "A whispered fragment of an earlier lyric reprised quietly in a later section, as if the singer is remembering what they just said",
-        "A very short melodic vowel sound — not a run, just a soft held 'oh' or 'ah' — placed in an unexpected gap, then not repeated",
+        "A very short melodic vowel sound \u2014 not a run, just a soft held 'oh' or 'ah' \u2014 placed in an unexpected gap, then not repeated",
         "Occasional near-inaudible mouth sounds or lip clicks left in as texture rather than scrubbed out, blending with the production's glitch artifacts"
       ],
       "avoid": [
         "Vocal runs, melisma, or any embellishment that draws attention to technique rather than feeling",
-        "Projecting or pushing volume to emphasize an emotional peak — dynamics here come from restraint, not from singing louder",
+        "Projecting or pushing volume to emphasize an emotional peak \u2014 dynamics here come from restraint, not from singing louder",
         "Chest-thumping confidence or declarative delivery that makes the voice sound like a lead performer rather than a quiet observer",
-        "Enunciating every syllable crisply — the character tends toward soft consonants and slightly swallowed endings",
-        "Harmonies that feel lush or arranged — any doubling should be barely audible, slightly detuned, and feel accidental rather than produced"
+        "Enunciating every syllable crisply \u2014 the character tends toward soft consonants and slightly swallowed endings",
+        "Harmonies that feel lush or arranged \u2014 any doubling should be barely audible, slightly detuned, and feel accidental rather than produced"
       ]
     },
     "performance_conceit_bank": [
       "The vocal delivers the first verse entirely in the second person ('you leave the light on, you forget the window') and then shifts without announcement to first person in the final section, as if the singer has admitted mid-song that they were always talking about themselves.",
-      "A single phrase is sung three times across the track, each time with a different word changed — the same melody, the same cadence, but the meaning shifts slightly each pass, so the repetition feels like revision rather than chorus.",
+      "A single phrase is sung three times across the track, each time with a different word changed \u2014 the same melody, the same cadence, but the meaning shifts slightly each pass, so the repetition feels like revision rather than chorus.",
       "The voice enters halfway through the track, after two full minutes of instrumental build, speaking the opening line at near-speech level over a loop that has already established its emotional register, so the vocal arrives as a guest inside a fully formed world.",
-      "One line in the song is sung slightly out of time with the grid — not free tempo, but fractionally early — then the next line snaps back, making that single phrase feel like a private thought that escaped before the singer could control it.",
-      "The bridge is delivered entirely without the drum machine — just voice and a single held pad — and the vocal becomes looser, more hesitant, as if the structural support of the beat was also the singer's emotional scaffolding.",
+      "One line in the song is sung slightly out of time with the grid \u2014 not free tempo, but fractionally early \u2014 then the next line snaps back, making that single phrase feel like a private thought that escaped before the singer could control it.",
+      "The bridge is delivered entirely without the drum machine \u2014 just voice and a single held pad \u2014 and the vocal becomes looser, more hesitant, as if the structural support of the beat was also the singer's emotional scaffolding.",
       "A lyric is started, abandoned mid-phrase with a small breath sound, and then restarted from a different angle, as though the singer reconsidered the word choice in real time and the recording kept it.",
       "The final line of the song is sung at a noticeably lower dynamic than everything before it, fading almost below the texture, so the song ends by withdrawing rather than landing."
     ],
     "album_mode_lanes": [
       {
         "name": "Drift",
-        "description": "Tracks where the production leads entirely and the vocal makes only two or three brief appearances, each one a short clause dropped into an ambient instrumental drift — the song is primarily listened to as sound design, with the lyric arriving as a sudden intimacy inside texture"
+        "description": "Tracks where the production leads entirely and the vocal makes only two or three brief appearances, each one a short clause dropped into an ambient instrumental drift \u2014 the song is primarily listened to as sound design, with the lyric arriving as a sudden intimacy inside texture"
       },
       {
         "name": "Loop Letter",
-        "description": "Tracks built around a single repeating motif that mutates very slowly over three to five minutes, with the vocal treating the lyric as a letter being written in real time — casual, slightly uncertain, using incomplete sentences and pauses as punctuation"
+        "description": "Tracks built around a single repeating motif that mutates very slowly over three to five minutes, with the vocal treating the lyric as a letter being written in real time \u2014 casual, slightly uncertain, using incomplete sentences and pauses as punctuation"
       },
       {
         "name": "Object Study",
-        "description": "Tracks where the entire lyrical world is anchored to one physical thing — a piece of furniture, a tool, a room, a route, a season — and the production mirrors it with one dominant organic instrument color that would not appear on any other lane"
+        "description": "Tracks where the entire lyrical world is anchored to one physical thing \u2014 a piece of furniture, a tool, a room, a route, a season \u2014 and the production mirrors it with one dominant organic instrument color that would not appear on any other lane"
       },
       {
         "name": "Close Noise",
@@ -284,47 +285,47 @@
       },
       {
         "name": "Time Slip",
-        "description": "Tracks with a subtle structural trick — a section that returns slightly changed, a tempo that very gently accelerates or decelerates without announcement, or a loop that drops one element on each repetition — so that time inside the song feels unreliable and the listener senses drift without understanding why"
+        "description": "Tracks with a subtle structural trick \u2014 a section that returns slightly changed, a tempo that very gently accelerates or decelerates without announcement, or a loop that drops one element on each repetition \u2014 so that time inside the song feels unreliable and the listener senses drift without understanding why"
       },
       {
         "name": "Rare Color",
-        "description": "Tracks that introduce one instrument not used anywhere else on the album — bowed strings, a melodica, a toy keyboard, a kalimba — and build the entire emotional arc around the limitations and character of that single unusual voice, using it as the primary melodic carrier instead of synth pads"
+        "description": "Tracks that introduce one instrument not used anywhere else on the album \u2014 bowed strings, a melodica, a toy keyboard, a kalimba \u2014 and build the entire emotional arc around the limitations and character of that single unusual voice, using it as the primary melodic carrier instead of synth pads"
       }
     ],
     "song_differentiation_rules": [
       "If the previous track used a repeating vocal phrase as its structural anchor, the next track must build its structure around an instrumental motif instead, with the vocal making no more than three distinct appearances.",
-      "If the previous track was anchored to a domestic or interior lyrical world, the next track must choose an exterior, landscape, travel, or abstract spatial world — and the production texture must shift to match the new environment.",
+      "If the previous track was anchored to a domestic or interior lyrical world, the next track must choose an exterior, landscape, travel, or abstract spatial world \u2014 and the production texture must shift to match the new environment.",
       "If the previous track featured the drum machine throughout, the next track must have at least one section of thirty seconds or more where the drums drop entirely and the track survives on pad, bass, and texture alone.",
-      "If the previous track introduced an unusual organic instrument as a texture accent, the next track must either omit organic accents entirely or make a completely different instrumental color its feature — no two consecutive tracks should share the same rare instrument.",
+      "If the previous track introduced an unusual organic instrument as a texture accent, the next track must either omit organic accents entirely or make a completely different instrumental color its feature \u2014 no two consecutive tracks should share the same rare instrument.",
       "If the previous track's vocal entered early in the first minute, the next track must delay the vocal entrance past the ninety-second mark, establishing the electronic world first.",
-      "If the previous track resolved emotionally — ending with a full phrase, a return to the opening motif, or a clear concluding image — the next track must end by fading mid-thought, withdrawing, or leaving the loop running past the last lyric without resolution."
+      "If the previous track resolved emotionally \u2014 ending with a full phrase, a return to the opening motif, or a clear concluding image \u2014 the next track must end by fading mid-thought, withdrawing, or leaving the loop running past the last lyric without resolution."
     ],
     "anti_generic_rules": [
-      "Do not generate a track where the lyric is carried primarily by consistent end-rhyme couplets — this character's specific failure mode is producing neat AABB rhyme schemes that feel like a different, more conventional artist entirely.",
-      "Do not place the vocal on every bar or close to every bar — Postal v3's most common generator failure is filling space with words when the production and silence are supposed to carry the weight.",
-      "Do not default to themes of screens, messages, missed calls, or digital disconnection as the primary lyrical subject — these images are permitted only as minor texture, and the generator tends to lean on them as easy emotional shorthand.",
-      "Do not generate a pre-chorus or chorus that lifts dynamically, adds new instrumentation, and arrives louder than the verse — this character has no arena moment and the generator must resist the trained instinct to build toward one.",
-      "Do not use glitch or digital artifact sounds decoratively on top of an otherwise clean, glossy production — the electronics must be structural and the grit must be baked in, not added as a surface treatment.",
-      "Do not generate a drum pattern with a live-kit feel, punchy kicks, or energetic hi-hat subdivisions — the drum machine here is dry, recessed, and functions as a quiet clock rather than a rhythmic personality.",
-      "Do not repeat the same small-world lyrical anchor — a specific object, place, or metaphor — across more than one track on a given album without a deliberate structural reason, even if the previous track using that anchor performed well.",
-      "Do not produce a vocal melody that is catchy in the conventional sense — hooks here are created by timing, space, and understatement, not by a memorable singable melodic line that could stand alone stripped of the production."
+      "Do not generate a track where the lyric is carried primarily by consistent end-rhyme couplets \u2014 this character's specific failure mode is producing neat AABB rhyme schemes that feel like a different, more conventional artist entirely.",
+      "Do not place the vocal on every bar or close to every bar \u2014 Postal v3's most common generator failure is filling space with words when the production and silence are supposed to carry the weight.",
+      "Do not default to themes of screens, messages, missed calls, or digital disconnection as the primary lyrical subject \u2014 these images are permitted only as minor texture, and the generator tends to lean on them as easy emotional shorthand.",
+      "Do not generate a pre-chorus or chorus that lifts dynamically, adds new instrumentation, and arrives louder than the verse \u2014 this character has no arena moment and the generator must resist the trained instinct to build toward one.",
+      "Do not use glitch or digital artifact sounds decoratively on top of an otherwise clean, glossy production \u2014 the electronics must be structural and the grit must be baked in, not added as a surface treatment.",
+      "Do not generate a drum pattern with a live-kit feel, punchy kicks, or energetic hi-hat subdivisions \u2014 the drum machine here is dry, recessed, and functions as a quiet clock rather than a rhythmic personality.",
+      "Do not repeat the same small-world lyrical anchor \u2014 a specific object, place, or metaphor \u2014 across more than one track on a given album without a deliberate structural reason, even if the previous track using that anchor performed well.",
+      "Do not produce a vocal melody that is catchy in the conventional sense \u2014 hooks here are created by timing, space, and understatement, not by a memorable singable melodic line that could stand alone stripped of the production."
     ],
     "do_not_repeat_across_album": [
-      "Do not use the same looping motif interval — if one track loops a two-bar phrase, the next track using a loop must loop at a different length or mutate the loop rather than hold it static",
-      "Do not anchor two consecutive tracks to the same primary synth pad character — rotate between warmer analog-feeling pads, colder digital textures, detuned or chorus-drifted patches, and thin filtered tones",
-      "Do not use the same organic instrumental accent color twice on one album — each rare instrument appearance must be the only appearance of that instrument across the project",
-      "Do not use the same vocal entrance timing strategy on consecutive tracks — alternate between early entrance, delayed entrance, and tracks where the vocal appears only once mid-song",
-      "Do not repeat the same lyrical structural device — if one track uses a single phrase repeated with variations, the next track must use a different structural approach such as a single extended narrative observation or a fragmented non-linear image sequence",
-      "Do not use tape hiss or filtered room noise as the primary ambient texture on more than two tracks per album — vary the ambient carrier between hiss, faint field recording, pad decay, and silence",
-      "Do not end two consecutive tracks with the same type of conclusion — vary between fade-out mid-loop, sudden stop, vocal last word held, and instrumental decay after the final lyric",
-      "Do not repeat the same BPM within four beats of a previous track — vary tempo meaningfully across the album so the pacing feels like an intentional journey rather than a settled default"
+      "Do not use the same looping motif interval \u2014 if one track loops a two-bar phrase, the next track using a loop must loop at a different length or mutate the loop rather than hold it static",
+      "Do not anchor two consecutive tracks to the same primary synth pad character \u2014 rotate between warmer analog-feeling pads, colder digital textures, detuned or chorus-drifted patches, and thin filtered tones",
+      "Do not use the same organic instrumental accent color twice on one album \u2014 each rare instrument appearance must be the only appearance of that instrument across the project",
+      "Do not use the same vocal entrance timing strategy on consecutive tracks \u2014 alternate between early entrance, delayed entrance, and tracks where the vocal appears only once mid-song",
+      "Do not repeat the same lyrical structural device \u2014 if one track uses a single phrase repeated with variations, the next track must use a different structural approach such as a single extended narrative observation or a fragmented non-linear image sequence",
+      "Do not use tape hiss or filtered room noise as the primary ambient texture on more than two tracks per album \u2014 vary the ambient carrier between hiss, faint field recording, pad decay, and silence",
+      "Do not end two consecutive tracks with the same type of conclusion \u2014 vary between fade-out mid-loop, sudden stop, vocal last word held, and instrumental decay after the final lyric",
+      "Do not repeat the same BPM within four beats of a previous track \u2014 vary tempo meaningfully across the album so the pacing feels like an intentional journey rather than a settled default"
     ],
     "hidden_brief_requirements": [
-      "The brief must specify the exact physical or sensory world this track inhabits — a particular place, time of day, season, or material texture — and this world must not have been used on any prior track in the same project.",
+      "The brief must specify the exact physical or sensory world this track inhabits \u2014 a particular place, time of day, season, or material texture \u2014 and this world must not have been used on any prior track in the same project.",
       "The brief must describe how the vocal will be withheld or delayed in a way that is different from the approach used on the immediately preceding track, explaining what the production will do in the space before the vocal arrives.",
-      "The brief must name the single most dominant emotional register of the track — not a genre label but a felt state, such as 'the specific restlessness of a Sunday afternoon that is almost over' — and this felt state must be distinct from the prior track's emotional register.",
+      "The brief must name the single most dominant emotional register of the track \u2014 not a genre label but a felt state, such as 'the specific restlessness of a Sunday afternoon that is almost over' \u2014 and this felt state must be distinct from the prior track's emotional register.",
       "The brief must specify whether this track introduces an organic or unusual instrumental color and, if so, confirm that this instrument does not appear on any other track in the project and describe the role it plays in the arrangement beyond texture.",
-      "The brief must describe what the loop or repeating motif does across the track — whether it mutates, drops elements, accelerates slightly, or disappears — and confirm that this behavior is different from any loop behavior used on the prior track.",
+      "The brief must describe what the loop or repeating motif does across the track \u2014 whether it mutates, drops elements, accelerates slightly, or disappears \u2014 and confirm that this behavior is different from any loop behavior used on the prior track.",
       "The brief must identify the one lyrical image or phrase that anchors the entire track emotionally and confirm that this anchor image has not been used, approximated, or implicitly echoed on any other track in the same project."
     ]
   }

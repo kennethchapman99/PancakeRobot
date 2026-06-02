@@ -89,7 +89,8 @@
       "trap hi-hat overload",
       "overly pristine modern radio production",
       "direct artist imitation"
-    ]
+    ],
+    "sparse_format": true
   },
   "lyrics": {
     "title_examples": [
@@ -186,100 +187,100 @@
   },
   "songwriting": {
     "vocal_performance_engine": {
-      "priority": "Postal v2's voice is irreplaceable because it functions as another texture in the mix — never leading the electronics but speaking between them, like a voice memo found years later.",
+      "priority": "Postal v2's voice is irreplaceable because it functions as another texture in the mix \u2014 never leading the electronics but speaking between them, like a voice memo found years later.",
       "vocal_textures": [
         "Dry, close-mic'd speech-tone that sounds like the singer is in the same small room as the listener, no reverb tail, almost no air",
         "Occasional breath-catch mid-phrase where a word trails into silence before the next line catches up, leaving the electronics to fill the gap",
-        "A slightly dulled, partially filtered vocal on verses — as if heard through a wall or across a hallway — that opens slightly on the emotional pivot point",
+        "A slightly dulled, partially filtered vocal on verses \u2014 as if heard through a wall or across a hallway \u2014 that opens slightly on the emotional pivot point",
         "Monotone low-register passages where pitch barely moves and the rhythm of speech carries more meaning than melody",
-        "Sparse falsetto fragments used once per song at most — never a flourish, always a moment of surprised sincerity"
+        "Sparse falsetto fragments used once per song at most \u2014 never a flourish, always a moment of surprised sincerity"
       ],
       "timing_behaviors": [
         "Lands words slightly behind the beat on emotional lines, as if the thought arrived a half-second late",
-        "Runs syllables together in the middle of dense phrases, then separates the final word with unusual space — isolating it like a subject line",
+        "Runs syllables together in the middle of dense phrases, then separates the final word with unusual space \u2014 isolating it like a subject line",
         "Pauses inside lines rather than between them, breaking grammar rather than meter, so the melody breathes in unexpected places",
-        "Speeds up slightly on mundane concrete details — addresses, objects, dates — and slows on the abstract or emotional word that follows"
+        "Speeds up slightly on mundane concrete details \u2014 addresses, objects, dates \u2014 and slows on the abstract or emotional word that follows"
       ],
       "adlib_behaviors": [
-        "Whispered single-word repetition under the final word of a chorus — not harmonized, just ghosted below it as if uncertain",
+        "Whispered single-word repetition under the final word of a chorus \u2014 not harmonized, just ghosted below it as if uncertain",
         "A short exhale or soft 'hm' between verses that sits in the stereo field slightly off-center, never centered with the main vocal",
-        "Fragmented syllable or half-word that trails off during a production gap — sounds like a thought abandoned before it became a sentence",
-        "Occasional hummed single note on an offbeat during a stripped passage — not melodic decoration, more like absentminded self-soothing"
+        "Fragmented syllable or half-word that trails off during a production gap \u2014 sounds like a thought abandoned before it became a sentence",
+        "Occasional hummed single note on an offbeat during a stripped passage \u2014 not melodic decoration, more like absentminded self-soothing"
       ],
       "avoid": [
-        "Melisma or runs of any kind — even small ones break the speech-tone intimacy this character depends on",
+        "Melisma or runs of any kind \u2014 even small ones break the speech-tone intimacy this character depends on",
         "Reverb-heavy vocal washes that push the voice away from the listener and into traditional indie-dream distance",
         "Projected chest-voice power notes that suggest performance for an audience rather than speaking to one person",
-        "Harmonies that are full and lush — any doubling should feel accidental or slightly imperfect, never choir-like",
-        "Call-and-response or back-and-forth vocal dynamics that imply a band, a room, a stage — this voice is solitary"
+        "Harmonies that are full and lush \u2014 any doubling should feel accidental or slightly imperfect, never choir-like",
+        "Call-and-response or back-and-forth vocal dynamics that imply a band, a room, a stage \u2014 this voice is solitary"
       ]
     },
     "performance_conceit_bank": [
-      "The voice drops to near-silence on a single concrete noun mid-verse — a street name, a color, a brand of something — as if that specific detail is the most fragile thing in the lyric",
+      "The voice drops to near-silence on a single concrete noun mid-verse \u2014 a street name, a color, a brand of something \u2014 as if that specific detail is the most fragile thing in the lyric",
       "A melody that begins confidently in the verse dissolves into spoken cadence by its third repetition, as if the singer stopped believing the pitch was necessary",
-      "The chorus is delivered at lower energy than the verse, not higher — the emotional release comes from backing off, not pushing through",
+      "The chorus is delivered at lower energy than the verse, not higher \u2014 the emotional release comes from backing off, not pushing through",
       "One line per song is sung twice, back to back, with the second version slightly slower and quieter, as if the singer heard themselves and wasn't sure they meant it",
-      "The bridge introduces a new melodic phrase that never returns — it exists only once in the song, making it feel like a memory that can't be retrieved",
-      "A backing vocal enters one bar before the listener expects it and then disappears, creating a phantom sensation — was that a harmony or a glitch?",
+      "The bridge introduces a new melodic phrase that never returns \u2014 it exists only once in the song, making it feel like a memory that can't be retrieved",
+      "A backing vocal enters one bar before the listener expects it and then disappears, creating a phantom sensation \u2014 was that a harmony or a glitch?",
       "The final word of the last chorus is left unresolved on a non-tonic pitch, the electronics sustain but the voice stops, and the song fades rather than lands"
     ],
     "album_mode_lanes": [
       {
         "name": "Signal Decay",
-        "description": "Tracks in this lane foreground transmission failure — vocals that cut, loop briefly on a phrase, drop a syllable to a click, and re-enter. The production feels like a message that almost didn't arrive. Use tape-stop effects, momentary silence drops, and looping fragments of the vocal itself as percussion texture."
+        "description": "Tracks in this lane foreground transmission failure \u2014 vocals that cut, loop briefly on a phrase, drop a syllable to a click, and re-enter. The production feels like a message that almost didn't arrive. Use tape-stop effects, momentary silence drops, and looping fragments of the vocal itself as percussion texture."
       },
       {
         "name": "Late Room",
-        "description": "Minimal, almost still production — a single synth pad, a soft drum machine pulse with one or two ornaments, and a vocal that barely needs to compete with anything. These are 2am songs: not sad in a narrative way, but quietly unresolved. The emotional weight comes from restraint and from what the lyrics don't say."
+        "description": "Minimal, almost still production \u2014 a single synth pad, a soft drum machine pulse with one or two ornaments, and a vocal that barely needs to compete with anything. These are 2am songs: not sad in a narrative way, but quietly unresolved. The emotional weight comes from restraint and from what the lyrics don't say."
       },
       {
         "name": "Object Memory",
-        "description": "Tracks built around a specific physical object or location in the lyric — a phone, a window, a parking lot, a doorbell — and the production mirrors it with a recurring sonic motif tied to that object. The motif returns transformed, just as a memory of a thing shifts over time."
+        "description": "Tracks built around a specific physical object or location in the lyric \u2014 a phone, a window, a parking lot, a doorbell \u2014 and the production mirrors it with a recurring sonic motif tied to that object. The motif returns transformed, just as a memory of a thing shifts over time."
       },
       {
         "name": "Fragile Momentum",
-        "description": "A lane with the most rhythmic energy in the catalog — but energy generated by a drum machine pattern that feels one hi-hat away from stopping. Bass pulse is more prominent. The vocal matches the rhythm closely but slips off it once per section, as if the singer is running slightly behind their own song."
+        "description": "A lane with the most rhythmic energy in the catalog \u2014 but energy generated by a drum machine pattern that feels one hi-hat away from stopping. Bass pulse is more prominent. The vocal matches the rhythm closely but slips off it once per section, as if the singer is running slightly behind their own song."
       },
       {
         "name": "Artifact",
-        "description": "Tracks that foreground the handmade origin of the sounds — audible mouse clicks, wrong notes left in, a synth that drifts out of tune and isn't corrected, a sample loop with a visible edit point. The voice sounds like it was recorded in one take with no punch-ins. Imperfection is the aesthetic argument."
+        "description": "Tracks that foreground the handmade origin of the sounds \u2014 audible mouse clicks, wrong notes left in, a synth that drifts out of tune and isn't corrected, a sample loop with a visible edit point. The voice sounds like it was recorded in one take with no punch-ins. Imperfection is the aesthetic argument."
       }
     ],
     "song_differentiation_rules": [
-      "If the previous track used a sparse late-night texture, the next track must introduce a rhythmic element that creates forward motion — even if subtle — so the album does not become a single long ambient mood",
-      "No two consecutive tracks may share the same vocal conceit — if one track uses spoken cadence as its emotional pivot, the next must commit to a sustained melodic line instead",
-      "If the previous track's emotional register was quietly resigned, the next must contain at least one moment of something unexpected: a dynamic surprise, a left-turn lyric, a production element that doesn't belong — even briefly",
+      "If the previous track used a sparse late-night texture, the next track must introduce a rhythmic element that creates forward motion \u2014 even if subtle \u2014 so the album does not become a single long ambient mood",
+      "No two consecutive tracks may share the same vocal conceit \u2014 if one track uses spoken cadence as its emotional pivot, the next must commit to a sustained melodic line instead",
+      "If the previous track's emotional register was quietly resigned, the next must contain at least one moment of something unexpected: a dynamic surprise, a left-turn lyric, a production element that doesn't belong \u2014 even briefly",
       "Rotate the primary production texture across consecutive tracks: if one track leads with synth pad atmosphere, the next should lead with rhythmic click-texture or bass pulse, not another pad wash",
-      "The lyrical subject anchor must shift between tracks — if one track is organized around a place, the next must be organized around an action, a time, or an object, not another place",
-      "If a track ends with fade and ambiguity, the following track must begin with a defined, deliberate opening gesture — a single clear sound — so the listener re-enters rather than drifts forward"
+      "The lyrical subject anchor must shift between tracks \u2014 if one track is organized around a place, the next must be organized around an action, a time, or an object, not another place",
+      "If a track ends with fade and ambiguity, the following track must begin with a defined, deliberate opening gesture \u2014 a single clear sound \u2014 so the listener re-enters rather than drifts forward"
     ],
     "anti_generic_rules": [
-      "Do not let the production become 'sad bedroom pop with glitch flavoring' — the glitch and click elements are structural, not decorative, and must change the shape of the song not just its surface",
-      "Do not write a chorus that peaks in volume, opens up in reverb, and delivers an emotional payoff through vocal projection — this character's choruses release inward, not outward",
-      "Do not use the word 'distance' or 'memory' as a lyric — these are the emotional territories, not the words. The lyrics must find concrete objects, times, and actions that carry those feelings without naming them",
-      "Do not fill every bar — silence, near-silence, and the space between a synth note and the next drum hit are active compositional choices for this character, not gaps to be filled",
-      "Do not default to a verse-chorus-verse-chorus-bridge-chorus structure without modification — this character's songs grow through accumulation, loop logic, or quiet dissolution, not pop architecture",
-      "Do not add string arrangements, orchestral swells, or any acoustic instrument that implies live performance — this world is built from machines, samples, and small electronic artifacts only",
-      "Do not make the emotional tone 'uplifting' or 'hopeful' in a resolved way — comfort in this world comes from recognition and company in sadness, not from having things work out",
-      "Do not use metaphors drawn from nature in an expansive sense — oceans, mountains, storms, fire. This character's imagery is domestic, urban, and small-scale: rooms, screens, vehicles, weather through glass"
+      "Do not let the production become 'sad bedroom pop with glitch flavoring' \u2014 the glitch and click elements are structural, not decorative, and must change the shape of the song not just its surface",
+      "Do not write a chorus that peaks in volume, opens up in reverb, and delivers an emotional payoff through vocal projection \u2014 this character's choruses release inward, not outward",
+      "Do not use the word 'distance' or 'memory' as a lyric \u2014 these are the emotional territories, not the words. The lyrics must find concrete objects, times, and actions that carry those feelings without naming them",
+      "Do not fill every bar \u2014 silence, near-silence, and the space between a synth note and the next drum hit are active compositional choices for this character, not gaps to be filled",
+      "Do not default to a verse-chorus-verse-chorus-bridge-chorus structure without modification \u2014 this character's songs grow through accumulation, loop logic, or quiet dissolution, not pop architecture",
+      "Do not add string arrangements, orchestral swells, or any acoustic instrument that implies live performance \u2014 this world is built from machines, samples, and small electronic artifacts only",
+      "Do not make the emotional tone 'uplifting' or 'hopeful' in a resolved way \u2014 comfort in this world comes from recognition and company in sadness, not from having things work out",
+      "Do not use metaphors drawn from nature in an expansive sense \u2014 oceans, mountains, storms, fire. This character's imagery is domestic, urban, and small-scale: rooms, screens, vehicles, weather through glass"
     ],
     "do_not_repeat_across_album": [
-      "The same drum machine pattern without at least one structural variation — if a hi-hat pattern appears on track two, it must be altered in density, placement, or dropped entirely on the next use",
-      "A whispered adlib used as a climactic moment — reserve this for one track per album and use silence or a different technique elsewhere",
-      "Tape hiss as an intro texture — rotate intro gestures across the album: a single synth tone, a bass pulse entry, a vocal fragment, a glitch click, not always the same warmth-signaling hiss",
-      "The lyrical device of a half-written or unsent message — this is a strong conceit for one track; do not repeat the 'unfinished communication' frame more than once per project",
-      "A chord progression that moves I–VI–IV–V or any of its inversions in a clearly recognizable form — vary harmonic movement so no two tracks share an audible progression logic",
-      "Falsetto as the emotional peak moment — if used on one track, the remaining tracks must find a different technique for their most exposed moment",
-      "Rain, condensation, or window-weather as the central image in the lyric — if one track uses window and weather as its anchor image, rotate to a different domestic or urban sensory detail",
-      "A two-bar synth motif that loops unaltered for the full duration of a section — motifs must evolve, fragment, or drop out rather than loop identically for more than four bars at a time"
+      "The same drum machine pattern without at least one structural variation \u2014 if a hi-hat pattern appears on track two, it must be altered in density, placement, or dropped entirely on the next use",
+      "A whispered adlib used as a climactic moment \u2014 reserve this for one track per album and use silence or a different technique elsewhere",
+      "Tape hiss as an intro texture \u2014 rotate intro gestures across the album: a single synth tone, a bass pulse entry, a vocal fragment, a glitch click, not always the same warmth-signaling hiss",
+      "The lyrical device of a half-written or unsent message \u2014 this is a strong conceit for one track; do not repeat the 'unfinished communication' frame more than once per project",
+      "A chord progression that moves I\u2013VI\u2013IV\u2013V or any of its inversions in a clearly recognizable form \u2014 vary harmonic movement so no two tracks share an audible progression logic",
+      "Falsetto as the emotional peak moment \u2014 if used on one track, the remaining tracks must find a different technique for their most exposed moment",
+      "Rain, condensation, or window-weather as the central image in the lyric \u2014 if one track uses window and weather as its anchor image, rotate to a different domestic or urban sensory detail",
+      "A two-bar synth motif that loops unaltered for the full duration of a section \u2014 motifs must evolve, fragment, or drop out rather than loop identically for more than four bars at a time"
     ],
     "hidden_brief_requirements": [
-      "The brief must identify a single specific physical object that anchors the lyric's emotional world on this track, and explain why that object — not a synonym or category — is irreplaceable to this song's meaning.",
+      "The brief must identify a single specific physical object that anchors the lyric's emotional world on this track, and explain why that object \u2014 not a synonym or category \u2014 is irreplaceable to this song's meaning.",
       "The brief must specify the one moment in this track where the production does something unexpected or slightly wrong, and describe exactly what that element is and where in the song's structure it occurs.",
-      "The brief must articulate how the vocal conceit on this track differs from every other track on the same project — stating the prior tracks' conceits and naming what this track does instead.",
-      "The brief must define the emotional register of the chorus relative to the verse — specifically whether it contracts, holds still, or shifts register downward, and what production change signals that movement.",
+      "The brief must articulate how the vocal conceit on this track differs from every other track on the same project \u2014 stating the prior tracks' conceits and naming what this track does instead.",
+      "The brief must define the emotional register of the chorus relative to the verse \u2014 specifically whether it contracts, holds still, or shifts register downward, and what production change signals that movement.",
       "The brief must name which album mode lane this track occupies and describe one specific production or lyrical constraint that distinguishes this track within that lane from a generic example of it.",
-      "The brief must specify the silence or near-silence moment in the track — its location, its duration in rough bars, and what the listener is meant to feel or notice in that gap."
+      "The brief must specify the silence or near-silence moment in the track \u2014 its location, its duration in rough bars, and what the listener is meant to feel or notice in that gap."
     ]
   }
 }

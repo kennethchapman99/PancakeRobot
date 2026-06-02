@@ -41,7 +41,7 @@
     "default_prompt": "Original intimate electronic indie pop with delicate vocal melodies, precise programmed drums, warm analog synths, subtle glitch percussion, airy pads, downtempo bass, and cinematic late-night atmosphere. Vary the lane by song: soft romantic electronic pop, glitchy drum-machine confessionals, darker trip-hop grooves, ambient piano/synth laments, warm nostalgic synth-pop, and sparse nocturnal instrumentals with vocal fragments are all valid. Never imitate, clone, or reference any real artist voice, cadence, lyrics, melody, drum pattern, arrangement, production, persona, or copyrighted work. Create a fresh performance with intimacy, restraint, melancholy, warmth, shadow, and memorable hooks.",
     "target_length": "2:20-4:10",
     "min_words": 120,
-    "normal_word_range": "150-320",
+    "normal_word_range": "200-460",
     "first_vocal_by_seconds": 14,
     "max_instrumental_intro_seconds": 20
   },
@@ -169,7 +169,7 @@
       "Rotate point of view: unsent message, room memory, train-window scene, late-night confession, detached observer, dream logic, or direct romantic address.",
       "Do not make every song about messages, technology, or distance; those are lanes, not the whole brand.",
       "When lyrics become abstract, include one plain human sentence that clarifies the emotional center.",
-      "When lyrics become romantic, avoid cliché and include a specific object, place, or small action.",
+      "When lyrics become romantic, avoid clich\u00e9 and include a specific object, place, or small action.",
       "When lyrics become dark, keep the tone restrained and avoid glamorizing collapse."
     ],
     "anti_repetition_rules": [
@@ -235,14 +235,14 @@
       "include_chorus_lines": true
     },
     "vocal_performance_engine": {
-      "priority": "This character's vocal is irreplaceable because it sits in the narrow register between confession and transmission — close enough to feel private, distant enough to feel like a signal arriving from somewhere you can no longer reach.",
+      "priority": "This character's vocal is irreplaceable because it sits in the narrow register between confession and transmission \u2014 close enough to feel private, distant enough to feel like a signal arriving from somewhere you can no longer reach.",
       "vocal_textures": [
         "A clean, slightly airy mid-register tone that sounds like it was recorded in a small lit room at 2am, with gentle room presence but no reverb wash",
         "Syllables clipped at the ends as though the message was cut short before the emotion could become melodramatic",
         "Occasional breathy onset on stressed words that makes the line feel physically close, like the microphone is inside the thought",
         "A flat, almost spoken delivery on the most painful lines, where pitch barely moves but emotional weight is entirely in the word choice and timing",
         "Soft doubling of specific phrases where one vocal layer is slightly behind the other, creating the feel of a memory overlapping the present moment",
-        "Very controlled vibrato used sparingly — only at the end of a phrase that earns release — never as a constant feature"
+        "Very controlled vibrato used sparingly \u2014 only at the end of a phrase that earns release \u2014 never as a constant feature"
       ],
       "timing_behaviors": [
         "Deliver certain syllables a half-beat late, as though the narrator hesitated before admitting the word, then catches up cleanly on the next phrase",
@@ -254,27 +254,27 @@
       "adlib_behaviors": [
         "Add a near-inaudible exhale or soft voiced breath between lines that functions as punctuation, not performance",
         "Occasionally repeat the last word of a phrase at lower volume under the next line, as though the narrator is still processing what was just said",
-        "Use a single wordless hum or tonal syllable in the drop or bridge — not a flourish, but a signal that language has temporarily run out",
+        "Use a single wordless hum or tonal syllable in the drop or bridge \u2014 not a flourish, but a signal that language has temporarily run out",
         "Layer a whispered version of the hook under the sung version in the final section, making the hook feel like it is fading into memory",
-        "Resist filling silence with ad-libs; when the track leaves space, the voice waits — emptiness is an adlib choice here"
+        "Resist filling silence with ad-libs; when the track leaves space, the voice waits \u2014 emptiness is an adlib choice here"
       ],
       "avoid": [
-        "Melisma, runs, or vocal acrobatics — any display of technique breaks the transmission-from-a-quiet-room illusion",
-        "Shouted or belted chorus peaks — emotional intensity here is expressed through restraint, not volume",
-        "Warm, breathy pop-smooth production sheen — the vocal should feel lightly processed and slightly exposed, not polished to a mainstream finish",
-        "Narrator as wounded performer — the voice should feel like someone sending a message, not someone performing grief for an audience",
+        "Melisma, runs, or vocal acrobatics \u2014 any display of technique breaks the transmission-from-a-quiet-room illusion",
+        "Shouted or belted chorus peaks \u2014 emotional intensity here is expressed through restraint, not volume",
+        "Warm, breathy pop-smooth production sheen \u2014 the vocal should feel lightly processed and slightly exposed, not polished to a mainstream finish",
+        "Narrator as wounded performer \u2014 the voice should feel like someone sending a message, not someone performing grief for an audience",
         "Aggressive vibrato or sustained held notes that signal theatrical emotion rather than private feeling"
       ]
     },
     "performance_conceit_bank": [
-      "The narrator sings the entire verse as though reading aloud from something written down — slightly more rhythmically even than natural speech — then breaks that controlled cadence on the last line, where the thought becomes too direct to perform.",
-      "A second vocal layer enters mid-chorus and sings a different clause of the same sentence simultaneously, so the hook contains two grammatical halves that never quite finish each other — the listener hears completion but cannot identify which line did it.",
+      "The narrator sings the entire verse as though reading aloud from something written down \u2014 slightly more rhythmically even than natural speech \u2014 then breaks that controlled cadence on the last line, where the thought becomes too direct to perform.",
+      "A second vocal layer enters mid-chorus and sings a different clause of the same sentence simultaneously, so the hook contains two grammatical halves that never quite finish each other \u2014 the listener hears completion but cannot identify which line did it.",
       "The voice drops to near-spoken level for exactly one line in the bridge that states the plainest emotional fact of the song, surrounded by more melodic material, making the plain line land harder than any held note could.",
       "On a glitch-pop track, the vocal is split so that consonants are slightly time-shifted from vowels through subtle editing, making the voice feel like a signal that has traveled a long distance and arrived slightly disassembled but still legible.",
-      "The hook is sung the first time at low volume and incomplete phrasing, as though the narrator is testing whether to say it at all, then repeated at full delivery only in the final section — the emotional payoff depends on having withheld it.",
-      "In a slow downtempo track, the narrator does not sing the last line of the final chorus — only the instrumental plays where the lyric should be, leaving the listener to complete it internally from prior repetition.",
-      "A recurring two-note melodic cell — the same two pitches — appears in the verse, the hook, and once in the outro at different rhythms and harmonies, acting as a sonic through-line the listener may not consciously notice but will feel as coherence.",
-      "The narrator addresses the same subject using second person in the verse, first person in the chorus, and third person in the bridge — not as a stylistic shift but as the emotional mechanism of the song: moving from direct address to identification to release."
+      "The hook is sung the first time at low volume and incomplete phrasing, as though the narrator is testing whether to say it at all, then repeated at full delivery only in the final section \u2014 the emotional payoff depends on having withheld it.",
+      "In a slow downtempo track, the narrator does not sing the last line of the final chorus \u2014 only the instrumental plays where the lyric should be, leaving the listener to complete it internally from prior repetition.",
+      "A recurring two-note melodic cell \u2014 the same two pitches \u2014 appears in the verse, the hook, and once in the outro at different rhythms and harmonies, acting as a sonic through-line the listener may not consciously notice but will feel as coherence.",
+      "The narrator addresses the same subject using second person in the verse, first person in the chorus, and third person in the bridge \u2014 not as a stylistic shift but as the emotional mechanism of the song: moving from direct address to identification to release."
     ],
     "album_mode_lanes": [
       {
@@ -287,7 +287,7 @@
       },
       {
         "name": "Night Architecture",
-        "description": "A fuller arrangement with warm analog pads, a steady drum-machine pulse in the 91-104 BPM range, and a chorus that opens the harmonic space without becoming anthemic; the song has the feeling of moving through a city at night — forward motion with private interior narration underneath"
+        "description": "A fuller arrangement with warm analog pads, a steady drum-machine pulse in the 91-104 BPM range, and a chorus that opens the harmonic space without becoming anthemic; the song has the feeling of moving through a city at night \u2014 forward motion with private interior narration underneath"
       },
       {
         "name": "Dream Correspondence",
@@ -303,38 +303,38 @@
       }
     ],
     "song_differentiation_rules": [
-      "If the previous track used a glitch-edited vocal conceit, the next track must use an entirely smooth, unprocessed vocal approach — the character's tendency is to over-apply digital texture when in doubt, so smooth must be a deliberate choice.",
-      "If the previous track ended ambiguously or with a fade into texture, the next track must have a clear final moment — a single last note, a final spoken syllable, a drum pattern that stops rather than dissolves — to prevent the album from drifting into one long ending.",
-      "If the previous track was primarily atmospheric and lyric-light, the next track must carry a complete narrative arc with a verse, a hook, and a bridge that shifts emotional perspective — this character defaults to texture when structural work feels hard.",
-      "Do not allow two consecutive tracks to open with the same type of element: if one opens on a synth pad, the next must open on a drum figure, piano motif, bass pulse, or immediate vocal — the character's default is to open everything on a pad texture.",
-      "If the previous track used second-person direct address throughout, the next must use either pure first-person interiority or cinematic third-person distance — the character tends to stay in second-person address as an emotional comfort move.",
-      "Ensure that no two adjacent tracks share a tempo within 8 BPM of each other and that their primary emotional postures — longing, numbness, warmth, tension, release — are different named states, not gradations of the same state"
+      "If the previous track used a glitch-edited vocal conceit, the next track must use an entirely smooth, unprocessed vocal approach \u2014 the character's tendency is to over-apply digital texture when in doubt, so smooth must be a deliberate choice.",
+      "If the previous track ended ambiguously or with a fade into texture, the next track must have a clear final moment \u2014 a single last note, a final spoken syllable, a drum pattern that stops rather than dissolves \u2014 to prevent the album from drifting into one long ending.",
+      "If the previous track was primarily atmospheric and lyric-light, the next track must carry a complete narrative arc with a verse, a hook, and a bridge that shifts emotional perspective \u2014 this character defaults to texture when structural work feels hard.",
+      "Do not allow two consecutive tracks to open with the same type of element: if one opens on a synth pad, the next must open on a drum figure, piano motif, bass pulse, or immediate vocal \u2014 the character's default is to open everything on a pad texture.",
+      "If the previous track used second-person direct address throughout, the next must use either pure first-person interiority or cinematic third-person distance \u2014 the character tends to stay in second-person address as an emotional comfort move.",
+      "Ensure that no two adjacent tracks share a tempo within 8 BPM of each other and that their primary emotional postures \u2014 longing, numbness, warmth, tension, release \u2014 are different named states, not gradations of the same state"
     ],
     "anti_generic_rules": [
-      "This character's specific failure mode is writing a verse full of beautiful small details and then abandoning them in the chorus for a vague emotional declaration — every chorus must contain at least one specific object, action, or place that earns the feeling it carries.",
-      "The character defaults to rain, windows, and late-night train imagery when the lyric-writing stalls — if any of these appear, they must earn their place by doing something structurally unusual, not simply signaling atmosphere.",
-      "Generic output for this style produces a soft synth pad, a four-on-the-floor kick with light room reverb, and a minor-key vocal that rises on the word 'gone' — if any of these three elements appear together unchallenged, the song must be redesigned.",
-      "The character tends to mistake restraint for emptiness — a track that has nothing except quiet is not restrained, it is unfinished; every track must have at least one moment of deliberate sonic choice that could only have been made by this specific character's production sensibility.",
-      "When emotional stakes are high the character defaults to abstraction as a protective move — the plainest, most direct sentence in a lyric is usually the most important one, and it must not be buried under metaphor or left out entirely.",
-      "The character's programmed drums tend to become decorative over time, running in the background without rhythmic personality — drums must have at least one moment per track where their pattern, gap, or texture is the primary event, not the backdrop.",
-      "Hooks that end on the tonic note and land on beat one of the bar are this character's comfort-zone escape hatch — at least half of all hooks should resolve unexpectedly, either harmonically, rhythmically, or by ending mid-phrase."
+      "This character's specific failure mode is writing a verse full of beautiful small details and then abandoning them in the chorus for a vague emotional declaration \u2014 every chorus must contain at least one specific object, action, or place that earns the feeling it carries.",
+      "The character defaults to rain, windows, and late-night train imagery when the lyric-writing stalls \u2014 if any of these appear, they must earn their place by doing something structurally unusual, not simply signaling atmosphere.",
+      "Generic output for this style produces a soft synth pad, a four-on-the-floor kick with light room reverb, and a minor-key vocal that rises on the word 'gone' \u2014 if any of these three elements appear together unchallenged, the song must be redesigned.",
+      "The character tends to mistake restraint for emptiness \u2014 a track that has nothing except quiet is not restrained, it is unfinished; every track must have at least one moment of deliberate sonic choice that could only have been made by this specific character's production sensibility.",
+      "When emotional stakes are high the character defaults to abstraction as a protective move \u2014 the plainest, most direct sentence in a lyric is usually the most important one, and it must not be buried under metaphor or left out entirely.",
+      "The character's programmed drums tend to become decorative over time, running in the background without rhythmic personality \u2014 drums must have at least one moment per track where their pattern, gap, or texture is the primary event, not the backdrop.",
+      "Hooks that end on the tonic note and land on beat one of the bar are this character's comfort-zone escape hatch \u2014 at least half of all hooks should resolve unexpectedly, either harmonically, rhythmically, or by ending mid-phrase."
     ],
     "do_not_repeat_across_album": [
-      "Do not open more than one track per album with a slowly rising synth pad that establishes key and mood before any rhythm or melody enters — this is the character's most-used opener and it must be rationed to one use per project.",
-      "Do not use the layered whisper-under-sung-hook technique in more than two songs on a given album — it is a signature moment, not a default texture.",
-      "Do not place the bridge at the same structural position — following the second chorus — in more than two consecutive tracks; vary bridge placement to keep the album's architecture from feeling formulaic.",
-      "Do not use the same harmonic move — minor chord resolving down to the relative major — as the emotional release point in more than two songs on the same album; find different harmonic ways to deliver warmth or resolution.",
-      "Do not repeat the lyrical device of an unsent or incomplete message as the central conceit in back-to-back tracks — message incompleteness is one lane in a larger catalog, not the only lane.",
-      "Do not use glitch artifacts as the primary textural event in two tracks that will sit adjacent in a sequence — space them across the album so each glitch moment feels like a chosen event rather than a stylistic tic.",
-      "Do not allow the drum-machine pattern on consecutive tracks to share the same kick placement on beat one and snare on beat three — vary the grid relationship of bass and snare to prevent rhythmic sameness from erasing the emotional distinctiveness of each song.",
-      "Do not end more than two tracks on the same album with a fade into pad texture; outros must vary across forms — a held single note, a drum pattern stopping cold, a voice alone, an ambient loop that loops visibly — so that each ending feels like a specific choice about that song's meaning."
+      "Do not open more than one track per album with a slowly rising synth pad that establishes key and mood before any rhythm or melody enters \u2014 this is the character's most-used opener and it must be rationed to one use per project.",
+      "Do not use the layered whisper-under-sung-hook technique in more than two songs on a given album \u2014 it is a signature moment, not a default texture.",
+      "Do not place the bridge at the same structural position \u2014 following the second chorus \u2014 in more than two consecutive tracks; vary bridge placement to keep the album's architecture from feeling formulaic.",
+      "Do not use the same harmonic move \u2014 minor chord resolving down to the relative major \u2014 as the emotional release point in more than two songs on the same album; find different harmonic ways to deliver warmth or resolution.",
+      "Do not repeat the lyrical device of an unsent or incomplete message as the central conceit in back-to-back tracks \u2014 message incompleteness is one lane in a larger catalog, not the only lane.",
+      "Do not use glitch artifacts as the primary textural event in two tracks that will sit adjacent in a sequence \u2014 space them across the album so each glitch moment feels like a chosen event rather than a stylistic tic.",
+      "Do not allow the drum-machine pattern on consecutive tracks to share the same kick placement on beat one and snare on beat three \u2014 vary the grid relationship of bass and snare to prevent rhythmic sameness from erasing the emotional distinctiveness of each song.",
+      "Do not end more than two tracks on the same album with a fade into pad texture; outros must vary across forms \u2014 a held single note, a drum pattern stopping cold, a voice alone, an ambient loop that loops visibly \u2014 so that each ending feels like a specific choice about that song's meaning."
     ],
     "hidden_brief_requirements": [
-      "The brief must specify the exact vocal conceit this track uses — what the voice does differently from every other track already planned for this album — and explain why that conceit serves this specific lyric's emotional logic rather than simply varying technique for variety's sake.",
-      "The brief must name the single plainest sentence in the lyric — the line where the narrator stops performing and states the emotional fact directly — and confirm that this line is structurally visible rather than buried inside a verse or hidden under production.",
+      "The brief must specify the exact vocal conceit this track uses \u2014 what the voice does differently from every other track already planned for this album \u2014 and explain why that conceit serves this specific lyric's emotional logic rather than simply varying technique for variety's sake.",
+      "The brief must name the single plainest sentence in the lyric \u2014 the line where the narrator stops performing and states the emotional fact directly \u2014 and confirm that this line is structurally visible rather than buried inside a verse or hidden under production.",
       "The brief must identify which of the character's known failure modes is most likely on this track given its tempo lane and emotional posture, and specify what production or lyrical decision will counteract that failure mode before it emerges.",
-      "The brief must describe the outro's specific ending form — not 'fade out' but the precise final element that will be the last thing the listener hears — and explain how that ending creates an afterimage specific to this song rather than a generic dissolve.",
-      "The brief must confirm that the track's primary sensory detail — the concrete object, room element, or physical action that anchors the lyric — has not appeared in any other track on this album, and specify what emotional work that detail performs in the hook or verse where it lives.",
+      "The brief must describe the outro's specific ending form \u2014 not 'fade out' but the precise final element that will be the last thing the listener hears \u2014 and explain how that ending creates an afterimage specific to this song rather than a generic dissolve.",
+      "The brief must confirm that the track's primary sensory detail \u2014 the concrete object, room element, or physical action that anchors the lyric \u2014 has not appeared in any other track on this album, and specify what emotional work that detail performs in the hook or verse where it lives.",
       "The brief must state the tempo, the BPM lane it falls within, the drum-machine pattern character in plain terms, and confirm that this combination has not appeared in the immediately preceding track, with a note on how the rhythmic personality of this track differs audibly from the one before it."
     ]
   },

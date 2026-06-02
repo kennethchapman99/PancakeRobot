@@ -41,7 +41,7 @@
     "default_prompt": "Original intimate singer-songwriter track with warm acoustic guitar, natural live-room vocal, melodic bass, restrained percussion, and emotionally direct lyrics. Vary the lane by song: fingerpicked folk confession, blues-pop guitar groove, quiet indie-folk dusk song, full-band road anthem, tender love song, family-memory ballad, and sparse late-night acoustic take are all valid. Vocals should feel close, human, urban-adult, and honest without imitating any real artist voice, tone, cadence, lyrics, melody, guitar phrasing, arrangement, persona, or copyrighted work. Create a fresh performance with warmth, craft, restraint, vulnerability, and memorable melodic hooks.",
     "target_length": "2:30-4:10",
     "min_words": 120,
-    "normal_word_range": "150-360",
+    "normal_word_range": "220-460",
     "first_vocal_by_seconds": 10,
     "max_instrumental_intro_seconds": 16
   },
@@ -83,7 +83,7 @@
       "coffeehouse folk-pop warmth",
       "clean electric guitar singer-songwriter groove"
     ],
-    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, tone, cadence, lyrics, melodies, guitar licks, chord progressions, arrangements, album sequencing, persona, or copyrighted material. Use broad traits—intimacy, guitar craft, plainspoken storytelling, blues-pop color, and indie-folk restraint—as inspiration for an original Porchlight Atlas identity.",
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, tone, cadence, lyrics, melodies, guitar licks, chord progressions, arrangements, album sequencing, persona, or copyrighted material. Use broad traits\u2014intimacy, guitar craft, plainspoken storytelling, blues-pop color, and indie-folk restraint\u2014as inspiration for an original Porchlight Atlas identity.",
     "allowed_elements": [
       "fingerpicked acoustic guitar and warm strummed rhythm",
       "clean blues-pop electric guitar fills without copying known licks",
@@ -235,14 +235,14 @@
       "include_chorus_lines": true
     },
     "vocal_performance_engine": {
-      "priority": "This character's voice earns its place through lived-in grain and conversational intimacy — the sense that every sung line was road-tested in a real room before it was recorded, not polished into smoothness.",
+      "priority": "This character's voice earns its place through lived-in grain and conversational intimacy \u2014 the sense that every sung line was road-tested in a real room before it was recorded, not polished into smoothness.",
       "vocal_textures": [
         "A warm mid-range chest voice with faint roughness at phrase edges, as if the singer has been talking all day and the throat remembers it",
         "Breath-forward delivery on confessional lines, where the air arriving before the vowel is part of the emotional signal",
         "A slight natural crack on isolated high notes that is left in rather than corrected, giving the moment its emotional weight",
         "Hushed near-speech tone in verses when the lyric is at its most specific and personal, dropping back from singing into telling",
         "A fuller, warmer resonance on chorus hooks that widens the chest sound without pushing toward technical power-vocal territory",
-        "Subtle regional color in vowel shaping — not an accent, but a slight flatness or drawl on certain words that grounds the voice in a real geography"
+        "Subtle regional color in vowel shaping \u2014 not an accent, but a slight flatness or drawl on certain words that grounds the voice in a real geography"
       ],
       "timing_behaviors": [
         "Arrives on the beat slightly behind in verses, leaning into the rhythm from behind like someone who knows where the pocket is and trusts it",
@@ -260,84 +260,84 @@
       ],
       "avoid": [
         "Bright, clean studio-corrected pitch perfection that removes the grain the voice needs to feel like it belongs in a live room",
-        "Melisma or sustained note runs that pull focus from the lyric toward vocal display — this voice proves itself through what it says, not how long it can hold a note",
+        "Melisma or sustained note runs that pull focus from the lyric toward vocal display \u2014 this voice proves itself through what it says, not how long it can hold a note",
         "Punchy rhythmic vocal performance that flattens the conversational timing and makes the delivery feel like a genre exercise rather than a person",
         "Affecting a deep authoritative baritone gravitas that feels like a posture rather than a natural register",
         "Overshooting the emotional volume on chorus peaks so the vulnerability in the verse is dwarfed and the dynamic arc collapses"
       ]
     },
     "performance_conceit_bank": [
-      "On a tender family-memory song, the vocal drops to near-speech for exactly one line — the one that names the specific person or object — then rises back into melody, as if the real name was almost too private to sing aloud.",
+      "On a tender family-memory song, the vocal drops to near-speech for exactly one line \u2014 the one that names the specific person or object \u2014 then rises back into melody, as if the real name was almost too private to sing aloud.",
       "On a blues-pop groove track, the voice delays entry by half a bar after the guitar lick opens, letting the string sound make the promise before the narrator shows up to either keep or complicate it.",
-      "On a late-night solo acoustic piece, the singer lands on the hook note and then does not sustain it — the syllable cuts off and the guitar string rings the pitch instead, splitting the hook between instrument and voice.",
+      "On a late-night solo acoustic piece, the singer lands on the hook note and then does not sustain it \u2014 the syllable cuts off and the guitar string rings the pitch instead, splitting the hook between instrument and voice.",
       "On a road anthem, the chorus doubles the lead vocal with a barely-audible second take that is slightly drier and less confident, creating the impression of the singer in the room and the memory of the singer at the same time.",
-      "On an apology or regret song, the narrator drops one lyric line entirely into spoken cadence — no melody, just the plain sentence — and then returns to singing, marking the moment as too honest to dress in tune.",
+      "On an apology or regret song, the narrator drops one lyric line entirely into spoken cadence \u2014 no melody, just the plain sentence \u2014 and then returns to singing, marking the moment as too honest to dress in tune.",
       "On a fingerpicked folk confession, the vocal phrasing deliberately runs over the bar line on one verse lyric, spilling the sentence past where a tidy arrangement would have contained it, as if the feeling outran the structure.",
-      "On any song where the final chorus repeats, the last statement of the title phrase is sung softer than the first, not louder — the resolution arrives by going inward rather than pushing outward.",
+      "On any song where the final chorus repeats, the last statement of the title phrase is sung softer than the first, not louder \u2014 the resolution arrives by going inward rather than pushing outward.",
       "On a blues-inflected track, the voice bends a syllable in the verse exactly the way the guitar bends a note in the following fill, creating a call-and-response not between two instruments but between the body and the string."
     ],
     "album_mode_lanes": [
       {
         "name": "Porch Confession",
-        "description": "Solo or near-solo fingerpicked tracks where the only company is the guitar and the narrator's memory — arrangement is so sparse the listener can hear room tone, and the lyric earns its intimacy by naming one specific irretrievable thing per verse rather than gesturing at loss in general."
+        "description": "Solo or near-solo fingerpicked tracks where the only company is the guitar and the narrator's memory \u2014 arrangement is so sparse the listener can hear room tone, and the lyric earns its intimacy by naming one specific irretrievable thing per verse rather than gesturing at loss in general."
       },
       {
         "name": "Blue-Light Groove",
-        "description": "Relaxed blues-pop songs where the electric guitar is not background texture but a conversational partner — the vocal and the guitar fills complete each other's sentences, and the emotional content is complicated by pleasure rather than uncomplicated by it."
+        "description": "Relaxed blues-pop songs where the electric guitar is not background texture but a conversational partner \u2014 the vocal and the guitar fills complete each other's sentences, and the emotional content is complicated by pleasure rather than uncomplicated by it."
       },
       {
         "name": "Road Company",
-        "description": "Full-band tracks where the rhythm section creates forward momentum but the lyrics stay grounded in small, specific images rather than big anthem language — the song feels like motion toward something the narrator cannot quite name yet."
+        "description": "Full-band tracks where the rhythm section creates forward momentum but the lyrics stay grounded in small, specific images rather than big anthem language \u2014 the song feels like motion toward something the narrator cannot quite name yet."
       },
       {
         "name": "Dusk Window",
-        "description": "Slow, low-key indie-folk pieces that do not resolve — tempo sits at the bottom of the range, the mix is dry and close, and the final image is left deliberately ambiguous, trusting the listener to complete the emotional arc in the silence after the track ends."
+        "description": "Slow, low-key indie-folk pieces that do not resolve \u2014 tempo sits at the bottom of the range, the mix is dry and close, and the final image is left deliberately ambiguous, trusting the listener to complete the emotional arc in the silence after the track ends."
       },
       {
         "name": "Ordinary Tender",
-        "description": "Love and devotion songs that earn sentiment through physical specificity rather than elevated language — the emotional peak arrives from noticing a gesture, a habit, or a worn object rather than from stating the feeling directly."
+        "description": "Love and devotion songs that earn sentiment through physical specificity rather than elevated language \u2014 the emotional peak arrives from noticing a gesture, a habit, or a worn object rather than from stating the feeling directly."
       },
       {
         "name": "Dry Account",
-        "description": "Character sketches or self-inventories delivered in a more detached, observational voice — the narrator steps slightly outside the feeling and reports it with wry plainness, using humor or understatement as the emotional delivery mechanism rather than vulnerability."
+        "description": "Character sketches or self-inventories delivered in a more detached, observational voice \u2014 the narrator steps slightly outside the feeling and reports it with wry plainness, using humor or understatement as the emotional delivery mechanism rather than vulnerability."
       }
     ],
     "song_differentiation_rules": [
       "If the previous track opened with a fingerpicked guitar figure, the next track must open differently: cold vocal, a single electric note, room sound, drum brush, or immediate lyric image without an instrumental intro.",
       "If the previous track resolved with a swelling final chorus, the current track must end smaller: a repeated phrase dropping in volume, a guitar figure alone, an unresolved suspended chord, or a half-spoken trailing line.",
       "If the previous track used a direct first-person love address, the current track must shift perspective to a third-person character sketch, a self-directed inventory, a family scene, or a road observation that does not center romantic feeling.",
-      "If the previous track stayed in a slow folk lane, the current track must shift at least two energy variables simultaneously — tempo, guitar texture, and rhythm density — not just increase BPM while keeping everything else the same.",
+      "If the previous track stayed in a slow folk lane, the current track must shift at least two energy variables simultaneously \u2014 tempo, guitar texture, and rhythm density \u2014 not just increase BPM while keeping everything else the same.",
       "If the previous track's hook was melodically smooth and reassuring, the current track's hook should arrive jagged, plainspoken, or rhythmically interrupted, so the emotional mode of the hook itself signals a different kind of feeling.",
-      "If the previous track used brushed drums and warm upright-bass feel, the current track must either remove percussion entirely or introduce a noticeably different rhythmic texture — rim-click groove, more forward kick, or pure acoustic rhythm without kit."
+      "If the previous track used brushed drums and warm upright-bass feel, the current track must either remove percussion entirely or introduce a noticeably different rhythmic texture \u2014 rim-click groove, more forward kick, or pure acoustic rhythm without kit."
     ],
     "anti_generic_rules": [
-      "Do not open every song by establishing the narrator alone in a room or vehicle — this character's specific failure mode is the solitary-figure establishing shot, which becomes invisible through repetition and must be interrupted regularly with mid-scene entry or second-person address.",
-      "Do not allow plainspoken vocabulary to collapse into bare statement — this character earns emotional weight through one or two precise, unexpected concrete details per song, not through general declarations of longing or love or regret that could belong to any song in this style.",
-      "Do not let the blues-pop guitar lane default to a single mood of relaxed cool — this character's electric guitar should carry emotional information, so the tone, dynamics, and note choices must reflect the specific feeling of the song rather than performing a genre aesthetic.",
-      "Do not let dry humor become a tic — this character uses wry self-awareness as a release valve at specific moments, not as a continuous vocal personality, and overuse signals that the generator is filling space rather than serving the song.",
-      "Do not recycle the energy arc structure as a formula — the ROOM TO HOME LIGHT pattern describes emotional logic, not a required sequence of production moves, and every song must find its own concrete way to move through that logic without re-using the same verse setup, pre-chorus build, or chorus delivery.",
-      "Do not resolve emotional ambiguity too cleanly — this character lives in the unfinished, the almost-said, and the quietly unresolved, and a tidy emotional landing on every track flattens what makes the voice distinctive.",
-      "Do not treat the guitar as decoration — every arrangement must specify what the guitar is doing emotionally, not just texturally, and if the guitar cannot be described as commenting on the lyric or carrying emotional information, the arrangement must be reconsidered.",
-      "Do not allow consecutive songs on an album to share a dominant metaphor cluster — if one song uses weather imagery as its central texture, the next must build its imagery from a different concrete world: body, furniture, clothing, tool, sound, light, or movement."
+      "Do not open every song by establishing the narrator alone in a room or vehicle \u2014 this character's specific failure mode is the solitary-figure establishing shot, which becomes invisible through repetition and must be interrupted regularly with mid-scene entry or second-person address.",
+      "Do not allow plainspoken vocabulary to collapse into bare statement \u2014 this character earns emotional weight through one or two precise, unexpected concrete details per song, not through general declarations of longing or love or regret that could belong to any song in this style.",
+      "Do not let the blues-pop guitar lane default to a single mood of relaxed cool \u2014 this character's electric guitar should carry emotional information, so the tone, dynamics, and note choices must reflect the specific feeling of the song rather than performing a genre aesthetic.",
+      "Do not let dry humor become a tic \u2014 this character uses wry self-awareness as a release valve at specific moments, not as a continuous vocal personality, and overuse signals that the generator is filling space rather than serving the song.",
+      "Do not recycle the energy arc structure as a formula \u2014 the ROOM TO HOME LIGHT pattern describes emotional logic, not a required sequence of production moves, and every song must find its own concrete way to move through that logic without re-using the same verse setup, pre-chorus build, or chorus delivery.",
+      "Do not resolve emotional ambiguity too cleanly \u2014 this character lives in the unfinished, the almost-said, and the quietly unresolved, and a tidy emotional landing on every track flattens what makes the voice distinctive.",
+      "Do not treat the guitar as decoration \u2014 every arrangement must specify what the guitar is doing emotionally, not just texturally, and if the guitar cannot be described as commenting on the lyric or carrying emotional information, the arrangement must be reconsidered.",
+      "Do not allow consecutive songs on an album to share a dominant metaphor cluster \u2014 if one song uses weather imagery as its central texture, the next must build its imagery from a different concrete world: body, furniture, clothing, tool, sound, light, or movement."
     ],
     "do_not_repeat_across_album": [
-      "Do not use a fingerpicked descending arpeggio as the intro figure on more than one track per album — this is the character's most comfortable opening move and must be deliberately rationed.",
-      "Do not place the emotional turn in the bridge of three or more consecutive songs — rotate the location of the narrative turn to the second verse, the final chorus, the last couplet of a verse, or the outro.",
-      "Do not use road or driving imagery as a framing device in back-to-back tracks — it is one lane of the character's geography, not the character's entire world.",
-      "Do not rely on the same verb cluster — arriving, leaving, staying, waiting, remembering — to carry the emotional action across multiple songs; each track must find its own physical or sensory action verb to anchor the lyric.",
-      "Do not use the near-speech lyric drop more than once every four tracks — it is a high-impact device that loses power through repetition and must be reserved for the moment it earns the most.",
-      "Do not end more than two consecutive songs with a fading repeated hook — vary the ending mode with a single unaccompanied line, a guitar figure alone, a room-sound decay, or a mid-phrase cut.",
-      "Do not use hushed close-mic vulnerability as the dominant vocal texture across a whole album — rotate it with more conversational delivery, slight distance, or the fuller chest resonance so the quiet moments remain meaningful by contrast.",
-      "Do not use the same seasonal or time-of-day framing — late night, early morning, dusk — in more than two songs on the same album; vary the temporal setting to prevent the album from feeling atmospherically claustrophobic.",
-      "Do not place the melodic hook on the same syllable position within the title phrase across multiple tracks — vary whether the emphasis falls on the first word, the last word, or an unexpected middle word so each hook has its own rhythmic identity."
+      "Do not use a fingerpicked descending arpeggio as the intro figure on more than one track per album \u2014 this is the character's most comfortable opening move and must be deliberately rationed.",
+      "Do not place the emotional turn in the bridge of three or more consecutive songs \u2014 rotate the location of the narrative turn to the second verse, the final chorus, the last couplet of a verse, or the outro.",
+      "Do not use road or driving imagery as a framing device in back-to-back tracks \u2014 it is one lane of the character's geography, not the character's entire world.",
+      "Do not rely on the same verb cluster \u2014 arriving, leaving, staying, waiting, remembering \u2014 to carry the emotional action across multiple songs; each track must find its own physical or sensory action verb to anchor the lyric.",
+      "Do not use the near-speech lyric drop more than once every four tracks \u2014 it is a high-impact device that loses power through repetition and must be reserved for the moment it earns the most.",
+      "Do not end more than two consecutive songs with a fading repeated hook \u2014 vary the ending mode with a single unaccompanied line, a guitar figure alone, a room-sound decay, or a mid-phrase cut.",
+      "Do not use hushed close-mic vulnerability as the dominant vocal texture across a whole album \u2014 rotate it with more conversational delivery, slight distance, or the fuller chest resonance so the quiet moments remain meaningful by contrast.",
+      "Do not use the same seasonal or time-of-day framing \u2014 late night, early morning, dusk \u2014 in more than two songs on the same album; vary the temporal setting to prevent the album from feeling atmospherically claustrophobic.",
+      "Do not place the melodic hook on the same syllable position within the title phrase across multiple tracks \u2014 vary whether the emphasis falls on the first word, the last word, or an unexpected middle word so each hook has its own rhythmic identity."
     ],
     "hidden_brief_requirements": [
-      "The brief must specify a single concrete physical detail unique to this track — not drawn from any other song in this session or album — that anchors the narrator's emotional situation in a specific, irreplaceable object, gesture, or place.",
+      "The brief must specify a single concrete physical detail unique to this track \u2014 not drawn from any other song in this session or album \u2014 that anchors the narrator's emotional situation in a specific, irreplaceable object, gesture, or place.",
       "The brief must describe how the electric or acoustic guitar is behaving emotionally on this specific track, not just texturally, including whether it is leading, answering, contradicting, or shadowing the vocal line.",
       "The brief must identify which song-family lane this track occupies and explain what structural or vocal choice will prevent it from sounding like the previous track in the same lane.",
-      "The brief must specify the exact emotional posture of the narrator at the end of the song — resolved, unresolved, dryly aware, quietly hopeful, or still mid-feeling — so the arrangement and final image serve that posture rather than defaulting to a generic close.",
+      "The brief must specify the exact emotional posture of the narrator at the end of the song \u2014 resolved, unresolved, dryly aware, quietly hopeful, or still mid-feeling \u2014 so the arrangement and final image serve that posture rather than defaulting to a generic close.",
       "The brief must state where the narrative or emotional turn falls in this track's structure and confirm it does not fall in the same structural position as the turn in the preceding track.",
-      "The brief must specify one performance behavior — a timing choice, an adlib moment, a dynamic drop, or a vocal texture shift — that is unique to this track and has not been used in the same way on any adjacent track in this album sequence."
+      "The brief must specify one performance behavior \u2014 a timing choice, an adlib moment, a dynamic drop, or a vocal texture shift \u2014 that is unique to this track and has not been used in the same way on any adjacent track in this album sequence."
     ]
   },
   "visuals": {

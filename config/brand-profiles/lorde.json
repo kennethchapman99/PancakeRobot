@@ -41,7 +41,7 @@
     "default_prompt": "Original minimalist dark-pop with sparse programmed drums, deep synth bass, intimate low-register vocal presence, elegant negative space, soft harmonies, cinematic pads, and carefully placed emotional lift. Vary the lane by song: cool restrained dark-pop, glittering heartbreak anthem, sparse bedroom confession, party-afterglow song, anxious synth-pop pulse, intimate piano/synth ballad, and explosive final-chorus catharsis are all valid. Never imitate, clone, or reference any real artist voice, vocal tone, cadence, lyrics, melody, beat, arrangement, production, persona, or copyrighted work. Create a fresh performance with restraint, emotional precision, youth-memory detail, elegance, and melodic impact.",
     "target_length": "2:20-4:00",
     "min_words": 120,
-    "normal_word_range": "150-340",
+    "normal_word_range": "200-400",
     "first_vocal_by_seconds": 10,
     "max_instrumental_intro_seconds": 16
   },
@@ -83,7 +83,7 @@
       "cinematic heartbreak pop",
       "late-night minimalist alt-pop"
     ],
-    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, vocal tone, cadence, phrasing, lyrics, melodies, drum programming, synth motifs, arrangements, album sequencing, persona, or copyrighted material. Use broad emotional and sonic traits—minimalism, intimacy, observational writing, controlled cool, and explosive emotional release—as inspiration for an original Midnight Province identity.",
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, vocal tone, cadence, phrasing, lyrics, melodies, drum programming, synth motifs, arrangements, album sequencing, persona, or copyrighted material. Use broad emotional and sonic traits\u2014minimalism, intimacy, observational writing, controlled cool, and explosive emotional release\u2014as inspiration for an original Midnight Province identity.",
     "allowed_elements": [
       "sparse programmed drums and negative space",
       "intimate low-register vocal energy without soundalike imitation",
@@ -237,105 +237,105 @@
     "vocal_performance_engine": {
       "priority": "Midnight Province's vocal is irreplaceable because it delivers enormous emotional stakes at near-conversational volume, using flatness and plain speech rhythm to make a single held note or a dropped syllable feel like a confession being dragged out of someone who didn't want to confess.",
       "vocal_textures": [
-        "A low-chest, slightly dry speaking-register delivery in verses — not breathy, not polished, almost like thinking out loud into a microphone placed too close",
+        "A low-chest, slightly dry speaking-register delivery in verses \u2014 not breathy, not polished, almost like thinking out loud into a microphone placed too close",
         "Deliberate syllable compression where multi-syllable words are flattened into one rhythmic unit, giving lyrics the feel of a text message read aloud",
-        "A sudden leap into pure-tone head voice on a single word inside a chorus — isolated, slightly cold, not melismatic, like a light turning on in a dark room",
+        "A sudden leap into pure-tone head voice on a single word inside a chorus \u2014 isolated, slightly cold, not melismatic, like a light turning on in a dark room",
         "Backing harmonies stacked close in pitch, parallel and slightly emotionless, functioning more as timbral widening than as melodic decoration",
         "A controlled near-mono dynamic in verses with volume swell saved exclusively for the one line in the chorus that earns it",
-        "Occasional deliberate roughness at phrase endings — not as vocal fry affectation but as honest breath running out"
+        "Occasional deliberate roughness at phrase endings \u2014 not as vocal fry affectation but as honest breath running out"
       ],
       "timing_behaviors": [
         "Placing lyric phrases slightly behind the beat in verses as if the narrator is reluctant to arrive at the word they need most",
         "Landing chorus hook words exactly on the downbeat with no anticipation, creating a sudden weight after verse drift",
-        "Stretching monosyllabic words — especially pronouns and prepositions — across beat divisions to make ordinary grammar feel loaded",
+        "Stretching monosyllabic words \u2014 especially pronouns and prepositions \u2014 across beat divisions to make ordinary grammar feel loaded",
         "Using hard rhythmic chops on short declarative phrases in bridge sections, clipped and metronomic, as if forcing clarity after emotional ambiguity",
         "Allowing a breath gap before the final chorus hook rather than connecting it to the previous phrase, letting silence act as punctuation"
       ],
       "adlib_behaviors": [
         "A near-inaudible repetition of the last word of a hook phrase, mixed under the lead vocal, heard more as resonance than as a separate take",
-        "Single-word breath vocals — 'oh', 'yeah', or a wordless exhale — placed at the end of a section rather than inside it, functioning as a period not an exclamation",
+        "Single-word breath vocals \u2014 'oh', 'yeah', or a wordless exhale \u2014 placed at the end of a section rather than inside it, functioning as a period not an exclamation",
         "Harmony ad-libs that diverge from the lead melody by no more than a minor third, keeping the emotional texture cool rather than gospel-wide",
-        "Occasional spoken fragment buried in the left channel during a bridge — one phrase, no reverb, as if overheard rather than performed",
+        "Occasional spoken fragment buried in the left channel during a bridge \u2014 one phrase, no reverb, as if overheard rather than performed",
         "Silence used as the adlib: a held space after the hook where a fill or ad-lib would be expected, creating absence as emphasis"
       ],
       "avoid": [
-        "Any riffing, melisma, or vocal run — this character does not ornament; every note is chosen because it is the only one",
-        "Bright, forward, cheerleader-register delivery — the vocal lives in the lower half of the chest and never performs happiness it does not mean",
-        "Oversaturated reverb that makes the voice feel large or arena-scaled — intimate close-mic dryness is the default even when the production is cinematic",
-        "Lyric phrasing that follows an obvious pop cadence or call-and-response structure — this voice interrupts the expected rhythm rather than fulfilling it",
-        "Emotional generosity in delivery — when the lyric is devastating, the vocal should be cooler than expected, not more expressive"
+        "Any riffing, melisma, or vocal run \u2014 this character does not ornament; every note is chosen because it is the only one",
+        "Bright, forward, cheerleader-register delivery \u2014 the vocal lives in the lower half of the chest and never performs happiness it does not mean",
+        "Oversaturated reverb that makes the voice feel large or arena-scaled \u2014 intimate close-mic dryness is the default even when the production is cinematic",
+        "Lyric phrasing that follows an obvious pop cadence or call-and-response structure \u2014 this voice interrupts the expected rhythm rather than fulfilling it",
+        "Emotional generosity in delivery \u2014 when the lyric is devastating, the vocal should be cooler than expected, not more expressive"
       ]
     },
     "performance_conceit_bank": [
-      "The voice delivers the most emotionally loaded line of the song at the lowest dynamic level on the track — the chorus drops in volume while the production lifts, making the listener lean in rather than pull back.",
-      "A verse lyric is delivered in near-monotone rhythmic speech for two lines, then the third line breaks into melody without warning — the melodic arrival is the emotional event, not a musical expectation.",
-      "The title phrase of the song is sung only once, on its first appearance, with no repetition — its hook power comes from restraint and precise placement rather than repetition across the track.",
+      "The voice delivers the most emotionally loaded line of the song at the lowest dynamic level on the track \u2014 the chorus drops in volume while the production lifts, making the listener lean in rather than pull back.",
+      "A verse lyric is delivered in near-monotone rhythmic speech for two lines, then the third line breaks into melody without warning \u2014 the melodic arrival is the emotional event, not a musical expectation.",
+      "The title phrase of the song is sung only once, on its first appearance, with no repetition \u2014 its hook power comes from restraint and precise placement rather than repetition across the track.",
       "A harmony enters one beat early on the second chorus, slightly displacing the familiar version of the hook, creating a sense that something has shifted in the narrator's emotional position since the first chorus.",
-      "The pre-chorus drops all percussion and bass for exactly two bars, leaving voice and a single synth pad — the beat returns not on a downbeat but one 16th note late, making the chorus arrival feel like stumbling forward.",
-      "An entire verse is performed without any vibrato or pitch sustain — completely flat and spoken in rhythm — so that the first note held in the hook carries all the feeling accumulated across the verse.",
-      "The outro repeats the hook melody but removes one word each time it cycles, so the final iteration is a single syllable or a breath — the song dissolves rather than resolves.",
+      "The pre-chorus drops all percussion and bass for exactly two bars, leaving voice and a single synth pad \u2014 the beat returns not on a downbeat but one 16th note late, making the chorus arrival feel like stumbling forward.",
+      "An entire verse is performed without any vibrato or pitch sustain \u2014 completely flat and spoken in rhythm \u2014 so that the first note held in the hook carries all the feeling accumulated across the verse.",
+      "The outro repeats the hook melody but removes one word each time it cycles, so the final iteration is a single syllable or a breath \u2014 the song dissolves rather than resolves.",
       "In a bridge section, the lead vocal is doubled by a version of itself panned opposite and pitched down a minor third with no reverb, giving the narrator the quality of arguing with a calmer version of themselves."
     ],
     "album_mode_lanes": [
       {
         "name": "Provincial Cool",
-        "description": "Sparse dark-pop tracks where Midnight Province narrates social environments — parties, parking lots, group chats — from a position of deliberate distance. Production is minimal: one synth texture, dry programmed drums, a bass note that barely moves. The vocal is unhurried and slightly superior. This is the character watching rather than participating."
+        "description": "Sparse dark-pop tracks where Midnight Province narrates social environments \u2014 parties, parking lots, group chats \u2014 from a position of deliberate distance. Production is minimal: one synth texture, dry programmed drums, a bass note that barely moves. The vocal is unhurried and slightly superior. This is the character watching rather than participating."
       },
       {
         "name": "Plain Wound",
-        "description": "Bedroom-scale confessional tracks where the production strips down to a piano or single synth and the vocal carries the entire emotional argument. No chorus lift, no cathartic build — just a plainspoken statement delivered at a level that makes it feel like something the narrator would never say out loud. These tracks end before the resolution."
+        "description": "Bedroom-scale confessional tracks where the production strips down to a piano or single synth and the vocal carries the entire emotional argument. No chorus lift, no cathartic build \u2014 just a plainspoken statement delivered at a level that makes it feel like something the narrator would never say out loud. These tracks end before the resolution."
       },
       {
         "name": "Glitter Damage",
-        "description": "Heartbreak tracks with full cinematic production — stacked synths, bigger programmed drums, chorus lift — but where the emotional content is specific, social, and embarrassing rather than universal. The narrator isn't destroyed; they're mortified. Production brightness and lyric precision are in intentional contrast."
+        "description": "Heartbreak tracks with full cinematic production \u2014 stacked synths, bigger programmed drums, chorus lift \u2014 but where the emotional content is specific, social, and embarrassing rather than universal. The narrator isn't destroyed; they're mortified. Production brightness and lyric precision are in intentional contrast."
       },
       {
         "name": "Afterglow Static",
-        "description": "Post-event songs set in the hour after a party, a fight, a kiss, or a decision. Production uses slow pulses, faint crowd or room-tone textures, and a vocal that sounds slightly hoarse or tired. These are neither sad nor happy — they are the specific texture of transition between one state and another."
+        "description": "Post-event songs set in the hour after a party, a fight, a kiss, or a decision. Production uses slow pulses, faint crowd or room-tone textures, and a vocal that sounds slightly hoarse or tired. These are neither sad nor happy \u2014 they are the specific texture of transition between one state and another."
       },
       {
         "name": "Anxious Pulse",
-        "description": "Higher-BPM synth-pop tracks where the drum pattern is tight and slightly relentless, the bass is clipped, and the vocal is clipped and metronomic in the verse — status anxiety, social performance, the sensation of being watched. The hook releases the tension exactly once and does not repeat it comfortably."
+        "description": "Higher-BPM synth-pop tracks where the drum pattern is tight and slightly relentless, the bass is clipped, and the vocal is clipped and metronomic in the verse \u2014 status anxiety, social performance, the sensation of being watched. The hook releases the tension exactly once and does not repeat it comfortably."
       },
       {
         "name": "Cold Ceremony",
-        "description": "Slow, formal tracks that treat an ordinary emotional event — a conversation ending, someone leaving a room, deciding not to call — with the production weight of a ceremony. Piano or synth pads, no drums or very slow kick only, long vocal phrases with significant silence between them. Emotional scale is enormous; sonic scale is minimal."
+        "description": "Slow, formal tracks that treat an ordinary emotional event \u2014 a conversation ending, someone leaving a room, deciding not to call \u2014 with the production weight of a ceremony. Piano or synth pads, no drums or very slow kick only, long vocal phrases with significant silence between them. Emotional scale is enormous; sonic scale is minimal."
       }
     ],
     "song_differentiation_rules": [
       "If the prior track used a slow BPM, spoken-register verse delivery, and a minimal chorus drop in volume, the next track must change at least two of those three: raise the BPM, introduce a melodic verse, or allow the chorus to genuinely expand in production density.",
-      "If the prior track was narrated from observer distance — watching a party, describing others — the next track must shift to a direct intimate address or a first-person vulnerability that removes the narrator's coolness as a shield.",
+      "If the prior track was narrated from observer distance \u2014 watching a party, describing others \u2014 the next track must shift to a direct intimate address or a first-person vulnerability that removes the narrator's coolness as a shield.",
       "If the prior track ended small, whispered, or unresolved, the following track must establish its emotional position clearly within the first 20 seconds rather than building ambiguity again from silence.",
-      "No two consecutive tracks should use the same intro type: if one begins with a cold vocal, the next must begin with a drum hit, bass note, synth pulse, or immediate lyric image — not another cold vocal over nothing.",
-      "If the prior track's hook used understatement and flat delivery as its primary device, the next hook must use melody, stack, or volume contrast as its primary device — the restraint conceit cannot be the default tool on every song.",
-      "If the prior track's central image was drawn from a social environment — a party, a school hallway, a group — the next track must anchor its central image in something private: a body, a room alone, a domestic object, or an interior sensation."
+      "No two consecutive tracks should use the same intro type: if one begins with a cold vocal, the next must begin with a drum hit, bass note, synth pulse, or immediate lyric image \u2014 not another cold vocal over nothing.",
+      "If the prior track's hook used understatement and flat delivery as its primary device, the next hook must use melody, stack, or volume contrast as its primary device \u2014 the restraint conceit cannot be the default tool on every song.",
+      "If the prior track's central image was drawn from a social environment \u2014 a party, a school hallway, a group \u2014 the next track must anchor its central image in something private: a body, a room alone, a domestic object, or an interior sensation."
     ],
     "anti_generic_rules": [
-      "Do not default to a slow minor-key verse followed by a swelling synth chorus every time emotional scale is required — Midnight Province earns scale through accumulation of plain detail, not through production volume alone.",
-      "Do not write hooks that are emotionally generalized or universal in the way of standard pop — every hook must contain one specific social, physical, or situational detail that could only belong to this narrator's particular experience.",
-      "Do not use the sparse production as an excuse for lyric vagueness — the fewer sounds on the track, the more precise and concrete each lyric line must be.",
-      "Do not make the narrator wise, healed, or instructional — Midnight Province is watching and feeling, not teaching. Remove any lyric that sounds like advice, resolution, or hard-won lesson.",
-      "Do not allow the emotional climax to be the loudest moment by default — the most devastating delivery on the track should often be the quietest, the driest, or the most suddenly unadorned.",
+      "Do not default to a slow minor-key verse followed by a swelling synth chorus every time emotional scale is required \u2014 Midnight Province earns scale through accumulation of plain detail, not through production volume alone.",
+      "Do not write hooks that are emotionally generalized or universal in the way of standard pop \u2014 every hook must contain one specific social, physical, or situational detail that could only belong to this narrator's particular experience.",
+      "Do not use the sparse production as an excuse for lyric vagueness \u2014 the fewer sounds on the track, the more precise and concrete each lyric line must be.",
+      "Do not make the narrator wise, healed, or instructional \u2014 Midnight Province is watching and feeling, not teaching. Remove any lyric that sounds like advice, resolution, or hard-won lesson.",
+      "Do not allow the emotional climax to be the loudest moment by default \u2014 the most devastating delivery on the track should often be the quietest, the driest, or the most suddenly unadorned.",
       "Do not repeat the social-observer framing for more than two songs on any project without introducing a track where the narrator is the one being watched, exposed, or embarrassed.",
-      "Do not write pre-choruses that simply raise energy and promise the chorus — Midnight Province pre-choruses must introduce a detail, a doubt, or a slight swerve in the narrator's position that reframes what the chorus means.",
-      "Do not pad out tracks with instrumental outros, repeated hooks over fading production, or generic eight-bar breakdowns — every section must earn its presence with a distinct lyric, melodic, or textural idea."
+      "Do not write pre-choruses that simply raise energy and promise the chorus \u2014 Midnight Province pre-choruses must introduce a detail, a doubt, or a slight swerve in the narrator's position that reframes what the chorus means.",
+      "Do not pad out tracks with instrumental outros, repeated hooks over fading production, or generic eight-bar breakdowns \u2014 every section must earn its presence with a distinct lyric, melodic, or textural idea."
     ],
     "do_not_repeat_across_album": [
-      "Do not use a slow descending synth pad as the primary atmospheric texture in more than two tracks — rotate to dry piano, clipped synth pulse, room tone, or bass-only negative space.",
-      "Do not use the near-monotone speaking-register verse delivery as the default mode — it is a specific tool for specific tracks, not the Midnight Province verse style by default.",
-      "Do not place the emotional revelation in the bridge on every track — rotate where the truth arrives: end of verse, pre-chorus undercut, post-chorus drop, or final line with no follow-up.",
-      "Do not anchor every song's central image in a social gathering or its aftermath — rotate to domestic private spaces, bodies, weather, transit, or the specific silence of a phone not ringing.",
-      "Do not stack close harmonies on the chorus of every track — in some tracks the lead vocal must be completely alone in the mix at maximum exposure.",
+      "Do not use a slow descending synth pad as the primary atmospheric texture in more than two tracks \u2014 rotate to dry piano, clipped synth pulse, room tone, or bass-only negative space.",
+      "Do not use the near-monotone speaking-register verse delivery as the default mode \u2014 it is a specific tool for specific tracks, not the Midnight Province verse style by default.",
+      "Do not place the emotional revelation in the bridge on every track \u2014 rotate where the truth arrives: end of verse, pre-chorus undercut, post-chorus drop, or final line with no follow-up.",
+      "Do not anchor every song's central image in a social gathering or its aftermath \u2014 rotate to domestic private spaces, bodies, weather, transit, or the specific silence of a phone not ringing.",
+      "Do not stack close harmonies on the chorus of every track \u2014 in some tracks the lead vocal must be completely alone in the mix at maximum exposure.",
       "Do not use a sudden final chorus key change, production swell, or added drum element as the climax device on more than one track per project.",
-      "Do not write every outro as a fading repetition of the hook — rotate to abrupt cut, single dry line with no music, held note dissolving, or a new melodic idea that does not repeat the chorus.",
-      "Do not give every track a four-bar percussion-free intro followed by bass entry at bar five — vary the opening moment radically from track to track so no two songs announce themselves the same way."
+      "Do not write every outro as a fading repetition of the hook \u2014 rotate to abrupt cut, single dry line with no music, held note dissolving, or a new melodic idea that does not repeat the chorus.",
+      "Do not give every track a four-bar percussion-free intro followed by bass entry at bar five \u2014 vary the opening moment radically from track to track so no two songs announce themselves the same way."
     ],
     "hidden_brief_requirements": [
-      "The brief must specify a concrete social or physical setting unique to this track — a specific type of room, event, or moment — and explain how that setting shapes both the vocal delivery register and the central lyric image, so the song is not set in a generic emotional space.",
+      "The brief must specify a concrete social or physical setting unique to this track \u2014 a specific type of room, event, or moment \u2014 and explain how that setting shapes both the vocal delivery register and the central lyric image, so the song is not set in a generic emotional space.",
       "The brief must describe the exact point in the track's structure where the narrator's emotional position shifts or cracks, and must explain why that moment is placed structurally where it is rather than at the conventional bridge or final chorus.",
-      "The brief must specify how the silence and negative space on this track functions differently from the silence on any adjacent track in the project — naming what the silence means emotionally for this narrator in this song.",
+      "The brief must specify how the silence and negative space on this track functions differently from the silence on any adjacent track in the project \u2014 naming what the silence means emotionally for this narrator in this song.",
       "The brief must identify the one lyric line that carries the track's entire emotional argument and confirm that no other line in the song competes with it for that function, ensuring the track has a single precise center of gravity.",
-      "The brief must describe the vocal delivery mode for this track's verses — specifying whether it is speech-rhythm flat, melodic, compressed, or delayed — and confirm it differs from the verse delivery mode of the preceding track.",
+      "The brief must describe the vocal delivery mode for this track's verses \u2014 specifying whether it is speech-rhythm flat, melodic, compressed, or delayed \u2014 and confirm it differs from the verse delivery mode of the preceding track.",
       "The brief must specify what the narrator knows at the end of the song that they did not know or admit at the start, and confirm that this shift is communicated through lyric detail or structural choice rather than through an explicit statement in the lyric."
     ]
   },

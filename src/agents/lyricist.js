@@ -195,6 +195,7 @@ LYRIC RULES:
 REQUIREMENTS:
 - Production render target: ${MUSIC.target_length}.
 - WORD COUNT: Target ${MUSIC.normal_word_range} singable words, excluding section labels like [CHORUS]. Minimum is ${MUSIC_MIN_WORDS} words unless the user explicitly asks for a short/jingle.
+${formatFullLengthStructureGuidance()}
 - Full-length hip-hop support is required. Do not shorten rap verses to protect JSON size; prioritize complete lyrics and keep metadata concise.
 - Song structure is brand/profile-driven. Do not default to verse/chorus/pop structure unless the active profile or user asks for it.
 - Section labels are optional. Use them only when they make the song clearer for the renderer or match the active profile.
@@ -278,7 +279,28 @@ function formatStructurePreferences() {
 
   return (Array.isArray(structures) && structures.length ? structures : defaults)
     .map((structure, index) => `${index + 1}. ${structure}`)
-    .join('\\n');
+    .join('\n');
+}
+
+function formatFullLengthStructureGuidance() {
+  if (!MUSIC_TARGET_LENGTH) return '';
+  const parts = String(MUSIC_TARGET_LENGTH).split('-');
+  const maxStr = (parts.length >= 2 ? parts[1] : parts[0]).trim();
+  const match = maxStr.match(/^(\d+):(\d{2})$/);
+  if (!match) return '';
+  const maxSecs = Number(match[1]) * 60 + Number(match[2]);
+  if (maxSecs <= 150) return '';
+
+  const lines = [
+    'FULL-LENGTH SONG REQUIREMENT:',
+    `This profile targets ${MUSIC_TARGET_LENGTH}. Do not write a compact or children\'s-song structure.`,
+    'Required full-length song sections: intro or short setup → verse 1 → pre-chorus where appropriate → chorus → verse 2 → bridge or breakdown → final chorus/outro.',
+    'Do not collapse to fewer than 5 distinct sections unless the profile\'s structure_preferences explicitly call for an unconventional form.',
+  ];
+  if (maxSecs > 210) {
+    lines.push(`For songs targeting over 3:30, aim toward the upper half of the word range (${MUSIC.normal_word_range}) to support the full duration.`);
+  }
+  return lines.join('\n');
 }
 function formatOutputSchema() { const fields = ['  "title": "The Song Title"', '  "lyrics": "full lyrics text with plain canonical section labels only; no performer descriptors or stage directions"', '  "notable_lines": ["line1", "line2", "line3", "line4"]', '  "word_count": 320', '  "structure_used": "which structure was used and why it fits the active profile"', '  "key_hook": "the memorable hook, refrain, thesis, chant, or core line"']; if (OUTPUT_SCHEMA.include_physical_action_cue) fields.push('  "physical_action_cue": "description of the main physical action"'); if (OUTPUT_SCHEMA.include_funny_long_word) fields.push('  "funny_long_word": "the comedic long word used if any"'); if (OUTPUT_SCHEMA.include_audio_prompt !== false) fields.push(`  "audio_prompt": {\n    "style": "${MUSIC.default_style}",\n    "tempo_bpm": ${MUSIC.default_bpm},\n    "genre": "${MUSIC.default_style}",\n    "instrumentation": "match the active profile music direction",\n    "energy": "match the emotional arc of the song",\n    "mood": "match the song",\n    "voice_style": "match the active brand profile, audience, and topic without naming reference artists unless explicitly requested",\n    "structure_note": "describe the actual structure used",\n    "target_length": "${MUSIC.target_length}",\n    "first_vocal_by_seconds": ${MUSIC.first_vocal_by_seconds},\n    "max_instrumental_intro_seconds": ${MUSIC.max_instrumental_intro_seconds},\n    "title_usage": "${LYRIC_CONVENTIONS.title_usage_required ? `${LYRIC_CONVENTIONS.title_usage} / ${LYRIC_CONVENTIONS.title_usage_location}` : 'artistically optional'}",\n    "special_notes": "Follow the active brand profile only; do not copy profile examples or lore terms unless requested."\n  }`); return `{\n${fields.join(',\n')}\n}`; }
 function summarizeResearch(researchReport) { if (!researchReport) return { note: 'No research data available. Use the active brand profile and songwriting expertise.' }; return { lyric_patterns: researchReport.lyric_patterns?.slice(0, 3), ideal_bpm_range: researchReport.ideal_bpm_range, ideal_length_seconds: researchReport.ideal_length_seconds, viral_signals: researchReport.viral_signals?.slice(0, 5) }; }

@@ -16,7 +16,10 @@
   "character": {
     "name": "Sunstone Signal",
     "core_concept": "A warm modern roots reggae project focused on resilience, community, gratitude, movement, sunlight, and groove-led positivity.",
-    "fallback_summary": "Modern roots reggae with rolling bass, relaxed one-drop or rockers groove, skanking guitar, organ bubbles, horns, smooth vocals, and sunny resilience."
+    "fallback_summary": "Modern roots reggae with rolling bass, relaxed one-drop or rockers groove, skanking guitar, organ bubbles, horns, smooth vocals, and sunny resilience.",
+    "visual_identity": "",
+    "personality_traits": [],
+    "catchphrases": []
   },
   "positioning": {
     "one_liner": "Warm modern roots reggae with deep bass, bright hooks, horn-lifted choruses, dub touches, and grounded positive energy.",
@@ -77,7 +80,9 @@
       "overly tropical stock sounds",
       "generic vacation-ad music",
       "direct artist imitation"
-    ]
+    ],
+    "sparse_format": true,
+    "default_key": ""
   },
   "lyrics": {
     "title_examples": [
@@ -256,6 +261,28 @@
       "The brief must specify which album mode lane this track occupies and articulate one production or lyric choice that would be present in a generic version of that lane but is being deliberately replaced or avoided here.",
       "The brief must address the bass role for this specific track — whether melodic, foundational, or fill-forward — and confirm it differs from the bass role used in the track directly before it.",
       "The brief must identify the emotional resolution strategy for this track: whether the song arrives at an answer, deepens a question, suspends the listener in ambiguity, or hands resolution back to the listener through lyric incompleteness — and confirm this strategy was not used in the same way on the immediately prior track."
-    ]
+    ],
+    "primary_emotional_goal": "",
+    "character_voice": {
+      "person": "",
+      "tone": "",
+      "vocabulary": "",
+      "signature_sounds": [],
+      "comedy_mode": "",
+      "kid_relationship": ""
+    },
+    "earworm_stack": [],
+    "hook_design_rules": [],
+    "energy_arc": {
+      "pattern": "",
+      "rules": []
+    },
+    "participation_patterns": [],
+    "structure_preferences": [],
+    "allowed_elements": [],
+    "forbidden_elements": [],
+    "render_safety": [],
+    "required_elements": [],
+    "qa_rules": []
   }
 }
