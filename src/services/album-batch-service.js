@@ -231,20 +231,40 @@ export async function runAlbumBatch({
         logger,
         isTest,
       });
-      upsertSong({
-        id: songId,
-        status: SONG_STATUSES.DRAFT,
-        pipeline_stage: trackResult?.pipelineStage || 'album_track_generated',
-        total_cost_usd: Number(trackResult?.totalCost) || 0,
-      });
-      trackResults.push({
-        status: 'success',
-        songId,
-        trackNumber: track.track_number,
-        title: trackResult?.title || track.title,
-        totalCost: Number(trackResult?.totalCost) || 0,
-      });
-      await emit(onEvent, { type: 'track_succeeded', albumId, songId, track });
+      if (!hasGeneratedAudioFile(songId)) {
+        const message = `Album track generation returned without an audio file for track ${track.track_number}`;
+        upsertSong({
+          id: songId,
+          status: SONG_STATUSES.DRAFT,
+          pipeline_stage: 'album_track_missing_audio',
+          total_cost_usd: Number(trackResult?.totalCost) || 0,
+          notes: message,
+        });
+        trackResults.push({
+          status: 'failed',
+          songId,
+          trackNumber: track.track_number,
+          title: trackResult?.title || track.title,
+          totalCost: Number(trackResult?.totalCost) || 0,
+          error: message,
+        });
+        await emit(onEvent, { type: 'track_failed', albumId, songId, track, error: message });
+      } else {
+        upsertSong({
+          id: songId,
+          status: SONG_STATUSES.DRAFT,
+          pipeline_stage: trackResult?.pipelineStage || 'album_track_generated',
+          total_cost_usd: Number(trackResult?.totalCost) || 0,
+        });
+        trackResults.push({
+          status: 'success',
+          songId,
+          trackNumber: track.track_number,
+          title: trackResult?.title || track.title,
+          totalCost: Number(trackResult?.totalCost) || 0,
+        });
+        await emit(onEvent, { type: 'track_succeeded', albumId, songId, track });
+      }
     } catch (err) {
       upsertSong({
         id: songId,
@@ -411,15 +431,29 @@ export async function resumeAlbumBatch({
         logger,
         isTest: album.is_test,
       });
-      upsertSong({
-        id: song.id,
-        status: SONG_STATUSES.DRAFT,
-        pipeline_stage: trackResult?.pipelineStage || 'album_track_generated',
-        total_cost_usd: Number(trackResult?.totalCost) || 0,
-      });
-      trackResults.push({ status: 'success', songId: song.id, trackNumber: track.track_number, title: trackResult?.title || track.title });
-      updateAlbumLatestEvent(cleanAlbumId, { type: 'track_succeeded', message: `Track ${track.track_number} completed: ${track.title}`, clear_error: true });
-      await emit(onEvent, { type: 'track_succeeded', albumId: cleanAlbumId, songId: song.id, track });
+      if (!hasGeneratedAudioFile(song.id)) {
+        const message = `Album track generation returned without an audio file for track ${track.track_number}`;
+        upsertSong({
+          id: song.id,
+          status: SONG_STATUSES.DRAFT,
+          pipeline_stage: 'album_track_missing_audio',
+          total_cost_usd: Number(trackResult?.totalCost) || 0,
+          notes: message,
+        });
+        trackResults.push({ status: 'failed', songId: song.id, trackNumber: track.track_number, title: trackResult?.title || track.title, error: message });
+        updateAlbumLatestEvent(cleanAlbumId, { type: 'track_failed', message: `Track ${track.track_number} failed: ${message}`, error: message });
+        await emit(onEvent, { type: 'track_failed', albumId: cleanAlbumId, songId: song.id, track, error: message });
+      } else {
+        upsertSong({
+          id: song.id,
+          status: SONG_STATUSES.DRAFT,
+          pipeline_stage: trackResult?.pipelineStage || 'album_track_generated',
+          total_cost_usd: Number(trackResult?.totalCost) || 0,
+        });
+        trackResults.push({ status: 'success', songId: song.id, trackNumber: track.track_number, title: trackResult?.title || track.title });
+        updateAlbumLatestEvent(cleanAlbumId, { type: 'track_succeeded', message: `Track ${track.track_number} completed: ${track.title}`, clear_error: true });
+        await emit(onEvent, { type: 'track_succeeded', albumId: cleanAlbumId, songId: song.id, track });
+      }
     } catch (err) {
       upsertSong({
         id: song.id,
@@ -592,8 +626,42 @@ export function getIncompleteAlbumTracks(albumId, plan = null) {
     .filter(({ song }) => !isCompletedAlbumTrack(song));
 }
 
+export function hasGeneratedAudioFile(songId) {
+  const cleanSongId = String(songId || '').trim();
+  if (!cleanSongId) return false;
+  const songDir = path.join(ROOT_DIR, 'output', 'songs', cleanSongId);
+  if (!fs.existsSync(songDir)) return false;
+
+  const rootAudioNames = [
+    'audio.mp3',
+    'audio.wav',
+    'audio.m4a',
+    'master.mp3',
+    'master.wav',
+    'final.mp3',
+    'final.wav',
+    'release-master.mp3',
+    'release-master.wav',
+  ];
+  const rootCandidates = rootAudioNames.map(name => path.join(songDir, name));
+  const audioDir = path.join(songDir, 'audio');
+  const nestedCandidates = fs.existsSync(audioDir)
+    ? fs.readdirSync(audioDir)
+      .filter(name => /\.(mp3|wav|m4a|flac)$/i.test(name))
+      .map(name => path.join(audioDir, name))
+    : [];
+
+  return [...rootCandidates, ...nestedCandidates].some(filePath => {
+    try {
+      return fs.existsSync(filePath) && fs.statSync(filePath).size > 0;
+    } catch {
+      return false;
+    }
+  });
+}
+
 export function isCompletedAlbumTrack(song) {
-  return song?.pipeline_stage === 'album_track_generated';
+  return song?.pipeline_stage === 'album_track_generated' && hasGeneratedAudioFile(song.id);
 }
 
 function rebuildAndPersistAlbumFinanceSummary({ albumId, costMode, trackSongIds, cachedSavingsUsd = 0 }) {

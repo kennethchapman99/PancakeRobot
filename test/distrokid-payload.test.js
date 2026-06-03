@@ -63,6 +63,48 @@ test('canonical DistroKid payload includes absolute artwork, audio, release meta
   assert.equal(payload.validation.ready, true);
 });
 
+test('canonical payload derives artist from brand profile when no package manifest exists yet', () => {
+  // Regression for ALBUM_MPVMJGNA_ACIR: before the package is built there is no
+  // canonical manifest, so uploadPayload.artist/manifest.artist are empty. The
+  // artist must still resolve from the release brand profile so the Browsy source
+  // payload validation does not fail with "album.artistName is required".
+  const nonDefaultCockpit = {
+    type: 'album',
+    id: 'ALBUM_NO_MANIFEST',
+    title: 'Still Water Running',
+    releaseDate: '2026-06-03',
+    brandProfileId: 'tribe',
+    packageState: { manifest: null },
+    tracks: [{ id: 'SONG_X_T01', title: 'Warm Front', track_number: 1, releaseAudio: { selected: { path: '/tmp/warm.mp3' } } }],
+  };
+  const nonDefault = buildDistroKidPayloadFromCockpit(nonDefaultCockpit, { repoRoot: os.tmpdir() });
+  assert.equal(nonDefault.artistName, 'Figment Factory');
+  assert.equal(nonDefault.artist, 'Figment Factory');
+
+  const defaultCockpit = { ...nonDefaultCockpit, id: 'ALBUM_DEFAULT', brandProfileId: 'default' };
+  const defaultPayload = buildDistroKidPayloadFromCockpit(defaultCockpit, { repoRoot: os.tmpdir() });
+  assert.equal(defaultPayload.artistName, 'Pancake Robot');
+
+  const noProfileCockpit = { ...nonDefaultCockpit, id: 'ALBUM_NO_PROFILE', brandProfileId: null };
+  const noProfilePayload = buildDistroKidPayloadFromCockpit(noProfileCockpit, { repoRoot: os.tmpdir() });
+  assert.equal(noProfilePayload.artistName, 'Pancake Robot');
+});
+
+test('explicit manifest artist still wins over brand-profile fallback', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-distrokid-artist-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const audioPath = path.join(root, 'track-01.wav');
+  const artworkPath = path.join(root, 'cover-art.png');
+  fs.writeFileSync(audioPath, 'fake-audio');
+  fs.writeFileSync(artworkPath, 'fake-artwork');
+  // Manifest declares Pancake Robot even though the brand profile is non-default;
+  // the explicit manifest value must not be overwritten by the fallback.
+  const cockpit = buildSyntheticCockpit({ root, artworkPath, audioPath, lyricsPath: audioPath });
+  cockpit.brandProfileId = 'tribe';
+  const payload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot: root });
+  assert.equal(payload.artistName, 'Pancake Robot');
+});
+
 test('Browsy workflow package and debug payload are produced from the same canonical builder', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-browsy-package-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

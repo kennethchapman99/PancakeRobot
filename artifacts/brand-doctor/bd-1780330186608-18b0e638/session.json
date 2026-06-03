@@ -1,0 +1,445 @@
+{
+  "id": "bd-1780330186608-18b0e638",
+  "timestamp": "2026-06-01T16:09:46.611Z",
+  "brandId": "doechii",
+  "brandProfilePath": "/Users/kchapman/PancakeRobot/config/brand-profiles/doechii.json",
+  "mode": "analyze",
+  "status": "rejected",
+  "currentProfileSummary": {
+    "brand_name": "Razor Bloom",
+    "brand_type": "music",
+    "genre_style_center": "experimental hard rap with club bounce, theatrical vocals, Southern-leaning low-end, trap, boom-bap, and alt-hip-hop textures",
+    "character_name": "Razor Bloom",
+    "core_concept": "A sharp-tongued underground rap persona: part battle rapper, part club instigator, part theatre kid villain, part wounded narrator who can turn vulnerability into a punchline.",
+    "vocal_performance_engine": {
+      "priority": "Razor Bloom's voice is non-replaceable because it operates as a live theatre piece trapped inside a rap song — switching between cold menace, cackle, and cracked confession in a single verse without losing rhythmic grip.",
+      "vocal_textures": [
+        "Dry, close-mic'd snarl: words spat with minimal reverb so every consonant cuts like a slap",
+        "Theatrical boom-drop: a sudden lower register used for punchline delivery, as if the character leaned into a stage microphone to land the joke",
+        "Cracked falsetto taunt: a brief, almost mocking high note mid-bar that signals the character is enjoying themselves too much to be scared",
+        "Hushed razor-whisper: a nearly spoken, intimately threatening delivery used when the lyric is most vulnerable or most vicious",
+        "Chant-mode bark: stripped of melody, rhythmically locked, every word punched with equal stress as if leading a crowd that didn't ask to be led",
+        "Jittery speed-switch: syllables compressed and tumbling with deliberate imprecision at the front of a flow burst, then snapping tight at the punchline"
+      ],
+      "timing_behaviors": [
+        "Delay the first syllable of a punchline by a half-beat so the beat lands before the word does, letting the bass underscore the joke",
+        "Rush the middle of a bar to create a pile-up of syllables, then land on a single monosyllabic curse word with full weight to reset the pocket",
+        "Use dead silence for one full beat before the hook to let anticipation replace a pre-chorus",
+        "Drag a vowel in an unexpected mid-bar position rather than at line-endings, creating stretch in the rhythm that feels improvisational",
+        "Double-time a single couplet inside an otherwise mid-tempo verse so the gear-shift reads as aggression, not just technical display"
+      ],
+      "adlib_behaviors": [
+        "Laugh-adlib used not as celebration but as editorial commentary on the line just delivered, as if the character can't believe they said it",
+        "Repeated single-syllable punctuation — a sharp grunt, hiss, or clipped curse — placed in the bar's pocket rather than after the bar ends",
+        "A sotto voce aside delivered between bars that reads like the character breaking the fourth wall to check whether anyone caught the reference",
+        "Answering-voice adlib: a second, slightly different register responds to the main vocal mid-verse as if two internal characters are arguing",
+        "The deliberate non-adlib: a bar left completely naked with no fill, making the silence louder than any overlay"
+      ],
+      "avoid": [
+        "Smooth melodic runs or R&B-adjacent vocal glides that soften the character's sharp-tongued core identity",
+        "Uniform delivery energy across a full verse, which flattens the theatrical range that makes Razor Bloom distinct",
+        "Adlibs placed only at bar-ends in the standard hype-rap position, turning a personality trait into a generic convention",
+        "Overly processed pitch correction that erases the grain and cracked-edge texture that signals live emotional danger",
+        "Shouting as a default intensity escalator — Razor Bloom gets more frightening by getting quieter and more deliberate, not louder"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The Reluctant Confession Drop: the verse rides hard and crude for eight bars, then a single unguarded line is delivered in near-whisper with no adlib cushion, forcing the listener to catch up emotionally before the beat snaps back",
+      "The Villain Parenthetical: mid-bar, the character inserts a bracketed aside in a different register — snide, amused, almost pedagogical — then returns to the main lyric as if the interruption never happened",
+      "The Punchline Rewind: the character delivers a punchline, pauses one beat, then repeats only the last two or three words in a slightly lower pitch as if tasting how good the line was",
+      "The Chant Hijack: what begins as a standard repeated hook phrase gets one word changed on the third repetition, recontextualizing the meaning mid-chant while the cadence stays locked",
+      "The Speed-Then-Freeze: a rapid-fire couplet of eight or more syllables per bar stops dead on a single monosyllabic profanity held for a full beat, making the curse function as punctuation and period simultaneously",
+      "The Mock Audience Address: the character briefly switches to a slightly more performative, enunciated register mid-song as if addressing a live crowd that doesn't deserve full effort, then drops back to intimate snarl",
+      "The Emotional Bait-Switch: a verse opens with what sounds like bragging language but the final bar reveals the boast is defensive armor over a stated insecurity, delivered without dropping the cocky cadence",
+      "The Dry Repeat-Attack: a target's alleged statement or behavior is quoted back in a flat, unimpressed voice, followed by a single-word dismissal and a beat of silence before the verse continues"
+    ],
+    "anti_generic_rules": [
+      "Do not default to the standard aggressive-rap opening of announcing power and presence; Razor Bloom's entries should be strange, specific, or mid-thought rather than declarative genre throat-clearing",
+      "Do not let 'theatrical' become a synonym for overwrought melodrama; Razor Bloom's theatricality is dry, comic, and controlled — excess should read as deliberate character choice, not unchecked genre inflation",
+      "Do not fill every empty beat pocket with adlibs; Razor Bloom's character is partly defined by knowing when to leave the room silent, and over-adlibbing turns a personality into a formula",
+      "Do not use crude language as a volume knob — escalating profanity to signal intensity is a generic failure mode; instead, use a single precisely placed crude phrase for maximum impact rather than saturation",
+      "Do not write hooks that could be transplanted to any other hard rap track; Razor Bloom's hooks must carry the character's specific comic-menace-vulnerability signature, not just an aggressive repeated phrase",
+      "Do not let the villain conceit settle into complacency — the character should always have something genuinely at stake, even in the most braggadocious song, or the performance becomes self-parody without edge",
+      "Do not recycle the emotional arc of verse-hard-hook-release without variation; the energy pattern must be reshaped by the specific concept of each track rather than applied as a default structural template"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Crude Machine",
+        "description": "Razor Bloom at maximum snappy profanity density — lyrics are short, punishing, and deliberately unpolished in diction, built on crude punchlines that land faster than they can be processed; production is minimal and dry so nothing cushions the words"
+      },
+      {
+        "name": "Swamp Villain",
+        "description": "Slow, thick low-end with Razor Bloom inhabiting an almost theatrical antagonist role — vocals drip rather than snap, threats are stated as facts, and the production has room for dramatic silence and heavy reverb on single words"
+      },
+      {
+        "name": "Club Chaos Agent",
+        "description": "Mid-to-high BPM with a chant hook designed to be yelled back by people who have had three drinks — crude, physically confident, sexually direct without being graphic, and built so the bass response in the room is as important as the lyrics"
+      },
+      {
+        "name": "Technical Spite",
+        "description": "Dense-syllable fast-flow lanes where Razor Bloom proves precision while sustaining genuine nastiness — punchlines arrive inside the speed rather than after it, and the concept of the track is always specific enough that the virtuosity serves a point"
+      },
+      {
+        "name": "Exposed Circuit",
+        "description": "Stripped, sparse production where the character's hurt, ambition, or loneliness is stated directly rather than hidden in metaphor — crude language remains but functions as emotional truth rather than performance armor"
+      },
+      {
+        "name": "Absurdist Flex Theatre",
+        "description": "Razor Bloom as a comedy villain whose bragging becomes so elaborately specific and bizarre that it crosses into genuine character comedy — the joke is always rooted in a real feeling, and the production should reflect controlled instability"
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the prior track used a chant hook with equal-stress bark delivery, the next track must use a different hook architecture — a melodic sneer, a single repeated insult, an instrumental drop, or no traditional hook at all",
+      "If the prior track opened with an immediate profane strike, the next track must open differently — bass-first, whispered setup, mid-sentence entry, or a beat of silence before the first syllable",
+      "If the prior track's emotional core was aggression or domination, the next track must foreground a different emotional register: humor, lust, anxiety, hurt, or absurdist pride",
+      "If the prior track was dense with syllables and speed, the next track must create space — fewer words per bar, longer held consonants, or a tempo lane that lives below 90 BPM",
+      "If crude language on the prior track was used for attack and insult, the next track must use profanity in a different functional mode — confession, punctuation, comedy, or intimacy — so cursing never becomes decorative wallpaper"
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use a chant hook in back-to-back tracks; rotate to a different hook delivery type after any chant-driven song",
+      "Do not open consecutive tracks with the same vocal texture — avoid leading with snarl, then snarl again; rotate to whisper, speed-burst, theatrical boom, or near-silence",
+      "Do not use the same profanity pattern — e.g., curse-at-end-of-every-bar — across more than one track in a row; reposition or respace crude language on the next song",
+      "Do not place the emotional reveal or vulnerable break in the same structural position (e.g., always pre-outro) across multiple tracks; move the crack to the first verse, mid-hook, or final bar depending on the song",
+      "Do not use the same drum feel — trap hi-hat grid, boom-bap kick pattern, or percussion-forward bounce — without at least one intervening track using a contrasting rhythmic texture",
+      "Do not end consecutive songs with the same outro device; rotate between a cold cut-off, a repeated sting, a fading adlib, a final punchline with no music, or a bass-only decay",
+      "Do not write more than two consecutive songs from the battle-stance or direct-takedown point of view; rotate to mirror pep talk, villain theatre, messy romance, or private confession",
+      "Do not use the speed-then-freeze timing conceit in more than one track per project without altering what the freeze lands on so it becomes a fresh move rather than a signature tic"
+    ],
+    "evaluation_targets": null,
+    "candidate_generation_strategy": null,
+    "weak_areas": []
+  },
+  "candidateDirections": null,
+  "audioAnalyses": [
+    {
+      "filename": "bitches-2-1780330199288.mp3",
+      "audioPath": "/Users/kchapman/PancakeRobot/artifacts/brand-doctor/bd-1780330186608-18b0e638/uploads/bitches-2-1780330199288.mp3",
+      "tags": [],
+      "notes": "",
+      "raw": {
+        "ok": true,
+        "audioPath": "/Users/kchapman/PancakeRobot/artifacts/brand-doctor/bd-1780330186608-18b0e638/uploads/bitches-2-1780330199288.mp3",
+        "metrics": {
+          "duration_seconds": 205.101859,
+          "file_size_bytes": 6573055,
+          "format": "mp3",
+          "sample_rate": 44100,
+          "channels": 2,
+          "bitrate": 256382,
+          "integrated_loudness_lufs": null,
+          "peak_db": 0,
+          "clipping_detected": true,
+          "clipping_ratio": 0.03,
+          "total_silence_seconds": 0,
+          "silence_start_seconds": 0,
+          "silence_end_seconds": 0,
+          "long_silence_segments": [],
+          "rms_energy_mean": -13.333,
+          "rms_energy_variance": 45.789,
+          "energy_curve": [
+            {
+              "start_seconds": 0,
+              "rms_db": -18.1
+            },
+            {
+              "start_seconds": 5,
+              "rms_db": -19.2
+            },
+            {
+              "start_seconds": 10,
+              "rms_db": -16.6
+            },
+            {
+              "start_seconds": 15,
+              "rms_db": -16.2
+            },
+            {
+              "start_seconds": 20,
+              "rms_db": -15
+            },
+            {
+              "start_seconds": 25,
+              "rms_db": -16.6
+            },
+            {
+              "start_seconds": 30,
+              "rms_db": -16.1
+            },
+            {
+              "start_seconds": 35,
+              "rms_db": -16.4
+            },
+            {
+              "start_seconds": 40,
+              "rms_db": -8.7
+            },
+            {
+              "start_seconds": 45,
+              "rms_db": -9.3
+            },
+            {
+              "start_seconds": 50,
+              "rms_db": -8.8
+            },
+            {
+              "start_seconds": 55,
+              "rms_db": -9
+            },
+            {
+              "start_seconds": 60,
+              "rms_db": -14.4
+            },
+            {
+              "start_seconds": 65,
+              "rms_db": -15.5
+            },
+            {
+              "start_seconds": 70,
+              "rms_db": -14.7
+            },
+            {
+              "start_seconds": 75,
+              "rms_db": -14.4
+            },
+            {
+              "start_seconds": 80,
+              "rms_db": -12.7
+            },
+            {
+              "start_seconds": 85,
+              "rms_db": -13.6
+            },
+            {
+              "start_seconds": 90,
+              "rms_db": -12.7
+            },
+            {
+              "start_seconds": 95,
+              "rms_db": -12.7
+            },
+            {
+              "start_seconds": 100,
+              "rms_db": -9.6
+            },
+            {
+              "start_seconds": 105,
+              "rms_db": -9.1
+            },
+            {
+              "start_seconds": 110,
+              "rms_db": -9.5
+            },
+            {
+              "start_seconds": 115,
+              "rms_db": -9.5
+            },
+            {
+              "start_seconds": 120,
+              "rms_db": -12.4
+            },
+            {
+              "start_seconds": 125,
+              "rms_db": -15.5
+            },
+            {
+              "start_seconds": 130,
+              "rms_db": -15.2
+            },
+            {
+              "start_seconds": 135,
+              "rms_db": -15.6
+            },
+            {
+              "start_seconds": 140,
+              "rms_db": -10.6
+            },
+            {
+              "start_seconds": 145,
+              "rms_db": -9.4
+            },
+            {
+              "start_seconds": 150,
+              "rms_db": -9.8
+            },
+            {
+              "start_seconds": 155,
+              "rms_db": -10.6
+            },
+            {
+              "start_seconds": 160,
+              "rms_db": -12.6
+            },
+            {
+              "start_seconds": 165,
+              "rms_db": -9.9
+            },
+            {
+              "start_seconds": 170,
+              "rms_db": -9.6
+            },
+            {
+              "start_seconds": 175,
+              "rms_db": -9.4
+            },
+            {
+              "start_seconds": 180,
+              "rms_db": -10
+            },
+            {
+              "start_seconds": 185,
+              "rms_db": -9.2
+            },
+            {
+              "start_seconds": 190,
+              "rms_db": -9.2
+            },
+            {
+              "start_seconds": 195,
+              "rms_db": -9.2
+            },
+            {
+              "start_seconds": 200,
+              "rms_db": -11.3
+            },
+            {
+              "start_seconds": 205,
+              "rms_db": -52.1
+            }
+          ],
+          "intro_energy_ramp": -1.1,
+          "high_energy_segments": [
+            {
+              "start_seconds": 40,
+              "end_seconds": 45,
+              "rms_db": -8.7
+            },
+            {
+              "start_seconds": 50,
+              "end_seconds": 55,
+              "rms_db": -8.8
+            },
+            {
+              "start_seconds": 55,
+              "end_seconds": 60,
+              "rms_db": -9
+            },
+            {
+              "start_seconds": 105,
+              "end_seconds": 110,
+              "rms_db": -9.1
+            },
+            {
+              "start_seconds": 185,
+              "end_seconds": 190,
+              "rms_db": -9.2
+            },
+            {
+              "start_seconds": 190,
+              "end_seconds": 195,
+              "rms_db": -9.2
+            },
+            {
+              "start_seconds": 195,
+              "end_seconds": 200,
+              "rms_db": -9.2
+            }
+          ],
+          "best_clip_start_seconds": 40,
+          "best_clip_end_seconds": 55,
+          "dynamic_range_estimate": 96.33,
+          "tempo_bpm": null,
+          "beat_confidence": null,
+          "brightness_score": null,
+          "chorus_or_peak_lift_estimate": 4.633,
+          "repeated_section_score": 10,
+          "vocal_presence_proxy": null
+        }
+      },
+      "brandImplications": {
+        "filename": "bitches-2-1780330199288.mp3",
+        "file_summary": "A ~3.4-minute track with clipping at peak, seven identifiable high-energy surges, and a slightly negative intro energy ramp suggesting the track opens below its eventual intensity ceiling rather than front-loading aggression.",
+        "detected_audio_traits": [
+          "Clipping detected at 0 dB peak — likely intentional saturation or limiter-brick walling, but risks muddiness in low-end-heavy playback environments",
+          "RMS energy mean of -13.3 dB indicates moderately loud mastering, consistent with club or streaming-competitive levels",
+          "Seven high-energy segments across ~3.4 minutes suggests a non-monolithic structure — multiple intensity peaks rather than a single sustained climax",
+          "Intro energy ramp of -1.1 (slightly negative) implies the track does not open at full force — energy builds or stutters into gear rather than detonating immediately",
+          "256 kbps bitrate — adequate streaming quality, not lossless; no artifacts expected at this rate",
+          "No user tags provided — full brand interpretation relies on audio metrics alone"
+        ],
+        "user_tag_summary": "No tags were provided for this track. Brand alignment assessment is inferred entirely from audio metrics and the Razor Bloom brand framework. Confidence in emotional or thematic readings is correspondingly low.",
+        "likely_brand_strengths": [
+          "The delayed energy ramp aligns well with Razor Bloom's anti-generic entry rule — the track does not announce itself declaratively, suggesting a stranger or mid-thought opening consistent with the brand's character",
+          "Seven distinct high-energy segments across the runtime imply structural variation, which supports the directive to reshape energy patterns by concept rather than applying a default verse-hard-hook-release template",
+          "Moderate-to-loud RMS with clipping suggests production confidence and willingness to push into distorted or saturated sonic territory, consistent with experimental hard rap and theatrical excess used as deliberate character choice",
+          "Non-immediate opening energy creates space for the brand's signature dry, controlled theatricality before intensity arrives — avoids the generic throat-clearing problem"
+        ],
+        "mismatch_risks": [
+          "Clipping at 0 dB peak, if uncontrolled rather than stylistic, could compromise Southern low-end clarity — boom-bap and trap sub-bass require headroom that brick-wall limiting can undermine",
+          "Seven high-energy segments in 3.4 minutes is a high density of peaks; if adlibs or vocal intensity are deployed at every surge, this risks the over-adlibbing failure mode the brand explicitly prohibits",
+          "Without tags or notes, there is no way to confirm whether the track's crude language (implied by filename) is used with surgical precision or as a volume-knob escalation — this is a significant brand risk given the anti-generic rules",
+          "The filename implies a potentially generic aggressive-rap thematic frame ('bitches' as subject) — without lyrical or structural subversion, this title direction could settle into the complacent villain conceit the brand must avoid",
+          "Clipping may indicate a mastering choice made for loudness competition rather than sonic identity — Razor Bloom's experimental positioning benefits more from intentional sonic texture than from loudness-war compression"
+        ],
+        "genericness_risk": "medium",
+        "production_notes": "The track shows structural ambition through its multi-peak energy map and withheld intro, which are positive signals for the brand's anti-formulaic mandate. However, the detected clipping warrants review: if it is stylistic saturation (e.g., lo-fi crunch, deliberately blown-out 808s), it fits the experimental hard rap identity; if it is inadvertent limiter ceiling, it should be addressed to protect low-end separation critical to trap and boom-bap textures. The moderately loud RMS is competitive for streaming without being extreme. Producer should confirm whether the seven high-energy segments are structurally distinct in character (tonal shifts, rhythmic breaks, textural contrasts) or whether they are repetitions of the same energy type — the former is a brand strength, the latter a genericness risk.",
+        "vocal_performance_notes": "Vocal performance cannot be meaningfully assessed from these metrics alone. No spectral, pitch, or formant data is available to infer delivery style, cadence, or originality. Inference is weak. What can be noted is that the energy architecture — slow open, multi-peak mid-section — creates structural opportunity for the brand's dry-comic-controlled theatricality if the vocalist exploits the negative space around each peak rather than filling every pocket. Whether that opportunity was taken cannot be determined here.",
+        "suggested_brand_profile_implications": [
+          "The withheld intro energy is a usable brand signature — Razor Bloom tracks that open below their ceiling project confidence through restraint, not declaration; this should be codified as a structural preference",
+          "The high density of energy peaks makes this track a test case for the brand's adlib discipline rule — if the track holds up with minimal adlib fill between surges, it demonstrates that Razor Bloom's character can carry silence; if it collapses, production scaffolding may be over-relied upon",
+          "The title framing, if not subverted lyrically, represents the single largest genericness risk in this submission — Razor Bloom's comic-menace-vulnerability signature requires that even provocative subject matter carries a specific, strange, or self-implicating angle rather than a conventional aggressive-possessive frame",
+          "Clipping as aesthetic choice could become a recognizable Razor Bloom production marker if applied consistently and intentionally — controlled saturation reads as character; accidental clipping reads as amateur; the brand needs to decide which this is and commit",
+          "The multi-peak structure suggests this track could support a non-standard emotional arc — rather than building to a single climactic hook release, the energy map allows for a more fragmented or circling narrative shape that would distinguish Razor Bloom from conventional hard rap song geometry"
+        ]
+      }
+    }
+  ],
+  "userFeedback": {
+    "songs": {
+      "bitches-2-1780330199288.mp3": {
+        "tags": [],
+        "notes": ""
+      }
+    }
+  },
+  "proposedPatch": {
+    "songwriting": {
+      "evaluation_targets": {
+        "loudness_floor_rms_db": -13,
+        "peak_ceiling_db": 0,
+        "note": "Song 'bitches-2-1780330199288.mp3' measured at -13.333dB RMS mean with 0dB peak and no tags returned. RMS is marginally below the -13.0dB target floor, indicating the mix may benefit from slightly hotter loudness staging. No creative or vocal tags were generated, suggesting the track's identity signals may not be sufficiently distinct or front-loaded for automated analysis to latch onto. Prioritize early-bar character differentiation and ensure the vocal sits forward in the mix with minimal low-mid mud obscuring consonant clarity."
+      },
+      "anti_generic_rules": [
+        "Do not default to the standard aggressive-rap opening of announcing power and presence; Razor Bloom's entries should be strange, specific, or mid-thought rather than declarative genre throat-clearing",
+        "Do not let 'theatrical' become a synonym for overwrought melodrama; Razor Bloom's theatricality is dry, comic, and controlled — excess should read as deliberate character choice, not unchecked genre inflation",
+        "Do not fill every empty beat pocket with adlibs; Razor Bloom's character is partly defined by knowing when to leave the room silent, and over-adlibbing turns a personality into a formula",
+        "Do not use crude language as a volume knob — escalating profanity to signal intensity is a generic failure mode; instead, use a single precisely placed crude phrase for maximum impact rather than saturation",
+        "Do not write hooks that could be transplanted to any other hard rap track; Razor Bloom's hooks must carry the character's specific comic-menace-vulnerability signature, not just an aggressive repeated phrase",
+        "Do not let the villain conceit settle into complacency — the character should always have something genuinely at stake, even in the most braggadocious song, or the performance becomes self-parody without edge",
+        "Do not recycle the emotional arc of verse-hard-hook-release without variation; the energy pattern must be reshaped by the specific concept of each track rather than applied as a default structural template",
+        "Do not allow the track's identity fingerprint to be buried in a dense or muddy mix — Razor Bloom's vocal character must be audible and legible from the first bar, placed forward in the stereo field with consonant clarity prioritized over reverb wash, so that automated and human listeners can tag the personality within the opening eight bars",
+        "Do not open a track in a way that could belong to any hard rap record; the first distinctive Razor Bloom vocal gesture — a register shift, a dry aside, a chant-mode bark, or a hushed razor-whisper — must occur before or at bar four, not after the verse has already established a generic momentum"
+      ],
+      "candidate_generation_strategy": {
+        "mix_notes": "Target RMS mean at or above -13.0dB. Vocal chain should prioritize close-mic'd dry presence with controlled compression rather than atmospheric reverb that diffuses consonant edges. The vocal must sit 1–2dB above the instrumental in perceived loudness without peak distortion. Avoid low-mid buildup that obscures snarl and whisper textures. Peak ceiling remains 0dB.",
+        "identity_front_loading": "Each generated track must contain a recognizable Razor Bloom identity signal — a specific vocal texture, timing behavior, or conceit — within the first 20 seconds. This ensures the character is taggable and distinguishable from the track's opening, reducing the risk of an untagged output that reads as generically hard rap rather than distinctively Razor Bloom."
+      }
+    }
+  },
+  "patchExplanation": "The only concrete data in the feedback is the audio measurement for 'bitches-2-1780330199288.mp3': RMS mean of -13.333dB (marginally below a reasonable -13.0dB floor target), 0dB peak, and an empty tag array. The empty tags are the most actionable creative signal — automated analysis returned nothing, meaning the track's identity markers were either too subtle, too late, or obscured in the mix to register as distinctive. In response, the patch adds an evaluation_targets block codifying the loudness floor and peak ceiling, plus a mix note rationale. It adds two new anti_generic_rules: one requiring the vocal to be audible and legible from bar one with consonant clarity prioritized over reverb wash, and one requiring a recognizable Razor Bloom identity gesture before bar four. A candidate_generation_strategy block is added to carry both the mix guidance and the identity front-loading instruction into generation. No creative identity fields, distribution metadata, or guardrails were altered.",
+  "validationResult": {
+    "valid": false,
+    "errors": [
+      "lint: [real artist name] \"doechii\" found in generation-facing field songwriting.reference_artists_for_internal_vibe_only — must be abstracted to traits",
+      "lint: [real artist name] \"doechii\" found in generation-facing field songwriting.qa_rules — must be abstracted to traits"
+    ],
+    "warnings": [
+      "lint: [repeated motif overuse] \"real artist\" appears in multiple generation-facing fields",
+      "lint: [repeated motif overuse] \"hook verse\" appears in multiple generation-facing fields",
+      "lint: [repeated motif overuse] \"every song\" appears in multiple generation-facing fields",
+      "lint: [repeated motif overuse] \"references only\" appears in multiple generation-facing fields"
+    ]
+  },
+  "beforeAfterDiff": "-       \"Do not recycle the emotional arc of verse-hard-hook-release without variation; the energy pattern must be reshaped by the specific concept of each track rather than applied as a default structural template\"\n+       \"Do not recycle the emotional arc of verse-hard-hook-release without variation; the energy pattern must be reshaped by the specific concept of each track rather than applied as a default structural template\",\n-     ],\n+       \"Do not allow the track's identity fingerprint to be buried in a dense or muddy mix — Razor Bloom's vocal character must be audible and legible from the first bar, placed forward in the stereo field with consonant clarity prioritized over reverb wash, so that automated and human listeners can tag the personality within the opening eight bars\",\n-     \"do_not_repeat_across_album\": [\n+       \"Do not open a track in a way that could belong to any hard rap record; the first distinctive Razor Bloom vocal gesture — a register shift, a dry aside, a chant-mode bark, or a hushed razor-whisper — must occur before or at bar four, not after the verse has already established a generic momentum\"\n-       \"Do not use a chant hook in back-to-back tracks; rotate to a different hook delivery type after any chant-driven song\",\n+     ],\n-       \"Do not open consecutive tracks with the same vocal texture — avoid leading with snarl, then snarl again; rotate to whisper, speed-burst, theatrical boom, or near-silence\",\n+     \"do_not_repeat_across_album\": [\n-       \"Do not use the same profanity pattern — e.g., curse-at-end-of-every-bar — across more than one track in a row; reposition or respace crude language on the next song\",\n+       \"Do not use a chant hook in back-to-back tracks; rotate to a different hook delivery type after any chant-driven song\",\n-       \"Do not place the emotional reveal or vulnerable break in the same structural position (e.g., always pre-outro) across multiple tracks; move the crack to the first verse, mid-hook, or final bar depending on the song\",\n+       \"Do not open consecutive tracks with the same vocal texture — avoid leading with snarl, then snarl again; rotate to whisper, speed-burst, theatrical boom, or near-silence\",\n-       \"Do not use the same drum feel — trap hi-hat grid, boom-bap kick pattern, or percussion-forward bounce — without at least one intervening track using a contrasting rhythmic texture\",\n+       \"Do not use the same profanity pattern — e.g., curse-at-end-of-every-bar — across more than one track in a row; reposition or respace crude language on the next song\",\n-       \"Do not end consecutive songs with the same outro device; rotate between a cold cut-off, a repeated sting, a fading adlib, a final punchline with no music, or a bass-only decay\",\n+       \"Do not place the emotional reveal or vulnerable break in the same structural position (e.g., always pre-outro) across multiple tracks; move the crack to the first verse, mid-hook, or final bar depending on the song\",\n-       \"Do not write more than two consecutive songs from the battle-stance or direct-takedown point of view; rotate to mirror pep talk, villain theatre, messy romance, or private confession\",\n+       \"Do not use the same drum feel — trap hi-hat grid, boom-bap kick pattern, or percussion-forward bounce — without at least one intervening track using a contrasting rhythmic texture\",\n-       \"Do not use the speed-then-freeze timing conceit in more than one track per project without altering what the freeze lands on so it becomes a fresh move rather than a signature tic\"\n+       \"Do not end consecutive songs with the same outro device; rotate between a cold cut-off, a repeated sting, a fading adlib, a final punchline with no music, or a bass-only decay\",\n-     ],\n+       \"Do not write more than two consecutive songs from the battle-stance or direct-takedown point of view; rotate to mirror pep talk, villain theatre, messy romance, or private confession\",\n-     \"hidden_brief_requirements\": [\n+       \"Do not use the speed-then-freeze timing conceit in more than one track per project without altering what the freeze lands on so it becomes a fresh move rather than a signature tic\"\n-       \"The brief must specify the exact emotional function of profanity in this track — whether it operates as attack, punctuation, comedy, confession, or intimacy — so crude language serves the concept rather than defaulting to saturation.\",\n+     ],\n-       \"The brief must identify which vocal texture from Razor Bloom's engine is primary for this track and which texture appears as a contrast moment, ensuring the two textures have not been combined in the same way on the prior track.\",\n+     \"hidden_brief_requirements\": [\n-       \"The brief must describe a specific scene, object, or physical detail that grounds the song's concept in something concrete and unrepeated from the previous three tracks, preventing the lyric from floating in abstract flex space.\",\n+       \"The brief must specify the exact emotional function of profanity in this track — whether it operates as attack, punctuation, comedy, confession, or intimacy — so crude language serves the concept rather than defaulting to saturation.\",\n-       \"The brief must specify the adlib strategy for this track — including whether adlibs are dense, sparse, or absent — and must differ from the adlib approach used on the most recently generated track.\",\n+       \"The brief must identify which vocal texture from Razor Bloom's engine is primary for this track and which texture appears as a contrast moment, ensuring the two textures have not been combined in the same way on the prior track.\",\n-       \"The brief must name the emotional stake underneath the song's dominant surface posture, even when that posture is pure aggression or pure comedy, so the track retains Razor Bloom's wounded-narrator depth.\",\n+       \"The brief must describe a specific scene, object, or physical detail that grounds the song's concept in something concrete and unrepeated from the previous three tracks, preventing the lyric from floating in abstract flex space.\",\n-       \"The brief must specify the hook architecture type for this track and confirm it has not been used on the immediately preceding track, ensuring the album rotates through Razor Bloom's full range of hook designs.\"\n+       \"The brief must specify the adlib strategy for this track — including whether adlibs are dense, sparse, or absent — and must differ from the adlib approach used on the most recently generated track.\",\n-     ]\n+       \"The brief must name the emotional stake underneath the song's dominant surface posture, even when that posture is pure aggression or pure comedy, so the track retains Razor Bloom's wounded-narrator depth.\",\n-   },\n+       \"The brief must specify the hook architecture type for this track and confirm it has not been used on the immediately preceding track, ensuring the album rotates through Razor Bloom's full range of hook designs.\"\n-   \"visuals\": {\n+     ],\n-     \"style\": \"Hard-edged underground rap artwork with black gloss, swamp green, hot pink, chrome highlights, thorn/floral shapes, club lighting, bass-speaker pressure, warped typography, and fashion-forward menace. Polished enough for streaming artwork; not photorealistic.\",\n+     \"evaluation_targets\": {\n-     \"palette\": {\n+       \"loudness_floor_rms_db\": -13,\n-       \"primary\": \"#111827\",\n+       \"peak_ceiling_db\": 0,\n-       \"secondary\": \"#D8D1BC\",\n+       \"note\": \"Song 'bitches-2-1780330199288.mp3' measured at -13.333dB RMS mean with 0dB peak and no tags returned. RMS is marginally below the -13.0dB target floor, indicating the mix may benefit from slightly hotter loudness staging. No creative or vocal tags were generated, suggesting the track's identity signals may not be sufficiently distinct or front-loaded for automated analysis to latch onto. Prioritize early-bar character differentiation and ensure the vocal sits forward in the mix with minimal low-mid mud obscuring consonant clarity.\"\n-       \"accent\": \"#FF2E88\",\n+     },\n-       \"background\": \"#0B0F0E\",\n+     \"candidate_generation_strategy\": {\n-       \"swamp_green\": \"#3D6B45\",\n+       \"mix_notes\": \"Target RMS mean at or above -13.0dB. Vocal chain should prioritize close-mic'd dry presence with controlled compression rather than atmospheric reverb that diffuses consonant edges. The vocal must sit 1–2dB above the instrumental in perceived loudness without peak distortion. Avoid low-mid buildup that obscures snarl and whisper textures. Peak ceiling remains 0dB.\",\n-       \"acid_lime\": \"#B7F000\",\n+       \"identity_front_loading\": \"Each generated track must contain a recognizable Razor Bloom identity signal — a specific vocal texture, timing behavior, or conceit — within the first 20 seconds. This ensures the character is taggable and distinguishable from the track's opening, reducing the risk of an untagged output that reads as generically hard rap rather than distinctively Razor Bloom.\"\n-       \"chrome_grey\": \"#A7ADB5\",\n+     }\n-       \"danger_red\": \"#C51F32\"\n+   },\n-     },\n+   \"visuals\": {\n-     \"negative_prompt\": \"photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words\",\n+     \"style\": \"Hard-edged underground rap artwork with black gloss, swamp green, hot pink, chrome highlights, thorn/floral shapes, club lighting, bass-speaker pressure, warped typography, and fashion-forward menace. Polished enough for streaming artwork; not photorealistic.\",\n-     \"text_overlay_style\": \"warped underground rap typography, limited words, glossy black/pink/green contrast, sticker-collage aggression, no dense text blocks\"\n+     \"palette\": {\n-   },\n+       \"primary\": \"#111827\",\n-   \"media\": {\n+       \"secondary\": \"#D8D1BC\",\n-     \"default_image_url\": \"/brand-media/doechii/default-image.png\",\n+       \"accent\": \"#FF2E88\",\n-     \"default_image_path\": \"\"\n+       \"background\": \"#0B0F0E\",\n-   },\n+       \"swamp_green\": \"#3D6B45\",\n-   \"distribution\": {\n+       \"acid_lime\": \"#B7F000\",\n-     \"default_distributor\": \"none\",\n+       \"chrome_grey\": \"#A7ADB5\",\n-     \"legacy_distributor\": \"none\",\n+       \"danger_red\": \"#C51F32\"\n-     \"research_default_service\": \"none\",\n+     },\n-     \"research_default_url\": \"none\",\n+     \"negative_prompt\": \"photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words\",\n-     \"default_artist\": \"Razor Bloom\",\n+     \"text_overlay_style\": \"warped underground rap typography, limited words, glossy black/pink/green contrast, sticker-collage aggression, no dense text blocks\"\n-     \"default_album\": \"Teeth Out\",\n+   },\n-     \"label_name\": \"Figment Factory\",\n+   \"media\": {\n-     \"primary_genre\": \"Hip-Hop/Rap\",\n+     \"default_image_url\": \"/brand-media/doechii/default-image.png\",\n-     \"spotify_genres\": [\n+     \"default_image_path\": \"\"\n-       \"experimental hip hop\",\n+   },\n-       \"trap\",\n+   \"distribution\": {\n-       \"southern hip hop\",\n+     \"default_distributor\": \"none\",\n-       \"club rap\",\n+     \"legacy_distributor\": \"none\",\n-       \"alternative hip hop\"\n+     \"research_default_service\": \"none\",\n-     ],\n+     \"research_default_url\": \"none\",\n-     \"youtube_tags_seed\": [\n+     \"default_artist\": \"Razor Bloom\",\n-       \"experimental hip hop\",\n+     \"default_album\": \"Teeth Out\",\n-       \"hard rap\",\n+     \"label_name\": \"Figment Factory\",\n-       \"club rap\",\n+     \"primary_genre\": \"Hip-Hop/Rap\",\n-       \"southern hip hop\",\n+     \"spotify_genres\": [\n-       \"alternative hip hop\",\n+       \"experimental hip hop\",\n-       \"Razor Bloom\"\n+       \"trap\",\n-     ],\n+       \"southern hip hop\",\n-     \"apple_music_genres\": [\n+       \"club rap\",\n-       \"Hip-Hop/Rap\",\n+       \"alternative hip hop\"\n-       \"Alternative Rap\",\n+     ],\n-       \"Rap\"\n+     \"youtube_tags_seed\": [\n-     ],\n+       \"experimental hip hop\",\n-     \"coppa_status\": \"not directed to children under 13\",\n+       \"hard rap\",\n-     \"content_advisory\": \"explicit adult language allowed; no hate slurs, graphic violence, coercive sexual content, or self-harm instruction\"\n+       \"club rap\",\n-   },\n+       \"southern hip hop\",\n-   \"social\": {\n+       \"alternative hip hop\",\n-     \"spotify_artist_url\": \"\",\n+       \"Razor Bloom\"\n-     \"youtube_channel_url\": \"\",\n+     ],\n-     \"instagram_url\": \"\",\n+     \"apple_music_genres\": [\n-     \"tiktok_url\": \"\",\n+       \"Hip-Hop/Rap\",\n-     \"website_url\": \"\",\n+       \"Alternative Rap\",\n-     \"linktree_url\": \"\",\n+       \"Rap\"\n-     \"email_contact\": \"\",\n+     ],\n-     \"press_kit_url\": \"\"\n+     \"coppa_status\": \"not directed to children under 13\",\n-   },\n+     \"content_advisory\": \"explicit adult language allowed; no hate slurs, graphic violence, coercive sexual content, or self-harm instruction\"\n-   \"ui\": {\n+   },\n-     \"sidebar_subtitle\": \"Razor Bloom Studio\",\n+   \"social\": {\n-     \"logo_path\": \"/figment-factory-logo.png\"\n+     \"spotify_artist_url\": \"\",\n-   },\n+     \"youtube_channel_url\": \"\",\n-   \"display_name\": \"Doechii\"\n+     \"instagram_url\": \"\",\n- }\n+     \"tiktok_url\": \"\",\n+     \"website_url\": \"\",\n+     \"linktree_url\": \"\",\n+     \"email_contact\": \"\",\n+     \"press_kit_url\": \"\"\n+   },\n+   \"ui\": {\n+     \"sidebar_subtitle\": \"Razor Bloom Studio\",\n+     \"logo_path\": \"/figment-factory-logo.png\"\n+   },\n+   \"display_name\": \"Doechii\"\n+ }",
+  "appliedAt": null,
+  "draftPatchPath": null
+}

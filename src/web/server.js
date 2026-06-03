@@ -122,6 +122,7 @@ import {
 } from '../shared/generation-cost-config.js';
 import { getAllAlbums, getAlbum, getSongsForAlbum } from '../shared/db.js';
 import { removeSongsFromAlbum } from '../shared/album-track-membership.js';
+import { getSelectedReleaseAudio } from '../shared/song-audio-selection.js';
 import {
   assertReleaseLiveSubmitReady,
   buildReleaseCockpitViewModel,
@@ -1149,9 +1150,10 @@ app.get('/albums/:id', (req, res) => {
   const summary = getAlbumSummary(req.params.id);
   if (!summary) return res.status(404).render('404', { message: 'Album not found' });
   const albumTracks = getSongsForAlbum(req.params.id);
+  const songsWithAudio = albumTracks.map(s => ({ ...s, releaseAudio: getSelectedReleaseAudio(s.id) }));
   res.render('album-batch/detail', {
     ...summary,
-    songs: albumTracks,
+    songs: songsWithAudio,
     albumAssets: getAlbumAssetState(req.params.id),
     albumSmartLink: buildAlbumSmartLink(albumTracks),
   });

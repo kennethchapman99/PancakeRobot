@@ -1,0 +1,407 @@
+{
+  "brand_name": "Loop Council",
+  "app_title": "Loop Council",
+  "brand_type": "music",
+  "brand_description": "Loop Council is an original AI-assisted artist brand for jazzy alternative hip-hop, relaxed pocket rap, turntablism, warm boom-bap drums, bass-forward grooves, conversational MC interplay, and occasional guest-style verses with contrasting deliveries. The sound should feel clever, loose, musical, urban, communal, and deeply rhythmic without imitating any real artist, voice, cadence, flow, lyrics, scratches, beats, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "16+",
+    "description": "Listeners who like jazz rap, golden-era-inspired hip-hop, smooth MC flow, inventive sampling aesthetics, live-feeling basslines, DJ scratching, smart hooks, cypher energy, and records that feel both laid-back and technically sharp.",
+    "guardrail": "Suitable for general streaming audiences ages 16+. Allow mild profanity, street-level observations, social commentary, romance, ambition, humor, and competition. Avoid hate slurs, identity-based attacks, graphic violence, explicit sexual detail, self-harm instruction, drug-use instruction, or child-directed framing."
+  },
+  "character": {
+    "name": "Loop Council",
+    "core_concept": "A rotating hip-hop crew built around a crate-digging producer-DJ, a smooth lead MC, and occasional guest voices trading relaxed but precise verses over jazz-heavy beats.",
+    "fallback_summary": "jazzy alternative hip-hop crew blending relaxed flow, boom-bap drums, turntable cuts, warm bass, and rotating MC energy",
+    "clap_name": "none",
+    "personality_traits": [
+      "Laid-back but technically sharp",
+      "Witty, conversational, and rhythm-first",
+      "Communal and crew-oriented rather than lone-star posturing",
+      "Musical and sample-minded without copying source material",
+      "Cool under pressure, with subtle humor and social observation",
+      "Flexible enough for solo verses, cypher tracks, and guest-style contrasts"
+    ],
+    "catchphrases": [
+      "Keep the pocket open",
+      "Pass the mic, move the room"
+    ],
+    "visual_identity": "Warm underground hip-hop visuals with turntables, record crates, street-corner jazz-club glow, subway-tile texture, handbill collage, speaker cones, and loose ink typography. Visuals should feel crate-digging, communal, urban, and musical without copying any real album cover or artist imagery.",
+    "visual_reference": [
+      "Record crates, turntables, slipmats, mixer faders, speaker stacks, and subway-night texture",
+      "Warm tan, muted teal, deep brown, black vinyl, brass gold, and brick red palette",
+      "Jazz-club light, street flyers, hand-drawn arrows, and collage layers used tastefully",
+      "DJ booth and cypher-circle imagery used occasionally, not forced into every image",
+      "No celebrity likeness, no copied album layouts, no readable copyrighted logos"
+    ]
+  },
+  "music": {
+    "default_style": "jazzy alternative hip-hop with smooth boom-bap drums, relaxed pocket flow, upright or electric bass, turntable scratching, and rotating MC textures",
+    "default_bpm": 94,
+    "default_key": "D Minor",
+    "default_prompt": "Original jazzy alternative hip-hop with warm boom-bap drums, loose swing, deep bass, Rhodes or jazz-guitar chords, horn or flute-like melodic accents, tasteful turntable scratching, and relaxed but precise rap vocals. Vary the lane by song: smooth lead-MC flow track, DJ-forward scratch showcase, crew cypher with mixed MC styles, mellow late-night jazz rap, upbeat block-party groove, socially observant head-nod track, and hook-forward radio-friendly single are all valid. Never imitate, clone, or reference any real artist voice, cadence, flow, lyrics, melody, beat, sample, scratch pattern, arrangement, persona, or copyrighted work. Create a fresh performance with pocket, wit, warmth, groove, clever MC interplay, and strong rhythmic identity.",
+    "target_length": "2:20-4:00",
+    "min_words": 180,
+    "normal_word_range": "220-520",
+    "first_vocal_by_seconds": 8,
+    "max_instrumental_intro_seconds": 14
+  },
+  "lyrics": {
+    "title_examples": [
+      "Sidewalk Pocket",
+      "Corner Theory",
+      "Fresh Air Static",
+      "Crate Talk",
+      "Blue Train Home"
+    ],
+    "topic_variety": "Use broad topic families: everyday city wisdom, creative confidence, friendship and crew loyalty, social observation without preaching, romance with humor, night travel, block-party joy, self-improvement, record-store or studio culture, and playful lyrical competition. Do not repeat the same crate, train, corner, jazz, pocket, vinyl, cypher, or microphone imagery across songs.",
+    "required_closing": "End with a memorable DJ cut image, final pocket line, conversational tag, crew handoff, warm fade, or unresolved street-scene detail; avoid preachy morals or generic goodbyes."
+  },
+  "songwriting": {
+    "song_type": "jazzy_alternative_hip_hop",
+    "primary_emotional_goal": "Create original hip-hop songs that feel smooth, clever, musical, communal, and rhythmically addictive, with enough variation to support albums without repeating one beat, flow, or cypher setup.",
+    "voice_perspective": "Flexible first-person, direct address, rotating crew voices, or observational narrator. The lead voice should feel relaxed and precise; guest-style voices may contrast in tone, density, rhythm, or energy.",
+    "character_voice": {
+      "person": "Mostly first-person and direct second-person, with occasional collective 'we' for crew or neighborhood moments.",
+      "tone": "Cool, conversational, witty, rhythmic, observant, warm, and confident without being overly aggressive.",
+      "vocabulary": "Plainspoken urban detail, playful rhyme, jazz/music references used sparingly, clever turns, and clean rhythmic phrasing; avoid forced slang or fake dialect.",
+      "signature_sounds": [
+        "warm boom-bap drums",
+        "walking or rubbery bassline",
+        "Rhodes or jazz-guitar chords",
+        "turntable scratches",
+        "horn or flute stabs",
+        "rotating MC handoffs"
+      ],
+      "comedy_mode": "Dry wit, friendly flexing, clever reversals, and situational humor; punchlines should feel conversational rather than insult-heavy.",
+      "kid_relationship": "Not a children's brand; lyrics should be appropriate for teens and adults."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "A Tribe Called Quest-inspired jazz-rap warmth",
+      "Q-Tip-inspired relaxed pocket flow",
+      "golden-era alternative hip-hop crew interplay",
+      "classic DJ turntablism and scratching",
+      "jazz rap bassline focus",
+      "mixed-MC cypher energy"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, cadence, flow, rhyme schemes, lyrics, melodies, sample choices, scratch phrases, beats, arrangements, personas, or copyrighted material. Use broad traits—warm jazz influence, relaxed pocket, smart flow, DJ craft, and crew contrast—as inspiration for an original Loop Council identity.",
+    "allowed_elements": [
+      "relaxed lead-MC flow with precise pocket",
+      "guest-style verses with contrasting rhythm or tone",
+      "turntable scratching as hook, transition, or punctuation",
+      "warm boom-bap drums and loose swing",
+      "jazz chords, bass movement, horn stabs, flute-like accents, or Rhodes texture",
+      "crew call-backs and mic handoffs",
+      "playful lyrical competition without cruelty",
+      "social observation grounded in everyday detail",
+      "mellow hooks, chant refrains, or DJ-cut motifs",
+      "clean or radio-friendly language by default"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist cadence, flow, rhyme scheme, vocal tone, beat, sample, scratch phrase, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "sampling language that implies use of copyrighted recordings",
+      "fake dialect, caricatured slang, or cultural stereotyping",
+      "hate slurs or identity-based attacks",
+      "graphic violence or actionable threats",
+      "explicit sexual content or coercive framing",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, groove lane, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "DJ scratches and turntable moments should vary by function: hook, transition, answer line, intro texture, or outro tag.",
+      "Use at least one concrete street, room, studio, movement, friendship, or object detail in each song."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be rapped, sung, or scratched as vocal-like phrases.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Mild profanity is allowed, but hate slurs and identity-based demeaning language are not.",
+      "Do not write fake accent spellings; vocal identity should come through rhythm, pocket, and attitude."
+    ],
+    "structure_preferences": [
+      "[DJ INTRO] -> [VERSE 1] -> [HOOK or CUT REFRAIN] -> [VERSE 2] -> [HOOK] -> [GUEST VERSE or SCRATCH BREAK] -> [FINAL HOOK] -> [OUTRO CUT]",
+      "[BASSLINE INTRO] -> [LEAD VERSE] -> [CALLBACK HOOK] -> [GUEST VERSE] -> [SCRATCH BRIDGE] -> [FINAL VERSE] -> [TAG]",
+      "[COLD RAP OPEN] -> [DRUM DROP] -> [VERSE 1] -> [REFRAIN] -> [VERSE 2] -> [BEAT DIP] -> [DJ BREAK] -> [REFRAIN]",
+      "[INSTRUMENTAL VAMP] -> [CYPHER VERSE 1] -> [CYPHER VERSE 2] -> [HOOK] -> [CYPHER VERSE 3] -> [SCRATCH OUTRO]"
+    ],
+    "song_family_types": [
+      "Smooth lead-MC jazz-rap track with relaxed pocket, warm bassline, and understated hook.",
+      "DJ-forward scratch showcase where cuts answer the verses and shape transitions.",
+      "Crew cypher with two or three contrasting MC-style sections and a simple unifying refrain.",
+      "Mellow late-night head-nod track with softer keys, observational lyric, and conversational tone.",
+      "Upbeat block-party groove with chantable hook, brighter drums, and playful call-backs.",
+      "Socially observant boom-bap track with grounded detail, calm confidence, and no slogan-heavy preaching."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feel: dusty boom-bap, crisp head-nod, loose swing, block-party bounce, stripped breakbeat, or live-band pocket.",
+      "Rotate bass role: walking bass, rubbery electric bass, upright-style movement, minimal sub pocket, melodic bass hook, or call-and-response with drums.",
+      "Rotate musical bed: Rhodes chords, jazz guitar, horn stabs, flute-like lead, vibraphone texture, organ pad, or sparse piano loop built as an original phrase.",
+      "Rotate vocal shape: smooth lead flow, conversational verse, denser guest-style verse, laid-back hook, chant refrain, DJ-cut response, or spoken intro tag.",
+      "Use scratches selectively; some songs should feature them heavily, others only as punctuation, intro, or outro."
+    ],
+    "tempo_energy_lanes": [
+      "78-86 BPM: mellow late-night head-nod, spacious bass, relaxed lyric density.",
+      "87-94 BPM: classic jazz-rap pocket, smooth flow, warm drums, balanced hook.",
+      "95-102 BPM: upbeat block-party bounce, brighter percussion, playful call-backs.",
+      "103-112 BPM: faster cypher energy, tighter verse tradeoffs, more DJ movement.",
+      "113-120 BPM: rare high-energy breakbeat or dance-adjacent lane, used for contrast."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: scratch phrase, bassline, drum break, horn stab, spoken room tone, keyboard vamp, or cold rap line.",
+      "Every song should vary at least three major variables: tempo, drum feel, bass role, vocal delivery, hook type, guest presence, scratch function, or instrumental texture.",
+      "Do not always include guest-style MCs; use them when contrast improves the song.",
+      "Do not always make scratching the main hook; sometimes let bass, horn, keys, or vocal refrain carry it.",
+      "Avoid identical verse lengths, cypher order, hook density, scratch placement, and outro cut style across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: mellow sung refrain, chant phrase, DJ-cut motif, bassline hook, call-back line, crew response, or instrumental break.",
+      "Do not reuse the same hook rhythm, title placement, scratch placement, or cadence shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear job: groove, wit, uplift, reflection, crew unity, dance-floor movement, or cool-down.",
+      "Use repetition for pocket and memorability, but change cuts, backing responses, bass movement, or adlibs on later returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: lead MC reflection, crew cypher, street-corner observer, friend-to-friend advice, playful flirtation, creative-process story, or calm social critique.",
+      "Do not make every song about records, crates, jazz, or being an MC; those are lanes, not the whole brand.",
+      "When lyrics are socially observant, include human detail instead of abstract lectures.",
+      "When lyrics are playful or romantic, keep wit and warmth instead of generic flexing.",
+      "When lyrics are competitive, keep it clever and musical rather than cruel or violent."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same crate, train, corner, jazz, pocket, vinyl, cypher, mic, or sidewalk imagery across every song.",
+      "Do not force specific numbers, objects, symbols, crew lore, or DJ phrases; they are optional background texture only.",
+      "Avoid repeated opening moves such as crate digging, stepping to the mic, riding a train, or calling out the DJ.",
+      "Do not reuse the same drum break feel, scratch function, guest handoff, hook cadence, or emotional conclusion across multiple tracks.",
+      "Keep Loop Council identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with an accessible groove that establishes bass, pocket, and crew warmth without using the busiest cypher first.",
+      "Sequence solo lead-MC tracks beside guest-style cyphers and DJ-forward pieces so the album breathes.",
+      "Use scratch-heavy tracks as highlights or transitions, not every-track default.",
+      "Place the most socially observant track after a relaxed or playful song to avoid preachy pacing.",
+      "Save one high-energy crew track for the late-middle or final third.",
+      "End with either a warm instrumental fade, final DJ cut, conversational tag, or mellow reflective verse."
+    ],
+    "earworm_stack": [
+      "Introduce a memorable bassline, drum pocket, scratch, horn phrase, or vocal cadence within the first 12 seconds.",
+      "Pair relaxed verses with a clean hook, DJ motif, or bassline identity.",
+      "Use pocket, swing, and small rhythmic surprises to create replay value.",
+      "Make at least one line per verse conversationally quotable without forcing punchlines.",
+      "Let guest-style contrast create variation without derailing the core groove."
+    ],
+    "hook_design_rules": [
+      "Hooks should be smooth, rhythmic, DJ-cut-driven, bassline-sticky, or crew-friendly.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse flow and hook simplicity.",
+      "For scratch-led lanes, let the DJ cuts function like a responding voice; for cypher lanes, let the refrain unify the MCs."
+    ],
+    "energy_arc": {
+      "pattern": "DROP -> POCKET -> HANDOFF -> CUT -> LIFT -> COOL-OUT",
+      "rules": [
+        "Start with a recognizable groove, scratch, bassline, keyboard phrase, or vocal spark rather than a long empty intro.",
+        "Build energy through pocket and MC contrast before adding density.",
+        "Include at least one handoff or texture change: guest-style verse, DJ cut, beat dip, bass variation, or hook response.",
+        "Let the final section feel warmer, busier, calmer, or more communal depending on the song family.",
+        "End with a memorable cool-out rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Crew response line for cypher tracks",
+      "Short chant phrase for block-party tracks",
+      "DJ-cut response used as a call-back voice",
+      "Bassline motif listeners can recognize before the chorus",
+      "Final conversational tag that reframes the groove"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct A Tribe Called Quest or Q-Tip imitation rather than an original adjacent jazz-rap lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, drum feel, bass role, scratch function, hook type, vocal delivery, MC count, or production texture.",
+      "If a song uses guest-style MCs, confirm each voice has a distinct rhythm, density, or emotional stance.",
+      "If a song leans heavily into jazz references, confirm it still has a clear hip-hop hook and modern listener entry point.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    },
+    "vocal_performance_engine": {
+      "priority": "Loop Council's lead vocal is irreplaceable because it delivers maximum rhythmic information at minimum apparent effort — precision disguised as ease, wit embedded in groove rather than announced.",
+      "vocal_textures": [
+        "A smooth mid-register conversational tone that sits just behind the beat, as if the MC is thinking aloud rather than performing — relaxed but never sleepy",
+        "Controlled breath-pocket phrasing where lines end on a subtle exhale, reinforcing the swing of the drums rather than fighting them",
+        "A guest-contrast texture that enters harder, drier, or more staccato, creating seams without jarring the listener out of the groove",
+        "A half-spoken half-sung hook delivery where melodic movement is implied by rhythm and vowel shape rather than full pitch commitment",
+        "A low-key chuckle-pocket tone for punchline moments — the voice barely shifts, letting the content land rather than telegraphing it"
+      ],
+      "timing_behaviors": [
+        "Deliberate late-pocket entry on the second and fourth beat emphasis, landing just after the snare crack to reinforce swing without rushing",
+        "Syllable compression on multi-syllable rhyme clusters — cramming four or five syllables into a beat and a half, then breathing into empty space",
+        "Strategic one-beat rests mid-verse that let the bassline or scratch answer before the next phrase, creating conversational space",
+        "End-of-bar cadence drop where the final word of a couplet falls below the beat grid, giving the line a nodding, settling quality",
+        "Guest-style verse acceleration — a contrasting MC voice enters at slightly higher syllabic density, then finds the pocket two bars in, as if warming up"
+      ],
+      "adlib_behaviors": [
+        "Quiet consonant punches — a soft 'yeah' or 'hm' placed between lines to mark the groove without claiming attention",
+        "Call-back whispers where a key word from the previous bar is echoed at half-volume by a second voice, as if the room is agreeing",
+        "Turntable-echo adlibs — short staccato vocal fragments that mimic the rhythm of a scratch answer, bridging DJ and MC without overlapping them",
+        "A single dry laugh or breath-release after a particularly loaded punchline, signaling the crew's reaction rather than the MC's ego",
+        "Collective 'we' murmur at hook transitions — a low, blended background vocal that sounds like a room rather than an overdub"
+      ],
+      "avoid": [
+        "Aggressive ad-lib shouting or hype-heavy background stacking that turns the conversational texture into a performance spectacle",
+        "On-the-beat rap delivery where every syllable lands exactly on grid — this flattens the swing and removes the pocket identity",
+        "Melodic hooks that require full pitch commitment and sustained notes, shifting the identity from jazz-rap ease to pop vocal showcase",
+        "Dense triplet-flow patterns that prioritize technical speed over space and wit, erasing the relaxed-but-precise balance",
+        "Over-explaining punchlines through tone shift, volume spike, or repeated emphasis — the delivery should trust the words"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The lead MC drops to near-spoken delivery for exactly one four-bar section per song, so quiet and direct it sounds like a private aside — then the beat re-enters and the flow resumes as if nothing happened.",
+      "A DJ scratch line answers the final word of the hook's last bar, replacing the expected vocal rhyme with a cut that sounds like the turntable finished the sentence.",
+      "Two contrasting MC voices trade single bars rather than full verses — not a cypher but a fast-cut argument or conversation, intercut so tightly the verses feel like one mind speaking in two registers.",
+      "The hook melody is carried entirely by the bassline with no vocals — the MC re-enters after it as if letting the instrument speak first.",
+      "A verse is structured as a list that accelerates with each item, syllable count climbing line by line until the final bar overflows and resolves into silence before the hook.",
+      "The adlib voice starts subtly agreeing mid-verse and grows louder across four bars until it is equal to the lead, then cuts entirely on the hook — the absence is louder than the presence.",
+      "A single image or phrase introduced in bar two of a verse is held back, transformed, and paid off in the last bar with a slight melodic shift in delivery — not announced, just landed.",
+      "The DJ drops the beat completely for two bars while the MC keeps the flow at the same tempo, proving the rhythm lives in the voice as much as the drum."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Solo Pocket",
+        "description": "Lead MC carries the full song alone with only bassline and sparse Rhodes for company — no guest voices, no cypher handoff, just the single voice working through one sustained idea with increasing intimacy across four minutes."
+      },
+      {
+        "name": "Council Session",
+        "description": "Three or more contrasting MC textures trade in a structured format, unified not by a sung hook but by a recurring scratch phrase that acts as punctuation — the groove stays constant while the voices redefine it."
+      },
+      {
+        "name": "Turntablist Lead",
+        "description": "The DJ takes structural priority: cuts open and close sections, answer lines, and carry the hook, while the MC's role shrinks to short precise bursts that feel like prompts the DJ is responding to."
+      },
+      {
+        "name": "Night Room",
+        "description": "Tempo drops below 86 BPM, keys become the dominant instrument, and the lead voice settles into observational narrator mode — lyric density falls, syllables stretch, and the music does emotional work the words leave unsaid."
+      },
+      {
+        "name": "Block Energy",
+        "description": "Brighter drums, a chantable hook designed for group delivery, and playful call-back lines that reward repeat listens — the groove is the destination, and the MC sounds like they are having more fun than usual."
+      },
+      {
+        "name": "One-Take Room",
+        "description": "Arrangement and delivery simulate a live-recorded take — imperfect breath placement, slight room ambience, minimal overdubs — making the song feel caught rather than constructed."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a scratch line as the hook resolution, the next track must resolve its hook through a vocal refrain, bassline answer, or horn stab — never back-to-back scratch-hook conclusions.",
+      "If the previous track featured a multi-MC cypher structure, the next track must be built around a single sustained voice or an MC-DJ dialogue rather than a group handoff.",
+      "If the previous track opened with a drum break or groove entry, the next must open cold — with a spoken phrase, a single bass note, a scratch, or silence before the downbeat.",
+      "If the previous track's emotional tone was reflective or observational, the next must shift register to playful, competitive, romantic, or communal before returning to introspection.",
+      "No two consecutive tracks may share the same tempo lane, drum feel category, and hook type simultaneously — at least two of those three variables must change.",
+      "If a guest-style voice was used in the prior track's climactic section, it may not occupy the same structural position in the next track — move it to the intro, bridge, or remove it entirely."
+    ],
+    "anti_generic_rules": [
+      "Do not default to crate-digging or vinyl-discovery as the lyrical frame when the brief calls for something personal — Loop Council's failure mode is hiding behind music-about-music when a human angle is stronger.",
+      "Do not make every scratch moment a hook ornament — if the DJ's cuts are only appearing at the end of hooks, the turntablist identity is decorative rather than structural, which contradicts the character.",
+      "Do not let 'relaxed' become 'uneventful' — the pocket must contain small rhythmic surprises, syllable compressions, or pocket shifts every 8-16 bars or the groove becomes wallpaper.",
+      "Do not assign the same syllabic density to all MC voices in a cypher — if two voices sound equally dense and paced, the crew texture is lost and the song sounds like one person performing in two names.",
+      "Do not use jazz references — chord names, instrument names, historical era nods — as lyrical decoration unless the song's actual concept earns them; otherwise the character sounds like a Wikipedia article.",
+      "Do not end every song with a cool-out scratch fade — Loop Council's closer failure mode is defaulting to the turntable as the polite exit every time, which erases the emotional variety of the album's endings.",
+      "Do not load every verse with street imagery as atmospheric padding — when detail is not earned by the song's specific concept, it reads as genre costuming rather than lived voice.",
+      "Do not let the hook be the most rhythmically complex moment in the song — for this character, the verse should carry the technical weight and the hook should feel like relief, not demonstration."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not repeat the same scratch function — hook ornament, verse answer, transition bridge, intro texture, and outro tag are all distinct roles; rotate them across songs rather than defaulting to hook placement.",
+      "Do not open more than two songs on the same album with a bassline entry — vary intros across drum break, spoken tone, keyboard vamp, horn stab, scratch phrase, or cold rap line.",
+      "Do not use the same MC contrast pairing twice — if one track juxtaposes a smooth lead with a harder staccato guest, the next multi-voice track must find a different contrast axis: density, register, tempo feel, or emotional tone.",
+      "Do not repeat the same hook structure — chantable group refrain, solo melodic phrase, scratch-only, bassline-carried, and call-and-response are all distinct; no two adjacent songs may share the same hook architecture.",
+      "Do not end consecutive songs with the same emotional resolution — not every album track should close with warmth or communal feeling; rotate through unresolved exits, cool irony, quiet intensity, and genuine uplift.",
+      "Do not place the most quotable lyrical moment in the same structural position — sometimes it belongs in bar three of verse one, sometimes in the bridge, sometimes buried in the second half of verse two.",
+      "Do not use the same drum feel category — four-on-the-floor swing, broken shuffle, half-time boom-bap, and uptempo bounce should rotate so no two adjacent tracks share the same rhythmic skeleton.",
+      "Do not repeat the same adlib behavior across more than two consecutive tracks — rotate between whisper echo, consonant punch, collective murmur, dry laugh, and silence."
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify a single concrete non-musical detail — a place, relationship, object, or moment — that anchors the lyric concept, ensuring this track's human specificity cannot be swapped with any other track on the album.",
+      "The brief must define the exact structural role of the DJ on this track — whether the turntable leads, answers, punctuates, or is absent — so that scratch placement is intentional rather than habitual.",
+      "The brief must identify which MC voice or voices appear and describe how their contrast serves this specific song's emotional goal, not just the crew concept in general.",
+      "The brief must state the hook's delivery mechanism — vocal, scratch, bass, horn, or hybrid — and explain why that mechanism fits the track's groove lane and tempo rather than defaulting to the prior song's approach.",
+      "The brief must specify the adlib strategy for this track, describing where in the song adlibs appear and what emotional function they serve, rather than leaving them as generic texture.",
+      "The brief must identify at least one arrangement moment where the music does something unexpected for Loop Council's default sound — a structural gap, a tempo micro-shift, an unusual intro type, or a hook absence — so that the track earns its place in an album rather than repeating the brand's comfort zone."
+    ]
+  },
+  "visuals": {
+    "style": "Warm underground jazz-rap cover art with record crates, turntables, mixer faders, street flyers, subway-night texture, speaker circles, handbill collage, and jazz-club glow. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#E7D8B1",
+      "accent": "#2F7E7E",
+      "background": "#1A1612",
+      "vinyl_black": "#050505",
+      "brass_gold": "#C89B3C",
+      "brick_red": "#9F3F2F",
+      "paper_cream": "#F0E3C2"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit drug imagery, weapons, gore, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words, fake record label logos",
+    "text_overlay_style": "loose underground hip-hop handbill typography, limited words, warm contrast, collage texture, no dense lyric blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/tribe/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Loop Council",
+    "default_album": "Sidewalk Pocket",
+    "label_name": "Figment Factory",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "jazz rap",
+      "alternative hip hop",
+      "boom bap",
+      "underground hip hop",
+      "turntablism"
+    ],
+    "youtube_tags_seed": [
+      "jazz rap",
+      "alternative hip hop",
+      "boom bap",
+      "underground hip hop",
+      "turntablism",
+      "Loop Council"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "Alternative Rap",
+      "Jazz"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "clean or radio-friendly by default; mild profanity and social commentary allowed without hate slurs, graphic violence, or explicit sexual content"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Loop Council Studio",
+    "logo_path": "/figment-factory-logo.png"
+  },
+  "display_name": "Tribe"
+}

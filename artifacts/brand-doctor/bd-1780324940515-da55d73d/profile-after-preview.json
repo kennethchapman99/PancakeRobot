@@ -1,0 +1,417 @@
+{
+  "brand_name": "Razor Bloom",
+  "app_title": "Razor Bloom",
+  "brand_type": "music",
+  "brand_description": "Razor Bloom is an original AI-assisted artist brand for fierce, technically sharp, performance-first hip-hop with theatrical vocals, hard language, switchback flows, swampy low-end, club pressure, playful menace, and emotional bite. The sound should feel bold, funny, confrontational, athletic, and unpredictable without imitating any real artist, voice, cadence, lyrics, flows, beats, arrangements, persona, or copyrighted work.",
+  "audience": {
+    "age_range": "18+",
+    "description": "Adult listeners who like aggressive women-led rap energy, experimental hip-hop, club-ready bounce, sharp punchlines, fast flow switches, theatrical character work, raw confidence, messy honesty, and high-control vocal performances.",
+    "guardrail": "Adult-oriented music. Strong profanity, confrontational language, sexual confidence, ego, anger, and chaotic party energy are allowed. Do not include hate slurs, graphic sexual detail, sexual coercion, graphic violence, revenge fantasy, real-person harassment, self-harm instruction, or drug-use instructions."
+  },
+  "character": {
+    "name": "Razor Bloom",
+    "core_concept": "A sharp-tongued underground rap persona: part battle rapper, part club instigator, part theatre kid villain, part wounded narrator who can turn vulnerability into a punchline.",
+    "fallback_summary": "hard-edged experimental rap artist with theatrical delivery, explicit confidence, agile flows, club pressure, and emotional bite",
+    "clap_name": "none",
+    "personality_traits": [
+      "Fearless, funny, and confrontational",
+      "Technically agile without becoming cold or over-written",
+      "Theatrical and character-driven, but emotionally real underneath",
+      "Sexually confident without needing graphic detail",
+      "Playfully chaotic, sharp, and quotable",
+      "Able to pivot from rage to comedy to vulnerability within one track"
+    ],
+    "catchphrases": [
+      "Pretty teeth, sharper tongue",
+      "Soft face, hard verse"
+    ],
+    "visual_identity": "High-contrast underground rap visuals: glossy black, swamp green, hot pink, chrome, sharp florals, thorn shapes, club lighting, warped typography, and stage-poster aggression. Visuals should feel dangerous, stylish, humid, and theatrical without copying any real artist imagery.",
+    "visual_reference": [
+      "Black-and-green club lighting with hot pink accents",
+      "Sharp floral or thorn motifs used occasionally, not required in every visual",
+      "Chrome microphone, wet pavement, bass speakers, and stage smoke",
+      "Warped typography, sticker collage, and underground rap flyer energy",
+      "Fashion-forward confidence without using celebrity likeness"
+    ]
+  },
+  "music": {
+    "default_style": "experimental hard rap with club bounce, theatrical vocals, Southern-leaning low-end, trap, boom-bap, and alt-hip-hop textures",
+    "default_bpm": 104,
+    "default_key": "F Minor",
+    "default_prompt": "Original fierce experimental hip-hop with hard drums, heavy bass, sharp rap delivery, theatrical vocal switches, explicit adult language when useful, club bounce, punchline density, and occasional vulnerable breaks. Vary the lane by song: aggressive rap workout, nasty club banger, swampy low-end anthem, fast-flow technical showcase, funny villain monologue, stripped confession, and chaotic posse-style chant are all valid. Never imitate, clone, or reference any real artist voice, cadence, flow, lyrics, melody, beat, adlibs, arrangement, persona, or copyrighted work. Create a fresh performance with attack, wit, rhythm control, attitude, surprise, and emotional stakes.",
+    "target_length": "2:00-3:20",
+    "min_words": 200,
+    "normal_word_range": "220-520",
+    "first_vocal_by_seconds": 4,
+    "max_instrumental_intro_seconds": 8
+  },
+  "lyrics": {
+    "title_examples": [
+      "Teeth Out",
+      "Mud Season",
+      "Pink Knife",
+      "Bad Taste",
+      "Heavy Pretty"
+    ],
+    "topic_variety": "Use broad topic families: dominance and self-ownership, messy nightlife, betrayal and payback feelings without actual harm, sexual confidence without graphic detail, outsider ambition, fashion as armor, rage turning into comedy, vulnerability hidden inside bravado, fake friends, money pressure, body confidence, and chaotic reinvention. Do not repeat the same teeth, mud, knife, flower, club, or villain imagery across songs.",
+    "required_closing": "End with a final sting, punchline, threat-as-metaphor, laugh, abrupt cutoff, or exposed emotional line; avoid tidy lessons or soft goodbyes."
+  },
+  "songwriting": {
+    "song_type": "experimental_hard_rap",
+    "primary_emotional_goal": "Create original rap songs that feel dangerous, funny, technically impressive, club-ready, explicit when appropriate, and emotionally alive without becoming formulaic.",
+    "voice_perspective": "Mostly first-person and direct-address. The narrator can be cocky, horny, furious, playful, paranoid, wounded, triumphant, or absurd depending on the song lane.",
+    "character_voice": {
+      "person": "Mostly first-person with direct second-person attacks, occasional character-scene narration.",
+      "tone": "Hard, witty, explicit, theatrical, agile, funny, confrontational, and occasionally vulnerable.",
+      "vocabulary": "Adult rap language with profanity allowed; vivid, punchy, image-rich, rhythmically flexible, and never reliant on slurs or lazy shock value.",
+      "signature_sounds": [
+        "bass-heavy drums",
+        "rapid flow switches",
+        "chant hooks",
+        "theatrical vocal drops",
+        "sharp adlib pockets",
+        "sudden stripped breaks"
+      ],
+      "comedy_mode": "Insult comedy, absurd flexes, bait-and-switch punchlines, and villain monologue energy; jokes should reveal character rather than become random novelty.",
+      "kid_relationship": "Not a children's brand; lyrics are adult-oriented and may include strong profanity."
+    },
+    "reference_artists_for_internal_vibe_only": [
+      "Doechii-inspired theatrical rap intensity",
+      "Doechii-inspired technical flow agility",
+      "Doechii-inspired hard-language confidence",
+      "experimental Southern hip-hop energy",
+      "club rap pressure",
+      "alt-rap character performance"
+    ],
+    "reference_safety": "References are internal vibe anchors only. Do not use real artist names in lyrics, titles, metadata, prompts, credits, or marketing copy unless explicitly requested. Do not imitate vocals, flows, cadence, adlibs, punchline style, lyrics, melodies, beats, arrangements, persona, or copyrighted material. Use the broad performance attributes—confidence, theatricality, agility, humor, and force—as inspiration for an original Razor Bloom identity.",
+    "allowed_elements": [
+      "strong profanity and hard adult rap language",
+      "rapid flow switches and rhythmic left turns",
+      "club-ready chant hooks and bass pressure",
+      "theatrical vocal character changes",
+      "punchlines, insults, and absurd flexes",
+      "sexual confidence without graphic explicit detail",
+      "anger and revenge feelings as metaphor, not instructions",
+      "vulnerability hidden inside bravado",
+      "Southern-leaning low-end and experimental percussion",
+      "clean emotional turns after chaotic sections"
+    ],
+    "forbidden_elements": [
+      "copying or paraphrasing real lyrics",
+      "voice cloning or soundalike requests",
+      "direct imitation of any real artist cadence, flow, adlib, delivery, beat, arrangement, or persona",
+      "using real artist names in lyrics, titles, audio prompts, or metadata",
+      "hate slurs or identity-based attacks",
+      "graphic sexual detail or coercive sexual content",
+      "graphic violence or actionable threats",
+      "drug-use instructions or glamorized addiction",
+      "self-harm instructions or romanticized self-destruction",
+      "children's music framing, Pancake Robot references, or kid call-and-response"
+    ],
+    "required_elements": [
+      "Every song must have a distinct concept, emotional angle, and hook design.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Catchphrases are optional spice, not mandatory lyrics. Use at most one in a song, and usually none.",
+      "Reference artists are internal vibe references only and must not appear in lyrics, titles, audio prompts, or metadata.",
+      "Hooks should be aggressive, funny, seductive, or memorable, but every song should invent its own hook language.",
+      "Use at least one concrete scene, object, body-language, or room detail in each song to prevent generic flex writing."
+    ],
+    "render_safety": [
+      "Lyrics must contain only words intended to be rapped or sung.",
+      "No markdown formatting in lyrics.",
+      "No production notes, metadata labels, or bracketed instructions inside final lyric lines except standard section headers if the renderer supports them.",
+      "Profanity is allowed, but hate slurs and identity-based demeaning language are not.",
+      "Anger and menace may be theatrical, but the song must not instruct or encourage real-world harm."
+    ],
+    "structure_preferences": [
+      "[COLD OPEN] -> [HOOK] -> [VERSE 1] -> [HOOK] -> [VERSE 2] -> [BREAKDOWN] -> [FINAL HOOK] -> [TAG]",
+      "[INTRO ADLIB] -> [VERSE 1] -> [FLOW SWITCH] -> [HOOK] -> [VERSE 2] -> [CHANT BREAK] -> [FINAL VERSE]",
+      "[BASS DROP] -> [HOOK] -> [RAP RUN] -> [PRE-HOOK] -> [HOOK] -> [STRIPPED CONFESSION] -> [AGGRESSIVE OUTRO]",
+      "[VERSE 1] -> [HOOK] -> [VERSE 2] -> [BEAT SWITCH] -> [CHARACTER MONOLOGUE] -> [FINAL HOOK]"
+    ],
+    "song_family_types": [
+      "Aggressive technical rap workout with fast switches, dense punchlines, and minimal melodic relief.",
+      "Nasty club banger with chant hook, heavy bass, sexual confidence, and controlled chaos.",
+      "Swampy low-end anthem with slower pocket, sticky menace, and theatrical vocal shifts.",
+      "Funny villain monologue with absurd flexes, character voices, and sudden beat drops.",
+      "Stripped confession that starts hard but reveals hurt, ambition, or loneliness underneath.",
+      "Experimental bounce track with unpredictable percussion, hook fragments, and abrupt arrangement turns."
+    ],
+    "production_variation_matrix": [
+      "Rotate drum feels: trunk-rattling trap, club bounce, sparse boom-bap, swampy half-time, jittery experimental percussion, or stripped stomp-clap pressure.",
+      "Rotate bass texture: clean sub, distorted 808, rubbery funk low-end, grimy synth bass, minimal kick-bass lock, or blown-speaker rumble.",
+      "Rotate vocal shape: rapid-fire rap, low villain voice, chant hook, melodic taunt, spoken break, stacked adlibs, or sudden whispered threat.",
+      "Rotate production color: glossy club, dirty underground, humid swamp, chrome future, dry battle-rap room, or chaotic collage.",
+      "Use beat switches selectively; when used, the switch should reveal a new character angle or emotional crack."
+    ],
+    "tempo_energy_lanes": [
+      "72-84 BPM: slow menace, heavy pocket, spacious threats-as-metaphor, low vocal control.",
+      "85-98 BPM: grimy rap pocket, technical verses, punchline focus.",
+      "99-112 BPM: club bounce, chant hooks, energetic flow switches.",
+      "113-128 BPM: frantic workout lane, rapid delivery, playful aggression.",
+      "129-145 BPM: rare high-speed chaos or double-time section, used for impact rather than default."
+    ],
+    "arrangement_variation_rules": [
+      "Rotate intro types across releases: cold insult, bass drop, drum fill, whispered setup, crowd noise, adlib burst, or immediate hook.",
+      "Every song should vary at least three major variables: tempo, drum feel, vocal delivery, hook type, emotional posture, structure, or production texture.",
+      "Do not always use a chant hook; rotate sung-taunt, shouted phrase, repeated insult, melodic sneer, instrumental hook, or no traditional hook.",
+      "Use stripped moments to reveal vulnerability or danger, not as generic breathers.",
+      "Avoid identical verse lengths, beat switch placement, adlib density, and outro tag style across adjacent songs."
+    ],
+    "hook_variation_rules": [
+      "Rotate hook types: chant, taunt, call-back, whispered line, melodic sneer, crowd-ready phrase, or bass-led instrumental hook.",
+      "Do not reuse the same hook rhythm, profanity pattern, title placement, or cadence shape across adjacent songs.",
+      "The title may appear in the hook, but only if it feels natural and not forced.",
+      "A hook should have one clear emotional job: dominance, seduction, chaos, disgust, triumph, warning, or exposed hurt.",
+      "Use repetition for impact, but change adlibs, pauses, texture, or response lines on later hook returns."
+    ],
+    "lyrical_angle_variation_rules": [
+      "Rotate point of view: battle stance, club narrator, ex-friend takedown, mirror pep talk, villain theatre, messy romance, or private confession.",
+      "Do not make every song about domination; confidence, hurt, humor, lust, ambition, and anxiety should rotate.",
+      "When lyrics are sexually confident, keep detail sharp but not graphic.",
+      "When lyrics are angry, make threats metaphorical or performative rather than actionable.",
+      "When lyrics are funny, include one real emotional stake so the song does not become empty punchlines."
+    ],
+    "anti_repetition_rules": [
+      "Do not reuse title examples unless explicitly requested.",
+      "Do not repeat the same teeth, blade, flower, mud, swamp, club, mirror, or villain imagery across every song.",
+      "Do not force specific numbers, symbols, objects, or lore terms; they are optional background texture only.",
+      "Avoid repeated opening moves such as announcing dominance, entering a club, laughing first, or calling someone broke.",
+      "Do not reuse the same rhyme family, curse pattern, hook cadence, beat-switch trick, or emotional conclusion across multiple tracks.",
+      "Keep Razor Bloom identity mostly in metadata and visual world; do not name-drop the brand in every lyric."
+    ],
+    "album_sequence_guidance": [
+      "Open with a high-control rap statement that establishes technical skill and attitude without using the wildest track first.",
+      "Place club bangers beside stranger experimental cuts so the project feels dynamic rather than one-note.",
+      "Use a stripped confession before or after the most chaotic song to create emotional depth.",
+      "Save the fastest or most theatrical flow showcase for the late-middle of the album.",
+      "End with either a final hard flex, a vulnerable twist, or an abrupt theatrical cutoff."
+    ],
+    "earworm_stack": [
+      "Land a memorable vocal attack, bass hit, adlib, or hook phrase within the first 8 seconds.",
+      "Pair dense verses with a simpler, repeatable hook or taunt.",
+      "Use rhythmic silence and sudden drops as part of the hook design.",
+      "Make at least one line per verse feel quotable without relying on slurs or lazy shock.",
+      "Let vocal performance changes create replay value."
+    ],
+    "hook_design_rules": [
+      "Hooks should be aggressive, funny, seductive, or rhythmically addictive.",
+      "Avoid direct artist-reference language in hooks.",
+      "The title can appear in the hook but does not have to.",
+      "Use contrast between verse agility and hook bluntness.",
+      "For club lanes, let bass and chant carry part of the hook; for technical lanes, let cadence and punchline rhythm carry it."
+    ],
+    "energy_arc": {
+      "pattern": "STRIKE -> FLEX -> SWERVE -> CRACK -> SNAPBACK -> STING",
+      "rules": [
+        "Start with a sharp vocal, bass, rhythm, or character move rather than a long empty intro.",
+        "Build energy through flow control, not only volume.",
+        "Include at least one swerve: beat drop, vocal shift, unexpected joke, or exposed line.",
+        "Let the final section hit harder, weirder, colder, or more emotionally bare depending on the song family.",
+        "End with a memorable sting rather than a generic fade."
+      ]
+    },
+    "participation_patterns": [
+      "Chant hook for club tracks",
+      "Short taunt listeners can repeat without needing dense lyrics",
+      "Adlib response lines that add humor or threat-as-theatre",
+      "Sudden beat-stop punchline moment",
+      "Final tag line that reframes the narrator's confidence"
+    ],
+    "qa_rules": [
+      "Do not include real artist names in finished lyrics, title, metadata, or audio prompt.",
+      "Reject any output that sounds like a direct Doechii imitation rather than an original adjacent performance lane.",
+      "Title examples are style references only; do not reuse them unless the user explicitly requests that exact title.",
+      "Every song must vary at least three of these: tempo, drum feel, bass texture, hook type, vocal delivery, emotional posture, structure, or production texture.",
+      "If a song is hard or explicit, confirm it still has craft, rhythm, and a specific point of view.",
+      "If a song is sexually confident, confirm it avoids graphic detail or coercive framing.",
+      "Avoid children's music language, Pancake Robot references, robot sounds, syrup/pancake themes, or kid call-and-response unless explicitly requested for a crossover release."
+    ],
+    "output_schema": {
+      "include_physical_action_cue": false,
+      "include_funny_long_word": false,
+      "include_audio_prompt": true,
+      "include_chorus_lines": true
+    },
+    "vocal_performance_engine": {
+      "priority": "Razor Bloom's voice is non-replaceable because it operates as a live theatre piece trapped inside a rap song — switching between cold menace, cackle, and cracked confession in a single verse without losing rhythmic grip.",
+      "vocal_textures": [
+        "Dry, close-mic'd snarl: words spat with minimal reverb so every consonant cuts like a slap",
+        "Theatrical boom-drop: a sudden lower register used for punchline delivery, as if the character leaned into a stage microphone to land the joke",
+        "Cracked falsetto taunt: a brief, almost mocking high note mid-bar that signals the character is enjoying themselves too much to be scared",
+        "Hushed razor-whisper: a nearly spoken, intimately threatening delivery used when the lyric is most vulnerable or most vicious",
+        "Chant-mode bark: stripped of melody, rhythmically locked, every word punched with equal stress as if leading a crowd that didn't ask to be led",
+        "Jittery speed-switch: syllables compressed and tumbling with deliberate imprecision at the front of a flow burst, then snapping tight at the punchline"
+      ],
+      "timing_behaviors": [
+        "Delay the first syllable of a punchline by a half-beat so the beat lands before the word does, letting the bass underscore the joke",
+        "Rush the middle of a bar to create a pile-up of syllables, then land on a single monosyllabic curse word with full weight to reset the pocket",
+        "Use dead silence for one full beat before the hook to let anticipation replace a pre-chorus",
+        "Drag a vowel in an unexpected mid-bar position rather than at line-endings, creating stretch in the rhythm that feels improvisational",
+        "Double-time a single couplet inside an otherwise mid-tempo verse so the gear-shift reads as aggression, not just technical display"
+      ],
+      "adlib_behaviors": [
+        "Laugh-adlib used not as celebration but as editorial commentary on the line just delivered, as if the character can't believe they said it",
+        "Repeated single-syllable punctuation — a sharp grunt, hiss, or clipped curse — placed in the bar's pocket rather than after the bar ends",
+        "A sotto voce aside delivered between bars that reads like the character breaking the fourth wall to check whether anyone caught the reference",
+        "Answering-voice adlib: a second, slightly different register responds to the main vocal mid-verse as if two internal characters are arguing",
+        "The deliberate non-adlib: a bar left completely naked with no fill, making the silence louder than any overlay"
+      ],
+      "avoid": [
+        "Smooth melodic runs or R&B-adjacent vocal glides that soften the character's sharp-tongued core identity",
+        "Uniform delivery energy across a full verse, which flattens the theatrical range that makes Razor Bloom distinct",
+        "Adlibs placed only at bar-ends in the standard hype-rap position, turning a personality trait into a generic convention",
+        "Overly processed pitch correction that erases the grain and cracked-edge texture that signals live emotional danger",
+        "Shouting as a default intensity escalator — Razor Bloom gets more frightening by getting quieter and more deliberate, not louder"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The Reluctant Confession Drop: the verse rides hard and crude for eight bars, then a single unguarded line is delivered in near-whisper with no adlib cushion, forcing the listener to catch up emotionally before the beat snaps back",
+      "The Villain Parenthetical: mid-bar, the character inserts a bracketed aside in a different register — snide, amused, almost pedagogical — then returns to the main lyric as if the interruption never happened",
+      "The Punchline Rewind: the character delivers a punchline, pauses one beat, then repeats only the last two or three words in a slightly lower pitch as if tasting how good the line was",
+      "The Chant Hijack: what begins as a standard repeated hook phrase gets one word changed on the third repetition, recontextualizing the meaning mid-chant while the cadence stays locked",
+      "The Speed-Then-Freeze: a rapid-fire couplet of eight or more syllables per bar stops dead on a single monosyllabic profanity held for a full beat, making the curse function as punctuation and period simultaneously",
+      "The Mock Audience Address: the character briefly switches to a slightly more performative, enunciated register mid-song as if addressing a live crowd that doesn't deserve full effort, then drops back to intimate snarl",
+      "The Emotional Bait-Switch: a verse opens with what sounds like bragging language but the final bar reveals the boast is defensive armor over a stated insecurity, delivered without dropping the cocky cadence",
+      "The Dry Repeat-Attack: a target's alleged statement or behavior is quoted back in a flat, unimpressed voice, followed by a single-word dismissal and a beat of silence before the verse continues"
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Crude Machine",
+        "description": "Razor Bloom at maximum snappy profanity density — lyrics are short, punishing, and deliberately unpolished in diction, built on crude punchlines that land faster than they can be processed; production is minimal and dry so nothing cushions the words"
+      },
+      {
+        "name": "Swamp Villain",
+        "description": "Slow, thick low-end with Razor Bloom inhabiting an almost theatrical antagonist role — vocals drip rather than snap, threats are stated as facts, and the production has room for dramatic silence and heavy reverb on single words"
+      },
+      {
+        "name": "Club Chaos Agent",
+        "description": "Mid-to-high BPM with a chant hook designed to be yelled back by people who have had three drinks — crude, physically confident, sexually direct without being graphic, and built so the bass response in the room is as important as the lyrics"
+      },
+      {
+        "name": "Technical Spite",
+        "description": "Dense-syllable fast-flow lanes where Razor Bloom proves precision while sustaining genuine nastiness — punchlines arrive inside the speed rather than after it, and the concept of the track is always specific enough that the virtuosity serves a point"
+      },
+      {
+        "name": "Exposed Circuit",
+        "description": "Stripped, sparse production where the character's hurt, ambition, or loneliness is stated directly rather than hidden in metaphor — crude language remains but functions as emotional truth rather than performance armor"
+      },
+      {
+        "name": "Absurdist Flex Theatre",
+        "description": "Razor Bloom as a comedy villain whose bragging becomes so elaborately specific and bizarre that it crosses into genuine character comedy — the joke is always rooted in a real feeling, and the production should reflect controlled instability"
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the prior track used a chant hook with equal-stress bark delivery, the next track must use a different hook architecture — a melodic sneer, a single repeated insult, an instrumental drop, or no traditional hook at all",
+      "If the prior track opened with an immediate profane strike, the next track must open differently — bass-first, whispered setup, mid-sentence entry, or a beat of silence before the first syllable",
+      "If the prior track's emotional core was aggression or domination, the next track must foreground a different emotional register: humor, lust, anxiety, hurt, or absurdist pride",
+      "If the prior track was dense with syllables and speed, the next track must create space — fewer words per bar, longer held consonants, or a tempo lane that lives below 90 BPM",
+      "If crude language on the prior track was used for attack and insult, the next track must use profanity in a different functional mode — confession, punctuation, comedy, or intimacy — so cursing never becomes decorative wallpaper"
+    ],
+    "anti_generic_rules": [
+      "Do not default to the standard aggressive-rap opening of announcing power and presence; Razor Bloom's entries should be strange, specific, or mid-thought rather than declarative genre throat-clearing",
+      "Do not let 'theatrical' become a synonym for overwrought melodrama; Razor Bloom's theatricality is dry, comic, and controlled — excess should read as deliberate character choice, not unchecked genre inflation",
+      "Do not fill every empty beat pocket with adlibs; Razor Bloom's character is partly defined by knowing when to leave the room silent, and over-adlibbing turns a personality into a formula",
+      "Do not use crude language as a volume knob — escalating profanity to signal intensity is a generic failure mode; instead, use a single precisely placed crude phrase for maximum impact rather than saturation",
+      "Do not write hooks that could be transplanted to any other hard rap track; Razor Bloom's hooks must carry the character's specific comic-menace-vulnerability signature, not just an aggressive repeated phrase",
+      "Do not let the villain conceit settle into complacency — the character should always have something genuinely at stake, even in the most braggadocious song, or the performance becomes self-parody without edge",
+      "Do not recycle the emotional arc of verse-hard-hook-release without variation; the energy pattern must be reshaped by the specific concept of each track rather than applied as a default structural template",
+      "Do not submit or approve a track with an empty tags array; absence of tags is not a neutral state — it signals a metadata failure that breaks discovery, context-setting, and brand coherence downstream"
+    ],
+    "do_not_repeat_across_album": [
+      "Do not use a chant hook in back-to-back tracks; rotate to a different hook delivery type after any chant-driven song",
+      "Do not open consecutive tracks with the same vocal texture — avoid leading with snarl, then snarl again; rotate to whisper, speed-burst, theatrical boom, or near-silence",
+      "Do not use the same profanity pattern — e.g., curse-at-end-of-every-bar — across more than one track in a row; reposition or respace crude language on the next song",
+      "Do not place the emotional reveal or vulnerable break in the same structural position (e.g., always pre-outro) across multiple tracks; move the crack to the first verse, mid-hook, or final bar depending on the song",
+      "Do not use the same drum feel — trap hi-hat grid, boom-bap kick pattern, or percussion-forward bounce — without at least one intervening track using a contrasting rhythmic texture",
+      "Do not end consecutive songs with the same outro device; rotate between a cold cut-off, a repeated sting, a fading adlib, a final punchline with no music, or a bass-only decay",
+      "Do not write more than two consecutive songs from the battle-stance or direct-takedown point of view; rotate to mirror pep talk, villain theatre, messy romance, or private confession",
+      "Do not use the speed-then-freeze timing conceit in more than one track per project without altering what the freeze lands on so it becomes a fresh move rather than a signature tic"
+    ],
+    "hidden_brief_requirements": [
+      "The brief must specify the exact emotional function of profanity in this track — whether it operates as attack, punctuation, comedy, confession, or intimacy — so crude language serves the concept rather than defaulting to saturation.",
+      "The brief must identify which vocal texture from Razor Bloom's engine is primary for this track and which texture appears as a contrast moment, ensuring the two textures have not been combined in the same way on the prior track.",
+      "The brief must describe a specific scene, object, or physical detail that grounds the song's concept in something concrete and unrepeated from the previous three tracks, preventing the lyric from floating in abstract flex space.",
+      "The brief must specify the adlib strategy for this track — including whether adlibs are dense, sparse, or absent — and must differ from the adlib approach used on the most recently generated track.",
+      "The brief must name the emotional stake underneath the song's dominant surface posture, even when that posture is pure aggression or pure comedy, so the track retains Razor Bloom's wounded-narrator depth.",
+      "The brief must specify the hook architecture type for this track and confirm it has not been used on the immediately preceding track, ensuring the album rotates through Razor Bloom's full range of hook designs."
+    ],
+    "evaluation_targets": {
+      "dynamic_range_floor_rms_db": -16,
+      "dynamic_range_ceiling_rms_db": -10,
+      "peak_ceiling_db": 0,
+      "note": "Track 'bitches-2-1780324945196.mp3' measured at -13.333 dB RMS with 0 dB peak — within acceptable range, but tagging pipeline returned empty tags. Evaluation should flag any future track with empty tags as incomplete metadata regardless of audio metrics, and confirm tag population before distribution sign-off."
+    },
+    "candidate_generation_strategy": {
+      "tag_completeness_gate": "Every generated or submitted track must carry a minimum viable tag set before advancing to distribution review. An empty tags array is an automatic hold condition, not a passable state. Tags must reflect at minimum: primary genre, mood signature, and at least one Razor Bloom conceit active in that track.",
+      "dynamic_range_targeting": "Aim for RMS mean between -16 dB and -10 dB. Tracks hitting 0 dB peak are acceptable only if the mix retains perceptible dynamic contrast — compression to a flat ceiling is a failure condition even if peak is technically compliant.",
+      "silence_as_intentional_element": "Tracks featuring The Reluctant Confession Drop or The Speed-Then-Freeze conceits may register lower average RMS in isolated sections by design. Evaluation tools should not flag these dips as mix errors without cross-referencing the active conceit on that track."
+    }
+  },
+  "visuals": {
+    "style": "Hard-edged underground rap artwork with black gloss, swamp green, hot pink, chrome highlights, thorn/floral shapes, club lighting, bass-speaker pressure, warped typography, and fashion-forward menace. Polished enough for streaming artwork; not photorealistic.",
+    "palette": {
+      "primary": "#111827",
+      "secondary": "#D8D1BC",
+      "accent": "#FF2E88",
+      "background": "#0B0F0E",
+      "swamp_green": "#3D6B45",
+      "acid_lime": "#B7F000",
+      "chrome_grey": "#A7ADB5",
+      "danger_red": "#C51F32"
+    },
+    "negative_prompt": "photorealistic, celebrity likeness, real artist portrait, copied album cover, explicit sex imagery, gore, weapons as focal point, hate symbols, children's cartoon branding, Pancake Robot character, readable copyrighted logos, dense text, messy typography, misspelled words",
+    "text_overlay_style": "warped underground rap typography, limited words, glossy black/pink/green contrast, sticker-collage aggression, no dense text blocks"
+  },
+  "media": {
+    "default_image_url": "/brand-media/doechii/default-image.png",
+    "default_image_path": ""
+  },
+  "distribution": {
+    "default_distributor": "none",
+    "legacy_distributor": "none",
+    "research_default_service": "none",
+    "research_default_url": "none",
+    "default_artist": "Razor Bloom",
+    "default_album": "Teeth Out",
+    "label_name": "Figment Factory",
+    "primary_genre": "Hip-Hop/Rap",
+    "spotify_genres": [
+      "experimental hip hop",
+      "trap",
+      "southern hip hop",
+      "club rap",
+      "alternative hip hop"
+    ],
+    "youtube_tags_seed": [
+      "experimental hip hop",
+      "hard rap",
+      "club rap",
+      "southern hip hop",
+      "alternative hip hop",
+      "Razor Bloom"
+    ],
+    "apple_music_genres": [
+      "Hip-Hop/Rap",
+      "Alternative Rap",
+      "Rap"
+    ],
+    "coppa_status": "not directed to children under 13",
+    "content_advisory": "explicit adult language allowed; no hate slurs, graphic violence, coercive sexual content, or self-harm instruction"
+  },
+  "social": {
+    "spotify_artist_url": "",
+    "youtube_channel_url": "",
+    "instagram_url": "",
+    "tiktok_url": "",
+    "website_url": "",
+    "linktree_url": "",
+    "email_contact": "",
+    "press_kit_url": ""
+  },
+  "ui": {
+    "sidebar_subtitle": "Razor Bloom Studio",
+    "logo_path": "/figment-factory-logo.png"
+  },
+  "display_name": "Doechii"
+}

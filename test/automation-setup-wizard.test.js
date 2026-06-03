@@ -39,22 +39,33 @@ function writeSongAsset(songId, relativePath, content = 'test') {
   return filePath;
 }
 
-function seedAlbum({ releaseDate = '2026-09-01', audio = true, artwork = true } = {}) {
-  const songId = uniqueId('SETUPSONG');
-  songIds.add(songId);
-  upsertSong({ id: songId, title: `Setup ${songId}`, brand_profile_id: 'default', release_date: releaseDate, is_test: true });
-  if (audio) writeSongAsset(songId, 'audio.mp3', 'fake-audio');
-  if (artwork) writeSongAsset(songId, 'reference/base-image.png', 'fake-art');
+function seedAlbum({ releaseDate = '2026-09-01', audio = true, artwork = true, trackCount = 1, audioLayout = 'root', imported = false } = {}) {
+  const ids = [];
+  for (let i = 0; i < trackCount; i++) {
+    const songId = uniqueId('SETUPSONG');
+    ids.push(songId);
+    songIds.add(songId);
+    upsertSong({
+      id: songId,
+      title: `Setup ${i + 1}`,
+      brand_profile_id: imported ? 'imported-test' : 'default',
+      release_date: releaseDate,
+      pipeline_stage: imported ? 'imported' : 'album_track_generated',
+      is_test: true,
+    });
+    if (audio) writeSongAsset(songId, audioLayout === 'nested' ? `audio/setup-${i + 1}.mp3` : 'audio.mp3', 'fake-audio');
+    if (artwork && i === 0) writeSongAsset(songId, 'reference/base-image.png', 'fake-art');
+  }
   const albumId = createAlbum({
     id: uniqueId('SETUPALBUM'),
     album_title: 'Setup Album',
     release_date: releaseDate,
-    number_of_songs: 1,
+    number_of_songs: trackCount,
     status: 'assembled',
     is_test: true,
   });
   albumIds.add(albumId);
-  assignSongsToAlbum(albumId, [songId]);
+  assignSongsToAlbum(albumId, ids);
   return albumId;
 }
 
@@ -96,6 +107,34 @@ test('workflow context maps album release payload including releaseDate, artwork
   assert.ok(context.samplePayload.tracks[0].audioPath.endsWith('audio.mp3'));
   assert.equal(context.samplePayload.derived.numberOfSongs, context.samplePayload.tracks.length);
   assert.equal(context.validation.ok, true);
+});
+
+test('workflow context exposes valid audioPath for generated and imported multi-track releases', () => {
+  for (const trackCount of [1, 3, 10, 20]) {
+    const generatedAlbumId = seedAlbum({ trackCount, audioLayout: 'nested' });
+    const generated = buildDistroKidAlbumWorkflowContext({
+      cockpit: buildReleaseCockpitViewModel('album', generatedAlbumId),
+      releaseId: generatedAlbumId,
+    });
+    assert.equal(generated.samplePayload.tracks.length, trackCount);
+    assert.equal(generated.validation.ok, true, generated.validation.errors.join('; '));
+    generated.samplePayload.tracks.forEach((track, index) => {
+      assert.ok(track.audioPath, `generated ${trackCount} tracks[${index}].audioPath missing`);
+      assert.ok(fs.existsSync(track.audioPath), `generated ${trackCount} tracks[${index}].audioPath missing on disk`);
+    });
+
+    const importedAlbumId = seedAlbum({ trackCount, imported: true });
+    const imported = buildDistroKidAlbumWorkflowContext({
+      cockpit: buildReleaseCockpitViewModel('album', importedAlbumId),
+      releaseId: importedAlbumId,
+    });
+    assert.equal(imported.samplePayload.tracks.length, trackCount);
+    assert.equal(imported.validation.ok, true, imported.validation.errors.join('; '));
+    imported.samplePayload.tracks.forEach((track, index) => {
+      assert.ok(track.audioPath, `imported ${trackCount} tracks[${index}].audioPath missing`);
+      assert.ok(fs.existsSync(track.audioPath), `imported ${trackCount} tracks[${index}].audioPath missing on disk`);
+    });
+  }
 });
 
 test('setup validation blocks missing release date, about:blank target, artwork, and track audio', () => {

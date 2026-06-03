@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { resolveDistroKidArtist } from './brand-profile.js';
+
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SCHEMA_VERSION = 'pancake-distrokid-payload-v1';
 
@@ -35,7 +37,10 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
     || (releaseType === 'single' ? findFirstSongId(cockpit.tracks?.[0], cockpit, manifest, uploadPayload) : '')
   );
   const releaseTitle = clean(uploadPayload.release_title || manifest.release_title || cockpit.title);
-  const artistName = clean(uploadPayload.artist || manifest.artist || options.artistName || options.artist);
+  const artistName = clean(uploadPayload.artist || manifest.artist || options.artistName || options.artist)
+    || resolveDistroKidArtist(
+      clean(cockpit.brandProfileId || cockpit.brand_profile_id || manifest.brand_profile_id || uploadPayload.brand_profile_id) || null,
+    );
   const releaseDate = clean(uploadPayload.release_date || manifest.release_date || cockpit.releaseDate);
   const label = clean(uploadPayload.label || manifest.label || manifest.record_label || options.label);
   const primaryGenre = clean(uploadPayload.primary_genre || manifest.primary_genre || uploadPayload.genre || manifest.genre || options.primaryGenre || options.genre);

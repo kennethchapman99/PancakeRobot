@@ -100,7 +100,15 @@ function buildPlanGenerator({ recordedCalls } = {}) {
   };
 }
 
-function makeTrackPipeline({ failOnTrack = null, costPerTrack = 0.02, recordedTracks } = {}) {
+function writeGeneratedAudio(songId, relativePath = 'audio/generated.mp3') {
+  const filePath = path.join(REPO_ROOT, 'output', 'songs', songId, relativePath);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, 'fake-audio');
+  songOutputIds.add(songId);
+  return filePath;
+}
+
+function makeTrackPipeline({ failOnTrack = null, costPerTrack = 0.02, recordedTracks, writeAudio = true } = {}) {
   return async function fakeTrackPipeline({ songId, albumId, track, plan }) {
     albumOutputIds.add(albumId);
     songOutputIds.add(songId);
@@ -123,6 +131,7 @@ function makeTrackPipeline({ failOnTrack = null, costPerTrack = 0.02, recordedTr
       pricingSource: 'test',
       status: 'success',
     });
+    if (writeAudio) writeGeneratedAudio(songId);
     return { title: track.title, totalCost: costPerTrack, pipelineStage: 'album_track_generated' };
   };
 }
@@ -452,6 +461,7 @@ test('album resume resumes only first incomplete track and skips completed track
     },
   });
   const songs = ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
+  writeGeneratedAudio(songs[0].id);
   upsertSong({ id: songs[0].id, pipeline_stage: 'album_track_generated', total_cost_usd: 0.12 });
   const recordedTracks = [];
 
@@ -572,6 +582,7 @@ test('album resume does not rerun orchestration and chooses the first failed or 
   });
   albumOutputIds.add(albumId);
   const songs = ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
+  writeGeneratedAudio(songs[0].id);
   upsertSong({ id: songs[0].id, pipeline_stage: 'album_track_generated', total_cost_usd: 0.12 });
   upsertSong({ id: songs[1].id, pipeline_stage: 'album_track_failed', notes: 'previous failure' });
   const recordedTracks = [];
@@ -587,6 +598,36 @@ test('album resume does not rerun orchestration and chooses the first failed or 
   assert.equal(recordedTracks[0].track_number, 2);
   assert.equal(getSongsForAlbum(albumId).length, 3);
   assert.equal(getSong(songs[0].id).pipeline_stage, 'album_track_generated');
+});
+
+test('album resume treats generated track rows without audio as incomplete', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 2, albumTheme: 'Missing Audio' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_RESUME_MISSING_AUDIO',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 2,
+    cost_mode: 'standard',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+  albumOutputIds.add(albumId);
+  const songs = ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
+  upsertSong({ id: songs[0].id, pipeline_stage: 'album_track_generated', total_cost_usd: 0.12 });
+  const recordedTracks = [];
+
+  const result = await resumeAlbumBatch({
+    albumId,
+    brandLoader: fakeBrandLoader,
+    trackPipeline: makeTrackPipeline({ recordedTracks, costPerTrack: 0.03 }),
+  });
+
+  assert.equal(result.generationStarted, true);
+  assert.deepEqual(recordedTracks.map(track => track.track_number), [1]);
+  assert.equal(getSong(songs[0].id).pipeline_stage, 'album_track_generated');
+  assert.equal(result.nextTrack.track_number, 2);
 });
 
 test('album resume persists provider auth/config errors in album latest event', async () => {

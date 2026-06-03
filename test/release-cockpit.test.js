@@ -411,6 +411,46 @@ test('album package uses each track release master instead of arbitrary audio ca
   assert.ok(manifest.canonical_distrokid_upload_payload.tracks.every(track => track.audio_file));
 });
 
+test('missing platform derivatives do not block packaging when primary artwork exists', () => {
+  const first = createSong('Derivative Optional One');
+  const second = createSong('Derivative Optional Two');
+  const albumId = createAlbum({
+    id: uniqueId('COCKPIT_ALBUM_DERIVATIVES'),
+    album_title: 'Optional Derivatives Album',
+    release_date: '2026-07-18',
+    number_of_songs: 2,
+    status: 'assembled',
+    is_test: true,
+  });
+  albumIds.add(albumId);
+  assignSongsToAlbum(albumId, [first, second]);
+  // Primary artwork present, tracks ready, but derivatives have no publicUrl (not generated).
+  writeAlbumImage(albumId);
+  const albumAssetsDir = path.join(repoRoot, 'output', 'albums', albumId, 'assets');
+  fs.mkdirSync(albumAssetsDir, { recursive: true });
+  fs.writeFileSync(path.join(albumAssetsDir, 'metadata.json'), JSON.stringify({
+    primary_image_fingerprint: 'test',
+    generated_assets: [
+      'spotify-cover-3000x3000.png',
+      'youtube-thumbnail-1280x720.png',
+      'instagram-square-1080x1080.png',
+    ].map(name => ({ name, format: name, path: path.join(albumAssetsDir, name), publicUrl: null })),
+  }));
+  for (const songId of [first, second]) {
+    writeSongAsset(songId, 'audio.mp3', 'fake-audio');
+    writeSongAsset(songId, 'metadata.json', JSON.stringify({ artist: 'Pancake Robot', title: `Title ${songId}`, primary_genre: "Children's Music", made_for_kids: true }));
+    writeSongAsset(songId, 'lyrics.md', 'la la album');
+  }
+
+  const cockpit = buildReleaseCockpitViewModel('album', albumId);
+  const mediaStage = cockpit.stages.find(stage => stage.key === 'media');
+  assert.equal(mediaStage.status, 'complete');
+  assert.match(mediaStage.detail, /optional/i);
+  assert.ok(!cockpit.blockers.some(blocker => /derivative/i.test(blocker)), 'derivatives must not be a blocker');
+  // The canonical package action is no longer gated by missing derivatives.
+  assert.notEqual(cockpit.stages.find(stage => stage.key === 'package')?.status, 'blocked');
+});
+
 test('missing cover_art blocks canonical package readiness and disables DistroKid preview with row fix actions', async () => {
   const first = createSong('Package Cover Block One');
   const second = createSong('Package Cover Block Two');

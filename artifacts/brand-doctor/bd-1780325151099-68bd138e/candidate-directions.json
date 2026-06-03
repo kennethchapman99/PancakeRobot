@@ -1,0 +1,127 @@
+[
+  {
+    "id": "c1",
+    "name": "Clipped Glass",
+    "testing": "sharper articulation / clipped consonants",
+    "vocal_identity": "Every plosive and fricative is weaponized — P, T, K, S, and F sounds hit like small detonations. The snarl is close-mic'd to the point that breath between words is audible as a structural choice. Delivery feels surgical, as if each word is being cut from a larger sentence and handed over individually.",
+    "articulation_phonetics": "Hard consonant stops are not smoothed into the next vowel — each word ends before the next begins, creating micro-silences inside bars. Sibilants are exaggerated slightly, nearly hissing. Vowels are clipped short rather than held, resisting any melodic elongation. The effect is staccato diction that feels typewritten rather than sung.",
+    "hook_behavior": "The hook is built from a single two-word phrase repeated four times with different consonant emphasis each pass — not melodic repetition but phonetic mutation. No melodic contour; the ear-worm is the percussive texture of the phrase itself, not its pitch.",
+    "production_texture": "Minimal low-end during verses — kick is present but sits under the vocal rather than competing. Snare hits feel dry and close, almost cardboard. A single pitched metal percussion loop (like struck brake rotor) provides tonality without warmth. Bass drops only at punchlines, arriving as a single-hit sub bloom rather than a sustained low end.",
+    "emotional_posture": "Cold enjoyment — not anger, not menace, but the specific pleasure of someone who has already decided how this ends and is narrating it in real time without raising their voice.",
+    "performance_conceit": "Razor Bloom as forensic examiner of their own ruthlessness — the character is describing damage the way a technician describes a specimen, with detached precision that is more disturbing than any shout.",
+    "anti_generic_risk_addressed": "Avoids crude language as a volume knob — the intensity here is entirely phonetic and rhythmic, not vocabulary-dependent. Also resists the aggressive-rap declarative opening by entering mid-observation.",
+    "sample_audio_prompt": "Close-mic'd dry rap vocal with audible consonant hits, no reverb tail, staccato diction over a minimal trap beat with a single metallic tonal loop and sub bass that blooms only at punchlines, BPM 92",
+    "sample_negative_prompt": "No smooth vocal transitions, no sustained vowels, no melodic hook contour, no reverb wash, no bass-heavy mix throughout",
+    "fields_likely_affected": [
+      "vocal_textures",
+      "articulation_phonetics",
+      "production_texture",
+      "hook_behavior"
+    ]
+  },
+  {
+    "id": "c2",
+    "name": "Wrong Room Hymn",
+    "testing": "emotional contradiction (happy delivery, dark content or vice versa)",
+    "vocal_identity": "The cracked falsetto taunt is extended into a near-hymn register — bright, almost joyful, occasionally breaking upward — while the lyrical content is the most confessional and self-lacerating in the catalog. The character sounds celebratory while narrating collapse. The laugh-adlib functions as punctuation for lines that are genuinely painful, making the comedy land as defense mechanism rather than deflection.",
+    "articulation_phonetics": "Vowels are opened wide in the upper register, giving the vocal a choir-adjacent quality that the lyrics immediately contaminate. Consonants soften slightly in the higher passages, which makes the sudden drop to dry snarl for a single line feel like a mask slipping. The contrast between opened vowels and clipped stops within the same verse marks the emotional seam.",
+    "hook_behavior": "The hook is a major-key melodic phrase — genuinely bright, almost inviting — but the final word of each pass lands in the hushed razor-whisper register, collapsing the warmth. The ear-worm is the tension between the brightness arriving and the whisper dismantling it. Listeners hum the melody and remember the dread.",
+    "production_texture": "Keys-forward production — a slightly detuned upright piano sample looped over a boom-bap kick pattern. The Southern low-end appears only in the bridge, arriving as an intrusion rather than a foundation. Subtle orchestral string swell enters once and does not return. The overall mix is mid-dense, not maximalist — there is room around the vocal.",
+    "emotional_posture": "Performative wellness masking genuine wound — the character is not hiding the pain, they are choosing to sing over it, which is its own form of defiance and its own form of coping that isn't coping.",
+    "performance_conceit": "Razor Bloom as unreliable celebration — a performer doing a victory lap around a crater they made themselves, fully aware, inviting the audience to either cheer or notice the smoke.",
+    "anti_generic_risk_addressed": "Directly addresses the villain-conceit-settling-into-complacency rule — something is genuinely at stake here because the contradiction makes the stakes visible. Also resists verse-hard-hook-release default by using the hook as the most emotionally unstable moment rather than the release.",
+    "sample_audio_prompt": "Slightly detuned upright piano loop over boom-bap drums, warm but unsettled, featuring a vocal that shifts between bright near-falsetto and intimate whisper within the same hook, single orchestral string swell in bridge only, BPM 84",
+    "sample_negative_prompt": "No uniform emotional delivery, no R&B melodic glides, no shouted intensity, no maximalist production, no adlibs placed only at bar ends",
+    "fields_likely_affected": [
+      "vocal_textures",
+      "hook_behavior",
+      "emotional_posture",
+      "adlib_behaviors",
+      "production_texture"
+    ]
+  },
+  {
+    "id": "c3",
+    "name": "Two-Voice Collapse",
+    "testing": "unstable adlib or background personality",
+    "vocal_identity": "The answering-voice adlib behavior is promoted from a texture element to a structural pillar — two distinct internal characters argue across the entire track, not just mid-verse. The primary voice carries the main rap, and a second slightly lower, drier register interrupts, corrects, mocks, and occasionally finishes sentences. Neither voice is clearly the 'real' Razor Bloom. The instability is the point.",
+    "articulation_phonetics": "The two voices are distinguished not by pitch alone but by diction: the primary voice uses the theatrical boom-drop and jittery speed-switch; the answering voice is slower, more deliberate, consonants clipped short. When they overlap briefly — one word spoken by both simultaneously — the phonetic clash is intentional and unsettling.",
+    "hook_behavior": "There is no consensus hook — the two voices deliver different words over the same melodic frame, creating a hook that never fully coheres. The listener's brain tries to reconcile them into a single lyric and cannot. On repeated listens, different words surface. The ear-worm is the incompleteness.",
+    "production_texture": "Split stereo field — primary voice centered, answering voice panned 30–40% left, never fully opposite but consistently off-center. Beat is hard trap with a boom-bap kick pattern underneath. The answering voice has slightly more room reverb than the primary, suggesting it exists in a different acoustic space. Adlib silences are mixed louder than adlibs usually are, so the absence of the second voice feels like a presence.",
+    "emotional_posture": "Fractured self-awareness — not dissociation performed as a genre trick but two genuine internal positions in actual disagreement, neither winning, neither comic relief for the other.",
+    "performance_conceit": "Razor Bloom as argument with themselves that the audience has walked into mid-fight — the performance doesn't explain the split, it just demands the listener navigate it.",
+    "anti_generic_risk_addressed": "Directly solves the anti-generic rule against over-adlibbing turning personality into formula — here the adlib becomes a second protagonist, which means its presence or absence carries dramatic weight rather than just texture. Also resists declarative genre openings by beginning mid-disagreement.",
+    "sample_audio_prompt": "Hard trap beat with boom-bap kick pattern, split stereo vocal arrangement with primary centered and secondary voice 30% left with slight room reverb, two distinct vocal registers arguing across verses, intentional single-word overlaps, BPM 96",
+    "sample_negative_prompt": "No single unified vocal perspective, no conventional adlib placements, no melodic hooks, no smooth handoffs between voices, no explanatory lyrics that resolve the split",
+    "fields_likely_affected": [
+      "adlib_behaviors",
+      "vocal_textures",
+      "hook_behavior",
+      "production_texture",
+      "performance_conceit"
+    ]
+  },
+  {
+    "id": "c4",
+    "name": "Bare Floor Sermon",
+    "testing": "unconventional structure (no traditional chorus)",
+    "vocal_identity": "Chant-mode bark elevated to primary mode — the entire track is verse-structured with no identifiable chorus. Instead, a recurring single-line incantation returns at irregular intervals, each time in a different vocal register (boom-drop, whisper, full bark, then sped-up double-time), making it feel like a refrain without becoming a hook. The theatrical range is expressed through structural mutation rather than melodic repetition.",
+    "articulation_phonetics": "Equal stress on every word during chant-mode passages — no natural speech de-emphasis, which creates a slightly alien, ceremonial cadence. In narrative verses, diction is more fluid. The contrast between ceremonial equal-stress and conversational flow marks the structural seam. Consonants in the recurring incantation are exaggerated each pass, as if the character is testing how much weight the phrase can hold.",
+    "hook_behavior": "No hook in the traditional sense. The recurring incantation creates a structural anchor without melodic payoff — it is recognized by rhythm and register change rather than melody. The ear-worm is the anticipation of when it returns and in what form, not the line itself. Listeners learn to listen for structural patterns rather than melodic resolution.",
+    "production_texture": "Boom-bap foundation with Southern low-end sub presence that only activates during the recurring incantation, not during verses — so the bass becomes a structural signal. Instrumentation is sparse: hi-hat pattern, kick, snare, one bass note, and a single pitched sample loop with a short decay. No melodic fills between sections. Space is load-bearing.",
+    "emotional_posture": "Preacher who has lost the congregation but continues anyway — not desperate for listeners, but unable to stop delivering the sermon, which makes it both more committed and more unnerving than performance for an audience would be.",
+    "performance_conceit": "Razor Bloom as a character who has decided the song's structure is the villain — refusing to give the listener the architectural comfort of a chorus is itself the act of aggression, done quietly and without announcement.",
+    "anti_generic_risk_addressed": "Directly attacks the verse-hard-hook-release recycled arc rule — the emotional energy is entirely reshaped by structural refusal. Also resists hooks that could be transplanted to any hard rap track by ensuring the recurring phrase only functions inside this specific architectural context.",
+    "sample_audio_prompt": "Sparse boom-bap beat with Southern sub bass that appears only at recurring incantation moments, minimal instrumentation with one short-decay pitched sample loop, chant-mode vocal delivery with equal word stress during ceremonial passages, no melodic chorus, BPM 88",
+    "sample_negative_prompt": "No melodic chorus, no pre-chorus build, no release after verses, no consistent bass presence throughout, no standard hard-rap structural template",
+    "fields_likely_affected": [
+      "hook_behavior",
+      "timing_behaviors",
+      "production_texture",
+      "vocal_textures",
+      "performance_conceit"
+    ]
+  },
+  {
+    "id": "c5",
+    "name": "Static Confession",
+    "testing": "deliberate human imperfection (breathiness, grain, tempo drift)",
+    "vocal_identity": "The hushed razor-whisper becomes the dominant register for the first two-thirds of the track. Breath is audible and intentional — not as a flaw but as punctuation. The voice drifts slightly behind the beat in emotional passages, returning to pocket only at punchlines, making the tempo drift itself a signal of where the lyric is most exposed. Grain is preserved and occasionally amplified through minimal analog saturation.",
+    "articulation_phonetics": "Consonants are softened by breath placement — they are present but surrounded by air rather than cut from silence. Sibilants are not hissed but exhaled. Vowels are elongated in unexpected mid-bar positions, as per the timing behavior of dragging vowels that creates stretch. The overall phonetic effect is intimacy-as-threat: the voice is so close and so human that its control becomes unsettling.",
+    "hook_behavior": "The hook is spoken rather than sung or chanted — delivered at a tempo that floats slightly above half-time, with one full beat of silence before it begins each time. The ear-worm is the silence before it, not the phrase itself. Listeners remember the pause. The hook's words are mundane, almost bureaucratic, which makes the intimate grain of the delivery feel disproportionately dangerous.",
+    "production_texture": "Lo-fi boom-bap with vinyl crackle that is mixed as a textural element rather than aesthetic signifier — it adds grain that matches the vocal. Kick drum is slightly behind the grid. Snare has tape flutter. No 808s. A single electric piano chord voicing loops under the entire track, unresolved. The mix feels like a cassette recording of something that should not have been recorded.",
+    "emotional_posture": "The specific intimacy of someone telling you something damaging in a very quiet voice in a public place — not confessional vulnerability, but vulnerability weaponized by proximity and understatement.",
+    "performance_conceit": "Razor Bloom as a performer who is not performing — or is performing the complete absence of performance so precisely that it becomes the most theatrical thing on the track. The imperfection is the craft.",
+    "anti_generic_risk_addressed": "Directly counters the overly processed pitch correction avoid rule by making grain and imperfection the central sonic identity. Also addresses the shouting-as-default-intensity-escalator rule — this direction goes quiet as the intensity increases, never louder.",
+    "sample_audio_prompt": "Lo-fi boom-bap with vinyl crackle and tape flutter on snare, single unresolved electric piano chord loop, intimate breathy vocal with audible breath as punctuation and slight behind-beat tempo drift in emotional passages, analog saturation on vocal chain, BPM 82",
+    "sample_negative_prompt": "No pitch correction, no 808s, no clean digital production, no shouted delivery, no reverb-heavy mix, no melodic vocal contour",
+    "fields_likely_affected": [
+      "vocal_textures",
+      "timing_behaviors",
+      "production_texture",
+      "articulation_phonetics",
+      "hook_behavior"
+    ]
+  },
+  {
+    "id": "c6",
+    "name": "Genre Infection",
+    "testing": "unusual production texture (sparse, overloaded, or genre-alien elements)",
+    "vocal_identity": "The theatrical boom-drop and jittery speed-switch are deployed over a production environment that is actively hostile to rap conventions — the character's vocal familiarity becomes the anchor in a disorienting sonic context. Because the beat refuses to behave like a rap beat, every time the vocal snaps into chant-mode bark or cracked falsetto taunt, it feels like the character is imposing their will on the wrong room.",
+    "articulation_phonetics": "Diction is at its most precise here — because the production provides no rhythmic comfort, every consonant is an act of rhythmic placement. The vocal is more carefully articulated than in any other direction because the beat cannot be relied on for pocket. Vowels are shortened and controlled. The jittery speed-switch couplets occur over a section where the production briefly drops to a single sustained tone, forcing the syllables to generate their own momentum.",
+    "hook_behavior": "The hook arrives over a production section that sounds most alien to rap — a sparse industrial percussive frame with a long sustain and no clear kick pattern. The hook's memorability comes from its context-collision: a rhythmically locked rap chant over a post-industrial texture. The ear-worm is the wrongness of the fit and the confidence with which the vocal ignores it.",
+    "production_texture": "Alt-hip-hop framework with genre-alien intrusions: a distorted industrial drum machine pattern (not trap, not boom-bap — more irregular, mechanical) underneath a conventional Southern low-end. A reversed orchestral hit used as a rhythmic element. Silence as a compositional event — bars where the beat drops to a single hi-hat and a sub rumble. The overall texture is overloaded in frequency range but sparse in rhythmic density, creating a disorienting spaciousness.",
+    "emotional_posture": "Hostile tourism — the character is fully themselves in a space that was not built for them and is visibly uninterested in adapting, which reads as both arrogance and a genuine survival instinct.",
+    "performance_conceit": "Razor Bloom as an invasive species — the vocal doesn't negotiate with the production environment, it colonizes it, and the track documents whether the colonization succeeds or whether the beat eventually wins.",
+    "anti_generic_risk_addressed": "Addresses the anti-generic rule about hooks that could be transplanted to any hard rap track — this hook is completely non-transplantable because its identity is entirely dependent on the production collision it inhabits. Also resists genre throat-clearing by refusing to establish any comfortable genre context at all.",
+    "sample_audio_prompt": "Industrial drum machine pattern with irregular mechanical timing over Southern sub bass, reversed orchestral hit used rhythmically, sparse hi-hat pattern, deliberate silence as compositional event, confident close-mic'd rap vocal that performs as if the beat were conventional, BPM 94",
+    "sample_negative_prompt": "No standard trap or boom-bap framework, no production warmth, no melodic fill between sections, no vocal adaptation to the disorienting beat, no genre-comfort signals",
+    "fields_likely_affected": [
+      "production_texture",
+      "hook_behavior",
+      "vocal_textures",
+      "timing_behaviors",
+      "performance_conceit"
+    ]
+  }
+]

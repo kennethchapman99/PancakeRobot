@@ -24,6 +24,7 @@ import { DEFAULT_PROFILE_ID, getActiveProfileId, loadBrandProfileById, resolveDi
 import { getSongFinanceSummary } from './finance-manager.js';
 import { getSelectedReleaseAudio } from './song-audio-selection.js';
 import { isRealSongCatalogRow } from './song-catalog-cleanup.js';
+import { buildDistroKidAlbumWorkflowContext } from './automation-workflow-presets.js';
 import { summarizeBrowsyIntegration, summarizeMagicReleaseForCockpit } from './magic-release.js';
 import { summarizeMagicReleaseBrowsyRecordings } from './magic-release-browsy-recordings.js';
 import { BROWSY_WORKFLOW_IDS, buildBrowsyWorkflowRef, getBrowsyConfig } from './browsy-client.js';
@@ -188,7 +189,13 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
   const magicRelease = summarizeMagicReleaseForCockpit(type, release.id);
   const browsyIntegration = magicRelease ? summarizeBrowsyIntegration(type, release.id) : null;
   const browsyRecordings = magicRelease ? summarizeMagicReleaseBrowsyRecordings({ campaignId: magicRelease.campaignId }) : null;
-  const distrokidBrowsyWorkflow = summarizeDistroKidBrowsyWorkflow({ type, releaseId: release.id, browsyRecordings, packageState, distrokidArtwork, magicRelease });
+  const sourceWorkflowContext = type === 'album'
+    ? buildDistroKidAlbumWorkflowContext({
+        cockpit: { ...release, type, tracks, releaseAssetState: assetState, distrokidArtwork, packageState },
+        releaseId: release.id,
+      })
+    : null;
+  const distrokidBrowsyWorkflow = summarizeDistroKidBrowsyWorkflow({ type, releaseId: release.id, browsyRecordings, packageState, distrokidArtwork, magicRelease, sourceWorkflowContext });
   const liveSubmitApproval = summarizeLiveSubmitApproval(magicRelease);
   const brandProfile = resolveReleaseBrandProfile(release.brandProfileId);
   const headerArtwork = resolveReleaseHeaderArtwork({ assetState, brandProfile });
@@ -489,10 +496,15 @@ function buildStages({ type, release, tracks, assetState, distrokidArtwork, camp
     return [];
   });
 
+  // Only the primary release image (DistroKid cover art) is a hard requirement.
+  // Platform derivatives (DSP cover, YouTube thumbnail, social crops) are post-release
+  // assets and must not block packaging, preview, or submit.
   const mediaIssues = [];
   if (!assetState.primaryImage?.path) mediaIssues.push('Primary release image is missing');
   const missingDerivatives = (assetState.assets || []).filter(asset => !asset.publicUrl).map(asset => asset.label || asset.name);
-  if (missingDerivatives.length) mediaIssues.push(`Platform derivatives missing: ${missingDerivatives.slice(0, 3).join(', ')}${missingDerivatives.length > 3 ? '...' : ''}`);
+  const mediaNotes = missingDerivatives.length
+    ? [`Platform derivatives not generated yet (optional): ${missingDerivatives.slice(0, 3).join(', ')}${missingDerivatives.length > 3 ? '...' : ''}`]
+    : [];
 
   const jobs = tracks.map(track => track.distrokidJob).filter(Boolean);
   const latestPreviewRun = findLatestRun(runHistory, 'distrokid_preview');
@@ -568,7 +580,11 @@ function buildStages({ type, release, tracks, assetState, distrokidArtwork, camp
     }),
     stage('media', release.tracks?.length > 1 ? 'Release assets' : 'Release assets', mediaIssues.length ? 'blocked' : 'complete', mediaIssues, true, {
       owner: 'Pipeline',
-      detail: mediaIssues.length ? mediaIssues.join('; ') : 'Primary artwork and platform derivatives are ready.',
+      detail: mediaIssues.length
+        ? mediaIssues.join('; ')
+        : mediaNotes.length
+          ? `Primary artwork ready. ${mediaNotes.join('; ')}`
+          : 'Primary artwork and platform derivatives are ready.',
       actions: [
         { label: assetState.primaryImage?.path ? 'Generate / refresh release assets' : 'Open album details', method: assetState.primaryImage?.path ? 'POST' : 'GET', url: assetState.primaryImage?.path ? `/releases/${type}/${encodeURIComponent(release.id)}/actions/release-assets/build` : (type === 'album' ? `/albums/${encodeURIComponent(release.id)}` : `/songs/${encodeURIComponent(tracks[0]?.id || release.id)}`), enabled: true },
       ],
@@ -1136,7 +1152,7 @@ function distrokidAuthState(recordingPhase) {
   }
 }
 
-function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordings, packageState, distrokidArtwork, magicRelease = null }) {
+function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordings, packageState, distrokidArtwork, magicRelease = null, sourceWorkflowContext = null }) {
   const config = getBrowsyConfig();
   const workflowId = type === 'album'
     ? BROWSY_WORKFLOW_IDS.distrokidAlbumSubmit
@@ -1157,6 +1173,8 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
     configured,
     baseUrl: config.baseUrl,
     payloadReadiness,
+    sourcePayloadValidation: sourceWorkflowContext?.validation || null,
+    sourceSamplePayload: sourceWorkflowContext?.samplePayload || null,
     setupWizardUrl: `/releases/${encodeURIComponent(type)}/${encodeURIComponent(releaseId)}/automation-setup`,
   };
   const previewPassed = Boolean((magicRelease?.tasks || []).find(task => task.task_key === DISTROKID_SUBMIT_TASK_KEY && task.status === 'complete'));

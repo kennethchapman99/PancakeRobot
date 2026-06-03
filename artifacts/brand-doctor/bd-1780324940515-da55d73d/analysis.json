@@ -1,0 +1,283 @@
+[
+  {
+    "filename": "bitches-2-1780324945196.mp3",
+    "audioPath": "/Users/kchapman/PancakeRobot/artifacts/brand-doctor/bd-1780324940515-da55d73d/uploads/bitches-2-1780324945196.mp3",
+    "tags": [],
+    "notes": "",
+    "raw": {
+      "ok": true,
+      "audioPath": "/Users/kchapman/PancakeRobot/artifacts/brand-doctor/bd-1780324940515-da55d73d/uploads/bitches-2-1780324945196.mp3",
+      "metrics": {
+        "duration_seconds": 205.101859,
+        "file_size_bytes": 6573055,
+        "format": "mp3",
+        "sample_rate": 44100,
+        "channels": 2,
+        "bitrate": 256382,
+        "integrated_loudness_lufs": null,
+        "peak_db": 0,
+        "clipping_detected": true,
+        "clipping_ratio": 0.03,
+        "total_silence_seconds": 0,
+        "silence_start_seconds": 0,
+        "silence_end_seconds": 0,
+        "long_silence_segments": [],
+        "rms_energy_mean": -13.333,
+        "rms_energy_variance": 45.789,
+        "energy_curve": [
+          {
+            "start_seconds": 0,
+            "rms_db": -18.1
+          },
+          {
+            "start_seconds": 5,
+            "rms_db": -19.2
+          },
+          {
+            "start_seconds": 10,
+            "rms_db": -16.6
+          },
+          {
+            "start_seconds": 15,
+            "rms_db": -16.2
+          },
+          {
+            "start_seconds": 20,
+            "rms_db": -15
+          },
+          {
+            "start_seconds": 25,
+            "rms_db": -16.6
+          },
+          {
+            "start_seconds": 30,
+            "rms_db": -16.1
+          },
+          {
+            "start_seconds": 35,
+            "rms_db": -16.4
+          },
+          {
+            "start_seconds": 40,
+            "rms_db": -8.7
+          },
+          {
+            "start_seconds": 45,
+            "rms_db": -9.3
+          },
+          {
+            "start_seconds": 50,
+            "rms_db": -8.8
+          },
+          {
+            "start_seconds": 55,
+            "rms_db": -9
+          },
+          {
+            "start_seconds": 60,
+            "rms_db": -14.4
+          },
+          {
+            "start_seconds": 65,
+            "rms_db": -15.5
+          },
+          {
+            "start_seconds": 70,
+            "rms_db": -14.7
+          },
+          {
+            "start_seconds": 75,
+            "rms_db": -14.4
+          },
+          {
+            "start_seconds": 80,
+            "rms_db": -12.7
+          },
+          {
+            "start_seconds": 85,
+            "rms_db": -13.6
+          },
+          {
+            "start_seconds": 90,
+            "rms_db": -12.7
+          },
+          {
+            "start_seconds": 95,
+            "rms_db": -12.7
+          },
+          {
+            "start_seconds": 100,
+            "rms_db": -9.6
+          },
+          {
+            "start_seconds": 105,
+            "rms_db": -9.1
+          },
+          {
+            "start_seconds": 110,
+            "rms_db": -9.5
+          },
+          {
+            "start_seconds": 115,
+            "rms_db": -9.5
+          },
+          {
+            "start_seconds": 120,
+            "rms_db": -12.4
+          },
+          {
+            "start_seconds": 125,
+            "rms_db": -15.5
+          },
+          {
+            "start_seconds": 130,
+            "rms_db": -15.2
+          },
+          {
+            "start_seconds": 135,
+            "rms_db": -15.6
+          },
+          {
+            "start_seconds": 140,
+            "rms_db": -10.6
+          },
+          {
+            "start_seconds": 145,
+            "rms_db": -9.4
+          },
+          {
+            "start_seconds": 150,
+            "rms_db": -9.8
+          },
+          {
+            "start_seconds": 155,
+            "rms_db": -10.6
+          },
+          {
+            "start_seconds": 160,
+            "rms_db": -12.6
+          },
+          {
+            "start_seconds": 165,
+            "rms_db": -9.9
+          },
+          {
+            "start_seconds": 170,
+            "rms_db": -9.6
+          },
+          {
+            "start_seconds": 175,
+            "rms_db": -9.4
+          },
+          {
+            "start_seconds": 180,
+            "rms_db": -10
+          },
+          {
+            "start_seconds": 185,
+            "rms_db": -9.2
+          },
+          {
+            "start_seconds": 190,
+            "rms_db": -9.2
+          },
+          {
+            "start_seconds": 195,
+            "rms_db": -9.2
+          },
+          {
+            "start_seconds": 200,
+            "rms_db": -11.3
+          },
+          {
+            "start_seconds": 205,
+            "rms_db": -52.1
+          }
+        ],
+        "intro_energy_ramp": -1.1,
+        "high_energy_segments": [
+          {
+            "start_seconds": 40,
+            "end_seconds": 45,
+            "rms_db": -8.7
+          },
+          {
+            "start_seconds": 50,
+            "end_seconds": 55,
+            "rms_db": -8.8
+          },
+          {
+            "start_seconds": 55,
+            "end_seconds": 60,
+            "rms_db": -9
+          },
+          {
+            "start_seconds": 105,
+            "end_seconds": 110,
+            "rms_db": -9.1
+          },
+          {
+            "start_seconds": 185,
+            "end_seconds": 190,
+            "rms_db": -9.2
+          },
+          {
+            "start_seconds": 190,
+            "end_seconds": 195,
+            "rms_db": -9.2
+          },
+          {
+            "start_seconds": 195,
+            "end_seconds": 200,
+            "rms_db": -9.2
+          }
+        ],
+        "best_clip_start_seconds": 40,
+        "best_clip_end_seconds": 55,
+        "dynamic_range_estimate": 96.33,
+        "tempo_bpm": null,
+        "beat_confidence": null,
+        "brightness_score": null,
+        "chorus_or_peak_lift_estimate": 4.633,
+        "repeated_section_score": 10,
+        "vocal_presence_proxy": null
+      }
+    },
+    "brandImplications": {
+      "filename": "bitches-2-1780324945196.mp3",
+      "file_summary": "A ~3.4-minute track with clipping at peak, moderate-to-high RMS energy, seven high-energy segments suggesting structural variation, and a slightly negative intro ramp indicating the song opens at or near full intensity rather than building gradually.",
+      "detected_audio_traits": [
+        "Peak clipping detected — mix is hitting or exceeding 0dBFS at points, suggesting either intentional saturation aesthetic or mastering headroom issue",
+        "RMS mean of -13.3 dB indicates a moderately loud, dense mix — not hyper-compressed radio pop, but not sparse either",
+        "Seven high-energy segments across ~205 seconds suggests roughly one structural peak every 25–30 seconds, implying frequent energy punctuation rather than a single sustained climax",
+        "Intro energy ramp of -1.1 is slightly negative — the track does not build into itself; it arrives already engaged or slightly receding from a prior peak",
+        "256kbps bitrate — acceptable file quality, not lossless but sufficient for production review",
+        "No user-applied tags — no genre, mood, or contextual metadata provided"
+      ],
+      "user_tag_summary": "No tags were provided for this file. Without user-supplied genre, mood, tempo, or instrumentation labels, all brand interpretation is inferred solely from raw audio metrics. Confidence in specific stylistic conclusions is low; findings should be treated as structural tendencies, not confirmed creative identities.",
+      "likely_brand_strengths": [
+        "Frequent high-energy segment distribution could align with Razor Bloom's expected structural unpredictability — the energy doesn't arc in a single predictable wave, which resists the default verse-hard-hook-release template",
+        "The clipping, if intentional, may signal a deliberate lo-fi or saturated aesthetic consistent with experimental hard rap textures — distortion as character rather than accident",
+        "A non-building intro (flat or slight ramp-down) is consistent with the anti-generic rule against declarative genre throat-clearing — the track appears to enter mid-state rather than announcing itself",
+        "Moderate RMS without extreme hyper-compression leaves dynamic room for vocal presence to cut through without total dynamic obliteration — space for dry, controlled theatrical delivery to register"
+      ],
+      "mismatch_risks": [
+        "Clipping, if unintentional, is a production failure that could undermine the precision required by Razor Bloom's controlled-excess brand identity — saturated mix must read as deliberate, not sloppy",
+        "Seven evenly distributed energy peaks risk creating a rhythmic predictability in tension that, despite structural frequency, may still feel formulaic if each peak functions identically",
+        "Without tag data, it is impossible to confirm whether the low-end is Southern-leaning or trap-inflected as the brand requires — bass character cannot be verified from RMS and peak data alone",
+        "Negative intro ramp could also indicate the track opens on a hook or mid-section element rather than a verse, which may or may not serve the brand depending on lyrical and vocal execution not assessable here",
+        "No information on adlib density, vocal layering, or silence usage — the brand's critical rule about restraint in empty beat pockets cannot be evaluated from these metrics"
+      ],
+      "genericness_risk": "medium",
+      "production_notes": "Clipping must be reviewed and classified as intentional or corrective — if this is an aesthetic saturation choice (e.g., driven low-end or distorted 808s), document it as such and ensure it is consistent across the mix rather than appearing only at uncontrolled peaks. Seven high-energy segments in 205 seconds is a reasonable structural density, but the production team should confirm each segment has a distinct textural identity rather than repeating the same energy delivery. The slightly negative intro ramp suggests the mix may have been edited to start post-peak — confirm the intro is not accidentally cropped or misaligned. Headroom management should be revisited if the intent is a clean master; if clipping is intentional, it should be applied with surgical consistency rather than as a byproduct of gain staging.",
+      "vocal_performance_notes": "Vocal performance cannot be assessed from these audio metrics. RMS and peak data reflect the combined mix, not isolated vocal behavior. Inferences about delivery style, adlib usage, theatrical control, crude language placement, or emotional arc are not possible from this file's technical data alone. A stems-level review or spectrogram analysis would be required to begin drawing vocal conclusions. All vocal brand alignment notes here are therefore speculative and should not be used for final creative decisions.",
+      "suggested_brand_profile_implications": [
+        "If the clipping is intentional and consistent, this track may establish a deliberately abrasive sonic signature for Razor Bloom — useful for marking the brand's experimental hard rap edge without relying on conventional loudness war mastering",
+        "The non-escalating intro structure has potential to embody the brand's 'strange, specific, or mid-thought' entry rule — but this must be confirmed by lyrical and vocal analysis, not assumed from audio metrics alone",
+        "The multi-peak energy distribution could support a track concept where tension is dispersed rather than climactic — structurally interesting for a brand that resists the default verse-hard-hook-release arc, provided each peak is conceptually motivated",
+        "Without tag data, this track is currently brand-unanchored — it should be re-submitted with genre, mood, tempo, and key instrumentation tags before final brand profile conclusions are drawn",
+        "The moderate RMS density is compatible with club bounce applications but does not confirm it — Southern low-end character and trap/boom-bap texture verification requires spectral or stems-level analysis beyond what is available here"
+      ]
+    }
+  }
+]

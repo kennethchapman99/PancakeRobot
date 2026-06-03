@@ -1,0 +1,122 @@
+{
+  "id": "bd-1780343997633-2b143da1",
+  "timestamp": "2026-06-01T19:59:57.634Z",
+  "brandId": "tribe",
+  "brandProfilePath": "/Users/kchapman/PancakeRobot/config/brand-profiles/tribe.json",
+  "mode": "analyze",
+  "status": "in_progress",
+  "currentProfileSummary": {
+    "brand_name": "Loop Council",
+    "brand_type": "music",
+    "genre_style_center": "jazzy alternative hip-hop with smooth boom-bap drums, relaxed pocket flow, upright or electric bass, turntable scratching, and rotating MC textures",
+    "character_name": "Loop Council",
+    "core_concept": "A rotating hip-hop crew built around a crate-digging producer-DJ, a smooth lead MC, and occasional guest voices trading relaxed but precise verses over jazz-heavy beats.",
+    "vocal_performance_engine": {
+      "priority": "Loop Council's lead vocal is irreplaceable because it delivers maximum rhythmic information at minimum apparent effort — precision disguised as ease, wit embedded in groove rather than announced.",
+      "vocal_textures": [
+        "A smooth mid-register conversational tone that sits just behind the beat, as if the MC is thinking aloud rather than performing — relaxed but never sleepy",
+        "Controlled breath-pocket phrasing where lines end on a subtle exhale, reinforcing the swing of the drums rather than fighting them",
+        "A guest-contrast texture that enters harder, drier, or more staccato, creating seams without jarring the listener out of the groove",
+        "A half-spoken half-sung hook delivery where melodic movement is implied by rhythm and vowel shape rather than full pitch commitment",
+        "A low-key chuckle-pocket tone for punchline moments — the voice barely shifts, letting the content land rather than telegraphing it"
+      ],
+      "timing_behaviors": [
+        "Deliberate late-pocket entry on the second and fourth beat emphasis, landing just after the snare crack to reinforce swing without rushing",
+        "Syllable compression on multi-syllable rhyme clusters — cramming four or five syllables into a beat and a half, then breathing into empty space",
+        "Strategic one-beat rests mid-verse that let the bassline or scratch answer before the next phrase, creating conversational space",
+        "End-of-bar cadence drop where the final word of a couplet falls below the beat grid, giving the line a nodding, settling quality",
+        "Guest-style verse acceleration — a contrasting MC voice enters at slightly higher syllabic density, then finds the pocket two bars in, as if warming up"
+      ],
+      "adlib_behaviors": [
+        "Quiet consonant punches — a soft 'yeah' or 'hm' placed between lines to mark the groove without claiming attention",
+        "Call-back whispers where a key word from the previous bar is echoed at half-volume by a second voice, as if the room is agreeing",
+        "Turntable-echo adlibs — short staccato vocal fragments that mimic the rhythm of a scratch answer, bridging DJ and MC without overlapping them",
+        "A single dry laugh or breath-release after a particularly loaded punchline, signaling the crew's reaction rather than the MC's ego",
+        "Collective 'we' murmur at hook transitions — a low, blended background vocal that sounds like a room rather than an overdub"
+      ],
+      "avoid": [
+        "Aggressive ad-lib shouting or hype-heavy background stacking that turns the conversational texture into a performance spectacle",
+        "On-the-beat rap delivery where every syllable lands exactly on grid — this flattens the swing and removes the pocket identity",
+        "Melodic hooks that require full pitch commitment and sustained notes, shifting the identity from jazz-rap ease to pop vocal showcase",
+        "Dense triplet-flow patterns that prioritize technical speed over space and wit, erasing the relaxed-but-precise balance",
+        "Over-explaining punchlines through tone shift, volume spike, or repeated emphasis — the delivery should trust the words"
+      ]
+    },
+    "performance_conceit_bank": [
+      "The lead MC drops to near-spoken delivery for exactly one four-bar section per song, so quiet and direct it sounds like a private aside — then the beat re-enters and the flow resumes as if nothing happened.",
+      "A DJ scratch line answers the final word of the hook's last bar, replacing the expected vocal rhyme with a cut that sounds like the turntable finished the sentence.",
+      "Two contrasting MC voices trade single bars rather than full verses — not a cypher but a fast-cut argument or conversation, intercut so tightly the verses feel like one mind speaking in two registers.",
+      "The hook melody is carried entirely by the bassline with no vocals — the MC re-enters after it as if letting the instrument speak first.",
+      "A verse is structured as a list that accelerates with each item, syllable count climbing line by line until the final bar overflows and resolves into silence before the hook.",
+      "The adlib voice starts subtly agreeing mid-verse and grows louder across four bars until it is equal to the lead, then cuts entirely on the hook — the absence is louder than the presence.",
+      "A single image or phrase introduced in bar two of a verse is held back, transformed, and paid off in the last bar with a slight melodic shift in delivery — not announced, just landed.",
+      "The DJ drops the beat completely for two bars while the MC keeps the flow at the same tempo, proving the rhythm lives in the voice as much as the drum."
+    ],
+    "anti_generic_rules": [
+      "Do not default to crate-digging or vinyl-discovery as the lyrical frame when the brief calls for something personal — Loop Council's failure mode is hiding behind music-about-music when a human angle is stronger.",
+      "Do not make every scratch moment a hook ornament — if the DJ's cuts are only appearing at the end of hooks, the turntablist identity is decorative rather than structural, which contradicts the character.",
+      "Do not let 'relaxed' become 'uneventful' — the pocket must contain small rhythmic surprises, syllable compressions, or pocket shifts every 8-16 bars or the groove becomes wallpaper.",
+      "Do not assign the same syllabic density to all MC voices in a cypher — if two voices sound equally dense and paced, the crew texture is lost and the song sounds like one person performing in two names.",
+      "Do not use jazz references — chord names, instrument names, historical era nods — as lyrical decoration unless the song's actual concept earns them; otherwise the character sounds like a Wikipedia article.",
+      "Do not end every song with a cool-out scratch fade — Loop Council's closer failure mode is defaulting to the turntable as the polite exit every time, which erases the emotional variety of the album's endings.",
+      "Do not load every verse with street imagery as atmospheric padding — when detail is not earned by the song's specific concept, it reads as genre costuming rather than lived voice.",
+      "Do not let the hook be the most rhythmically complex moment in the song — for this character, the verse should carry the technical weight and the hook should feel like relief, not demonstration."
+    ],
+    "album_mode_lanes": [
+      {
+        "name": "Solo Pocket",
+        "description": "Lead MC carries the full song alone with only bassline and sparse Rhodes for company — no guest voices, no cypher handoff, just the single voice working through one sustained idea with increasing intimacy across four minutes."
+      },
+      {
+        "name": "Council Session",
+        "description": "Three or more contrasting MC textures trade in a structured format, unified not by a sung hook but by a recurring scratch phrase that acts as punctuation — the groove stays constant while the voices redefine it."
+      },
+      {
+        "name": "Turntablist Lead",
+        "description": "The DJ takes structural priority: cuts open and close sections, answer lines, and carry the hook, while the MC's role shrinks to short precise bursts that feel like prompts the DJ is responding to."
+      },
+      {
+        "name": "Night Room",
+        "description": "Tempo drops below 86 BPM, keys become the dominant instrument, and the lead voice settles into observational narrator mode — lyric density falls, syllables stretch, and the music does emotional work the words leave unsaid."
+      },
+      {
+        "name": "Block Energy",
+        "description": "Brighter drums, a chantable hook designed for group delivery, and playful call-back lines that reward repeat listens — the groove is the destination, and the MC sounds like they are having more fun than usual."
+      },
+      {
+        "name": "One-Take Room",
+        "description": "Arrangement and delivery simulate a live-recorded take — imperfect breath placement, slight room ambience, minimal overdubs — making the song feel caught rather than constructed."
+      }
+    ],
+    "song_differentiation_rules": [
+      "If the previous track used a scratch line as the hook resolution, the next track must resolve its hook through a vocal refrain, bassline answer, or horn stab — never back-to-back scratch-hook conclusions.",
+      "If the previous track featured a multi-MC cypher structure, the next track must be built around a single sustained voice or an MC-DJ dialogue rather than a group handoff.",
+      "If the previous track opened with a drum break or groove entry, the next must open cold — with a spoken phrase, a single bass note, a scratch, or silence before the downbeat.",
+      "If the previous track's emotional tone was reflective or observational, the next must shift register to playful, competitive, romantic, or communal before returning to introspection.",
+      "No two consecutive tracks may share the same tempo lane, drum feel category, and hook type simultaneously — at least two of those three variables must change.",
+      "If a guest-style voice was used in the prior track's climactic section, it may not occupy the same structural position in the next track — move it to the intro, bridge, or remove it entirely."
+    ],
+    "do_not_repeat_across_album": [
+      "Do not repeat the same scratch function — hook ornament, verse answer, transition bridge, intro texture, and outro tag are all distinct roles; rotate them across songs rather than defaulting to hook placement.",
+      "Do not open more than two songs on the same album with a bassline entry — vary intros across drum break, spoken tone, keyboard vamp, horn stab, scratch phrase, or cold rap line.",
+      "Do not use the same MC contrast pairing twice — if one track juxtaposes a smooth lead with a harder staccato guest, the next multi-voice track must find a different contrast axis: density, register, tempo feel, or emotional tone.",
+      "Do not repeat the same hook structure — chantable group refrain, solo melodic phrase, scratch-only, bassline-carried, and call-and-response are all distinct; no two adjacent songs may share the same hook architecture.",
+      "Do not end consecutive songs with the same emotional resolution — not every album track should close with warmth or communal feeling; rotate through unresolved exits, cool irony, quiet intensity, and genuine uplift.",
+      "Do not place the most quotable lyrical moment in the same structural position — sometimes it belongs in bar three of verse one, sometimes in the bridge, sometimes buried in the second half of verse two.",
+      "Do not use the same drum feel category — four-on-the-floor swing, broken shuffle, half-time boom-bap, and uptempo bounce should rotate so no two adjacent tracks share the same rhythmic skeleton.",
+      "Do not repeat the same adlib behavior across more than two consecutive tracks — rotate between whisper echo, consonant punch, collective murmur, dry laugh, and silence."
+    ],
+    "evaluation_targets": null,
+    "candidate_generation_strategy": null,
+    "weak_areas": []
+  },
+  "candidateDirections": null,
+  "audioAnalyses": null,
+  "userFeedback": null,
+  "proposedPatch": null,
+  "patchExplanation": null,
+  "validationResult": null,
+  "beforeAfterDiff": null,
+  "appliedAt": null,
+  "draftPatchPath": null
+}

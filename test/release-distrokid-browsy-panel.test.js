@@ -58,18 +58,33 @@ function seedSong() {
   return id;
 }
 
-function seedAlbum() {
-  const songId = seedSong();
+function seedAlbum({ trackCount = 1, missingAudioIndexes = [] } = {}) {
+  const ids = [];
+  const missing = new Set(missingAudioIndexes);
+  for (let i = 0; i < trackCount; i++) {
+    const id = uniqueId('DKBROWSY');
+    ids.push(id);
+    songIds.add(id);
+    upsertSong({
+      id,
+      title: `Browsy Panel ${i + 1}`,
+      brand_profile_id: 'default',
+      release_date: '2026-09-01',
+      is_test: true,
+    });
+    if (!missing.has(i)) writeSongAsset(id, 'audio.mp3', 'fake-audio');
+    if (i === 0) writeSongAsset(id, 'reference/base-image.png', 'fake-art');
+  }
   const albumId = createAlbum({
     id: uniqueId('DKBROWSY_ALBUM'),
     album_title: 'Browsy Panel Album',
     release_date: '2026-09-01',
-    number_of_songs: 1,
+    number_of_songs: trackCount,
     status: 'assembled',
     is_test: true,
   });
   albumIds.add(albumId);
-  assignSongsToAlbum(albumId, [songId]);
+  assignSongsToAlbum(albumId, ids);
   return albumId;
 }
 
@@ -154,6 +169,21 @@ test('album release detail renders compact Browsy Record Automation entrypoint',
   assert.doesNotMatch(html, />Run Preview<\/button>/);
   assert.doesNotMatch(html, />Run Live<\/button>/);
   assert.doesNotMatch(html, /Advanced Browsy recording diagnostics/);
+});
+
+test('album release detail blocks Record Automation when later tracks lack audio paths', async () => {
+  const albumId = seedAlbum({ trackCount: 3, missingAudioIndexes: [1, 2] });
+  seedRecording('album', albumId, { contract: completeContract('distrokid-album-submit') });
+  const wf = buildReleaseCockpitViewModel('album', albumId).distrokidBrowsyWorkflow;
+  assert.equal(wf.sourcePayloadValidation.ok, false);
+  assert.match(wf.sourcePayloadValidation.errors.join(' '), /tracks\[1\]\.audioPath is required/);
+  assert.match(wf.sourcePayloadValidation.errors.join(' '), /tracks\[2\]\.audioPath is required/);
+
+  const html = await fetchDetailHtml('album', albumId);
+  assert.match(html, /Source payload blocked/);
+  assert.match(html, /tracks\[1\]\.audioPath is required/);
+  assert.match(html, /tracks\[2\]\.audioPath is required/);
+  assert.match(html, /<button[^>]*disabled[^>]*>Record Automation<\/button>/);
 });
 
 // 2. Legacy local preview card has been removed from the DistroKid section.

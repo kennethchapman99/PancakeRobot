@@ -210,5 +210,51 @@
   })();
 </script>
 
+<script>
+  // Singleton inline audio player for song play buttons
+  window.prPlayToggle = (function () {
+    let activeBtn = null, activeAudio = null, activeUrl = null;
+
+    function setIcons(btn, playing) {
+      const play = btn.querySelector('[data-play-icon]');
+      const pause = btn.querySelector('[data-pause-icon]');
+      if (play) play.classList.toggle('hidden', playing);
+      if (pause) pause.classList.toggle('hidden', !playing);
+    }
+
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-pr-play]');
+      if (!btn) return;
+      const url = btn.getAttribute('data-audio-url');
+      if (!url) return;
+
+      if (activeUrl === url && activeAudio) {
+        if (activeAudio.paused) {
+          activeAudio.play().catch(() => {});
+          setIcons(activeBtn, true);
+        } else {
+          activeAudio.pause();
+          setIcons(activeBtn, false);
+        }
+        return;
+      }
+
+      if (activeAudio) {
+        activeAudio.pause();
+        if (activeBtn) setIcons(activeBtn, false);
+      }
+
+      activeAudio = new Audio(url);
+      activeUrl = url;
+      activeBtn = btn;
+      activeAudio.addEventListener('ended', function () {
+        setIcons(btn, false);
+        activeUrl = null;
+      });
+      activeAudio.play().catch(() => {});
+      setIcons(btn, true);
+    });
+  })();
+</script>
 </body>
 </html>

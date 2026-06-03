@@ -341,5 +341,6 @@
   "media": {
     "default_image_url": "/brand-media/basement-cypher/default-image.png",
     "default_image_path": ""
-  }
+  },
+  "display_name": ""
 }

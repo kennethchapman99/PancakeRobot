@@ -1,0 +1,25 @@
+{
+  "songwriting": {
+    "evaluation_targets": {
+      "dynamic_range_floor_rms_db": -16,
+      "dynamic_range_ceiling_rms_db": -10,
+      "peak_ceiling_db": 0,
+      "note": "Track 'bitches-2-1780324945196.mp3' measured at -13.333 dB RMS with 0 dB peak — within acceptable range, but tagging pipeline returned empty tags. Evaluation should flag any future track with empty tags as incomplete metadata regardless of audio metrics, and confirm tag population before distribution sign-off."
+    },
+    "candidate_generation_strategy": {
+      "tag_completeness_gate": "Every generated or submitted track must carry a minimum viable tag set before advancing to distribution review. An empty tags array is an automatic hold condition, not a passable state. Tags must reflect at minimum: primary genre, mood signature, and at least one Razor Bloom conceit active in that track.",
+      "dynamic_range_targeting": "Aim for RMS mean between -16 dB and -10 dB. Tracks hitting 0 dB peak are acceptable only if the mix retains perceptible dynamic contrast — compression to a flat ceiling is a failure condition even if peak is technically compliant.",
+      "silence_as_intentional_element": "Tracks featuring The Reluctant Confession Drop or The Speed-Then-Freeze conceits may register lower average RMS in isolated sections by design. Evaluation tools should not flag these dips as mix errors without cross-referencing the active conceit on that track."
+    },
+    "anti_generic_rules": [
+      "Do not default to the standard aggressive-rap opening of announcing power and presence; Razor Bloom's entries should be strange, specific, or mid-thought rather than declarative genre throat-clearing",
+      "Do not let 'theatrical' become a synonym for overwrought melodrama; Razor Bloom's theatricality is dry, comic, and controlled — excess should read as deliberate character choice, not unchecked genre inflation",
+      "Do not fill every empty beat pocket with adlibs; Razor Bloom's character is partly defined by knowing when to leave the room silent, and over-adlibbing turns a personality into a formula",
+      "Do not use crude language as a volume knob — escalating profanity to signal intensity is a generic failure mode; instead, use a single precisely placed crude phrase for maximum impact rather than saturation",
+      "Do not write hooks that could be transplanted to any other hard rap track; Razor Bloom's hooks must carry the character's specific comic-menace-vulnerability signature, not just an aggressive repeated phrase",
+      "Do not let the villain conceit settle into complacency — the character should always have something genuinely at stake, even in the most braggadocious song, or the performance becomes self-parody without edge",
+      "Do not recycle the emotional arc of verse-hard-hook-release without variation; the energy pattern must be reshaped by the specific concept of each track rather than applied as a default structural template",
+      "Do not submit or approve a track with an empty tags array; absence of tags is not a neutral state — it signals a metadata failure that breaks discovery, context-setting, and brand coherence downstream"
+    ]
+  }
+}
