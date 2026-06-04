@@ -82,6 +82,10 @@ test('DistroKid Album Submit preset exposes required variables/assets and derive
   assert.equal(preset.sourceApp, 'pancake-robot');
   const albumProps = preset.inputSchema.properties.album.properties;
   const trackProps = preset.inputSchema.properties.tracks.items.properties;
+  assert.ok(preset.inputSchema.properties.releaseId);
+  assert.ok(preset.inputSchema.properties.albumId);
+  assert.ok(albumProps.id);
+  assert.ok(albumProps.releaseId);
   assert.ok(albumProps.title);
   assert.ok(albumProps.artistName);
   assert.ok(albumProps.releaseDate);
@@ -91,6 +95,7 @@ test('DistroKid Album Submit preset exposes required variables/assets and derive
   assert.ok(trackProps.audioPath);
   assert.ok(trackProps.explicit);
   assert.equal(preset.derivedVariables.numberOfSongs, 'tracks.length');
+  assert.ok(preset.bindingHints.some(hint => hint.path === 'releaseId'));
   assert.ok(preset.bindingHints.some(hint => hint.path === 'album.releaseDate'));
   assert.ok(preset.requiredAssets.some(asset => asset.path === 'album.coverArtPath'));
   assert.ok(preset.requiredAssets.some(asset => asset.path === 'tracks[].audioPath'));
@@ -100,6 +105,10 @@ test('workflow context maps album release payload including releaseDate, artwork
   const albumId = seedAlbum();
   const cockpit = buildReleaseCockpitViewModel('album', albumId);
   const context = buildDistroKidAlbumWorkflowContext({ cockpit, releaseId: albumId });
+  assert.equal(context.samplePayload.releaseId, albumId);
+  assert.equal(context.samplePayload.albumId, albumId);
+  assert.equal(context.samplePayload.album.id, albumId);
+  assert.equal(context.samplePayload.album.releaseId, albumId);
   assert.equal(context.samplePayload.album.title, 'Setup Album');
   assert.equal(context.samplePayload.album.releaseDate, '2026-09-01');
   assert.ok(context.samplePayload.album.coverArtPath);
@@ -163,6 +172,8 @@ test('recording launch spec sends full workflow context to Browsy before recorde
   assert.equal(built.spec.workflowName, 'DistroKid Album Submit');
   assert.equal(built.spec.sourceApp, 'pancake-robot');
   assert.equal(built.spec.targetUrl, 'https://distrokid.com/new/');
+  assert.equal(built.spec.releaseId, albumId);
+  assert.equal(built.spec.recordingSetup.tabs[0].url, 'http://localhost:3737/releases/album/{releaseId}');
   assert.ok(built.spec.inputSchema);
   assert.ok(built.spec.requiredAssets.length >= 2);
   assert.equal(built.spec.samplePayload.album.releaseDate, '2026-09-01');
@@ -179,6 +190,7 @@ test('Automation Setup Wizard renders variables and sample payload before launch
     const html = await res.text();
     assert.match(html, /Automation Setup Wizard/);
     assert.match(html, /DistroKid Album Submit/);
+    assert.match(html, /releaseId/);
     assert.match(html, /album\.releaseDate/);
     assert.match(html, /album\.coverArtPath/);
     assert.match(html, /tracks\[\]\.audioPath/);

@@ -59,6 +59,7 @@ export async function startBrowsyWorkflowRun({
   payload,
   mode = 'preview',
   callerId = 'pancake-robot',
+  correlationId = '',
   approvalToken = '',
   config = getBrowsyConfig(),
 } = {}) {
@@ -68,9 +69,10 @@ export async function startBrowsyWorkflowRun({
     version: config.workflowVersion,
   });
   const body = pruneEmpty({
-    payload,
+    payload: normalizeReleasePayload(payload),
     mode: normalizeBrowsyMode(mode),
     callerId,
+    correlationId: clean(correlationId),
     approvalToken: clean(approvalToken),
   });
 
@@ -131,12 +133,13 @@ export async function executeBrowsyWorkflowRun({
   payload,
   mode = 'preview',
   callerId = 'pancake-robot',
+  correlationId = '',
   approvalToken = '',
   config = getBrowsyConfig(),
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   now = () => Date.now(),
 } = {}) {
-  const start = await startBrowsyWorkflowRun({ workflowId, payload, mode, callerId, approvalToken, config });
+  const start = await startBrowsyWorkflowRun({ workflowId, payload, mode, callerId, correlationId, approvalToken, config });
   if (!start.ok) {
     const unreachable = start.status === 0;
     return {
@@ -227,6 +230,7 @@ export async function startBrowsyRecordingSession({
   callbackUrl,
   config = getBrowsyConfig(),
 } = {}) {
+  const normalizedSamplePayload = normalizeReleasePayload(samplePayload, releaseId);
   const body = pruneEmpty({
     workflowRef: clean(workflowRef) || undefined,
     appId: clean(appId) || config.appId,
@@ -242,7 +246,7 @@ export async function startBrowsyRecordingSession({
     inputSchema,
     payloadSchema,
     requiredAssets,
-    samplePayload,
+    samplePayload: normalizedSamplePayload,
     derivedVariables,
     bindingHints,
     fileBindings,
@@ -672,6 +676,30 @@ function normalizeBrowsyMode(mode) {
   const raw = clean(mode).toLowerCase();
   if (raw === 'dry_run' || raw === 'dry-run') return 'preview';
   return raw || 'preview';
+}
+
+function normalizeReleasePayload(payload, fallbackReleaseId = '') {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+  const releaseId = clean(
+    fallbackReleaseId
+    || payload.releaseId
+    || payload.release_id
+    || payload.albumId
+    || payload.album_id
+    || payload.album?.releaseId
+    || payload.album?.id
+  );
+  if (!releaseId) return payload;
+  const next = { ...payload, releaseId };
+  if (!next.albumId) next.albumId = releaseId;
+  if (next.album && typeof next.album === 'object' && !Array.isArray(next.album)) {
+    next.album = {
+      ...next.album,
+      id: next.album.id || releaseId,
+      releaseId: next.album.releaseId || releaseId,
+    };
+  }
+  return next;
 }
 
 function joinUrl(baseUrl, path) {

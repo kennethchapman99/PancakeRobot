@@ -44,6 +44,7 @@ import { runMagicPipelineService } from './magic-pipeline-service.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const ALBUMS_DIR = path.join(ROOT_DIR, 'output', 'albums');
+const INCOMPLETE_ALBUM_TRACK_STAGES = new Set(['album_track_failed', 'album_track_missing_audio']);
 
 export const ALBUM_COST_MODES = Object.freeze(['draft', 'standard', 'premium', 'album_batch']);
 
@@ -661,7 +662,8 @@ export function hasGeneratedAudioFile(songId) {
 }
 
 export function isCompletedAlbumTrack(song) {
-  return song?.pipeline_stage === 'album_track_generated' && hasGeneratedAudioFile(song.id);
+  if (!song || INCOMPLETE_ALBUM_TRACK_STAGES.has(song.pipeline_stage)) return false;
+  return hasGeneratedAudioFile(song.id);
 }
 
 function rebuildAndPersistAlbumFinanceSummary({ albumId, costMode, trackSongIds, cachedSavingsUsd = 0 }) {

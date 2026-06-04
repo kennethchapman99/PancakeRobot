@@ -79,6 +79,7 @@ function completeDistroKidContract(workflowId = 'distrokid-single-submit') {
 }
 
 function startFakeBrowsy(runStatus, { outputs = {}, contract = completeDistroKidContract() } = {}) {
+  const captured = { runStartBody: null };
   const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
     if (req.method === 'GET' && /\/contract(\?|$)/.test(req.url)) {
@@ -92,8 +93,13 @@ function startFakeBrowsy(runStatus, { outputs = {}, contract = completeDistroKid
       return;
     }
     if (req.method === 'POST' && req.url.endsWith('/runs')) {
-      res.writeHead(201);
-      res.end(JSON.stringify({ ok: true, runId: 'run_fake_1', status: 'created', run: { runId: 'run_fake_1', status: 'created' } }));
+      let raw = '';
+      req.on('data', chunk => { raw += chunk; });
+      req.on('end', () => {
+        try { captured.runStartBody = JSON.parse(raw || '{}'); } catch { captured.runStartBody = null; }
+        res.writeHead(201);
+        res.end(JSON.stringify({ ok: true, runId: 'run_fake_1', status: 'created', run: { runId: 'run_fake_1', status: 'created' }, correlationId: captured.runStartBody?.correlationId || null }));
+      });
       return;
     }
     if (req.method === 'GET' && /\/api\/runs\/run_fake_1$/.test(req.url)) {
@@ -118,7 +124,7 @@ function startFakeBrowsy(runStatus, { outputs = {}, contract = completeDistroKid
   return new Promise(resolve => {
     server.listen(0, '127.0.0.1', () => {
       const { port } = server.address();
-      resolve({ server, baseUrl: `http://127.0.0.1:${port}` });
+      resolve({ server, baseUrl: `http://127.0.0.1:${port}`, captured });
     });
   });
 }
@@ -182,6 +188,27 @@ test('live run against Browsy completion marks the task complete and harvests ca
   const state = getMagicReleaseState('single', songId);
   assert.equal(state.tasks.find(t => t.task_key === 'distrokid_submit_dry_run')?.status, 'complete');
   assert.ok(getReleaseLinks(songId).some(link => link.url === 'https://distrokid.com/hyperfollow/live-ok'));
+});
+
+test('live run threads a correlation id into the Browsy run body and result.json', async () => {
+  const songId = seedReleaseSong(uniqueId('BROWSY_CORRELATION'));
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  const fake = await startFakeBrowsy('completed', { outputs: { smart_link_url: 'https://distrokid.com/hyperfollow/corr' } });
+
+  process.env.PANCAKE_BROWSY_BASE_URL = fake.baseUrl;
+  process.env.PANCAKE_BROWSY_POLL_INTERVAL_MS = '1';
+  try {
+    await runMagicReleaseTask({ campaignId: created.campaign.id, taskKey: 'distrokid_submit_dry_run', dryRun: false });
+  } finally {
+    delete process.env.PANCAKE_BROWSY_BASE_URL;
+    delete process.env.PANCAKE_BROWSY_POLL_INTERVAL_MS;
+    fake.server.close();
+  }
+
+  const sentCorrelationId = fake.captured.runStartBody?.correlationId;
+  assert.match(sentCorrelationId || '', /^pr-single-.+/);
+  const resultJson = resultJsonFor(created.campaign.id, 'distrokid_submit_dry_run');
+  assert.equal(resultJson.correlation_id, sentCorrelationId);
 });
 
 test('live run paused for approval maps to a needs-Ken gate (no auto submit)', async () => {

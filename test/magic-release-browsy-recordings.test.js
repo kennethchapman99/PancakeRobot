@@ -370,6 +370,42 @@ test('Record Automation reuses an existing recording session', async () => {
   assert.equal(result.recordAutomationControl.href, 'http://wizard/existing');
 });
 
+test('Record Automation can force a fresh session instead of reusing stale wizard URL', async () => {
+  const songId = seedReleaseSong(uniqueId('RECAUTO_FRESH'));
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  const submitTask = created.tasks.find(t => t.task_key === SUBMIT_TASK);
+  createReleaseBrowsyRecording({
+    campaign_id: created.campaign.id,
+    task_id: submitTask.id,
+    task_key: SUBMIT_TASK,
+    release_type: 'single',
+    release_id: songId,
+    workflow_id: 'distrokid-single-submit',
+    recording_session_id: 'rec_stale',
+    wizard_url: 'http://wizard/stale',
+    recording_status: 'setup_ready',
+  });
+  const fake = await startFakeBrowsy({
+    startResponse: {
+      ok: true,
+      recording: { recordingSessionId: 'rec_fresh', status: 'setup_ready' },
+      wizardUrl: 'http://wizard/fresh',
+    },
+  });
+  process.env.PANCAKE_BROWSY_BASE_URL = fake.baseUrl;
+  try {
+    const result = await ensureMagicReleaseBrowsyRecordAutomation({ campaignId: created.campaign.id, taskKey: SUBMIT_TASK, forceNew: true });
+    assert.equal(result.ok, true);
+    assert.equal(result.reused, false);
+    assert.equal(result.recordAutomationControl.href, 'http://wizard/fresh');
+    assert.equal(fake.state.startBodies.length, 1);
+    assert.equal(fake.state.startBodies[0].releaseId, songId);
+  } finally {
+    delete process.env.PANCAKE_BROWSY_BASE_URL;
+    fake.server.close();
+  }
+});
+
 test('Record Automation reports Browsy unavailable without pretending ready', async () => {
   const songId = seedReleaseSong(uniqueId('RECAUTO_DOWN'));
   const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
@@ -630,8 +666,8 @@ test('start auto-launches the recorder and logs both session creation and launch
     'expected a "Created Browsy recording session" log',
   );
   assert.ok(
-    logs.some(log => log.action === 'browsy_recording' && log.status === 'success' && /recorder browser opened/i.test(log.message)),
-    'expected a "Recorder browser opened" launch log',
+    logs.some(log => log.action === 'browsy_recording' && log.status === 'success' && /browser launched for browsy recording/i.test(log.message)),
+    'expected a "Browser launched for Browsy recording" launch log',
   );
 });
 

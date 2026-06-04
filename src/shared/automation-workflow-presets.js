@@ -8,6 +8,10 @@ export const PANCAKE_SOURCE_APP = 'pancake-robot';
 export const DISTROKID_TARGET_URL = 'https://distrokid.com/new/';
 
 export const DISTROKID_ALBUM_BINDING_HINTS = Object.freeze([
+  'releaseId',
+  'albumId',
+  'album.id',
+  'album.releaseId',
   'album.title',
   'album.artistName',
   'album.releaseDate',
@@ -36,12 +40,16 @@ export function getDistroKidAlbumSubmitPreset({ browsyBaseUrl = '', targetUrl = 
     browsyBaseUrl,
     inputSchema: {
       type: 'object',
-      required: ['album', 'tracks'],
+      required: ['releaseId', 'album', 'tracks'],
       properties: {
+        releaseId: { type: 'string' },
+        albumId: { type: 'string' },
         album: {
           type: 'object',
           required: ['title', 'artistName', 'releaseDate', 'language', 'primaryGenre', 'coverArtPath'],
           properties: {
+            id: { type: 'string' },
+            releaseId: { type: 'string' },
             title: { type: 'string' },
             artistName: { type: 'string' },
             releaseDate: { type: ['string'], format: 'date' },
@@ -92,6 +100,7 @@ export function getDistroKidAlbumSubmitPreset({ browsyBaseUrl = '', targetUrl = 
 export function buildDistroKidAlbumSamplePayload(cockpit = null, options = {}) {
   if (!cockpit) return safeSamplePayload(options);
   const canonical = buildDistroKidPayloadFromCockpit(cockpit, options);
+  const releaseId = clean(options.releaseId || canonical.releaseId || canonical.release_id || cockpit.id);
   const tracks = (canonical.tracks || []).map((track, index) => ({
     index: Number(track.trackNumber || track.track_number || index + 1),
     title: track.title || track.trackTitle || track.track_title || '',
@@ -103,7 +112,11 @@ export function buildDistroKidAlbumSamplePayload(cockpit = null, options = {}) {
     aiDisclosure: track.aiDisclosure || track.ai_disclosure || {},
   }));
   return {
+    releaseId,
+    albumId: releaseId,
     album: {
+      id: releaseId,
+      releaseId,
       title: canonical.releaseTitle || canonical.release_title || '',
       artistName: canonical.artistName || canonical.artist || cockpit.brandProfileName || '',
       releaseDate: canonical.releaseDate || canonical.release_date || '',
@@ -121,10 +134,11 @@ export function buildDistroKidAlbumSamplePayload(cockpit = null, options = {}) {
 
 export function buildDistroKidAlbumWorkflowContext({ cockpit = null, browsyBaseUrl = '', targetUrl = DISTROKID_TARGET_URL, releaseId = '', packageId = '' } = {}) {
   const preset = getDistroKidAlbumSubmitPreset({ browsyBaseUrl, targetUrl });
-  const samplePayload = buildDistroKidAlbumSamplePayload(cockpit);
+  const resolvedReleaseId = releaseId || cockpit?.id || null;
+  const samplePayload = buildDistroKidAlbumSamplePayload(cockpit, { releaseId: resolvedReleaseId });
   return {
     ...preset,
-    releaseId: releaseId || cockpit?.id || null,
+    releaseId: resolvedReleaseId,
     packageId: packageId || cockpit?.packageState?.id || cockpit?.packageState?.manifestPath || null,
     samplePayload,
     validation: validateDistroKidAlbumWorkflowContext({ ...preset, samplePayload }),
@@ -142,6 +156,7 @@ export function validateDistroKidAlbumWorkflowContext(context = {}) {
   if (!targetUrl) errors.push('Target URL is required.');
   if (targetUrl === 'about:blank') errors.push('Target URL cannot be about:blank.');
   if (!context.inputSchema) errors.push('Input schema is required.');
+  if (!payload.releaseId) errors.push('releaseId is required.');
   if (!album.title) errors.push('album.title is required.');
   if (!album.artistName) errors.push('album.artistName is required.');
   if (!album.releaseDate) errors.push('album.releaseDate is required.');
@@ -161,6 +176,7 @@ export function validateDistroKidAlbumWorkflowContext(context = {}) {
     warnings,
     indicators: [
       { key: 'targetUrl', label: 'Target URL', ok: Boolean(targetUrl && targetUrl !== 'about:blank') },
+      { key: 'releaseId', label: 'Release ID', ok: Boolean(payload.releaseId) },
       { key: 'album.title', label: 'Album title', ok: Boolean(album.title) },
       { key: 'album.artistName', label: 'Artist name', ok: Boolean(album.artistName) },
       { key: 'album.releaseDate', label: 'Release date', ok: Boolean(album.releaseDate) },
@@ -173,8 +189,13 @@ export function validateDistroKidAlbumWorkflowContext(context = {}) {
 }
 
 function safeSamplePayload() {
+  const releaseId = 'ALBUM_SAMPLE';
   return {
+    releaseId,
+    albumId: releaseId,
     album: {
+      id: releaseId,
+      releaseId,
       title: 'Sample Album',
       artistName: 'Sample Artist',
       releaseDate: '2026-09-01',
@@ -203,4 +224,8 @@ function fileExistsIfLocal(value) {
   const raw = String(value || '').trim();
   if (!raw || /^https?:\/\//i.test(raw)) return true;
   return fs.existsSync(raw);
+}
+
+function clean(value) {
+  return String(value || '').trim();
 }

@@ -186,6 +186,26 @@ test('album release detail blocks Record Automation when later tracks lack audio
   assert.match(html, /<button[^>]*disabled[^>]*>Record Automation<\/button>/);
 });
 
+test('album release detail ignores stale source-payload errors after audio paths validate', async () => {
+  const albumId = seedAlbum({ trackCount: 3 });
+  seedRecording('album', albumId, {
+    contract: completeContract('distrokid-album-submit'),
+    recording_status: 'setup_incomplete',
+    last_error: 'tracks[1].audioPath is required.; tracks[2].audioPath is required.',
+  });
+
+  const wf = buildReleaseCockpitViewModel('album', albumId).distrokidBrowsyWorkflow;
+  assert.equal(wf.sourcePayloadValidation.ok, true);
+  assert.equal(wf.lastError, null);
+  assert.notEqual(wf.readinessLabel, 'failed');
+
+  const html = await fetchDetailHtml('album', albumId);
+  assert.doesNotMatch(html, /tracks\[1\]\.audioPath is required/);
+  assert.doesNotMatch(html, /tracks\[2\]\.audioPath is required/);
+  assert.doesNotMatch(html, /Source payload blocked/);
+  assert.doesNotMatch(html, /<button[^>]*disabled[^>]*>Record Automation<\/button>/);
+});
+
 // 2. Legacy local preview card has been removed from the DistroKid section.
 test('legacy local preview card is no longer rendered', async () => {
   const albumId = seedAlbum();

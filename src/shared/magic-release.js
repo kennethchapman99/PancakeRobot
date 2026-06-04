@@ -773,9 +773,21 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   const entityType = packagePayload.entity_type;
   const entityId = packagePayload.entity_id;
   const captureOutputs = packagePayload.capture_outputs || [];
+  // One correlation id ties a Pancake release run to its Browsy run across both
+  // systems' logs. It rides the HTTP body to Browsy and is echoed in cockpit
+  // logs and result.json so a failed live run is traceable end-to-end.
+  const correlationId = makeBrowsyCorrelationId(entityType, entityId);
 
   if (dryRun) {
-    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    addReleaseCockpitLog({
+      releaseType: entityType,
+      releaseId: entityId,
+      action: 'browsy_run',
+      status: 'info',
+      message: 'Browsy preview started.',
+      payload: { workflowId, correlationId, dryRun: true, mode: 'preview' },
+    });
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId });
     result.status = 'dry_run_passed';
     result.dry_run = true;
     result.mode = 'preview';
@@ -799,7 +811,7 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   // incomplete contract is reported as a blocking result, never a fake run.
   const contractGate = await getBrowsyWorkflowContract({ workflowId, version: config.workflowVersion || '', config });
   if (contractGate.reachable === false) {
-    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId });
     result.status = 'not_configured';
     result.mode = 'live';
     result.errors = [contractGate.error || 'Browsy service was unreachable while fetching the workflow contract.'];
@@ -818,7 +830,7 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
 
   const completeness = evaluateBrowsyContractCompleteness(contractGate.contract, workflowId);
   if (!completeness.ready) {
-    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId });
     result.status = 'contract_not_ready';
     result.mode = 'live';
     result.errors = [completeness.summary];
@@ -837,17 +849,32 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   }
 
   const variables = buildBrowsyRunVariables(packagePayload);
+  addReleaseCockpitLog({
+    releaseType: entityType,
+    releaseId: entityId,
+    action: 'browsy_run',
+    status: 'info',
+    message: 'Browsy live run started.',
+    payload: {
+      workflowId,
+      correlationId,
+      releaseId: variables.releaseId,
+      variablesResolved: ['releaseId', 'album.coverArtPath', 'tracks[].audioPath', 'tracks.length'],
+      authProfileRef: contractGate.contract?.authProfileRef || contractGate.contract?.auth?.[0]?.authProfileId || contractGate.contract?.auth?.[0]?.siteId || null,
+    },
+  });
   const execution = await executeBrowsyWorkflowRun({
     workflowId,
     payload: variables,
     mode: 'live',
     callerId: 'pancake-robot',
+    correlationId,
     config,
   });
 
   // Browsy unreachable / not configured: surface a clear blocked status.
   if (execution.reachable === false) {
-    const result = baseResult({ workflowId, entityType, entityId, captureOutputs });
+    const result = baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId });
     result.status = 'not_configured';
     result.mode = 'live';
     result.errors = [execution.error || 'Browsy service was unreachable.'];
@@ -865,7 +892,7 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   }
 
   if (execution.timedOut) {
-    const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution });
+    const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution, correlationId });
     result.status = 'timeout';
     result.errors = [`Browsy run ${execution.runId} did not reach a terminal state within the timeout.`];
     writeJson(resultPath, result);
@@ -884,7 +911,7 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
     };
   }
 
-  const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution });
+  const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution, correlationId });
   result.status = mapCategoryToResultStatus(execution.category);
   writeJson(resultPath, result);
   return {
@@ -901,11 +928,22 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   };
 }
 
-function baseResult({ workflowId, entityType, entityId, captureOutputs }) {
+// Derives a stable, greppable correlation id for a Browsy run. The id is shared
+// across Pancake cockpit logs, the Browsy HTTP body, and Browsy's own run logs.
+function makeBrowsyCorrelationId(entityType, entityId) {
+  const slug = String(`${entityType || 'release'}-${entityId || 'unknown'}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `pr-${slug}-${Date.now().toString(36)}`;
+}
+
+function baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId = null }) {
   return {
     ok: true,
     workflow_id: workflowId,
     run_id: null,
+    correlation_id: correlationId,
     source_system: 'pancake_robot',
     entity_type: entityType,
     entity_id: entityId,
@@ -925,7 +963,7 @@ function baseResult({ workflowId, entityType, entityId, captureOutputs }) {
 
 // Translates a live Browsy run (buildRunResult shape) into the pancake-contract
 // result.json shape consumed by ingestBrowsyResult.
-function resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution }) {
+function resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution, correlationId }) {
   const runResult = execution.result || {};
   const artifactGroups = runResult.artifacts || {};
   const screenshots = (artifactGroups.screenshots || []).map(a => a.path || a.name).filter(Boolean);
@@ -962,6 +1000,7 @@ function resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs,
     ok: category === 'success',
     workflow_id: workflowId,
     run_id: execution.runId || null,
+    correlation_id: correlationId || null,
     browsy_run_id: execution.runId || null,
     browsy_status: execution.status || null,
     source_system: 'pancake_robot',
@@ -995,13 +1034,42 @@ function mapCategoryToResultStatus(category) {
 // consumes these and the recorded steps; it does not resolve DistroKid fields.
 function buildBrowsyRunVariables(packagePayload) {
   const canonical = packagePayload.canonical_payload || {};
+  const releaseId = canonical.releaseId || canonical.release_id || packagePayload.entity_id;
   const idKey = packagePayload.entity_type === 'album' ? 'albumId' : 'songId';
+  const tracks = Array.isArray(canonical.tracks)
+    ? canonical.tracks.map(track => pruneEmptyValues({
+        songId: track.songId || track.song_id,
+        title: track.title || track.trackTitle || track.track_title,
+        trackNumber: track.trackNumber || track.track_number,
+        audioPath: track.audioPath || track.audio_path,
+        lyrics: track.lyrics,
+        explicit: track.explicit,
+        instrumental: track.instrumental,
+        isAiGenerated: track.isAiGenerated || track.is_ai_generated,
+        isrc: track.isrc,
+        songwriterCredits: track.songwriterCredits || track.songwriter_credits,
+        aiDisclosure: track.aiDisclosure || track.ai_disclosure,
+      }))
+    : [];
   return pruneEmptyValues({
     appId: getBrowsyConfig().appId,
-    releaseId: canonical.release_id || packagePayload.entity_id,
-    [idKey]: canonical.release_id || packagePayload.entity_id,
+    releaseId,
+    albumId: packagePayload.entity_type === 'album' ? releaseId : undefined,
+    [idKey]: releaseId,
     mode: packagePayload.mode,
     distrokid_payload: canonical,
+    album: pruneEmptyValues({
+      id: releaseId,
+      releaseId,
+      title: canonical.releaseTitle || canonical.release_title,
+      artistName: canonical.artistName || canonical.artist,
+      releaseDate: canonical.releaseDate || canonical.release_date,
+      language: canonical.language || 'English',
+      labelName: canonical.label,
+      primaryGenre: canonical.primaryGenre || canonical.primary_genre || canonical.genre,
+      secondaryGenre: canonical.secondaryGenre || canonical.secondary_genre,
+      coverArtPath: canonical.artworkPath || canonical.artwork_path,
+    }),
     release: pruneEmptyValues({
       title: canonical.release_title,
       artist: canonical.artist,
@@ -1011,18 +1079,8 @@ function buildBrowsyRunVariables(packagePayload) {
       subgenre: canonical.secondary_genre,
     }),
     artworkPath: canonical.artworkPath || null,
-    tracks: Array.isArray(canonical.tracks)
-      ? canonical.tracks.map(track => pruneEmptyValues({
-          songId: track.song_id,
-          title: track.title,
-          trackNumber: track.track_number,
-          audioPath: track.audioPath,
-          lyrics: track.lyrics,
-          explicit: track.explicit,
-          instrumental: track.instrumental,
-          isAiGenerated: track.is_ai_generated,
-        }))
-      : [],
+    tracks,
+    derived: { numberOfSongs: tracks.length },
     expected_human_gates: packagePayload.human_gate ? ['final_submit_approval'] : [],
     expected_outputs: packagePayload.capture_outputs || [],
   });

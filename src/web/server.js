@@ -895,6 +895,7 @@ app.post('/releases/:type/:id/magic-release/record-automation', async (req, res)
       campaignId: state.campaign.id,
       taskKey,
       workflowContext,
+      forceNew: true,
     });
     if (!result.ok) throw new Error(result.error || 'Browsy could not start a recording session.');
     const href = result.recordAutomationControl?.href || result.wizardUrl;

@@ -1152,6 +1152,11 @@ function distrokidAuthState(recordingPhase) {
   }
 }
 
+function isSourcePayloadRequiredFieldError(message) {
+  const text = String(message || '');
+  return /\b(?:album|tracks(?:\[\d+\])?)\.[A-Za-z0-9_]+ is required\b/.test(text);
+}
+
 function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordings, packageState, distrokidArtwork, magicRelease = null, sourceWorkflowContext = null }) {
   const config = getBrowsyConfig();
   const workflowId = type === 'album'
@@ -1243,8 +1248,11 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
     };
   }
 
-  const unreachable = /unreachable|cannot be reached|not configured|ECONNREFUSED|ENOTFOUND/i.test(String(item.lastError || ''));
-  const failed = !unreachable && (DISTROKID_RECORDING_FAILED_STATUSES.has(String(item.recordingStatus || '')) || Boolean(item.lastError));
+  const sourcePayloadOk = sourceWorkflowContext?.validation?.ok !== false;
+  const staleSourcePayloadError = sourcePayloadOk && isSourcePayloadRequiredFieldError(item.lastError);
+  const effectiveLastError = staleSourcePayloadError ? null : item.lastError;
+  const unreachable = /unreachable|cannot be reached|not configured|ECONNREFUSED|ENOTFOUND/i.test(String(effectiveLastError || ''));
+  const failed = !unreachable && (DISTROKID_RECORDING_FAILED_STATUSES.has(String(item.recordingStatus || '')) || Boolean(effectiveLastError));
   const recordingPhase = distrokidRecordingPhase(item.recordingStatus);
   const readinessLabel = item.ready
     ? 'ready'
@@ -1291,7 +1299,7 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
     authState: authState.state,
     authStateLabel: authState.label,
     relaunchNeeded,
-    nextStep: distrokidBrowsyNextStep(nextStepLabel, missingAreas, item.lastError),
+    nextStep: distrokidBrowsyNextStep(nextStepLabel, missingAreas, effectiveLastError),
     recordingId: item.recordingId,
     recordingSessionId: item.recordingSessionId,
     recordingStatus: item.recordingStatus,
@@ -1299,7 +1307,7 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
     setupWizardUrl: base.setupWizardUrl,
     recorderUrl: item.recorderUrl,
     importedWorkflowRef: item.importedWorkflowRef,
-    lastError: item.lastError,
+    lastError: effectiveLastError,
     counts: item.counts,
     readinessChecks: item.readinessChecks || [],
     missingAreas,

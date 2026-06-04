@@ -167,7 +167,7 @@ test('Browsy client posts to documented workflowRef run endpoint and normalizes 
 
     const result = await startBrowsyWorkflowRun({
       workflowId: 'distrokid-album-submit',
-      payload: { releaseTitle: 'Two-Headed Wiener Dog' },
+      payload: { album: { id: 'ALBUM_HTTP_1', title: 'Two-Headed Wiener Dog' } },
       mode: 'dry_run',
       config: {
         baseUrl: 'http://browsy.local',
@@ -183,7 +183,11 @@ test('Browsy client posts to documented workflowRef run endpoint and normalizes 
     assert.equal(calls[0].url, 'http://browsy.local/api/workflows/pancake-robot.distrokid-album-submit%401.0.0/runs');
     assert.equal(calls[0].body.mode, 'preview');
     assert.equal(calls[0].body.callerId, 'pancake-robot');
-    assert.deepEqual(calls[0].body.payload, { releaseTitle: 'Two-Headed Wiener Dog' });
+    assert.deepEqual(calls[0].body.payload, {
+      releaseId: 'ALBUM_HTTP_1',
+      albumId: 'ALBUM_HTTP_1',
+      album: { id: 'ALBUM_HTTP_1', releaseId: 'ALBUM_HTTP_1', title: 'Two-Headed Wiener Dog' },
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }

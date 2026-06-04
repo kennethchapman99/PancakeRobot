@@ -630,6 +630,38 @@ test('album resume treats generated track rows without audio as incomplete', asy
   assert.equal(result.nextTrack.track_number, 2);
 });
 
+test('album resume treats selected or imported tracks with audio as complete', async () => {
+  const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 3, albumTheme: 'Selected Audio' })).plan;
+  const albumId = createAlbum({
+    id: 'ALBUM_RESUME_SELECTED_AUDIO',
+    brand_profile_id: 'repair-brand',
+    album_title: plan.album_title,
+    album_theme: plan.album_theme,
+    number_of_songs: 3,
+    cost_mode: 'standard',
+    status: 'generating_tracks',
+    shared_orchestration: { plan_version: plan.plan_version, plan },
+    is_test: true,
+  });
+  albumOutputIds.add(albumId);
+  const songs = ensureAlbumTrackJobs({ albumId, plan, brandProfileId: 'repair-brand', isTest: true });
+  writeGeneratedAudio(songs[0].id);
+  writeGeneratedAudio(songs[1].id);
+  upsertSong({ id: songs[0].id, pipeline_stage: 'release_selection_complete', total_cost_usd: 0.12 });
+  upsertSong({ id: songs[1].id, pipeline_stage: 'imported', total_cost_usd: 0 });
+  const recordedTracks = [];
+
+  const result = await resumeAlbumBatch({
+    albumId,
+    brandLoader: fakeBrandLoader,
+    trackPipeline: makeTrackPipeline({ recordedTracks, costPerTrack: 0.03 }),
+  });
+
+  assert.equal(result.generationStarted, true);
+  assert.deepEqual(recordedTracks.map(track => track.track_number), [3]);
+  assert.equal(result.nextTrack, null);
+});
+
 test('album resume persists provider auth/config errors in album latest event', async () => {
   const plan = (await buildPlanGenerator()({ brandProfile: FAKE_BRAND, numberOfSongs: 2, albumTheme: 'Auth Error' })).plan;
   const albumId = createAlbum({

@@ -99,7 +99,7 @@ export function buildBrowsyRecordingSpecForTask({ campaign, task, release = null
   // Recording is a local-only bridge: the recorder browser and Browsy both reach
   // Pancake on this machine, so this tab always uses localhost (never ngrok),
   // independent of PANCAKE_DISABLE_NGROK.
-  const releaseTabUrl = `${getLocalAppBaseUrl()}/releases/${encodeURIComponent(releaseType)}/${encodeURIComponent(releaseId)}`;
+  const releaseTabUrl = `${getLocalAppBaseUrl()}/releases/${encodeURIComponent(releaseType)}/{releaseId}`;
   const appId = config.appId;
   const appName = 'Pancake Robot';
   const base = { appId, appName, workflowId, workflowName: WORKFLOW_NAMES[workflowId] || workflowId, releaseType, releaseId };
@@ -177,7 +177,7 @@ function distrokidSubmitSpec({ base, releaseTabUrl, single, workflowContext = nu
       authProfileId: DISTROKID_AUTH_PROFILE_ID,
       authPreflight: { targetUrl, rules: DISTROKID_AUTH_PREFLIGHT_RULES },
       tabs: [
-        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
+        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, urlTemplate: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
         { id: 'distrokidUpload', title: 'DistroKid Upload', url: targetUrl, siteId: 'distrokid', requiresAuth: true, authProfileId: DISTROKID_AUTH_PROFILE_ID, role: 'target' },
       ],
     },
@@ -214,7 +214,7 @@ function hyperfollowCaptureSpec({ base, releaseTabUrl }) {
       authProfileId: DISTROKID_AUTH_PROFILE_ID,
       authPreflight: { targetUrl: 'https://distrokid.com/hyperfollow/', rules: DISTROKID_AUTH_PREFLIGHT_RULES },
       tabs: [
-        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
+        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, urlTemplate: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
         { id: 'distrokidHyperfollow', title: 'DistroKid HyperFollow', url: 'https://distrokid.com/hyperfollow/', siteId: 'distrokid', requiresAuth: true, authProfileId: DISTROKID_AUTH_PROFILE_ID, role: 'target' },
       ],
     },
@@ -239,7 +239,7 @@ function hyperfollowEnrichSpec({ base, releaseTabUrl }) {
       authProfileId: DISTROKID_AUTH_PROFILE_ID,
       authPreflight: { targetUrl: 'https://distrokid.com/hyperfollow/', rules: DISTROKID_AUTH_PREFLIGHT_RULES },
       tabs: [
-        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
+        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, urlTemplate: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
         { id: 'distrokidHyperfollow', title: 'DistroKid HyperFollow', url: 'https://distrokid.com/hyperfollow/', siteId: 'distrokid', requiresAuth: true, authProfileId: DISTROKID_AUTH_PROFILE_ID, role: 'target' },
       ],
     },
@@ -257,7 +257,7 @@ function linkHarvestSpec({ base, releaseTabUrl }) {
       authProfileId: DISTROKID_AUTH_PROFILE_ID,
       authPreflight: { targetUrl: 'https://distrokid.com/mymusic', rules: DISTROKID_AUTH_PREFLIGHT_RULES },
       tabs: [
-        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
+        { id: 'pancakeRelease', title: 'Pancake Robot Release', url: releaseTabUrl, urlTemplate: releaseTabUrl, siteId: 'pancake-robot', requiresAuth: false, role: 'source' },
         { id: 'distrokidBank', title: 'DistroKid Links', url: 'https://distrokid.com/mymusic', siteId: 'distrokid', requiresAuth: true, authProfileId: DISTROKID_AUTH_PROFILE_ID, role: 'target' },
       ],
     },
@@ -289,6 +289,11 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
   const tabs = built.spec?.recordingSetup?.tabs || [];
   const targetTab = tabs.find(tab => tab.role === 'target') || tabs[tabs.length - 1];
   const targetUrl = built.spec?.targetUrl || targetTab?.url || '';
+  logRecording(campaign, taskKey, 'info', 'Browsy workflow selected.', {
+    workflowId: built.workflowId,
+    workflowRef: built.spec?.workflowRef,
+    releaseId: built.spec?.releaseId,
+  });
 
   if (/distrokid-album-submit/.test(built.workflowId)) {
     const validation = validateDistroKidAlbumWorkflowContext({
@@ -337,9 +342,21 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     return { ok: false, error: errMsg, recording };
   }
 
+  const resolvedTabs = tabs.map(tab => ({
+    id: tab.id,
+    urlTemplate: tab.urlTemplate || tab.url,
+    url: resolveReleaseTemplate(tab.urlTemplate || tab.url, built.spec?.releaseId),
+  }));
+
+  logRecording(campaign, taskKey, 'info', 'Browsy variables resolved.', {
+    releaseId: built.spec?.releaseId,
+    availableVariables: Object.keys(flattenObject(built.spec?.samplePayload || {})).sort(),
+    resolvedTabs,
+  });
+
   // Log the full sanitized launch payload so the cockpit and logs confirm the tabs
   // are correct before Browsy is called.
-  logRecording(campaign, taskKey, 'info', 'Building Browsy recording launch payload.', {
+  logRecording(campaign, taskKey, 'info', 'Browsy payload prepared.', {
     workflowId: built.workflowId,
     appId: config.appId,
     callbackUrl,
@@ -370,7 +387,7 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
     return { ok: false, error: guardError.message, localOnlyBlocked: true, recording };
   }
 
-  logRecording(campaign, taskKey, 'info', 'Recording context sent to Browsy.', {
+  logRecording(campaign, taskKey, 'info', 'Browsy payload sent.', {
     workflowId: built.workflowId,
     workflowRef: built.spec?.workflowRef,
     targetUrl,
@@ -476,9 +493,9 @@ export async function startMagicReleaseBrowsyRecording({ campaignId, taskKey, au
   };
 }
 
-export async function ensureMagicReleaseBrowsyRecordAutomation({ campaignId, taskKey, config = getBrowsyConfig(), workflowContext = null } = {}) {
+export async function ensureMagicReleaseBrowsyRecordAutomation({ campaignId, taskKey, config = getBrowsyConfig(), workflowContext = null, forceNew = false } = {}) {
   const existing = getLatestReleaseBrowsyRecordingForTask(campaignId, taskKey);
-  if (existing?.wizard_url) {
+  if (existing?.wizard_url && !forceNew) {
     return {
       ok: true,
       reused: true,
@@ -490,6 +507,16 @@ export async function ensureMagicReleaseBrowsyRecordAutomation({ campaignId, tas
       },
       wizardUrl: existing.wizard_url,
     };
+  }
+  if (existing?.wizard_url && forceNew) {
+    const campaign = getReleaseCampaignById(campaignId);
+    if (campaign) {
+      logRecording(campaign, taskKey, 'info', 'Creating fresh Browsy recording session for current release payload.', {
+        previousRecordingId: existing.id,
+        previousRecordingSessionId: existing.recording_session_id,
+        previousWizardUrl: existing.wizard_url,
+      });
+    }
   }
 
   const started = await startMagicReleaseBrowsyRecording({
@@ -658,7 +685,7 @@ async function performRecorderLaunch({ recording, config = getBrowsyConfig() } =
     launched_at: new Date().toISOString(),
     last_error: null,
   });
-  logRecordingById(recording, 'success', 'Recorder browser opened.', {
+  logRecordingById(recording, 'success', 'Browser launched for Browsy recording.', {
     recordingId: recording.id,
     authProfileId,
     persistentProfile: true,
@@ -770,7 +797,7 @@ export async function stopMagicReleaseBrowsyRecording({ recordingId, config = ge
     stopped_at: new Date().toISOString(),
     last_error: null,
   });
-  logRecordingById(recording, 'success', 'Stopped Browsy recording.', { recordingId: recording.id, runtime: stopped.runtime });
+  logRecordingById(recording, 'success', 'Recording saved in Browsy.', { recordingId: recording.id, runtime: stopped.runtime });
   return { ok: true, recording: updated, runtime: stopped.runtime };
 }
 
@@ -810,7 +837,7 @@ export async function importMagicReleaseBrowsyRecording({ recordingId, overwrite
 
   applyContractReadinessToTask({ campaign, task, completeness });
   logRecording(campaign, recording.task_key, completeness.ready ? 'success' : 'warning',
-    completeness.ready ? 'Imported Browsy workflow — contract ready.' : `Imported Browsy workflow — contract incomplete: ${completeness.summary}`,
+    completeness.ready ? 'Recording saved/imported — Browsy workflow contract ready.' : `Recording saved/imported — contract incomplete: ${completeness.summary}`,
     { recordingId: recording.id, workflowRef: updated.imported_workflow_ref, severity: completeness.severity });
   return { ok: true, recording: updated, contract, completeness };
 }
@@ -980,6 +1007,26 @@ function annotateTask(task, campaign, { reason, suggested_action, action_url }) 
 function isBlankOrMissing(url) {
   const u = String(url || '').trim();
   return !u || u === 'about:blank' || u.startsWith('chrome://newtab');
+}
+
+function resolveReleaseTemplate(url, releaseId) {
+  return String(url || '')
+    .replaceAll('{releaseId}', encodeURIComponent(String(releaseId || '')))
+    .replaceAll('{{releaseId}}', encodeURIComponent(String(releaseId || '')));
+}
+
+function flattenObject(value, prefix = '', out = {}) {
+  if (prefix) out[prefix] = value;
+  if (!value || typeof value !== 'object') return out;
+  if (Array.isArray(value)) {
+    if (prefix) out[`${prefix}.length`] = value.length;
+    if (value[0] && typeof value[0] === 'object') flattenObject(value[0], `${prefix}[]`, out);
+    return out;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    flattenObject(child, prefix ? `${prefix}.${key}` : key, out);
+  }
+  return out;
 }
 
 function buildLaunchFailedMessage(spec, openedTabs, verification) {
