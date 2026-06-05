@@ -25,6 +25,7 @@ import { getSongFinanceSummary } from './finance-manager.js';
 import { getSelectedReleaseAudio } from './song-audio-selection.js';
 import { isRealSongCatalogRow } from './song-catalog-cleanup.js';
 import { buildDistroKidAlbumWorkflowContext } from './automation-workflow-presets.js';
+import { buildUploadManifest } from './distrokid-upload-bundle.js';
 import { summarizeBrowsyIntegration, summarizeMagicReleaseForCockpit } from './magic-release.js';
 import { summarizeMagicReleaseBrowsyRecordings } from './magic-release-browsy-recordings.js';
 import { BROWSY_WORKFLOW_IDS, buildBrowsyWorkflowRef, getBrowsyConfig } from './browsy-client.js';
@@ -255,6 +256,7 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     nextActions,
     commandCenter,
     trackTable,
+    uploadManifest: sourceWorkflowContext ? buildUploadManifest(sourceWorkflowContext.samplePayload) : null,
     updatedAt: release.updatedAt,
   };
 }

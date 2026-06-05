@@ -134,6 +134,7 @@ import {
   updateCanonicalReleaseDate,
   validateReleaseAction,
 } from '../shared/release-cockpit.js';
+import { materializeUploadBundle, openInFinder } from '../shared/distrokid-upload-bundle.js';
 import {
   createMagicReleaseCampaign,
   getMagicReleaseState,
@@ -387,6 +388,24 @@ app.get('/releases/:type/:id', (req, res) => {
     showBrowsyDebug: req.query.debug_browsy === '1',
     actionFeedback: feedbackMessage ? { level: feedbackLevel, message: feedbackMessage } : null,
   });
+});
+
+app.post('/releases/:type/:id/upload-bundle/open', async (req, res) => {
+  const backUrl = `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`;
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit || !cockpit.uploadManifest) {
+    return res.redirect(303, `${backUrl}?error=${encodeURIComponent('No upload files resolved for this release yet.')}`);
+  }
+  try {
+    const { bundleDir, linked, missing } = materializeUploadBundle({ releaseId: cockpit.id, manifest: cockpit.uploadManifest });
+    await openInFinder(bundleDir);
+    const notice = `Prepared ${linked.length} upload file${linked.length === 1 ? '' : 's'} in ${bundleDir}${missing.length ? ` — ${missing.length} source file(s) missing` : ''}.`;
+    const level = missing.length ? 'warning' : 'info';
+    logReleaseCockpitEvent(req.params.type, req.params.id, 'upload_bundle', missing.length ? 'warning' : 'success', notice, { bundleDir, linked, missing });
+    res.redirect(303, `${backUrl}?notice=${encodeURIComponent(notice)}&level=${level}#upload-files`);
+  } catch (err) {
+    res.redirect(303, `${backUrl}?error=${encodeURIComponent(`Could not prepare upload folder: ${err.message}`)}`);
+  }
 });
 
 app.get('/releases/:type/:id/automation-setup', (req, res) => {
