@@ -157,6 +157,52 @@ test('single DistroKid title remains the release title', () => {
   assert.equal(payload.releaseTitle, 'Song Manifest Title');
 });
 
+test('album spanning multiple brand profiles releases under "Figment Factory"', () => {
+  const cockpit = {
+    type: 'album',
+    id: 'ALBUM_MULTI_BRAND',
+    title: 'Mixed Brands',
+    brandProfileId: 'tribe',
+    packageState: { manifest: { release_type: 'album', release_id: 'ALBUM_MULTI_BRAND' } },
+    tracks: [
+      { id: 'SONG_MB_A', title: 'A', track_number: 1, brand_profile_id: 'tribe', releaseAudio: { selected: { path: '/tmp/a.mp3' } } },
+      { id: 'SONG_MB_B', title: 'B', track_number: 2, brand_profile_id: 'basement-cypher', releaseAudio: { selected: { path: '/tmp/b.mp3' } } },
+    ],
+  };
+  const payload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot: os.tmpdir() });
+  assert.equal(payload.releaseTitle, 'Figment Factory');
+  assert.equal(payload.release_title, 'Figment Factory');
+});
+
+test('track audio resolves from output/songs/{id}/audio/ subdir and cover art from release-packages', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-distrokid-subdir-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const songId = 'SONG_SUBDIR_T01';
+  const audioDir = path.join(root, 'output', 'songs', songId, 'audio');
+  fs.mkdirSync(audioDir, { recursive: true });
+  const audioPath = path.join(audioDir, '01 - Subdir Song.mp3');
+  fs.writeFileSync(audioPath, 'fake-audio');
+
+  const pkgDir = path.join(root, 'output', 'release-packages', 'ALBUM_SUBDIR');
+  fs.mkdirSync(pkgDir, { recursive: true });
+  const artworkPath = path.join(pkgDir, 'cover-art.png');
+  fs.writeFileSync(artworkPath, 'fake-art');
+
+  const cockpit = {
+    type: 'album',
+    id: 'ALBUM_SUBDIR',
+    title: 'Subdir Album',
+    brandProfileId: 'default',
+    packageState: { manifest: { release_type: 'album', release_id: 'ALBUM_SUBDIR' } },
+    tracks: [{ id: songId, title: 'Subdir Song', track_number: 1 }],
+  };
+
+  const payload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot: root });
+  assert.equal(payload.tracks[0].audioPath, audioPath);
+  assert.equal(payload.artworkPath, artworkPath);
+});
+
 test('DistroKid release date uses automation run date when source release date is in the past', () => {
   assert.equal(
     effectiveDistroKidReleaseDate('2026-06-04', { generatedAt: '2026-06-05T14:30:00.000Z' }),

@@ -190,6 +190,21 @@ test('replay run against Browsy completion marks the task complete and harvests 
   assert.equal(fake.captured.runStartBody?.options?.authProfileId, 'distrokid');
   assert.match(fake.captured.runStartBody?.payload?.files?.artwork || '', /base-image\.png$/);
   assert.match(fake.captured.runStartBody?.payload?.files?.file || '', /audio\.mp3$/);
+  // Figment Factory fixed-field policy ("Distrokid fields" spec): genre is always
+  // "Alternative", label always "Figment Factory", the AI gate is forced to "all
+  // audio" ("1") for every track, and all five agreement checkboxes are asserted.
+  const sentPayload = fake.captured.runStartBody?.payload;
+  assert.equal(sentPayload?.album?.primaryGenre, 'Alternative');
+  assert.equal(sentPayload?.inputs?.genre1, 'Alternative');
+  assert.equal(sentPayload?.album?.labelName, 'Figment Factory');
+  assert.equal(sentPayload?.inputs?.label, 'Figment Factory');
+  assert.equal(sentPayload?.release?.label, 'Figment Factory');
+  assert.ok(Array.isArray(sentPayload?.tracks) && sentPayload.tracks.length > 0);
+  assert.ok(sentPayload.tracks.every(t => t.aiGate === '1'), 'every track AI gate forced to all-audio');
+  assert.ok(sentPayload.tracks.every(t => t.aiRecordingScope === 'full'));
+  assert.deepEqual(sentPayload?.agreements, {
+    tandc: true, otherArtist: true, promoServices: true, recorded: true, youtube: true,
+  });
   assert.equal(resultJson.status, 'replay_run_completed');
   assert.equal(resultJson.browsy_run_id, 'run_fake_1');
   const state = getMagicReleaseState('single', songId);

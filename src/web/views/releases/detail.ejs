@@ -221,6 +221,15 @@
                 <% const wfNote = wf.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : ((wf.readinessLabel === 'failed' || wf.readinessLabel === 'unavailable') ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-900'); %>
 
                 <div data-distrokid-browsy-panel class="mt-3 rounded-2xl border-2 border-sky-300 bg-sky-50/40 p-4">
+                  <% if (wf.awaitingHumanSubmit) { %>
+                  <div data-distrokid-awaiting-human-submit class="mb-3 flex items-start gap-2 rounded-xl border-2 border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                    <span class="text-lg leading-none">✅</span>
+                    <div>
+                      <div class="font-bold">Ready for your review and final submit</div>
+                      <div class="mt-0.5 text-xs"><%= wf.awaitingHumanSubmitMessage %></div>
+                    </div>
+                  </div>
+                  <% } %>
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">Primary</span>
                     <h3 class="text-base font-bold text-zinc-900">Browsy automation</h3>

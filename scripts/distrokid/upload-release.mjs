@@ -1785,8 +1785,30 @@ function normalizeDistroKidManifest(manifest) {
   normalized.ai_disclosure = aiResult.value;
   normalized.field_sources.ai_disclosure = aiResult.sources;
   changed = changed || aiResult.changed;
+  const songwriterResult = normalizePancakeRobotSongwriterName(normalized.songwriter_real_name, normalized.field_sources.songwriter_real_name);
+  normalized.songwriter_real_name = songwriterResult.value;
+  normalized.field_sources.songwriter_real_name = songwriterResult.sources;
+  changed = changed || songwriterResult.changed;
   if (changed) console.log('Manifest normalized with Pancake Robot DistroKid defaults');
   return normalized;
+}
+
+// The songwriter is always the human owner — never a brand profile name. Force
+// first/middle/last to the legal name regardless of any upstream value, the
+// same way the AI disclosure is force-set. Role is left to merge-missing.
+function normalizePancakeRobotSongwriterName(current, currentSources) {
+  const value = current && typeof current === 'object' && !Array.isArray(current) ? { ...current } : {};
+  const sources = currentSources && typeof currentSources === 'object' && !Array.isArray(currentSources) ? { ...currentSources } : {};
+  let changed = false;
+  for (const key of ['first', 'middle', 'last']) {
+    const defaultValue = PANCAKE_ROBOT_DISTROKID_DEFAULTS.songwriter_real_name[key];
+    if (value[key] !== defaultValue) {
+      value[key] = defaultValue;
+      sources[key] = 'pancake_robot_default';
+      changed = true;
+    }
+  }
+  return { value, sources, changed };
 }
 
 function normalizePancakeRobotAiDisclosure(current, currentSources) {

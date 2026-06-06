@@ -129,7 +129,7 @@ assert(uploadSrc.includes('getOrderedFields') && uploadSrc.includes("fieldDef.st
 assert(uploadSrc.includes('page.isClosed()') && uploadSrc.includes('DistroKid page closed before field loop completed'), 'upload detects page close before field loop completes');
 
 const packageBuilderSrc = readText('scripts/distrokid/build-release-package.mjs');
-assert(packageBuilderSrc.includes("\"Children's Music\"") && packageBuilderSrc.includes('ai_disclosure'), 'package builder has genre and AI defaults');
+assert(packageBuilderSrc.includes('"Alternative"') && packageBuilderSrc.includes('ai_disclosure'), 'package builder has genre and AI defaults');
 assert(packageBuilderSrc.includes('lyrics_written_by_ai: false'), 'package builder defaults AI lyrics to false');
 assert(packageBuilderSrc.includes('music_composed_by_ai: false'), 'package builder defaults AI music to false');
 assert(packageBuilderSrc.includes('all_audio_performed_by_ai: true'), 'package builder defaults AI all-audio to true');

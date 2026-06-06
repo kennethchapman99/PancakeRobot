@@ -182,7 +182,14 @@ export async function executeBrowsyWorkflowRun({
     await sleep(config.pollIntervalMs || DEFAULT_POLL_INTERVAL_MS);
   }
 
-  const category = categorizeBrowsyStatus(publicStatus);
+  let category = categorizeBrowsyStatus(publicStatus);
+  // Defensive: a run that stops at a human checkpoint (e.g. "review & click
+  // final submit") is gated, not done — even if Browsy reports its public
+  // status as `completed`. Treat a reached human checkpoint as human-approval
+  // gated so the cockpit shows "paused for your approval" instead of "complete".
+  if (category === 'success' && reachedHumanCheckpoint(runResult)) {
+    category = 'blocked_human_approval';
+  }
   return {
     ok: category === 'success',
     reachable: true,
@@ -194,6 +201,18 @@ export async function executeBrowsyWorkflowRun({
     run: last,
     result: runResult,
   };
+}
+
+// True when a Browsy run halted at a human checkpoint before a gated action
+// (final submit / release). Tolerant of the field shapes Browsy may report:
+// a `checkpoint_reached` flag, a `human_checkpoint` object, or a non-empty
+// `human_checkpoints` / `manual_checkpoints` list.
+function reachedHumanCheckpoint(runResult) {
+  if (!runResult || typeof runResult !== 'object') return false;
+  if (runResult.checkpoint_reached === true) return true;
+  if (runResult.human_checkpoint && typeof runResult.human_checkpoint === 'object') return true;
+  const lists = [runResult.human_checkpoints, runResult.manual_checkpoints];
+  return lists.some(list => Array.isArray(list) && list.length > 0);
 }
 
 // ─────────────────────────────────────────────

@@ -40,7 +40,7 @@ if (!songIds.length) {
 }
 
 const PANCAKE_ROBOT_DISTROKID_DEFAULTS = Object.freeze({
-  primary_genre: "Children's Music",
+  primary_genre: "Alternative",
   ai_disclosure: {
     uses_ai: true,
     lyrics_written_by_ai: false,
@@ -166,10 +166,12 @@ function buildReleasePackage(songId) {
       [Array.isArray(metadata.value?.stores) ? metadata.value.stores : null, metadata.source],
       [[], 'default'],
     ], fieldSources),
+    // Songwriter is always the human owner. Never fall back to the brand
+    // profile (default_artist / dist.songwriter is the brand display name used
+    // for the performer/artist credit, not the songwriter).
     songwriter: pick('songwriter', [
       [metadata.value?.songwriter, metadata.source],
-      [dist.songwriter, 'brand_profile'],
-      [dist.default_artist, 'brand_profile'],
+      [`${PANCAKE_ROBOT_DISTROKID_DEFAULTS.songwriter_real_name.first} ${PANCAKE_ROBOT_DISTROKID_DEFAULTS.songwriter_real_name.last}`, 'pancake_robot_default'],
     ], fieldSources),
     songwriter_real_name: buildNestedDefaults('songwriter_real_name', PANCAKE_ROBOT_DISTROKID_DEFAULTS.songwriter_real_name, metadata.value?.songwriter_real_name, metadata.source, fieldSources),
     producer: pick('producer', [

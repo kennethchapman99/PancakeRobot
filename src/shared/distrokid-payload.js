@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { loadBrandProfileById, resolveDistroKidArtist } from './brand-profile.js';
+import { loadBrandProfileById, resolveDistroKidArtist, DISTROKID_NON_DEFAULT_PROFILE_ARTIST } from './brand-profile.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SCHEMA_VERSION = 'pancake-distrokid-payload-v1';
@@ -37,10 +37,16 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
     || (releaseType === 'single' ? findFirstSongId(cockpit.tracks?.[0], cockpit, manifest, uploadPayload) : '')
   );
   const brandProfileId = clean(cockpit.brandProfileId || cockpit.brand_profile_id || manifest.brand_profile_id || uploadPayload.brand_profile_id) || null;
+  const sourceTracks = collectPayloadTracks({ cockpit, manifest, uploadPayload, releaseType, releaseId });
+  // When an album mixes more than one brand profile, DistroKid releases it under
+  // the umbrella "Figment Factory" rather than any single brand's display name
+  // (per the test plan / [[project_distrokid_artist_rule]]).
+  const distinctBrandProfileIds = collectDistinctBrandProfileIds(sourceTracks, brandProfileId);
   const releaseTitle = resolveDistroKidReleaseTitle({
     releaseType,
     brandProfileId,
     fallbackTitle: uploadPayload.release_title || manifest.release_title || cockpit.title,
+    multiBrand: distinctBrandProfileIds.length > 1,
   });
   const artistName = clean(uploadPayload.artist || manifest.artist || options.artistName || options.artist)
     || resolveDistroKidArtist(
@@ -51,7 +57,6 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
   const label = clean(uploadPayload.label || manifest.label || manifest.record_label || options.label);
   const primaryGenre = clean(uploadPayload.primary_genre || manifest.primary_genre || uploadPayload.genre || manifest.genre || options.primaryGenre || options.genre);
   const secondaryGenre = clean(uploadPayload.secondary_genre || manifest.secondary_genre || options.secondaryGenre);
-  const sourceTracks = collectPayloadTracks({ cockpit, manifest, uploadPayload, releaseType, releaseId });
   const artworkPath = resolvePayloadArtworkPath({ cockpit, manifest, uploadPayload, sourceTracks, releaseId, repoRoot });
 
   const tracks = sourceTracks.map((track, index) => buildTrackPayload({
@@ -324,7 +329,27 @@ function findDefaultSongAudioPath({ songId, repoRoot }) {
     path.join(repoRoot, 'output', 'songs', id, 'release-master.wav'),
   ];
 
-  return candidates.find(candidate => fs.existsSync(candidate)) || '';
+  const flat = candidates.find(candidate => fs.existsSync(candidate));
+  if (flat) return flat;
+
+  // Spec layout: output/songs/{track.id}/audio/{track name}.mp3 — the audio file
+  // lives in an `audio/` subdirectory under an arbitrary name. Scan it and prefer
+  // mp3, then wav.
+  return scanAudioSubdir(path.join(repoRoot, 'output', 'songs', id, 'audio'));
+}
+
+function scanAudioSubdir(dir) {
+  try {
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return '';
+    const entries = fs.readdirSync(dir).filter(name => /\.(mp3|wav|flac|m4a|aiff?)$/i.test(name));
+    if (!entries.length) return '';
+    const preferred = entries.find(name => /\.mp3$/i.test(name))
+      || entries.find(name => /\.wav$/i.test(name))
+      || entries[0];
+    return path.join(dir, preferred);
+  } catch {
+    return '';
+  }
 }
 
 function findDefaultSongArtworkPath({ sourceTracks = [], releaseId, repoRoot }) {
@@ -342,6 +367,9 @@ function findDefaultSongArtworkPath({ sourceTracks = [], releaseId, repoRoot }) 
 
   for (const id of [...new Set(ids)]) {
     const candidates = [
+      // Spec layout: output/release-packages/{album.id}/cover-art.png
+      path.join(repoRoot, 'output', 'release-packages', id, 'cover-art.png'),
+      path.join(repoRoot, 'output', 'release-packages', id, 'cover-art.jpg'),
       path.join(repoRoot, 'output', 'songs', id, 'reference', 'base-image.png'),
       path.join(repoRoot, 'output', 'songs', id, 'reference', 'base-image.jpg'),
       path.join(repoRoot, 'output', 'songs', id, 'reference', 'base-image.webp'),
@@ -691,11 +719,31 @@ function buildBrowsyPackageAssets(canonicalPayload = {}) {
   return assets;
 }
 
-function resolveDistroKidReleaseTitle({ releaseType, brandProfileId, fallbackTitle }) {
+function resolveDistroKidReleaseTitle({ releaseType, brandProfileId, fallbackTitle, multiBrand }) {
   if (releaseType !== 'album') return clean(fallbackTitle);
+  if (multiBrand) return DISTROKID_NON_DEFAULT_PROFILE_ARTIST;
 
   const profileTitle = resolveBrandProfileDisplayName(brandProfileId);
   return profileTitle || clean(fallbackTitle);
+}
+
+// Distinct brand-profile ids referenced by an album's tracks (plus the release's
+// own brand profile). Used to detect multi-brand albums.
+function collectDistinctBrandProfileIds(tracks = [], fallbackId = null) {
+  const ids = new Set();
+  for (const track of tracks || []) {
+    const id = clean(
+      track?.brand_profile_id
+      || track?.brandProfileId
+      || track?.song?.brand_profile_id
+      || track?.metadata?.brand_profile_id
+      || track?.metadata?.brandProfileId,
+    );
+    if (id) ids.add(id);
+  }
+  const fallback = clean(fallbackId);
+  if (fallback) ids.add(fallback);
+  return [...ids].filter(Boolean);
 }
 
 function resolveBrandProfileDisplayName(profileId) {

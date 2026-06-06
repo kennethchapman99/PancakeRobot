@@ -99,7 +99,7 @@ export function buildBrowsyRecordingSpecForTask({ campaign, task, release = null
   // Recording is a local-only bridge: the recorder browser and Browsy both reach
   // Pancake on this machine, so this tab always uses localhost (never ngrok),
   // independent of PANCAKE_DISABLE_NGROK.
-  const releaseTabUrl = `${getLocalAppBaseUrl()}/releases/${encodeURIComponent(releaseType)}/{releaseId}`;
+  const releaseTabUrl = `${getLocalAppBaseUrl()}/releases/${encodeURIComponent(releaseType)}/{album.id}`;
   const appId = config.appId;
   const appName = 'Pancake Robot';
   const base = { appId, appName, workflowId, workflowName: WORKFLOW_NAMES[workflowId] || workflowId, releaseType, releaseId };
@@ -1010,9 +1010,12 @@ function isBlankOrMissing(url) {
 }
 
 function resolveReleaseTemplate(url, releaseId) {
+  const id = encodeURIComponent(String(releaseId || ''));
   return String(url || '')
-    .replaceAll('{releaseId}', encodeURIComponent(String(releaseId || '')))
-    .replaceAll('{{releaseId}}', encodeURIComponent(String(releaseId || '')));
+    .replaceAll('{releaseId}', id)
+    .replaceAll('{{releaseId}}', id)
+    .replaceAll('{album.id}', id)
+    .replaceAll('{{album.id}}', id);
 }
 
 function flattenObject(value, prefix = '', out = {}) {
@@ -1043,8 +1046,13 @@ function buildLaunchFailedMessage(spec, openedTabs, verification) {
 function buildCallbackUrl(campaign, taskKey) {
   // Browsy posts results back to Pancake on this machine — always localhost, never
   // a public/ngrok tunnel, regardless of PANCAKE_DISABLE_NGROK.
+  //
+  // Emit a TEMPLATE ({album.id}), not the concrete release id: Browsy stores it as
+  // callbackUrlTemplate and resolves it per run from the payload, so one recorded
+  // contract is reusable across every release. Baking the id here is what made the
+  // recorder reopen with a stale, release-specific callback.
   const base = getLocalAppBaseUrl();
-  return `${base}/releases/${encodeURIComponent(campaign.release_type)}/${encodeURIComponent(campaign.release_id)}/magic-release/ingest-result`;
+  return `${base}/releases/${encodeURIComponent(campaign.release_type)}/{album.id}/magic-release/ingest-result`;
 }
 
 // Fail fast if local-only mode is active but any tab URL or the callback still

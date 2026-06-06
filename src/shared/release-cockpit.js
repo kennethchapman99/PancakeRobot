@@ -261,6 +261,21 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     liveSubmitApproval,
     magicRelease,
   });
+  // Spec ("Distrokid fields"): once the automation has finished and stopped before
+  // the final submit, the human must be actively told it is ready for them. Surface
+  // a prominent banner when the DistroKid preview/dry-run reached the stop-before-
+  // submit checkpoint but the live submit has not yet completed.
+  const distrokidPreviewStage = stages.find(stage => stage.key === 'distrokid_preview');
+  const distrokidLiveSubmitStage = stages.find(stage => stage.key === 'distrokid_live_submit');
+  if (distrokidBrowsyWorkflow) {
+    distrokidBrowsyWorkflow.awaitingHumanSubmit = Boolean(
+      distrokidPreviewStage?.status === 'complete'
+      && distrokidLiveSubmitStage?.status !== 'complete',
+    );
+    distrokidBrowsyWorkflow.awaitingHumanSubmitMessage = distrokidBrowsyWorkflow.awaitingHumanSubmit
+      ? 'Automation finished and stopped before the final submit. Review the staged DistroKid release in the browser, then submit manually.'
+      : null;
+  }
   const blockers = stages.filter(stage => stage.blocksLiveSubmit && stage.status !== 'complete').flatMap(stage => stage.issues);
   const lifecycle = determineReleaseLifecycle({ tracks, stages, blockers, hyperfollow, campaigns, packageState });
   const nextActions = buildNextActions({ type, release, stages, blockers, hyperfollow, lifecycle, packageState, liveSubmitApproval, magicRelease });
@@ -1178,7 +1193,10 @@ function distrokidRecordingPhase(recordingStatus) {
   if (status === 'auth_blocked') return 'auth_blocked';
   if (status === 'launch_failed') return 'launch_failed';
   if (DISTROKID_RECORDING_FAILED_STATUSES.has(status)) return 'failed';
-  if (DISTROKID_RECORDING_SETUP_STATUSES.has(status)) return 'recording_started';
+  // A prepared scaffold (setup_ready/created/pending) is NOT a live recording —
+  // it must not count as an active lifecycle, or a leftover setup row would mask
+  // an otherwise-runnable reusable contract.
+  if (DISTROKID_RECORDING_SETUP_STATUSES.has(status)) return 'recording_setup';
   if (DISTROKID_RECORDING_ACTIVE_STATUSES.has(status)) return 'recording_active';
   if (DISTROKID_RECORDING_STOPPED_STATUSES.has(status)) return 'recording_stopped';
   if (status === 'imported') return 'imported';
@@ -1194,6 +1212,7 @@ function distrokidAuthState(recordingPhase) {
     case 'auth_rejected':
     case 'auth_blocked': return { state: 'auth_rejected', label: 'Auth rejected by Google' };
     case 'launch_failed': return { state: 'launch_failed', label: 'Launch failed' };
+    case 'recording_setup': return { state: 'recording_setup', label: 'Automation setup prepared' };
     case 'recording_active':
     case 'recording_started':
     case 'recording_stopped': return { state: 'authenticated', label: 'Authenticated — recording' };
@@ -1367,10 +1386,15 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
   const unreachable = /unreachable|cannot be reached|not configured|ECONNREFUSED|ENOTFOUND/i.test(String(effectiveLastError || ''));
   const failed = !unreachable && (DISTROKID_RECORDING_FAILED_STATUSES.has(String(item.recordingStatus || '')) || Boolean(effectiveLastError));
   const recordingPhase = distrokidRecordingPhase(item.recordingStatus);
-  // The badge reflects CONTRACT readiness; the next-step message also factors in the
-  // live recording lifecycle (started/active/stopped/launch-failed/auth-blocked).
-  const recordingPhaseLabels = ['recording_started', 'recording_active', 'recording_stopped', 'launch_failed', 'auth_blocked', 'auth_required', 'auth_rejected'];
-  const lifecycleActive = Boolean(recordingPhase && recordingPhaseLabels.includes(recordingPhase));
+  // An ACTIVE lifecycle (mid-recording / auth / launch-failed) suppresses the
+  // reusable contract so we surface the live state instead of masking it as ready.
+  // A prepared-but-unstarted scaffold (recording_setup) is intentionally excluded:
+  // a leftover setup row must not block an otherwise-runnable reusable contract.
+  const activeLifecyclePhases = ['recording_started', 'recording_active', 'recording_stopped', 'launch_failed', 'auth_blocked', 'auth_required', 'auth_rejected'];
+  // The next-step message covers the active lifecycle AND the setup scaffold, so a
+  // local setup row still gets "Automation setup exists" guidance when not ready.
+  const nextStepPhases = [...activeLifecyclePhases, 'recording_setup'];
+  const lifecycleActive = Boolean(recordingPhase && activeLifecyclePhases.includes(recordingPhase));
   // A reusable contract published from another release makes this one runnable even
   // if this release's own recording row isn't complete — unless we're mid-recording
   // here (then show the live lifecycle instead of masking it as "ready").
@@ -1387,7 +1411,7 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
             ? 'scaffold-only'
             : 'incomplete';
   const missingAreas = (item.readinessChecks || []).filter(check => !check.ok).map(check => check.label);
-  const nextStepLabel = (!effectiveReady && !unreachable && recordingPhase && recordingPhaseLabels.includes(recordingPhase))
+  const nextStepLabel = (!effectiveReady && !unreachable && recordingPhase && nextStepPhases.includes(recordingPhase))
     ? recordingPhase
     : readinessLabel;
   const recorderActive = recordingPhase === 'recording_active';
@@ -1445,6 +1469,7 @@ function distrokidBrowsyNextStep(label, missingAreas = [], lastError = null) {
       return { headline: 'Browsy is not configured or cannot be reached.', cta: 'Refresh Contract', detail: 'Set the Browsy base URL and start the Browsy server, then refresh the contract.' };
     case 'ready':
       return { headline: 'Workflow contract is ready.', cta: 'Run Automation for This Release', detail: 'Contract recorded and complete. Run the Browsy replay with this release payload; the final DistroKid submit remains a manual checkpoint.' };
+    case 'recording_setup':
     case 'recording_started':
       return { headline: 'Automation setup exists; review it before launching the recorder.', cta: 'Open Automation Setup Wizard', detail: 'A Browsy recording session exists, but the setup wizard remains the canonical place to validate context before recording.' };
     case 'recording_active':

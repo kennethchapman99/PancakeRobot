@@ -173,7 +173,7 @@ test('recording launch spec sends full workflow context to Browsy before recorde
   assert.equal(built.spec.sourceApp, 'pancake-robot');
   assert.equal(built.spec.targetUrl, 'https://distrokid.com/new/');
   assert.equal(built.spec.releaseId, albumId);
-  assert.equal(built.spec.recordingSetup.tabs[0].url, 'http://localhost:3737/releases/album/{releaseId}');
+  assert.equal(built.spec.recordingSetup.tabs[0].url, 'http://localhost:3737/releases/album/{album.id}');
   assert.ok(built.spec.inputSchema);
   assert.ok(built.spec.requiredAssets.length >= 2);
   assert.equal(built.spec.samplePayload.album.releaseDate, '2026-09-01');

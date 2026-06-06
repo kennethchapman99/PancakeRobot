@@ -38,6 +38,19 @@ import {
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const WORKFLOW_ROOT = path.join(REPO_ROOT, 'output', 'release-workflows');
 
+// The songwriter/producer is always the human owner — never a brand profile
+// display name. DistroKid wants the real legal name in the songwriter credit,
+// while the performer/artist field uses the brand name ([[project_distrokid_artist_rule]]).
+const SONGWRITER_LEGAL_NAME = 'Kenneth Chapman';
+
+// Figment Factory → DistroKid fixed-field policy (per the test plan / "Distrokid
+// fields" spec). Every Figment Factory release uses these regardless of per-song
+// data: Primary Genre is always "Alternative" and the Record Label is always
+// "Figment Factory". The DistroKid genre <select> option text is exactly
+// "Alternative".
+const DISTROKID_FIGMENT_GENRE = 'Alternative';
+const DISTROKID_FIGMENT_LABEL = 'Figment Factory';
+
 export const MAGIC_RELEASE_TASK_STATUSES = Object.freeze([
   'pending',
   'ready',
@@ -1090,21 +1103,21 @@ function buildBrowsyRunVariables(packagePayload) {
   // album-title field (per the recorded flow). artist is already resolved to
   // the brand display name upstream ([[project_distrokid_artist_rule]]).
   const brandDisplayName = canonical.artist || canonical.artistName || canonical.release_title || canonical.releaseTitle || '';
-  // Map a track's AI disclosure object to DistroKid's ai_gate radio value:
-  // "1" = all audio performed by AI, "2" = part AI + humans, "0" = none.
-  const aiGateValue = (disclosure = {}) => {
-    if (disclosure.all_audio_performed_by_ai || disclosure.allAudioPerformedByAi) return '1';
-    if (disclosure.part_audio_performed_by_ai_and_humans || disclosure.partAudioPerformedByAiAndHumans) return '2';
-    return '0';
-  };
+  // DistroKid's ai_gate radio value: "1" = all audio performed by AI, "2" = part
+  // AI + humans, "0" = none. Per the Figment Factory spec every track always
+  // answers Yes → "All of the audio", so the gate is forced to "1" (scope "full")
+  // regardless of stored disclosure. The actual modal handling is owned by the
+  // Browsy ai_disclosure executor / the captured DistroKid recording.
+  const AI_GATE_ALL_AUDIO = '1';
   const splitName = (raw) => {
     const parts = String(raw || '').trim().split(/\s+/).filter(Boolean);
     return { first: parts[0] || '', last: parts.length > 1 ? parts.slice(1).join(' ') : '' };
   };
   const tracks = Array.isArray(canonical.tracks)
     ? canonical.tracks.map(track => {
-        const songwriterName = track.songwriter || track.songwriterCredits?.[0]?.name || '';
-        const sw = splitName(songwriterName);
+        // Songwriter is always the human owner, never the brand display name
+        // that DistroKid uses for the performer/artist credit.
+        const sw = splitName(SONGWRITER_LEGAL_NAME);
         const disclosure = track.aiDisclosure || track.ai_disclosure || {};
         return pruneEmptyValues({
           songId: track.songId || track.song_id,
@@ -1125,9 +1138,9 @@ function buildBrowsyRunVariables(packagePayload) {
           songwriterLast: sw.last,
           performerName: brandDisplayName,
           performerRole: 'Performer',
-          producerName: 'Kenneth Chapman',
+          producerName: SONGWRITER_LEGAL_NAME,
           producerRole: 'Executive Producer',
-          aiGate: aiGateValue(disclosure),
+          aiGate: AI_GATE_ALL_AUDIO,
           aiRecordingScope: 'full',
         });
       })
@@ -1138,7 +1151,7 @@ function buildBrowsyRunVariables(packagePayload) {
   const songwriterLast = tracks[0]?.songwriterLast || '';
   const appleMusicCredits = {
     performer: { name: brandDisplayName, role: 'Performer' },
-    producer: { name: 'Kenneth Chapman', role: 'Executive Producer' },
+    producer: { name: SONGWRITER_LEGAL_NAME, role: 'Executive Producer' },
   };
   const canonicalWithCredits = { ...canonical, apple_music_credits: appleMusicCredits };
   return pruneEmptyValues({
@@ -1155,12 +1168,13 @@ function buildBrowsyRunVariables(packagePayload) {
       artwork: artworkPath,
       file: firstAudioPath,
       releaseDate: canonical.releaseDate || canonical.release_date,
-      genre1: canonical.primaryGenre || canonical.primary_genre || canonical.genre,
+      genre1: DISTROKID_FIGMENT_GENRE,
+      label: DISTROKID_FIGMENT_LABEL,
       albumtitle: brandDisplayName,
       songwriterRealNameFirst1: songwriterFirst,
       songwriterRealNameLast1: songwriterLast,
       performerName: brandDisplayName,
-      producerName: 'Kenneth Chapman',
+      producerName: SONGWRITER_LEGAL_NAME,
     }),
     howmanysongs: tracks.length,
     track_count: tracks.length,
@@ -1181,22 +1195,32 @@ function buildBrowsyRunVariables(packagePayload) {
       artistName: canonical.artistName || canonical.artist,
       releaseDate: canonical.releaseDate || canonical.release_date,
       language: canonical.language || 'English',
-      labelName: canonical.label,
-      primaryGenre: canonical.primaryGenre || canonical.primary_genre || canonical.genre,
+      labelName: DISTROKID_FIGMENT_LABEL,
+      primaryGenre: DISTROKID_FIGMENT_GENRE,
       secondaryGenre: canonical.secondaryGenre || canonical.secondary_genre,
       coverArtPath: canonical.artworkPath || canonical.artwork_path,
     }),
     release: pruneEmptyValues({
       title: canonical.release_title,
       artist: canonical.artist,
-      label: canonical.label,
+      label: DISTROKID_FIGMENT_LABEL,
       releaseDate: canonical.release_date,
-      genre: canonical.primary_genre,
+      genre: DISTROKID_FIGMENT_GENRE,
       subgenre: canonical.secondary_genre,
     }),
     artworkPath,
     tracks,
     derived: { numberOfSongs: tracks.length },
+    // The five mandatory DistroKid agreement checkboxes ("Important checkboxes")
+    // are all checked by the automation before the human checkpoint. These map to
+    // checkbox global fields in the Browsy field-map (agreements.*).
+    agreements: {
+      tandc: true,
+      otherArtist: true,
+      promoServices: true,
+      recorded: true,
+      youtube: true,
+    },
     expected_human_gates: packagePayload.human_gate ? ['final_submit_approval'] : [],
     expected_outputs: packagePayload.capture_outputs || [],
   });

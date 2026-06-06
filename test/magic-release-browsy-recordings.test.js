@@ -915,6 +915,16 @@ test('distrokid-single-submit spec builds 2 tabs: [localhost Pancake, distrokid.
     /\/releases\/single\//.test(first.url),
     `first tab URL must contain /releases/single/, got ${first.url}`,
   );
+  // The release tab must stay a reusable TEMPLATE ({album.id}), never a baked-in
+  // release id — otherwise the recorded contract is locked to one release.
+  assert.ok(
+    first.url.includes('{album.id}') && first.url === first.urlTemplate,
+    `first tab URL must use the {album.id} template, got ${first.url}`,
+  );
+  assert.ok(
+    !new RegExp(`/${songId}(/|$)`).test(first.url),
+    `first tab URL must not bake in the concrete release id, got ${first.url}`,
+  );
   assert.equal(second.siteId, 'distrokid', `second tab must be distrokid, got ${second.siteId}`);
   assert.equal(second.url, 'https://distrokid.com/new/', `second tab must be DistroKid upload URL, got ${second.url}`);
 });
