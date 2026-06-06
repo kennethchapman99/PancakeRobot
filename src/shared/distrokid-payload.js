@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { resolveDistroKidArtist } from './brand-profile.js';
+import { loadBrandProfileById, resolveDistroKidArtist } from './brand-profile.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SCHEMA_VERSION = 'pancake-distrokid-payload-v1';
@@ -36,12 +36,18 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
     || manifest.song_id
     || (releaseType === 'single' ? findFirstSongId(cockpit.tracks?.[0], cockpit, manifest, uploadPayload) : '')
   );
-  const releaseTitle = clean(uploadPayload.release_title || manifest.release_title || cockpit.title);
+  const brandProfileId = clean(cockpit.brandProfileId || cockpit.brand_profile_id || manifest.brand_profile_id || uploadPayload.brand_profile_id) || null;
+  const releaseTitle = resolveDistroKidReleaseTitle({
+    releaseType,
+    brandProfileId,
+    fallbackTitle: uploadPayload.release_title || manifest.release_title || cockpit.title,
+  });
   const artistName = clean(uploadPayload.artist || manifest.artist || options.artistName || options.artist)
     || resolveDistroKidArtist(
-      clean(cockpit.brandProfileId || cockpit.brand_profile_id || manifest.brand_profile_id || uploadPayload.brand_profile_id) || null,
+      brandProfileId,
     );
-  const releaseDate = clean(uploadPayload.release_date || manifest.release_date || cockpit.releaseDate);
+  const sourceReleaseDate = clean(uploadPayload.release_date || manifest.release_date || cockpit.releaseDate);
+  const releaseDate = effectiveDistroKidReleaseDate(sourceReleaseDate, options);
   const label = clean(uploadPayload.label || manifest.label || manifest.record_label || options.label);
   const primaryGenre = clean(uploadPayload.primary_genre || manifest.primary_genre || uploadPayload.genre || manifest.genre || options.primaryGenre || options.genre);
   const secondaryGenre = clean(uploadPayload.secondary_genre || manifest.secondary_genre || options.secondaryGenre);
@@ -100,21 +106,31 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
 export function buildCanonicalDistroKidPayload(input, options = {}) {
   if (!input) throw new Error('DistroKid payload input is required.');
 
-  if (input.packageState || input.tracks || input.type || input.id) {
+  if (isReleaseReference(input)) {
+    const manifest = loadCanonicalReleaseManifest(input, options);
+    if (manifest) return buildCanonicalDistroKidPayload(manifest, options);
+  }
+
+  if (input.packageState || input.type || input.id) {
     return buildDistroKidPayloadFromCockpit(input, options);
   }
 
   const manifest = input;
   const releaseType = normalizeReleaseType(
-    manifest.release_type || (Array.isArray(manifest.tracks) && manifest.tracks.length > 1 ? 'album' : 'single')
+    manifest.release_type
+    || manifest.releaseType
+    || (Array.isArray(manifest.tracks) && manifest.tracks.length > 1 ? 'album' : 'single')
   );
+  const manifestPath = clean(manifest.manifestPath || manifest.manifest_path);
+  const packagePath = clean(manifest.packagePath || manifest.package_path);
 
   const cockpit = {
-    id: manifest.release_id || manifest.album_id || manifest.song_id,
+    id: manifest.release_id || manifest.releaseId || manifest.album_id || manifest.albumId || manifest.song_id || manifest.songId,
     type: releaseType,
     title: manifest.release_title || manifest.album_title || manifest.title,
     releaseDate: manifest.release_date,
-    packageState: { manifest },
+    brandProfileId: manifest.brand_profile_id || manifest.brandProfileId,
+    packageState: { manifest, manifestPath: manifestPath || null, path: packagePath || null },
     tracks: Array.isArray(manifest.tracks)
       ? manifest.tracks.map((track, index) => ({
           ...track,
@@ -125,6 +141,35 @@ export function buildCanonicalDistroKidPayload(input, options = {}) {
   };
 
   return buildDistroKidPayloadFromCockpit(cockpit, options);
+}
+
+function isReleaseReference(input = {}) {
+  const hasReference = Boolean(input.releaseType || input.releaseId || input.release_type || input.release_id);
+  const hasManifestPayload = Boolean(input.canonical_distrokid_upload_payload || input.tracks || input.cover_art || input.audio_file);
+  const hasCockpitShape = Boolean(input.packageState || input.type || input.id);
+  return hasReference && !hasManifestPayload && !hasCockpitShape;
+}
+
+function loadCanonicalReleaseManifest(input, options = {}) {
+  const repoRoot = options.repoRoot || REPO_ROOT;
+  const releaseId = clean(input.releaseId || input.release_id || input.albumId || input.album_id || input.songId || input.song_id);
+  if (!releaseId) return null;
+  const explicitPath = clean(input.manifestPath || input.manifest_path);
+  const candidates = [
+    explicitPath ? toAbsolutePath(explicitPath, repoRoot) : null,
+    path.join(repoRoot, 'output', 'release-packages', releaseId, 'manifest.json'),
+  ].filter(Boolean);
+  const manifestPath = candidates.find(candidate => fs.existsSync(candidate));
+  if (!manifestPath) return null;
+  const manifest = readJsonIfExists(manifestPath);
+  if (!manifest || typeof manifest !== 'object') return null;
+  return {
+    ...manifest,
+    release_type: manifest.release_type || input.release_type || input.releaseType,
+    release_id: manifest.release_id || input.release_id || input.releaseId || releaseId,
+    manifestPath,
+    packagePath: manifest.packagePath || manifest.package_path || path.dirname(manifestPath),
+  };
 }
 
 export function writeDistroKidPayloadFromCockpit(cockpit, outputPath, options = {}) {
@@ -149,7 +194,7 @@ export function buildBrowsyDistroKidWorkflowPackage({
   const canonicalPayload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot, generatedAt });
   const resolvedWorkflowId = clean(workflowId || task?.source_workflow_id)
     || (canonicalPayload.release_type === 'album' ? 'distrokid-album-submit' : 'distrokid-single-submit');
-  const mode = dryRun ? 'preview' : 'live';
+  const mode = 'preview';
   const workflowDir = outputDir || path.join(
     repoRoot,
     'output',
@@ -182,12 +227,12 @@ export function buildBrowsyDistroKidWorkflowPackage({
     entity_type: canonicalPayload.release_type,
     entity_id: canonicalPayload.release_id,
     mode,
-    pancake_mode: dryRun ? 'dry_run' : 'live',
+    pancake_mode: dryRun ? 'dry_run' : 'replay',
     human_gate: true,
     manifest_path: asRepoRelativePath(manifestPath, repoRoot),
     payload_path: asRepoRelativePath(payloadPath, repoRoot),
     canonical_payload: canonicalPayload,
-    assets: canonicalPayload.artworkPath ? [{ type: 'artwork', path: canonicalPayload.artworkPath }] : [],
+    assets: buildBrowsyPackageAssets(canonicalPayload),
     capture_outputs: defaultCaptureOutputs(resolvedWorkflowId),
     on_failure: 'stop_and_return_blocked_result',
     return_contract_version: 'automation-result-v1',
@@ -627,6 +672,71 @@ function defaultCaptureOutputs(workflowId) {
 
 function normalizeReleaseType(value) {
   return String(value || '').toLowerCase() === 'album' ? 'album' : 'single';
+}
+
+function buildBrowsyPackageAssets(canonicalPayload = {}) {
+  const assets = [];
+  if (canonicalPayload.artworkPath) {
+    assets.push({ type: 'artwork', id: 'artwork', path: canonicalPayload.artworkPath });
+  }
+  const firstTrack = Array.isArray(canonicalPayload.tracks) ? canonicalPayload.tracks[0] : null;
+  if (firstTrack?.audioPath) {
+    assets.push({
+      type: 'audio',
+      id: 'file',
+      track_number: firstTrack.trackNumber || firstTrack.track_number || 1,
+      path: firstTrack.audioPath,
+    });
+  }
+  return assets;
+}
+
+function resolveDistroKidReleaseTitle({ releaseType, brandProfileId, fallbackTitle }) {
+  if (releaseType !== 'album') return clean(fallbackTitle);
+
+  const profileTitle = resolveBrandProfileDisplayName(brandProfileId);
+  return profileTitle || clean(fallbackTitle);
+}
+
+function resolveBrandProfileDisplayName(profileId) {
+  const id = clean(profileId);
+  if (!id) return '';
+  try {
+    const profile = loadBrandProfileById(id);
+    return clean(profile.display_name || profile.brand_name);
+  } catch {
+    return '';
+  }
+}
+
+export function effectiveDistroKidReleaseDate(releaseDate, options = {}) {
+  const value = clean(releaseDate);
+  if (!value) return value;
+
+  const currentDate = currentDateString(options.currentDate || options.generatedAt || new Date());
+  if (!currentDate || !isIsoDate(value)) return value;
+
+  return value < currentDate ? currentDate : value;
+}
+
+function currentDateString(value) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (isIsoDate(trimmed)) return trimmed;
+    const isoMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})T/);
+    if (isoMatch) return isoMatch[1];
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isIsoDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 }
 
 function toAbsolutePath(value, repoRoot) {

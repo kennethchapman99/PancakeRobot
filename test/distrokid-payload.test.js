@@ -6,7 +6,9 @@ import path from 'path';
 
 import {
   buildBrowsyDistroKidWorkflowPackage,
+  buildCanonicalDistroKidPayload,
   buildDistroKidPayloadFromCockpit,
+  effectiveDistroKidReleaseDate,
 } from '../src/shared/distrokid-payload.js';
 import {
   buildBrowsyWorkflowRef,
@@ -105,6 +107,97 @@ test('explicit manifest artist still wins over brand-profile fallback', t => {
   assert.equal(payload.artistName, 'Pancake Robot');
 });
 
+test('album DistroKid title uses brand profile display name instead of Figment Factory album name', () => {
+  const cockpit = {
+    type: 'album',
+    id: 'ALBUM_DISPLAY_NAME',
+    title: 'Figment Factory Album Name',
+    brandProfileId: 'tribe',
+    packageState: {
+      manifest: {
+        release_type: 'album',
+        release_id: 'ALBUM_DISPLAY_NAME',
+        release_title: 'Manifest Album Name',
+        brand_profile_id: 'tribe',
+        canonical_distrokid_upload_payload: {
+          release_type: 'album',
+          release_title: 'Canonical Album Name',
+          brand_profile_id: 'tribe',
+        },
+        tracks: [],
+      },
+    },
+    tracks: [],
+  };
+
+  const payload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot: os.tmpdir() });
+  assert.equal(payload.release_title, 'Tribe');
+  assert.equal(payload.releaseTitle, 'Tribe');
+});
+
+test('single DistroKid title remains the release title', () => {
+  const cockpit = {
+    type: 'single',
+    id: 'SONG_DISPLAY_NAME',
+    title: 'Song Release Title',
+    brandProfileId: 'tribe',
+    packageState: {
+      manifest: {
+        release_type: 'single',
+        release_id: 'SONG_DISPLAY_NAME',
+        release_title: 'Song Manifest Title',
+        brand_profile_id: 'tribe',
+      },
+    },
+    tracks: [],
+  };
+
+  const payload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot: os.tmpdir() });
+  assert.equal(payload.release_title, 'Song Manifest Title');
+  assert.equal(payload.releaseTitle, 'Song Manifest Title');
+});
+
+test('DistroKid release date uses automation run date when source release date is in the past', () => {
+  assert.equal(
+    effectiveDistroKidReleaseDate('2026-06-04', { generatedAt: '2026-06-05T14:30:00.000Z' }),
+    '2026-06-05',
+  );
+  assert.equal(
+    effectiveDistroKidReleaseDate('2026-06-05', { generatedAt: '2026-06-05T14:30:00.000Z' }),
+    '2026-06-05',
+  );
+  assert.equal(
+    effectiveDistroKidReleaseDate('2026-06-06', { generatedAt: '2026-06-05T14:30:00.000Z' }),
+    '2026-06-06',
+  );
+});
+
+test('canonical payload clamps past release dates for DistroKid without changing future dates', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-distrokid-release-date-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const audioPath = path.join(root, 'track-01.wav');
+  const artworkPath = path.join(root, 'cover-art.png');
+  fs.writeFileSync(audioPath, 'fake-audio');
+  fs.writeFileSync(artworkPath, 'fake-artwork');
+
+  const cockpit = buildSyntheticCockpit({ root, artworkPath, audioPath, lyricsPath: audioPath });
+  cockpit.packageState.manifest.release_date = '2026-06-04';
+  cockpit.packageState.manifest.canonical_distrokid_upload_payload = {
+    release_type: 'album',
+    release_title: cockpit.title,
+    artist: 'Figment Factory',
+    release_date: '2026-06-04',
+  };
+
+  const payload = buildDistroKidPayloadFromCockpit(cockpit, {
+    repoRoot: root,
+    generatedAt: '2026-06-05T14:30:00.000Z',
+  });
+
+  assert.equal(payload.release_date, '2026-06-05');
+  assert.equal(payload.releaseDate, '2026-06-05');
+});
+
 test('Browsy workflow package and debug payload are produced from the same canonical builder', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-browsy-package-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -134,12 +227,74 @@ test('Browsy workflow package and debug payload are produced from the same canon
   assert.equal(packageResult.workflowPackage.workflow_id, 'distrokid-album-submit');
   assert.equal(packageResult.workflowPackage.mode, 'preview');
   assert.equal(packageResult.workflowPackage.payload_path, 'workflow-package/distrokid-payload.json');
+  assert.deepEqual(packageResult.workflowPackage.assets, [
+    { type: 'artwork', id: 'artwork', path: artworkPath },
+    { type: 'audio', id: 'file', track_number: 1, path: audioPath },
+  ]);
   assert.ok(fs.existsSync(packageResult.payloadPath));
   assert.ok(fs.existsSync(packageResult.manifestPath));
   assert.ok(fs.existsSync(packageResult.packagePath));
 
   const downloadedPayload = JSON.parse(fs.readFileSync(packageResult.payloadPath, 'utf8'));
   assert.deepEqual(downloadedPayload, expectedPayload);
+
+  const replayPackageResult = buildBrowsyDistroKidWorkflowPackage({
+    cockpit,
+    campaign: { id: 'CAMPAIGN_TEST_REPLAY' },
+    task: { task_key: 'distrokid_submit_dry_run', source_workflow_id: 'distrokid-album-submit' },
+    dryRun: false,
+    outputDir: path.join(root, 'workflow-package-replay'),
+    repoRoot: root,
+    generatedAt,
+  });
+  assert.equal(replayPackageResult.workflowPackage.mode, 'preview');
+  assert.equal(replayPackageResult.workflowPackage.pancake_mode, 'replay');
+});
+
+test('canonical payload reference loads album release package manifest assets and tracks', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-distrokid-reference-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const albumId = 'ALBUM_REFERENCE';
+  const songId = 'SONG_REFERENCE_T01';
+  const packageDir = path.join(root, 'output', 'release-packages', albumId);
+  const songPackageDir = path.join(root, 'output', 'release-packages', songId);
+  fs.mkdirSync(packageDir, { recursive: true });
+  fs.mkdirSync(songPackageDir, { recursive: true });
+  const artworkPath = path.join(packageDir, 'cover-art.png');
+  const audioPath = path.join(songPackageDir, 'audio.mp3');
+  fs.writeFileSync(artworkPath, 'fake-art');
+  fs.writeFileSync(audioPath, 'fake-audio');
+  fs.writeFileSync(path.join(packageDir, 'manifest.json'), JSON.stringify({
+    release_type: 'album',
+    release_id: albumId,
+    release_title: 'Reference Album',
+    release_date: '2026-06-19',
+    brand_profile_id: 'default',
+    canonical_distrokid_upload_payload: {
+      release_type: 'album',
+      artist: 'Pancake Robot',
+      release_title: 'Reference Album',
+      release_date: '2026-06-19',
+      cover_art: `output/release-packages/${albumId}/cover-art.png`,
+      tracks: [{
+        song_id: songId,
+        track_number: 1,
+        track_title: 'Reference Track',
+        audio_file: `output/release-packages/${songId}/audio.mp3`,
+      }],
+    },
+  }), 'utf8');
+
+  const payload = buildCanonicalDistroKidPayload({ releaseType: 'album', releaseId: albumId }, { repoRoot: root, generatedAt: '2026-05-27T12:00:00.000Z' });
+
+  assert.equal(payload.releaseId, albumId);
+  assert.equal(payload.releaseDate, '2026-06-19');
+  assert.equal(payload.artworkPath, artworkPath);
+  assert.equal(payload.tracks[0].songId, songId);
+  assert.equal(payload.tracks[0].trackTitle, 'Reference Track');
+  assert.equal(payload.tracks[0].audioPath, audioPath);
+  assert.equal(payload.validation.ready, true);
 });
 
 test('Browsy client posts to documented workflowRef run endpoint and normalizes dry_run to preview', async () => {

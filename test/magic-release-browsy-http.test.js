@@ -78,7 +78,7 @@ function completeDistroKidContract(workflowId = 'distrokid-single-submit') {
   };
 }
 
-function startFakeBrowsy(runStatus, { outputs = {}, contract = completeDistroKidContract() } = {}) {
+function startFakeBrowsy(runStatus, { outputs = {}, contract = completeDistroKidContract(), validationErrors = [] } = {}) {
   const captured = { runStartBody: null };
   const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
@@ -106,13 +106,14 @@ function startFakeBrowsy(runStatus, { outputs = {}, contract = completeDistroKid
       res.writeHead(200);
       res.end(JSON.stringify({
         ok: true,
-        run: { runId: 'run_fake_1', status: runStatus },
+        run: { runId: 'run_fake_1', status: runStatus, validationErrors },
         result: {
           runId: 'run_fake_1',
           status: runStatus,
           outputs,
           artifacts: { screenshots: [], downloads: [], trace: [], logs: [] },
           checkpoints: [],
+          validationErrors,
           blockingReason: runStatus === 'completed' ? null : 'Waiting on human approval',
         },
       }));
@@ -167,7 +168,7 @@ test('live run with unreachable Browsy surfaces not_configured instead of fake s
   assert.equal(run.log.reachable, false);
 });
 
-test('live run against Browsy completion marks the task complete and harvests captured links', async () => {
+test('replay run against Browsy completion marks the task complete and harvests captured links', async () => {
   const songId = seedReleaseSong(uniqueId('BROWSY_LIVE_OK'));
   const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
   const fake = await startFakeBrowsy('completed', { outputs: { smart_link_url: 'https://distrokid.com/hyperfollow/live-ok' } });
@@ -183,14 +184,49 @@ test('live run against Browsy completion marks the task complete and harvests ca
   }
 
   const resultJson = resultJsonFor(created.campaign.id, 'distrokid_submit_dry_run');
-  assert.equal(resultJson.status, 'live_run_completed');
+  assert.equal(fake.captured.runStartBody?.mode, 'preview');
+  assert.equal(fake.captured.runStartBody?.options?.leaveBrowserOpen, true);
+  assert.equal(fake.captured.runStartBody?.options?.usePersistentProfile, true);
+  assert.equal(fake.captured.runStartBody?.options?.authProfileId, 'distrokid');
+  assert.match(fake.captured.runStartBody?.payload?.files?.artwork || '', /base-image\.png$/);
+  assert.match(fake.captured.runStartBody?.payload?.files?.file || '', /audio\.mp3$/);
+  assert.equal(resultJson.status, 'replay_run_completed');
   assert.equal(resultJson.browsy_run_id, 'run_fake_1');
   const state = getMagicReleaseState('single', songId);
   assert.equal(state.tasks.find(t => t.task_key === 'distrokid_submit_dry_run')?.status, 'complete');
   assert.ok(getReleaseLinks(songId).some(link => link.url === 'https://distrokid.com/hyperfollow/live-ok'));
 });
 
-test('live run threads a correlation id into the Browsy run body and result.json', async () => {
+test('a failed replay surfaces the concrete Browsy reason (auth-profile lock) on the result and task', async () => {
+  const lockMsg = 'execution error: Auth profile "distrokid" is locked by another browser process. Close the existing browser profile and retry.';
+  const songId = seedReleaseSong(uniqueId('BROWSY_LOCKED'));
+  const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
+  const fake = await startFakeBrowsy('failed', { validationErrors: [lockMsg] });
+
+  process.env.PANCAKE_BROWSY_BASE_URL = fake.baseUrl;
+  process.env.PANCAKE_BROWSY_POLL_INTERVAL_MS = '1';
+  let result;
+  try {
+    result = await runMagicReleaseTask({ campaignId: created.campaign.id, taskKey: 'distrokid_submit_dry_run', dryRun: false });
+  } finally {
+    process.env.PANCAKE_BROWSY_BASE_URL && delete process.env.PANCAKE_BROWSY_BASE_URL;
+    delete process.env.PANCAKE_BROWSY_POLL_INTERVAL_MS;
+    fake.server.close();
+  }
+
+  const resultJson = resultJsonFor(created.campaign.id, 'distrokid_submit_dry_run');
+  assert.equal(resultJson.status, 'failed');
+  assert.ok(resultJson.errors.includes(lockMsg), 'lock message should be in result errors');
+  assert.match(resultJson.next_required_action || '', /locked by another browser/i);
+  assert.ok((resultJson.client_action_requests || []).some(r => r.type === 'browser_profile_locked'));
+
+  const state = getMagicReleaseState('single', songId);
+  const task = state.tasks.find(t => t.task_key === 'distrokid_submit_dry_run');
+  assert.equal(task?.status, 'failed');
+  assert.match(task?.reason || '', /locked by another browser/i);
+});
+
+test('replay run threads a correlation id into the Browsy run body and result.json', async () => {
   const songId = seedReleaseSong(uniqueId('BROWSY_CORRELATION'));
   const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
   const fake = await startFakeBrowsy('completed', { outputs: { smart_link_url: 'https://distrokid.com/hyperfollow/corr' } });
@@ -206,12 +242,13 @@ test('live run threads a correlation id into the Browsy run body and result.json
   }
 
   const sentCorrelationId = fake.captured.runStartBody?.correlationId;
+  assert.equal(fake.captured.runStartBody?.mode, 'preview');
   assert.match(sentCorrelationId || '', /^pr-single-.+/);
   const resultJson = resultJsonFor(created.campaign.id, 'distrokid_submit_dry_run');
   assert.equal(resultJson.correlation_id, sentCorrelationId);
 });
 
-test('live run paused for approval maps to a needs-Ken gate (no auto submit)', async () => {
+test('replay run paused for approval maps to a needs-Ken gate (no auto submit)', async () => {
   const songId = seedReleaseSong(uniqueId('BROWSY_LIVE_GATE'));
   const created = createMagicReleaseCampaign({ releaseType: 'single', releaseId: songId });
   const fake = await startFakeBrowsy('waiting_for_approval_to_submit');
@@ -227,7 +264,8 @@ test('live run paused for approval maps to a needs-Ken gate (no auto submit)', a
   }
 
   const resultJson = resultJsonFor(created.campaign.id, 'distrokid_submit_dry_run');
-  assert.equal(resultJson.status, 'live_run_gated');
+  assert.equal(fake.captured.runStartBody?.mode, 'preview');
+  assert.equal(resultJson.status, 'replay_run_gated');
   const state = getMagicReleaseState('single', songId);
   assert.equal(state.tasks.find(t => t.task_key === 'distrokid_submit_dry_run')?.status, 'needs_ken');
 });

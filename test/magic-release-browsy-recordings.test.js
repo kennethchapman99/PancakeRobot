@@ -275,7 +275,7 @@ test('recording lifecycle: start → launch → stop → import marks the contra
     // With a ready contract the live run is allowed through and completes.
     await runMagicReleaseTask({ campaignId, taskKey: SUBMIT_TASK, dryRun: false });
     const resultJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'output', 'release-workflows', campaignId, SUBMIT_TASK, 'result.json'), 'utf8'));
-    assert.equal(resultJson.status, 'live_run_completed');
+    assert.equal(resultJson.status, 'replay_run_completed');
   } finally {
     delete process.env.PANCAKE_BROWSY_BASE_URL;
     delete process.env.PANCAKE_BROWSY_POLL_INTERVAL_MS;
@@ -431,7 +431,7 @@ test('live run is gated (no fake automation) when the Browsy contract is scaffol
     await runMagicReleaseTask({ campaignId, taskKey: SUBMIT_TASK, dryRun: false });
     const resultJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'output', 'release-workflows', campaignId, SUBMIT_TASK, 'result.json'), 'utf8'));
     assert.equal(resultJson.status, 'contract_not_ready');
-    assert.notEqual(resultJson.status, 'live_run_completed');
+    assert.notEqual(resultJson.status, 'replay_run_completed');
     const state = getMagicReleaseState('single', songId);
     const task = state.tasks.find(t => t.task_key === SUBMIT_TASK);
     assert.equal(task.status, 'needs_ken');

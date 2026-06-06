@@ -127,6 +127,7 @@ import {
   assertReleaseLiveSubmitReady,
   buildReleaseCockpitViewModel,
   buildReleasePackageForCockpit,
+  warmDistroKidBrowsyContract,
   getCanonicalReleaseManifestPath,
   listReleaseCockpitEntries,
   logReleaseCockpitEvent,
@@ -377,9 +378,31 @@ app.post('/releases/:type/:id/star', (req, res) => {
   }
 });
 
-app.get('/releases/:type/:id', (req, res) => {
-  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+app.get('/releases/:type/:id', async (req, res) => {
+  // Refresh the reusable, account-level Browsy contract before rendering so the
+  // DistroKid automation panel reports "ready" for any release of this type once
+  // the workflow has been recorded once — not only on the release it was recorded on.
+  await warmDistroKidBrowsyContract(req.params.type);
+  let cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).render('404', { message: 'Release not found' });
+  if (shouldAutoBuildCanonicalPackage(cockpit)) {
+    try {
+      validateReleaseAction('package', cockpit);
+      const result = await buildReleasePackageForCockpit(cockpit.type, cockpit.id);
+      logReleaseCockpitEvent(
+        cockpit.type,
+        cockpit.id,
+        'build_package',
+        result.ok ? 'complete' : 'blocked',
+        result.ok ? `Auto-built canonical release package for ${result.trackCount} track(s).` : 'Canonical release package auto-build completed with blockers.',
+        { ...result, auto: true },
+      );
+      cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id) || cockpit;
+    } catch (error) {
+      logReleaseCockpitEvent(cockpit.type, cockpit.id, 'build_package', /blocked/i.test(error.message) ? 'blocked' : 'failed', `Canonical package auto-build failed: ${error.message}`, { auto: true });
+      cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id) || cockpit;
+    }
+  }
   const feedbackMessage = String(req.query.notice || req.query.error || '').trim();
   const feedbackLevel = String(req.query.level || (req.query.error ? 'error' : 'info')).trim().toLowerCase();
   res.render('releases/detail', {
@@ -389,6 +412,16 @@ app.get('/releases/:type/:id', (req, res) => {
     actionFeedback: feedbackMessage ? { level: feedbackLevel, message: feedbackMessage } : null,
   });
 });
+
+function shouldAutoBuildCanonicalPackage(cockpit) {
+  return Boolean(
+    cockpit
+      && cockpit.packageState
+      && !cockpit.packageState.exists
+      && !cockpit.packageState.ready
+      && cockpit.blockers.length === 0
+  );
+}
 
 app.post('/releases/:type/:id/upload-bundle/open', async (req, res) => {
   const backUrl = `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`;
@@ -798,10 +831,28 @@ app.post('/releases/:type/:id/magic-release/tasks/:taskKey/run', async (req, res
       dryRun: req.body?.dry_run !== 'false',
     });
     if (wantsJson(req)) return res.json({ ok: true, result });
-    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+    // ingestBrowsyResult always reports ok:true (ingest succeeded); the real run
+    // outcome lives on the task status/reason. Surface failures and gates as a
+    // banner instead of a silent redirect so the user sees what happened.
+    const base = `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`;
+    const taskStatus = result?.task?.status || null;
+    const reason = String(result?.task?.reason || result?.execution?.error || '').trim();
+    if (['failed', 'blocked'].includes(taskStatus)) {
+      const msg = reason || 'Automation did not complete.';
+      return res.redirect(303, `${base}?error=${encodeURIComponent(msg)}#magic-release`);
+    }
+    if (taskStatus === 'needs_ken') {
+      const msg = reason || 'Automation paused — human review required before final submit.';
+      return res.redirect(303, `${base}?notice=${encodeURIComponent(msg)}&level=warning#magic-release`);
+    }
+    if (taskStatus === 'complete') {
+      return res.redirect(303, `${base}?notice=${encodeURIComponent('Automation run completed.')}#magic-release`);
+    }
+    return res.redirect(303, base);
   } catch (error) {
     if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
-    res.redirect(303, `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`);
+    const base = `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`;
+    res.redirect(303, `${base}?error=${encodeURIComponent(error.message || 'Automation run failed.')}#magic-release`);
   }
 });
 
@@ -3019,7 +3070,13 @@ function buildDistroKidPreviewCommand(cockpit) {
 }
 
 function startReleaseAutomationChild({ cockpit, action, runId, command, args }) {
-  const child = spawn(process.execPath, args, {
+  // Never launch a real browser when the DistroKid automation stub is active
+  // (tests start the live server and hit these routes over HTTP). Spawn a
+  // no-op child that exits cleanly so the supervisor finalizes as "complete".
+  const childArgs = process.env.PANCAKE_DISTROKID_AUTOMATION_STUB === '1'
+    ? ['-e', 'process.exit(0)']
+    : args;
+  const child = spawn(process.execPath, childArgs, {
     cwd: join(__dirname, '../..'),
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],

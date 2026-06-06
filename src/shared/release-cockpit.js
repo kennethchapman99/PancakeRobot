@@ -28,7 +28,7 @@ import { buildDistroKidAlbumWorkflowContext } from './automation-workflow-preset
 import { buildUploadManifest } from './distrokid-upload-bundle.js';
 import { summarizeBrowsyIntegration, summarizeMagicReleaseForCockpit } from './magic-release.js';
 import { summarizeMagicReleaseBrowsyRecordings } from './magic-release-browsy-recordings.js';
-import { BROWSY_WORKFLOW_IDS, buildBrowsyWorkflowRef, getBrowsyConfig } from './browsy-client.js';
+import { BROWSY_WORKFLOW_IDS, buildBrowsyWorkflowRef, evaluateBrowsyContractCompleteness, getBrowsyConfig, getBrowsyWorkflowContract } from './browsy-client.js';
 import { validateCanonicalReleasePackageManifest } from './release-package-validation.js';
 
 const execFileAsync = promisify(execFile);
@@ -86,6 +86,52 @@ const DISTROKID_RECORDING_FAILED_STATUSES = new Set(['start_failed', 'launch_fai
 const DISTROKID_RECORDING_SETUP_STATUSES = new Set(['setup_ready', 'created', 'pending']);
 const DISTROKID_RECORDING_ACTIVE_STATUSES = new Set(['recording', 'launched', 'active', 'running']);
 const DISTROKID_RECORDING_STOPPED_STATUSES = new Set(['stopped', 'recorded']);
+
+// A completed Browsy workflow contract is a reusable, account-level asset keyed by
+// appId + workflowId — it is NOT tied to the release it was recorded on. So once
+// any release of a given type has been recorded + imported, every other release of
+// that type can run the automation without re-recording. The cockpit panel must
+// reflect that. We cache the published contract briefly so the synchronous
+// view-model build can report readiness without a per-render network call:
+// warmDistroKidBrowsyContract() refreshes from Browsy (awaited by the detail route),
+// and summarizeDistroKidBrowsyWorkflow() reads the snapshot via peek.
+const GLOBAL_BROWSY_CONTRACT_TTL_MS = 15000;
+const globalBrowsyContractCache = new Map(); // workflowId -> { fetchedAt, reachable, contract, completeness }
+
+function distrokidWorkflowIdForType(type) {
+  return normalizeReleaseType(type) === 'album'
+    ? BROWSY_WORKFLOW_IDS.distrokidAlbumSubmit
+    : BROWSY_WORKFLOW_IDS.distrokidSingleSubmit;
+}
+
+// Fetch + cache the published, reusable Browsy contract for this release type.
+// Returns the cache entry, or null when Browsy is unconfigured/unreachable (the
+// panel then falls back to per-campaign recording state — no regression).
+export async function warmDistroKidBrowsyContract(type, { config = getBrowsyConfig() } = {}) {
+  const workflowId = distrokidWorkflowIdForType(type);
+  if (!config.baseUrl || !workflowId) return null;
+  try {
+    const fetched = await getBrowsyWorkflowContract({ appId: config.appId, workflowId, version: config.workflowVersion, config });
+    const entry = {
+      fetchedAt: Date.now(),
+      reachable: fetched.reachable !== false,
+      contract: fetched.contract || null,
+      completeness: fetched.contract ? evaluateBrowsyContractCompleteness(fetched.contract, workflowId) : null,
+    };
+    globalBrowsyContractCache.set(workflowId, entry);
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
+function peekDistroKidGlobalContract(workflowId) {
+  const entry = globalBrowsyContractCache.get(workflowId);
+  if (!entry) return null;
+  if (Date.now() - entry.fetchedAt > GLOBAL_BROWSY_CONTRACT_TTL_MS) return null;
+  if (!entry.reachable || !entry.contract || !entry.completeness) return null;
+  return entry;
+}
 
 export const RELEASE_COCKPIT_STAGES = Object.freeze([
   'metadata',
@@ -910,6 +956,7 @@ function writeCanonicalAlbumReleasePackage(vm) {
     release_type: 'album',
     brand_profile_id: profileId,
     release_title: vm.title,
+    release_date: vm.releaseDate,
     track_title: undefined,
     audio_file: undefined,
     cover_art: albumCover,
@@ -942,6 +989,7 @@ function writeCanonicalAlbumReleasePackage(vm) {
     ...(manifest.field_sources || {}),
     album_id: 'derived',
     release_id: 'derived',
+    release_date: vm.releaseDate ? 'album' : 'missing',
     cover_art: albumCover ? 'release_assets' : 'missing',
   };
   delete manifest.field_sources.song_id;
@@ -1179,18 +1227,36 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
     workflowName,
     configured,
     baseUrl: config.baseUrl,
+    dryRunForced: config.dryRun === true,
     payloadReadiness,
     sourcePayloadValidation: sourceWorkflowContext?.validation || null,
     sourceSamplePayload: sourceWorkflowContext?.samplePayload || null,
     setupWizardUrl: `/releases/${encodeURIComponent(type)}/${encodeURIComponent(releaseId)}/automation-setup`,
   };
   const previewPassed = Boolean((magicRelease?.tasks || []).find(task => task.task_key === DISTROKID_SUBMIT_TASK_KEY && task.status === 'complete'));
+  // Reusable, account-level contract (keyed by appId+workflowId) — the source of
+  // truth for whether ANY release of this type can run, independent of whether
+  // THIS release was the one recorded on. Warmed by warmDistroKidBrowsyContract().
+  const globalEntry = peekDistroKidGlobalContract(workflowId);
+  const globalCompleteness = globalEntry?.completeness || null;
+  const globalReady = Boolean(globalCompleteness?.ready);
+  const len = value => (Array.isArray(value) ? value.length : 0);
+  const globalCounts = globalEntry?.contract
+    ? {
+        tabs: len(globalEntry.contract.tabs),
+        recordedSteps: len(globalEntry.contract.recordedSteps),
+        fileUploadBindings: len(globalEntry.contract.fileUploadBindings),
+        humanApprovalCheckpoints: len(globalEntry.contract.humanApprovalCheckpoints),
+      }
+    : { tabs: 0, recordedSteps: 0, fileUploadBindings: 0, humanApprovalCheckpoints: 0 };
+  const sourcePayloadOk = sourceWorkflowContext?.validation?.ok !== false;
 
   if (!configured) {
     return {
       ...base,
       hasRecording: Boolean(item?.hasRecording),
       ready: false,
+      runAutomationEnabled: false,
       runLiveEnabled: false,
       runPreviewEnabled: false,
       previewPassed,
@@ -1219,10 +1285,56 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
   }
 
   if (!item) {
+    // No recording was made on THIS release — but a reusable contract published
+    // from another release makes this one runnable too. Derive readiness from the
+    // global contract; only when none exists do we fall back to "missing".
+    if (globalEntry?.contract && globalCompleteness) {
+      const label = globalReady
+        ? 'ready'
+        : globalCompleteness.severity === 'scaffold'
+          ? 'scaffold-only'
+          : 'incomplete';
+      const globalMissing = (globalCompleteness.checks || []).filter(check => !check.ok).map(check => check.label);
+      return {
+        ...base,
+        workflowName,
+        hasRecording: false,
+        reusableContract: true,
+        ready: globalReady,
+        runAutomationEnabled: Boolean(globalReady && sourcePayloadOk && config.dryRun !== true),
+        runPreviewEnabled: globalReady,
+        runLiveEnabled: Boolean(globalReady && previewPassed),
+        previewPassed,
+        readinessSeverity: globalCompleteness.severity,
+        readinessLabel: label,
+        readinessSummary: globalReady
+          ? 'Reusable Browsy workflow contract is published — no recording needed for this release.'
+          : globalCompleteness.summary,
+        recordingPhase: null,
+        recorderActive: false,
+        needsAuthSetup: false,
+        authState: 'unknown',
+        authStateLabel: 'Unknown',
+        relaunchNeeded: false,
+        nextStep: distrokidBrowsyNextStep(label, globalMissing, null),
+        recordingId: null,
+        recordingSessionId: null,
+        recordingStatus: null,
+        wizardUrl: null,
+        setupWizardUrl: base.setupWizardUrl,
+        recorderUrl: null,
+        importedWorkflowRef: globalEntry.contract.workflowRef || workflowRef,
+        lastError: null,
+        counts: globalCounts,
+        readinessChecks: globalCompleteness.checks || [],
+        missingAreas: globalMissing,
+      };
+    }
     return {
       ...base,
       hasRecording: false,
       ready: false,
+      runAutomationEnabled: false,
       runLiveEnabled: false,
       runPreviewEnabled: false,
       previewPassed,
@@ -1250,13 +1362,20 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
     };
   }
 
-  const sourcePayloadOk = sourceWorkflowContext?.validation?.ok !== false;
   const staleSourcePayloadError = sourcePayloadOk && isSourcePayloadRequiredFieldError(item.lastError);
   const effectiveLastError = staleSourcePayloadError ? null : item.lastError;
   const unreachable = /unreachable|cannot be reached|not configured|ECONNREFUSED|ENOTFOUND/i.test(String(effectiveLastError || ''));
   const failed = !unreachable && (DISTROKID_RECORDING_FAILED_STATUSES.has(String(item.recordingStatus || '')) || Boolean(effectiveLastError));
   const recordingPhase = distrokidRecordingPhase(item.recordingStatus);
-  const readinessLabel = item.ready
+  // The badge reflects CONTRACT readiness; the next-step message also factors in the
+  // live recording lifecycle (started/active/stopped/launch-failed/auth-blocked).
+  const recordingPhaseLabels = ['recording_started', 'recording_active', 'recording_stopped', 'launch_failed', 'auth_blocked', 'auth_required', 'auth_rejected'];
+  const lifecycleActive = Boolean(recordingPhase && recordingPhaseLabels.includes(recordingPhase));
+  // A reusable contract published from another release makes this one runnable even
+  // if this release's own recording row isn't complete — unless we're mid-recording
+  // here (then show the live lifecycle instead of masking it as "ready").
+  const effectiveReady = Boolean(item.ready) || (globalReady && !lifecycleActive && !failed && !unreachable);
+  const readinessLabel = effectiveReady
     ? 'ready'
     : unreachable
       ? 'unavailable'
@@ -1268,10 +1387,7 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
             ? 'scaffold-only'
             : 'incomplete';
   const missingAreas = (item.readinessChecks || []).filter(check => !check.ok).map(check => check.label);
-  // The badge reflects CONTRACT readiness; the next-step message also factors in the
-  // live recording lifecycle (started/active/stopped/launch-failed/auth-blocked).
-  const recordingPhaseLabels = ['recording_started', 'recording_active', 'recording_stopped', 'launch_failed', 'auth_blocked', 'auth_required', 'auth_rejected'];
-  const nextStepLabel = (!item.ready && !unreachable && recordingPhase && recordingPhaseLabels.includes(recordingPhase))
+  const nextStepLabel = (!effectiveReady && !unreachable && recordingPhase && recordingPhaseLabels.includes(recordingPhase))
     ? recordingPhase
     : readinessLabel;
   const recorderActive = recordingPhase === 'recording_active';
@@ -1282,36 +1398,43 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
   const authState = distrokidAuthState(recordingPhase);
   // Relaunch is a secondary recovery action: a recording exists but no recorder is
   // currently open (launch failed, auth blocked, or the operator closed it).
-  const relaunchNeeded = Boolean(item.hasRecording) && !item.ready && !recorderActive && recordingPhase !== 'imported';
+  const relaunchNeeded = Boolean(item.hasRecording) && !effectiveReady && !recorderActive && recordingPhase !== 'imported';
+  // When this release's own row isn't complete but a reusable contract makes it
+  // runnable, surface the contract's readiness detail rather than the local row's.
+  const reusableContract = !item.ready && effectiveReady;
 
   return {
     ...base,
     workflowName: item.workflowName || workflowName,
     hasRecording: Boolean(item.hasRecording),
-    ready: Boolean(item.ready),
-    runPreviewEnabled: Boolean(item.ready),
-    runLiveEnabled: Boolean(item.ready && previewPassed),
+    reusableContract,
+    ready: effectiveReady,
+    runAutomationEnabled: Boolean(effectiveReady && sourcePayloadOk && config.dryRun !== true),
+    runPreviewEnabled: effectiveReady,
+    runLiveEnabled: Boolean(effectiveReady && previewPassed),
     previewPassed,
-    readinessSeverity: item.readinessSeverity,
+    readinessSeverity: reusableContract ? globalCompleteness.severity : item.readinessSeverity,
     readinessLabel,
-    readinessSummary: item.readinessSummary,
+    readinessSummary: reusableContract
+      ? 'Reusable Browsy workflow contract is published — no recording needed for this release.'
+      : item.readinessSummary,
     recordingPhase,
     recorderActive,
     needsAuthSetup,
     authState: authState.state,
     authStateLabel: authState.label,
     relaunchNeeded,
-    nextStep: distrokidBrowsyNextStep(nextStepLabel, missingAreas, effectiveLastError),
+    nextStep: distrokidBrowsyNextStep(reusableContract ? 'ready' : nextStepLabel, missingAreas, effectiveLastError),
     recordingId: item.recordingId,
     recordingSessionId: item.recordingSessionId,
     recordingStatus: item.recordingStatus,
     wizardUrl: item.wizardUrl,
     setupWizardUrl: base.setupWizardUrl,
     recorderUrl: item.recorderUrl,
-    importedWorkflowRef: item.importedWorkflowRef,
+    importedWorkflowRef: item.importedWorkflowRef || (reusableContract ? (globalEntry.contract.workflowRef || workflowRef) : null),
     lastError: effectiveLastError,
-    counts: item.counts,
-    readinessChecks: item.readinessChecks || [],
+    counts: reusableContract ? globalCounts : item.counts,
+    readinessChecks: reusableContract ? (globalCompleteness.checks || []) : (item.readinessChecks || []),
     missingAreas,
   };
 }
@@ -1321,7 +1444,7 @@ function distrokidBrowsyNextStep(label, missingAreas = [], lastError = null) {
     case 'unavailable':
       return { headline: 'Browsy is not configured or cannot be reached.', cta: 'Refresh Contract', detail: 'Set the Browsy base URL and start the Browsy server, then refresh the contract.' };
     case 'ready':
-      return { headline: 'Workflow contract is ready.', cta: 'Run Preview', detail: 'Contract recorded and complete. Run Live remains gated until preview passes and live approval requirements are satisfied.' };
+      return { headline: 'Workflow contract is ready.', cta: 'Run Automation for This Release', detail: 'Contract recorded and complete. Run the Browsy replay with this release payload; the final DistroKid submit remains a manual checkpoint.' };
     case 'recording_started':
       return { headline: 'Automation setup exists; review it before launching the recorder.', cta: 'Open Automation Setup Wizard', detail: 'A Browsy recording session exists, but the setup wizard remains the canonical place to validate context before recording.' };
     case 'recording_active':

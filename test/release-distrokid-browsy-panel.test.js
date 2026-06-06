@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -10,6 +11,10 @@ import {
 
 process.env.PIPELINE_APP_SLUG = prepareTestDbSlug('test-release-distrokid-browsy-panel').slug;
 process.env.PANCAKE_DISTROKID_AUTOMATION_STUB = '1';
+// The detail route warms the reusable Browsy contract on render. Pin Browsy to a
+// dead port by default so that warm is deterministically unreachable (panel falls
+// back to per-recording state) — individual tests opt into a fake Browsy as needed.
+process.env.PANCAKE_BROWSY_BASE_URL = 'http://127.0.0.1:9';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const songIds = new Set();
@@ -22,7 +27,7 @@ test.after(() => {
 const { upsertSong, createReleaseBrowsyRecording, createAlbum, assignSongsToAlbum, getReleaseCockpitLogs } = await import('../src/shared/db.js');
 const { evaluateBrowsyContractCompleteness } = await import('../src/shared/browsy-client.js');
 const { createMagicReleaseCampaign } = await import('../src/shared/magic-release.js');
-const { buildReleaseCockpitViewModel } = await import('../src/shared/release-cockpit.js');
+const { buildReleaseCockpitViewModel, warmDistroKidBrowsyContract } = await import('../src/shared/release-cockpit.js');
 const { app } = await import('../src/web/server.js');
 
 const SUBMIT_TASK = 'distrokid_submit_dry_run';
@@ -41,6 +46,22 @@ function writeSongAsset(songId, relativePath, content = 'test') {
   const filePath = path.join(repoRoot, 'output', 'songs', songId, relativePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content);
+}
+
+function writeAlbumImage(albumId) {
+  const filePath = path.join(repoRoot, 'output', 'albums', albumId, 'reference', 'primary-image.png');
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, 'fake-album-image');
+  const albumAssetsDir = path.join(repoRoot, 'output', 'albums', albumId, 'assets');
+  fs.mkdirSync(albumAssetsDir, { recursive: true });
+  fs.writeFileSync(path.join(albumAssetsDir, 'metadata.json'), JSON.stringify({
+    primary_image_fingerprint: 'test',
+    generated_assets: [
+      'spotify-cover-3000x3000.png',
+      'youtube-thumbnail-1280x720.png',
+      'instagram-square-1080x1080.png',
+    ].map(name => ({ name, format: name, path: path.join(albumAssetsDir, name), publicUrl: `/media/albums/${albumId}/assets/${name}` })),
+  }));
 }
 
 function seedSong() {
@@ -74,6 +95,13 @@ function seedAlbum({ trackCount = 1, missingAudioIndexes = [] } = {}) {
     });
     if (!missing.has(i)) writeSongAsset(id, 'audio.mp3', 'fake-audio');
     if (i === 0) writeSongAsset(id, 'reference/base-image.png', 'fake-art');
+    writeSongAsset(id, 'metadata.json', JSON.stringify({
+      artist: 'Pancake Robot',
+      title: `Browsy Panel ${i + 1}`,
+      primary_genre: "Children's Music",
+      made_for_kids: true,
+    }));
+    writeSongAsset(id, 'lyrics.md', 'la la test');
   }
   const albumId = createAlbum({
     id: uniqueId('DKBROWSY_ALBUM'),
@@ -85,6 +113,7 @@ function seedAlbum({ trackCount = 1, missingAudioIndexes = [] } = {}) {
   });
   albumIds.add(albumId);
   assignSongsToAlbum(albumId, ids);
+  writeAlbumImage(albumId);
   return albumId;
 }
 
@@ -149,6 +178,40 @@ async function fetchDetailHtml(releaseType, releaseId) {
   }
 }
 
+// Minimal fake Browsy that serves a published workflow contract. Mirrors what a
+// real Browsy returns after a workflow has been recorded + imported once, so the
+// cockpit can treat the contract as a reusable, account-level asset.
+function startFakeBrowsyContract(contract) {
+  const server = http.createServer((req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    if (req.method === 'GET' && /\/contract(\?|$)/.test(req.url)) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, contract }));
+      return;
+    }
+    res.writeHead(404);
+    res.end(JSON.stringify({ ok: false, error: 'not found' }));
+  });
+  return new Promise(resolve => {
+    server.listen(0, '127.0.0.1', () => resolve({ server, baseUrl: `http://127.0.0.1:${server.address().port}` }));
+  });
+}
+
+// Run `fn` with PANCAKE_BROWSY_BASE_URL pointed at a fake Browsy that publishes
+// `contract`, then restore the default dead-port pin (and clear the cached entry
+// by warming against the dead port) so the contract never leaks into later tests.
+async function withPublishedContract(releaseType, contract, fn) {
+  const fake = await startFakeBrowsyContract(contract);
+  process.env.PANCAKE_BROWSY_BASE_URL = fake.baseUrl;
+  try {
+    return await fn();
+  } finally {
+    process.env.PANCAKE_BROWSY_BASE_URL = 'http://127.0.0.1:9';
+    await warmDistroKidBrowsyContract(releaseType); // overwrite cache: now unreachable
+    fake.server.close();
+  }
+}
+
 // 1. Album release detail page renders the Browsy DistroKid workflow panel with every control.
 test('album release detail renders compact Browsy Record Automation entrypoint', async () => {
   const albumId = seedAlbum();
@@ -158,6 +221,9 @@ test('album release detail renders compact Browsy Record Automation entrypoint',
   assert.match(html, /data-distrokid-browsy-panel/);
   assert.match(html, /Browsy automation/);
   assert.match(html, /data-distrokid-browsy-readiness/);
+  assert.match(html, /data-distrokid-browsy-run-live/);
+  assert.match(html, />Run Automation for This Release<\/button>/);
+  assert.match(html, /name="dry_run" value="false"/);
   assert.match(html, />Record Automation<\/button>/);
   assert.match(html, /Release payload readiness/);
   assert.doesNotMatch(html, /Start Recording Browser/);
@@ -166,9 +232,24 @@ test('album release detail renders compact Browsy Record Automation entrypoint',
   assert.doesNotMatch(html, />Import Recording<\/button>/);
   assert.doesNotMatch(html, />Refresh Contract<\/button>/);
   assert.doesNotMatch(html, />View Contract<\/a>/);
-  assert.doesNotMatch(html, />Run Preview<\/button>/);
   assert.doesNotMatch(html, />Run Live<\/button>/);
   assert.doesNotMatch(html, /Advanced Browsy recording diagnostics/);
+});
+
+test('album release detail auto-builds a missing canonical package when source data is complete', async () => {
+  const albumId = seedAlbum({ trackCount: 2 });
+  seedRecording('album', albumId, { contract: completeContract('distrokid-album-submit') });
+  const manifestPath = path.join(repoRoot, 'output', 'release-packages', albumId, 'manifest.json');
+  assert.equal(fs.existsSync(manifestPath), false);
+
+  const html = await fetchDetailHtml('album', albumId);
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  assert.equal(manifest.release_type, 'album');
+  assert.equal(manifest.release_date, '2026-09-01');
+  assert.equal(manifest.readiness?.ready_for_distrokid_dry_run, true);
+  assert.match(html, /Canonical package is valid/);
+  assert.doesNotMatch(html, /Canonical package manifest is missing/);
 });
 
 test('album release detail blocks Record Automation when later tracks lack audio paths', async () => {
@@ -176,6 +257,7 @@ test('album release detail blocks Record Automation when later tracks lack audio
   seedRecording('album', albumId, { contract: completeContract('distrokid-album-submit') });
   const wf = buildReleaseCockpitViewModel('album', albumId).distrokidBrowsyWorkflow;
   assert.equal(wf.sourcePayloadValidation.ok, false);
+  assert.equal(wf.runAutomationEnabled, false);
   assert.match(wf.sourcePayloadValidation.errors.join(' '), /tracks\[1\]\.audioPath is required/);
   assert.match(wf.sourcePayloadValidation.errors.join(' '), /tracks\[2\]\.audioPath is required/);
 
@@ -183,6 +265,7 @@ test('album release detail blocks Record Automation when later tracks lack audio
   assert.match(html, /Source payload blocked/);
   assert.match(html, /tracks\[1\]\.audioPath is required/);
   assert.match(html, /tracks\[2\]\.audioPath is required/);
+  assert.match(html, /<button[^>]*data-distrokid-browsy-run-live[^>]*disabled[^>]*>Run Automation for This Release<\/button>/);
   assert.match(html, /<button[^>]*disabled[^>]*>Record Automation<\/button>/);
 });
 
@@ -235,19 +318,22 @@ test('scaffold-only contract is labelled distinctly with Run Live disabled but V
   assert.match(html, />Record Automation<\/button>/);
 });
 
-// 4. Ready contract state enables Preview but keeps Run Live gated until preview passes.
-test('ready contract enables Preview and keeps Run Live gated until preview passes', async () => {
+// 4. Ready contract state exposes replay for the current release while final submit stays gated.
+test('ready contract exposes Browsy replay for the current release payload', async () => {
   const songId = seedSong();
   seedRecording('single', songId, { contract: completeContract('distrokid-single-submit') });
 
   const wf = buildReleaseCockpitViewModel('single', songId).distrokidBrowsyWorkflow;
   assert.equal(wf.readinessLabel, 'ready');
+  assert.equal(wf.runAutomationEnabled, true);
   assert.equal(wf.runPreviewEnabled, true);
   assert.equal(wf.runLiveEnabled, false);
   assert.match(wf.nextStep.headline, /Workflow contract is ready/);
 
   const html = await fetchDetailHtml('single', songId);
-  assert.doesNotMatch(html, /data-distrokid-browsy-run-live/);
+  assert.match(html, /data-distrokid-browsy-run-live/);
+  assert.match(html, />Run Automation for This Release<\/button>/);
+  assert.match(html, /name="dry_run" value="false"/);
   assert.match(html, />Record Automation<\/button>/);
 });
 
@@ -361,6 +447,39 @@ test('normal release page hides legacy Browsy lifecycle routes and posts Record 
   assert.ok(!html.includes(`action="${base}/recordings/refresh-contract"`), 'refresh-contract route hidden');
   assert.ok(!html.includes(`${base}/recordings/contract?workflow_id=`), 'view-contract route hidden');
   assert.ok(!html.includes(`action="${base}/tasks/${SUBMIT_TASK}/run"`), 'run route hidden');
+});
+
+// Reusable contract: a release that was never recorded on still runs because a
+// published, account-level contract exists for its workflow type.
+test('a new release with no local recording is ready when a reusable contract is published', async () => {
+  const albumId = seedAlbum();
+  seedCampaign('album', albumId); // campaign only — this release was never recorded on.
+
+  await withPublishedContract('album', completeContract('distrokid-album-submit'), async () => {
+    await warmDistroKidBrowsyContract('album');
+    const wf = buildReleaseCockpitViewModel('album', albumId).distrokidBrowsyWorkflow;
+    assert.equal(wf.readinessLabel, 'ready');
+    assert.equal(wf.hasRecording, false);
+    assert.equal(wf.reusableContract, true);
+    assert.equal(wf.runAutomationEnabled, true);
+    assert.match(wf.readinessSummary, /[Rr]eusable Browsy workflow contract is published/);
+
+    const html = await fetchDetailHtml('album', albumId);
+    assert.match(html, />Run Automation for This Release<\/button>/);
+    assert.doesNotMatch(html, /automation is not ready/);
+  });
+});
+
+// Once the reusable contract is gone/unreachable, the same release falls back to
+// "missing" — readiness is never faked from a stale cache.
+test('reusable-contract readiness clears when Browsy is unreachable', async () => {
+  const albumId = seedAlbum();
+  seedCampaign('album', albumId);
+
+  await warmDistroKidBrowsyContract('album'); // dead-port pin → unreachable
+  const wf = buildReleaseCockpitViewModel('album', albumId).distrokidBrowsyWorkflow;
+  assert.equal(wf.readinessLabel, 'missing');
+  assert.equal(wf.ready, false);
 });
 
 // 8. Object-style logging regression — failed launch via HTTP writes a correctly-keyed cockpit log.

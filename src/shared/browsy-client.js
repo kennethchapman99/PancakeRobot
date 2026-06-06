@@ -61,6 +61,7 @@ export async function startBrowsyWorkflowRun({
   callerId = 'pancake-robot',
   correlationId = '',
   approvalToken = '',
+  options = null,
   config = getBrowsyConfig(),
 } = {}) {
   const resolvedWorkflowRef = clean(workflowRef) || buildBrowsyWorkflowRef({
@@ -74,6 +75,7 @@ export async function startBrowsyWorkflowRun({
     callerId,
     correlationId: clean(correlationId),
     approvalToken: clean(approvalToken),
+    options,
   });
 
   const canonicalPath = `/api/workflows/${encodeURIComponent(resolvedWorkflowRef)}/runs`;
@@ -135,11 +137,12 @@ export async function executeBrowsyWorkflowRun({
   callerId = 'pancake-robot',
   correlationId = '',
   approvalToken = '',
+  options = null,
   config = getBrowsyConfig(),
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   now = () => Date.now(),
 } = {}) {
-  const start = await startBrowsyWorkflowRun({ workflowId, payload, mode, callerId, correlationId, approvalToken, config });
+  const start = await startBrowsyWorkflowRun({ workflowId, payload, mode, callerId, correlationId, approvalToken, options, config });
   if (!start.ok) {
     const unreachable = start.status === 0;
     return {

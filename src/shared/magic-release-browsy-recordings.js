@@ -977,8 +977,8 @@ function updateRecording(id, patch) {
 function applyContractReadinessToTask({ campaign, task, completeness }) {
   if (completeness.ready) {
     // Clear any recording-related block so recompute can re-derive readiness.
-    if (['blocked', 'needs_ken'].includes(task.status) && /scaffold|record|contract|incomplete/i.test(String(task.reason || ''))) {
-      upsertReleaseCampaignTask({ id: task.id, campaign_id: campaign.id, task_key: task.task_key, status: 'pending', reason: null, suggested_action: null });
+    if (['blocked', 'needs_ken'].includes(task.status) && /scaffold|record|contract|incomplete|upload bindings|artwork|audio/i.test(String(task.reason || ''))) {
+      upsertReleaseCampaignTask({ id: task.id, campaign_id: campaign.id, task_key: task.task_key, status: 'pending', reason: '', suggested_action: '' });
     }
     return;
   }

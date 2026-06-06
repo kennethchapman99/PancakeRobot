@@ -204,6 +204,13 @@ export async function ingestBrowsyResult({ resultPath, campaignId = null, taskKe
     : findTaskForWorkflow(campaign.id, result.workflow_id);
   if (!task) throw new Error(`No campaign task found for Browsy workflow ${result.workflow_id}`);
   const nextStatus = mapBrowsyStatus(result.status);
+  // Prefer the concrete failure reason Browsy reported (e.g. an auth-profile lock)
+  // over the generic mapBrowsyStatus copy, so the cockpit and the UI banner show
+  // the actionable cause instead of "Browsy workflow failed."
+  const blockingActionRequest = (result.client_action_requests || []).find(req => req?.severity === 'blocking') || null;
+  const detailedReason = nextStatus.status === 'complete'
+    ? null
+    : (result.next_required_action || blockingActionRequest?.reason || (result.errors || []).slice(-1)[0] || null);
   const updatedTask = upsertReleaseCampaignTask({
     id: task.id,
     campaign_id: campaign.id,
@@ -213,8 +220,8 @@ export async function ingestBrowsyResult({ resultPath, campaignId = null, taskKe
     result_path: cleanPath,
     source_workflow_id: result.workflow_id,
     source_run_id: result.run_id || null,
-    reason: nextStatus.reason || task.reason,
-    suggested_action: nextStatus.suggestedAction || task.suggested_action,
+    reason: detailedReason || nextStatus.reason || task.reason,
+    suggested_action: blockingActionRequest?.suggested_action || nextStatus.suggestedAction || task.suggested_action,
     completed_at: nextStatus.status === 'complete' ? new Date().toISOString() : null,
   });
   if (result.captured_outputs) applyCapturedOutputs(campaign, result.captured_outputs, result);
@@ -277,7 +284,7 @@ export function summarizeBrowsyIntegration(releaseType, releaseId) {
     configured: Boolean(config.baseUrl),
     baseUrl: config.baseUrl,
     appId: config.appId,
-    mode: config.dryRun === true ? 'dry_run' : (config.dryRun === false ? 'live' : config.mode),
+    mode: config.dryRun === true ? 'dry_run' : (config.dryRun === false ? 'replay' : config.mode),
     dryRunForced: config.dryRun,
     workflowIds: BROWSY_WORKFLOW_IDS,
     lastRun: lastRun ? {
@@ -494,11 +501,11 @@ async function runBrowsyTask({ campaign, task, release, dryRun }) {
   const run = addReleaseCampaignRun({
     campaign_id: campaign.id,
     task_id: task.id,
-    workflow_id: task.source_workflow_id,
-    status: 'running',
-    package_path: packageResult.packagePath,
-    log: {
-      mode: effectiveDryRun ? 'dry_run' : 'live',
+      workflow_id: task.source_workflow_id,
+      status: 'running',
+      package_path: packageResult.packagePath,
+      log: {
+      mode: effectiveDryRun ? 'dry_run' : 'replay',
       browsy_base_url: config.baseUrl,
       browsy_app_id: config.appId,
       started_at: new Date().toISOString(),
@@ -518,7 +525,7 @@ async function runBrowsyTask({ campaign, task, release, dryRun }) {
     status: execution.runRecordStatus || (execution.ok ? 'complete' : 'failed'),
     result_path: execution.resultPath || null,
     log: {
-      mode: effectiveDryRun ? 'dry_run' : 'live',
+      mode: effectiveDryRun ? 'dry_run' : 'replay',
       browsy_base_url: config.baseUrl,
       browsy_app_id: config.appId,
       workflow_id: task.source_workflow_id,
@@ -569,6 +576,10 @@ function markNeedsKenTask(task, reason) {
 function mapBrowsyStatus(status) {
   switch (status) {
     case 'dry_run_passed':
+      return { status: 'complete', logStatus: 'success' };
+    case 'replay_run_gated':
+      return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy replay paused for human approval before final submit.', suggestedAction: 'Review the DistroKid browser session and click the final submit button manually if everything is correct.' };
+    case 'replay_run_completed':
       return { status: 'complete', logStatus: 'success' };
     case 'live_run_gated':
       return { status: 'needs_ken', logStatus: 'warning', reason: 'Browsy paused for human approval before final submit.', suggestedAction: 'Approve the DistroKid final submit gate.' };
@@ -745,11 +756,12 @@ function writeBrowsyWorkflowPackage({ campaign, task, release, dryRun }) {
     source_system: 'pancake_robot',
     entity_type: release.type,
     entity_id: release.id,
-    mode: dryRun ? 'dry_run' : 'live',
+    mode: dryRun ? 'dry_run' : 'preview',
+    pancake_mode: dryRun ? 'dry_run' : 'replay',
     human_gate: true,
     manifest_path: path.relative(REPO_ROOT, manifestPath),
     canonical_payload: canonicalPayload,
-    assets: [],
+    assets: buildBrowsyPackageAssets(canonicalPayload),
     capture_outputs: defaultCaptureOutputs(task.source_workflow_id),
     on_failure: 'stop_and_return_blocked_result',
     return_contract_version: 'automation-result-v1',
@@ -765,8 +777,8 @@ function writeBrowsyWorkflowPackage({ campaign, task, release, dryRun }) {
 
 // Runs (or explicitly dry-runs) a Browsy workflow and writes a pancake-contract
 // result.json that ingestBrowsyResult understands. There is no silent fake
-// success: an explicit dry-run is clearly marked, and a live run that cannot
-// reach Browsy is recorded as not_configured rather than a passing run.
+// success: an explicit dry-run is clearly marked, and a replay that cannot reach
+// Browsy is recorded as not_configured rather than a passing run.
 async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, config = getBrowsyConfig() }) {
   const resultPath = path.join(path.dirname(packagePath), 'result.json');
   const packagePayload = payload || JSON.parse(fs.readFileSync(packagePath, 'utf8'));
@@ -805,7 +817,7 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
     };
   }
 
-  // Live runs are gated on contract readiness. Before any browser automation we
+  // Replays are gated on contract readiness. Before any browser automation we
   // fetch the workflow contract from Browsy and verify it is a real
   // recorded/imported workflow — not a scaffold-only stub. A missing or
   // incomplete contract is reported as a blocking result, never a fake run.
@@ -813,7 +825,8 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   if (contractGate.reachable === false) {
     const result = baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId });
     result.status = 'not_configured';
-    result.mode = 'live';
+    result.mode = 'preview';
+    result.pancake_mode = 'replay';
     result.errors = [contractGate.error || 'Browsy service was unreachable while fetching the workflow contract.'];
     result.next_required_action = `Start Browsy at ${config.baseUrl} and rerun, or set PANCAKE_BROWSY_DRY_RUN=true for a dry run.`;
     writeJson(resultPath, result);
@@ -832,7 +845,8 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   if (!completeness.ready) {
     const result = baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId });
     result.status = 'contract_not_ready';
-    result.mode = 'live';
+    result.mode = 'preview';
+    result.pancake_mode = 'replay';
     result.errors = [completeness.summary];
     result.contract_completeness = completeness;
     result.next_required_action = 'Record/import the Browsy workflow first.';
@@ -854,10 +868,11 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
     releaseId: entityId,
     action: 'browsy_run',
     status: 'info',
-    message: 'Browsy live run started.',
+    message: 'Browsy replay started.',
     payload: {
       workflowId,
       correlationId,
+      mode: 'preview',
       releaseId: variables.releaseId,
       variablesResolved: ['releaseId', 'album.coverArtPath', 'tracks[].audioPath', 'tracks.length'],
       authProfileRef: contractGate.contract?.authProfileRef || contractGate.contract?.auth?.[0]?.authProfileId || contractGate.contract?.auth?.[0]?.siteId || null,
@@ -866,9 +881,15 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   const execution = await executeBrowsyWorkflowRun({
     workflowId,
     payload: variables,
-    mode: 'live',
+    mode: 'preview',
     callerId: 'pancake-robot',
     correlationId,
+    options: {
+      leaveBrowserOpen: true,
+      usePersistentProfile: true,
+      authProfileId: contractGate.contract?.authProfileRef || contractGate.contract?.auth?.[0]?.authProfileId || contractGate.contract?.auth?.[0]?.siteId || 'distrokid',
+      requireHumanApproval: true,
+    },
     config,
   });
 
@@ -876,7 +897,8 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   if (execution.reachable === false) {
     const result = baseResult({ workflowId, entityType, entityId, captureOutputs, correlationId });
     result.status = 'not_configured';
-    result.mode = 'live';
+    result.mode = 'preview';
+    result.pancake_mode = 'replay';
     result.errors = [execution.error || 'Browsy service was unreachable.'];
     result.next_required_action = `Start Browsy at ${config.baseUrl} and rerun, or set PANCAKE_BROWSY_DRY_RUN=true for a dry run.`;
     writeJson(resultPath, result);
@@ -894,6 +916,8 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
   if (execution.timedOut) {
     const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution, correlationId });
     result.status = 'timeout';
+    result.mode = 'preview';
+    result.pancake_mode = 'replay';
     result.errors = [`Browsy run ${execution.runId} did not reach a terminal state within the timeout.`];
     writeJson(resultPath, result);
     return {
@@ -913,7 +937,12 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
 
   const result = resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution, correlationId });
   result.status = mapCategoryToResultStatus(execution.category);
+  result.mode = 'preview';
+  result.pancake_mode = 'replay';
   writeJson(resultPath, result);
+  const failureReason = execution.category === 'success'
+    ? null
+    : (result.next_required_action || result.errors[result.errors.length - 1] || 'Browsy workflow did not complete.');
   return {
     ok: execution.category === 'success',
     resultPath,
@@ -924,6 +953,8 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
     browsyStatus: execution.status,
     artifactPaths: result.artifact_paths,
     reachable: true,
+    error: failureReason,
+    clientActionRequests: result.client_action_requests,
     result,
   };
 }
@@ -965,14 +996,33 @@ function baseResult({ workflowId, entityType, entityId, captureOutputs, correlat
 // result.json shape consumed by ingestBrowsyResult.
 function resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs, execution, correlationId }) {
   const runResult = execution.result || {};
+  const runRecord = execution.run || {};
   const artifactGroups = runResult.artifacts || {};
   const screenshots = (artifactGroups.screenshots || []).map(a => a.path || a.name).filter(Boolean);
   const artifactPaths = ['screenshots', 'downloads', 'trace', 'logs']
     .flatMap(key => (artifactGroups[key] || []).map(a => a.path).filter(Boolean));
   const checkpoints = runResult.checkpoints || [];
   const category = execution.category;
-  const blockingReason = runResult.blockingReason || null;
+  // Browsy records the concrete failure reason (e.g. an auth-profile lock) on the
+  // run record's validationErrors. Pull it through so the cockpit/UI shows the real
+  // cause instead of a generic "Browsy workflow failed".
+  const validationErrors = (Array.isArray(runResult.validationErrors) && runResult.validationErrors.length
+    ? runResult.validationErrors
+    : (Array.isArray(runRecord.validationErrors) ? runRecord.validationErrors : []))
+    .map(e => String(e)).filter(Boolean);
+  const lockError = validationErrors.find(e => /locked by another browser/i.test(e)) || null;
+  // A hard failure reason (lock / validation error) takes precedence over any
+  // stale "waiting on approval" blockingReason left on the run.
+  const blockingReason = lockError || (execution.category === 'failed' ? validationErrors[0] : null) || runResult.blockingReason || validationErrors[0] || null;
   const clientActionRequests = [];
+  if (lockError) {
+    clientActionRequests.push({
+      type: 'browser_profile_locked',
+      severity: 'blocking',
+      reason: lockError,
+      suggested_action: 'Close the open DistroKid automation browser window, then run the automation again.',
+    });
+  }
   if (category === 'blocked_human_approval') {
     clientActionRequests.push({
       type: 'human_decision_required',
@@ -1011,7 +1061,7 @@ function resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs,
     requested_outputs: captureOutputs,
     filled_fields: runResult.completedSteps || [],
     skipped_fields: runResult.skippedSteps || [],
-    errors: runResult.failedSteps || [],
+    errors: [...(runResult.failedSteps || []), ...validationErrors],
     screenshots,
     artifact_paths: artifactPaths,
     manual_checkpoints: checkpoints,
@@ -1022,8 +1072,8 @@ function resultFromBrowsyRun({ workflowId, entityType, entityId, captureOutputs,
 
 function mapCategoryToResultStatus(category) {
   switch (category) {
-    case 'success': return 'live_run_completed';
-    case 'blocked_human_approval': return 'live_run_gated';
+    case 'success': return 'replay_run_completed';
+    case 'blocked_human_approval': return 'replay_run_gated';
     case 'blocked_auth': return 'blocked_auth';
     case 'blocked_validation': return 'blocked_validation';
     default: return 'failed';
@@ -1036,28 +1086,94 @@ function buildBrowsyRunVariables(packagePayload) {
   const canonical = packagePayload.canonical_payload || {};
   const releaseId = canonical.releaseId || canonical.release_id || packagePayload.entity_id;
   const idKey = packagePayload.entity_type === 'album' ? 'albumId' : 'songId';
+  // DistroKid uses the brand profile display name for both the artist and the
+  // album-title field (per the recorded flow). artist is already resolved to
+  // the brand display name upstream ([[project_distrokid_artist_rule]]).
+  const brandDisplayName = canonical.artist || canonical.artistName || canonical.release_title || canonical.releaseTitle || '';
+  // Map a track's AI disclosure object to DistroKid's ai_gate radio value:
+  // "1" = all audio performed by AI, "2" = part AI + humans, "0" = none.
+  const aiGateValue = (disclosure = {}) => {
+    if (disclosure.all_audio_performed_by_ai || disclosure.allAudioPerformedByAi) return '1';
+    if (disclosure.part_audio_performed_by_ai_and_humans || disclosure.partAudioPerformedByAiAndHumans) return '2';
+    return '0';
+  };
+  const splitName = (raw) => {
+    const parts = String(raw || '').trim().split(/\s+/).filter(Boolean);
+    return { first: parts[0] || '', last: parts.length > 1 ? parts.slice(1).join(' ') : '' };
+  };
   const tracks = Array.isArray(canonical.tracks)
-    ? canonical.tracks.map(track => pruneEmptyValues({
-        songId: track.songId || track.song_id,
-        title: track.title || track.trackTitle || track.track_title,
-        trackNumber: track.trackNumber || track.track_number,
-        audioPath: track.audioPath || track.audio_path,
-        lyrics: track.lyrics,
-        explicit: track.explicit,
-        instrumental: track.instrumental,
-        isAiGenerated: track.isAiGenerated || track.is_ai_generated,
-        isrc: track.isrc,
-        songwriterCredits: track.songwriterCredits || track.songwriter_credits,
-        aiDisclosure: track.aiDisclosure || track.ai_disclosure,
-      }))
+    ? canonical.tracks.map(track => {
+        const songwriterName = track.songwriter || track.songwriterCredits?.[0]?.name || '';
+        const sw = splitName(songwriterName);
+        const disclosure = track.aiDisclosure || track.ai_disclosure || {};
+        return pruneEmptyValues({
+          songId: track.songId || track.song_id,
+          title: track.title || track.trackTitle || track.track_title,
+          trackNumber: track.trackNumber || track.track_number,
+          audioPath: track.audioPath || track.audio_path,
+          lyrics: track.lyrics,
+          explicit: track.explicit,
+          instrumental: track.instrumental,
+          isAiGenerated: track.isAiGenerated || track.is_ai_generated,
+          isrc: track.isrc,
+          songwriterCredits: track.songwriterCredits || track.songwriter_credits,
+          aiDisclosure: disclosure,
+          // Derived per-track values the Browsy repeat-group loop fills directly
+          // ([[browsy-repeat-groups]]). Kept flat so each iteration resolves
+          // track.<field> without further parsing on the Browsy side.
+          songwriterFirst: sw.first,
+          songwriterLast: sw.last,
+          performerName: brandDisplayName,
+          performerRole: 'Performer',
+          producerName: 'Kenneth Chapman',
+          producerRole: 'Executive Producer',
+          aiGate: aiGateValue(disclosure),
+          aiRecordingScope: 'full',
+        });
+      })
     : [];
+  const artworkPath = canonical.artworkPath || canonical.artwork_path || null;
+  const firstAudioPath = tracks.find(track => track.audioPath)?.audioPath || null;
+  const songwriterFirst = tracks[0]?.songwriterFirst || '';
+  const songwriterLast = tracks[0]?.songwriterLast || '';
+  const appleMusicCredits = {
+    performer: { name: brandDisplayName, role: 'Performer' },
+    producer: { name: 'Kenneth Chapman', role: 'Executive Producer' },
+  };
+  const canonicalWithCredits = { ...canonical, apple_music_credits: appleMusicCredits };
   return pruneEmptyValues({
     appId: getBrowsyConfig().appId,
     releaseId,
     albumId: packagePayload.entity_type === 'album' ? releaseId : undefined,
     [idKey]: releaseId,
     mode: packagePayload.mode,
-    distrokid_payload: canonical,
+    distrokid_payload: canonicalWithCredits,
+    inputs: pruneEmptyValues({
+      howmanysongs: tracks.length,
+      track_count: tracks.length,
+      numberOfSongs: tracks.length,
+      artwork: artworkPath,
+      file: firstAudioPath,
+      releaseDate: canonical.releaseDate || canonical.release_date,
+      genre1: canonical.primaryGenre || canonical.primary_genre || canonical.genre,
+      albumtitle: brandDisplayName,
+      songwriterRealNameFirst1: songwriterFirst,
+      songwriterRealNameLast1: songwriterLast,
+      performerName: brandDisplayName,
+      producerName: 'Kenneth Chapman',
+    }),
+    howmanysongs: tracks.length,
+    track_count: tracks.length,
+    numberOfSongs: tracks.length,
+    files: pruneEmptyValues({
+      artwork: artworkPath,
+      cover_art: artworkPath,
+      coverArt: artworkPath,
+      file: firstAudioPath,
+      audio: firstAudioPath,
+      audio_file: firstAudioPath,
+      track_1_audio: firstAudioPath,
+    }),
     album: pruneEmptyValues({
       id: releaseId,
       releaseId,
@@ -1078,12 +1194,22 @@ function buildBrowsyRunVariables(packagePayload) {
       genre: canonical.primary_genre,
       subgenre: canonical.secondary_genre,
     }),
-    artworkPath: canonical.artworkPath || null,
+    artworkPath,
     tracks,
     derived: { numberOfSongs: tracks.length },
     expected_human_gates: packagePayload.human_gate ? ['final_submit_approval'] : [],
     expected_outputs: packagePayload.capture_outputs || [],
   });
+}
+
+function buildBrowsyPackageAssets(canonical = {}) {
+  const assets = [];
+  const artworkPath = canonical.artworkPath || canonical.artwork_path || null;
+  if (artworkPath) assets.push({ type: 'artwork', id: 'artwork', path: artworkPath });
+  const firstTrack = Array.isArray(canonical.tracks) ? canonical.tracks[0] : null;
+  const audioPath = firstTrack?.audioPath || firstTrack?.audio_path || null;
+  if (audioPath) assets.push({ type: 'audio', id: 'file', track_number: firstTrack?.trackNumber || firstTrack?.track_number || 1, path: audioPath });
+  return assets;
 }
 
 function pruneEmptyValues(value) {

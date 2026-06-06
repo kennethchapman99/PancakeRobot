@@ -254,17 +254,32 @@
                   </div>
 
                   <div class="mt-3 flex flex-wrap gap-2">
+                    <% const sourcePayloadOk = !wf.sourcePayloadValidation || wf.sourcePayloadValidation.ok; %>
+                    <% const canRunBrowsyReplay = wf.ready && sourcePayloadOk && !wf.dryRunForced; %>
+                    <% const replayDisabledReason = wf.dryRunForced ? 'PANCAKE_BROWSY_DRY_RUN is forcing simulated dry-runs. Set it to false or unset it to replay in Browsy.' : (!wf.ready ? 'A complete Browsy contract is required before replay.' : (!sourcePayloadOk ? 'Fix the source payload blockers before replay.' : '')); %>
+                    <% if (wf.ready) { %>
+                      <form data-action-form method="POST" action="<%= wfBase %>/tasks/<%= encodeURIComponent(wf.taskKey) %>/run" data-confirm="Run this Browsy automation for the current release payload? Browsy should stop at the final DistroKid submit checkpoint for manual review.">
+                        <input type="hidden" name="dry_run" value="false">
+                        <button data-distrokid-browsy-run-live data-submit-label="Running…" <%= canRunBrowsyReplay ? '' : 'disabled' %> class="rounded-xl border px-3 py-2 text-xs font-bold <%= canRunBrowsyReplay ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-zinc-200 bg-zinc-100 text-zinc-400 cursor-not-allowed' %>">Run Automation for This Release</button>
+                      </form>
+                      <form data-action-form method="POST" action="<%= wfBase %>/browsy-dry-run">
+                        <button data-submit-label="Checking…" <%= sourcePayloadOk ? '' : 'disabled' %> class="rounded-xl border px-3 py-2 text-xs font-bold <%= sourcePayloadOk ? 'border-zinc-300 bg-white text-zinc-900' : 'border-zinc-200 bg-zinc-100 text-zinc-400 cursor-not-allowed' %>">Simulate Readiness</button>
+                      </form>
+                    <% } %>
                     <% if (wf.wizardUrl) { %>
                       <a href="<%= wf.wizardUrl %>" target="_blank" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-900">Open Existing Recording</a>
                     <% } %>
                     <form data-action-form method="POST" action="<%= wfBase %>/record-automation">
                       <input type="hidden" name="task_key" value="<%= wf.taskKey %>">
-                      <% const sourcePayloadOk = !wf.sourcePayloadValidation || wf.sourcePayloadValidation.ok; %>
-                      <button data-submit-label="Opening…" <%= sourcePayloadOk ? '' : 'disabled' %> class="rounded-xl border px-3 py-2 text-xs font-bold <%= sourcePayloadOk ? 'border-sky-300 bg-sky-600 text-white' : 'border-zinc-200 bg-zinc-100 text-zinc-400 cursor-not-allowed' %>">Record Automation</button>
+                      <button data-submit-label="Opening…" <%= sourcePayloadOk ? '' : 'disabled' %> class="rounded-xl border px-3 py-2 text-xs font-bold <%= sourcePayloadOk ? 'border-zinc-300 bg-white text-zinc-900' : 'border-zinc-200 bg-zinc-100 text-zinc-400 cursor-not-allowed' %>">Record Automation</button>
                     </form>
                   </div>
                   <% if (!wf.ready) { %>
-                    <div class="mt-2 text-xs text-zinc-500">No live automation can run until Browsy has a reusable, verified workflow contract. Record the workflow first.</div>
+                    <div class="mt-2 text-xs text-zinc-500">No automation can run until Browsy has a reusable, verified workflow contract. Record the workflow first.</div>
+                  <% } else if (!canRunBrowsyReplay) { %>
+                    <div class="mt-2 text-xs text-zinc-500"><%= replayDisabledReason %></div>
+                  <% } else { %>
+                    <div class="mt-2 text-xs text-zinc-500">This replays the imported Browsy contract using the current release payload and upload paths. The final DistroKid submit remains gated for manual review.</div>
                   <% } %>
                 </div>
 
