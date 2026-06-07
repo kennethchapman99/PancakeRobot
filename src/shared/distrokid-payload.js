@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { loadBrandProfileById, resolveDistroKidArtist, DISTROKID_NON_DEFAULT_PROFILE_ARTIST } from './brand-profile.js';
+import { loadBrandProfileById, resolveDistroKidArtist, resolveBrandProfileArtistName } from './brand-profile.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SCHEMA_VERSION = 'pancake-distrokid-payload-v1';
@@ -38,20 +38,24 @@ export function buildDistroKidPayloadFromCockpit(cockpit, options = {}) {
   );
   const brandProfileId = clean(cockpit.brandProfileId || cockpit.brand_profile_id || manifest.brand_profile_id || uploadPayload.brand_profile_id) || null;
   const sourceTracks = collectPayloadTracks({ cockpit, manifest, uploadPayload, releaseType, releaseId });
-  // When an album mixes more than one brand profile, DistroKid releases it under
-  // the umbrella "Figment Factory" rather than any single brand's display name
-  // (per the test plan / [[project_distrokid_artist_rule]]).
-  const distinctBrandProfileIds = collectDistinctBrandProfileIds(sourceTracks, brandProfileId);
+  // Album title is the release's own brand-profile display name (e.g. "Postal"),
+  // resolved from the album's brand_profile_id. Each brand releases under its own
+  // name — never the "Figment Factory" umbrella, even when the album's tracks were
+  // authored under a mix of brand sub-profiles.
   const releaseTitle = resolveDistroKidReleaseTitle({
     releaseType,
     brandProfileId,
     fallbackTitle: uploadPayload.release_title || manifest.release_title || cockpit.title,
-    multiBrand: distinctBrandProfileIds.length > 1,
   });
-  const artistName = clean(uploadPayload.artist || manifest.artist || options.artistName || options.artist)
-    || resolveDistroKidArtist(
-      brandProfileId,
-    );
+  // The brand profile is AUTHORITATIVE for the artist name: a resolvable brand name
+  // wins over any (possibly stale) artist baked into the manifest or upload payload.
+  // Order: explicit caller override → resolvable brand-profile name → manifest/payload
+  // artist (covers brandless releases AND unreadable profiles) → Figment Factory
+  // umbrella as a last resort so the field is never empty.
+  const artistName = clean(options.artistName || options.artist)
+    || resolveBrandProfileArtistName(brandProfileId)
+    || clean(uploadPayload.artist || manifest.artist)
+    || resolveDistroKidArtist(brandProfileId);
   const sourceReleaseDate = clean(uploadPayload.release_date || manifest.release_date || cockpit.releaseDate);
   const releaseDate = effectiveDistroKidReleaseDate(sourceReleaseDate, options);
   const label = clean(uploadPayload.label || manifest.label || manifest.record_label || options.label);
@@ -719,31 +723,10 @@ function buildBrowsyPackageAssets(canonicalPayload = {}) {
   return assets;
 }
 
-function resolveDistroKidReleaseTitle({ releaseType, brandProfileId, fallbackTitle, multiBrand }) {
+function resolveDistroKidReleaseTitle({ releaseType, brandProfileId, fallbackTitle }) {
   if (releaseType !== 'album') return clean(fallbackTitle);
-  if (multiBrand) return DISTROKID_NON_DEFAULT_PROFILE_ARTIST;
-
   const profileTitle = resolveBrandProfileDisplayName(brandProfileId);
   return profileTitle || clean(fallbackTitle);
-}
-
-// Distinct brand-profile ids referenced by an album's tracks (plus the release's
-// own brand profile). Used to detect multi-brand albums.
-function collectDistinctBrandProfileIds(tracks = [], fallbackId = null) {
-  const ids = new Set();
-  for (const track of tracks || []) {
-    const id = clean(
-      track?.brand_profile_id
-      || track?.brandProfileId
-      || track?.song?.brand_profile_id
-      || track?.metadata?.brand_profile_id
-      || track?.metadata?.brandProfileId,
-    );
-    if (id) ids.add(id);
-  }
-  const fallback = clean(fallbackId);
-  if (fallback) ids.add(fallback);
-  return [...ids].filter(Boolean);
 }
 
 function resolveBrandProfileDisplayName(profileId) {

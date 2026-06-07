@@ -198,16 +198,33 @@ export const DISTROKID_DEFAULT_PROFILE_ARTIST = 'Pancake Robot';
 export const DISTROKID_NON_DEFAULT_PROFILE_ARTIST = 'Figment Factory';
 
 /**
- * Resolves the DistroKid artist name from a release's brand profile id.
- * The default Pancake Robot profile releases as "Pancake Robot"; every other
- * brand profile releases under the "Figment Factory" umbrella, regardless of
- * that profile's own distribution.default_artist value.
+ * The brand profile's own DistroKid artist name, or '' when it can't be resolved.
+ * The default Pancake Robot profile releases as "Pancake Robot"; every other brand
+ * releases under ITS OWN name (distribution.default_artist, falling back to
+ * display_name / brand_name). Unlike resolveDistroKidArtist this does NOT fall back
+ * to the "Figment Factory" umbrella, so callers can supply their own fallback
+ * (e.g. a manifest-provided artist) before reaching for the umbrella.
+ */
+export function resolveBrandProfileArtistName(profileId) {
+  const raw = String(profileId || '').trim();
+  if (!raw || raw === DEFAULT_PROFILE_ID) return DISTROKID_DEFAULT_PROFILE_ARTIST;
+  try {
+    const profile = loadBrandProfileById(raw);
+    return String(
+      profile?.distribution?.default_artist || profile?.display_name || profile?.brand_name || '',
+    ).trim();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Resolves the DistroKid artist name from a release's brand profile id, guaranteed
+ * non-empty: the profile's own name, or the "Figment Factory" umbrella as a last
+ * resort when a non-default profile can't be read.
  */
 export function resolveDistroKidArtist(profileId) {
-  const raw = String(profileId || '').trim();
-  return !raw || raw === DEFAULT_PROFILE_ID
-    ? DISTROKID_DEFAULT_PROFILE_ARTIST
-    : DISTROKID_NON_DEFAULT_PROFILE_ARTIST;
+  return resolveBrandProfileArtistName(profileId) || DISTROKID_NON_DEFAULT_PROFILE_ARTIST;
 }
 
 export function getActiveProfileId() {

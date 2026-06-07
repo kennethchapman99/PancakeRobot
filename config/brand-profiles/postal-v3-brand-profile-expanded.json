@@ -2,10 +2,10 @@
   "id": "postal-v3",
   "schema_version": "brand-profile/v1",
   "brand_type": "music_artist",
-  "brand_name": "Postal v3",
-  "artist_name": "Postal v3",
-  "display_name": "Postal v3",
-  "short_name": "Postal v3",
+  "brand_name": "Postal",
+  "artist_name": "Postal",
+  "display_name": "Postal",
+  "short_name": "Postal",
   "genre": "Glitch Analog Indietronica",
   "brand_description": "Handmade-feeling analog indietronica built from glitch clicks, relaxed drum-machine pockets, warm pads, sampled textures, unusual instrumental colors, looping motifs, and restrained vocals with room for silence and lyrical variety.",
   "audience": {
@@ -172,7 +172,7 @@
     ]
   },
   "distribution": {
-    "default_artist": "Postal v3",
+    "default_artist": "Postal",
     "default_album": "Quiet Machinery",
     "primary_genre": "Alternative",
     "spotify_genres": [

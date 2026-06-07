@@ -18,12 +18,17 @@ import {
 } from '../src/shared/browsy-client.js';
 import { resolveDistroKidArtist } from '../src/shared/brand-profile.js';
 
-test('DistroKid artist resolves from brand profile: default is Pancake Robot, all others are Figment Factory', () => {
+test('DistroKid artist resolves from brand profile: default is Pancake Robot, every other brand uses its own name', () => {
   assert.equal(resolveDistroKidArtist(null), 'Pancake Robot');
   assert.equal(resolveDistroKidArtist(''), 'Pancake Robot');
   assert.equal(resolveDistroKidArtist('default'), 'Pancake Robot');
-  assert.equal(resolveDistroKidArtist('basement-cypher'), 'Figment Factory');
-  assert.equal(resolveDistroKidArtist('gravl-brand-profile'), 'Figment Factory');
+  // Non-default brands release under their own distribution.default_artist, not the
+  // retired "Figment Factory" umbrella.
+  assert.equal(resolveDistroKidArtist('basement-cypher'), 'Basement Cypher');
+  assert.equal(resolveDistroKidArtist('gravl-brand-profile'), 'Gravel Velvet Cypher');
+  // A non-default profile that can't be read still falls back to the umbrella so the
+  // field is never empty.
+  assert.equal(resolveDistroKidArtist('no-such-brand-profile'), 'Figment Factory');
 });
 
 test('canonical DistroKid payload includes absolute artwork, audio, release metadata, lyrics, and AI fields', t => {
@@ -80,8 +85,8 @@ test('canonical payload derives artist from brand profile when no package manife
     tracks: [{ id: 'SONG_X_T01', title: 'Warm Front', track_number: 1, releaseAudio: { selected: { path: '/tmp/warm.mp3' } } }],
   };
   const nonDefault = buildDistroKidPayloadFromCockpit(nonDefaultCockpit, { repoRoot: os.tmpdir() });
-  assert.equal(nonDefault.artistName, 'Figment Factory');
-  assert.equal(nonDefault.artist, 'Figment Factory');
+  assert.equal(nonDefault.artistName, 'Loop Council');
+  assert.equal(nonDefault.artist, 'Loop Council');
 
   const defaultCockpit = { ...nonDefaultCockpit, id: 'ALBUM_DEFAULT', brandProfileId: 'default' };
   const defaultPayload = buildDistroKidPayloadFromCockpit(defaultCockpit, { repoRoot: os.tmpdir() });
@@ -92,19 +97,20 @@ test('canonical payload derives artist from brand profile when no package manife
   assert.equal(noProfilePayload.artistName, 'Pancake Robot');
 });
 
-test('explicit manifest artist still wins over brand-profile fallback', t => {
+test('resolvable brand profile is authoritative for artist over a stale manifest artist', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pancake-distrokid-artist-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const audioPath = path.join(root, 'track-01.wav');
   const artworkPath = path.join(root, 'cover-art.png');
   fs.writeFileSync(audioPath, 'fake-audio');
   fs.writeFileSync(artworkPath, 'fake-artwork');
-  // Manifest declares Pancake Robot even though the brand profile is non-default;
-  // the explicit manifest value must not be overwritten by the fallback.
+  // The manifest carries a stale "Pancake Robot" artist, but the release's brand
+  // profile ('tribe' → "Loop Council") is authoritative and wins. This is the fix
+  // for stale brand renames silently shipping the wrong artist.
   const cockpit = buildSyntheticCockpit({ root, artworkPath, audioPath, lyricsPath: audioPath });
   cockpit.brandProfileId = 'tribe';
   const payload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot: root });
-  assert.equal(payload.artistName, 'Pancake Robot');
+  assert.equal(payload.artistName, 'Loop Council');
 });
 
 test('album DistroKid title uses brand profile display name instead of Figment Factory album name', () => {
@@ -157,7 +163,7 @@ test('single DistroKid title remains the release title', () => {
   assert.equal(payload.releaseTitle, 'Song Manifest Title');
 });
 
-test('album spanning multiple brand profiles releases under "Figment Factory"', () => {
+test('album with tracks authored under mixed brand sub-profiles still releases under the album\'s own brand profile', () => {
   const cockpit = {
     type: 'album',
     id: 'ALBUM_MULTI_BRAND',
@@ -169,9 +175,11 @@ test('album spanning multiple brand profiles releases under "Figment Factory"', 
       { id: 'SONG_MB_B', title: 'B', track_number: 2, brand_profile_id: 'basement-cypher', releaseAudio: { selected: { path: '/tmp/b.mp3' } } },
     ],
   };
+  // Mixed per-track brand ids no longer trigger the retired "Figment Factory"
+  // umbrella; the album uses its own brand profile display name ('tribe' → "Tribe").
   const payload = buildDistroKidPayloadFromCockpit(cockpit, { repoRoot: os.tmpdir() });
-  assert.equal(payload.releaseTitle, 'Figment Factory');
-  assert.equal(payload.release_title, 'Figment Factory');
+  assert.equal(payload.releaseTitle, 'Tribe');
+  assert.equal(payload.release_title, 'Tribe');
 });
 
 test('track audio resolves from output/songs/{id}/audio/ subdir and cover art from release-packages', t => {
