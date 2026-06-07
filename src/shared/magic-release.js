@@ -1099,10 +1099,15 @@ function buildBrowsyRunVariables(packagePayload) {
   const canonical = packagePayload.canonical_payload || {};
   const releaseId = canonical.releaseId || canonical.release_id || packagePayload.entity_id;
   const idKey = packagePayload.entity_type === 'album' ? 'albumId' : 'songId';
-  // DistroKid uses the brand profile display name for both the artist and the
-  // album-title field (per the recorded flow). artist is already resolved to
-  // the brand display name upstream ([[project_distrokid_artist_rule]]).
+  // Two DISTINCT fields (don't conflate them):
+  //  - Artist/band + performer credit = the umbrella artist name ("Figment
+  //    Factory" for any non-default brand, "Pancake Robot" for the default),
+  //    resolved upstream as canonical.artist ([[project_distrokid_artist_rule]]).
+  //  - Album title = the brand profile DISPLAY NAME (e.g. "Mac Miller"), or
+  //    "Figment Factory" only when a release spans multiple brands — resolved
+  //    upstream as canonical.releaseTitle.
   const brandDisplayName = canonical.artist || canonical.artistName || canonical.release_title || canonical.releaseTitle || '';
+  const albumTitle = canonical.releaseTitle || canonical.release_title || brandDisplayName;
   // DistroKid's ai_gate radio value: "1" = all audio performed by AI, "2" = part
   // AI + humans, "0" = none. Per the Figment Factory spec every track always
   // answers Yes → "All of the audio", so the gate is forced to "1" (scope "full")
@@ -1170,7 +1175,7 @@ function buildBrowsyRunVariables(packagePayload) {
       releaseDate: canonical.releaseDate || canonical.release_date,
       genre1: DISTROKID_FIGMENT_GENRE,
       label: DISTROKID_FIGMENT_LABEL,
-      albumtitle: brandDisplayName,
+      albumtitle: albumTitle,
       songwriterRealNameFirst1: songwriterFirst,
       songwriterRealNameLast1: songwriterLast,
       performerName: brandDisplayName,

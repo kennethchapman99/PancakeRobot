@@ -205,6 +205,12 @@ test('replay run against Browsy completion marks the task complete and harvests 
   assert.deepEqual(sentPayload?.agreements, {
     tandc: true, otherArtist: true, promoServices: true, recorded: true, youtube: true,
   });
+  // The album-title field must use the release title (brand profile display name),
+  // falling back to the artist only when no release title exists — never forcing
+  // the umbrella artist over a real title. Regression for album titles coming out
+  // as "Figment Factory".
+  const dp = sentPayload?.distrokid_payload || {};
+  assert.equal(sentPayload?.inputs?.albumtitle, dp.releaseTitle || dp.release_title || dp.artist);
   assert.equal(resultJson.status, 'replay_run_completed');
   assert.equal(resultJson.browsy_run_id, 'run_fake_1');
   const state = getMagicReleaseState('single', songId);

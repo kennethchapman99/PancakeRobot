@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { basename, extname, join } from 'path';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import { getSong, getAssetsForSong } from '../../src/shared/db.js';
 import { getActiveProfileId, loadBrandProfile, loadBrandProfileById, resolveDistroKidArtist } from '../../src/shared/brand-profile.js';
@@ -227,9 +228,13 @@ function buildReleasePackage(songId) {
   }
 
   if (cover.path) {
-    const ext = extname(cover.path).toLowerCase() || '.png';
-    const dest = join(packageDir, `cover-art${ext}`);
-    copyFileIfExists(cover.path, dest);
+    // Package the cover as a square 3000×3000 JPG — DistroKid's recommended
+    // format. Stores require square artwork ≥1400×1400 (recommend 3000×3000) and
+    // reject undersized art even though it previews fine; an upscaled PNG can also
+    // balloon to 10+ MB and fail/stall DistroKid's uploader, whereas a 3000 JPG is
+    // ~2 MB and accepted. Falls back to a plain copy if image tooling is missing.
+    const dest = join(packageDir, 'cover-art.jpg');
+    writeStoreReadyCover(cover.path, dest);
     manifest.cover_art = relativeToRepo(dest);
     fieldSources.cover_art = cover.source;
   } else {
@@ -376,6 +381,32 @@ function findCoverArt(song, songId, assets) {
     || assets.find(item => item.file_path && /\.(png|jpe?g)$/i.test(item.file_path));
   const assetPath = absoluteFromMaybeRelative(asset?.file_path);
   return exists(assetPath) ? { path: assetPath, source: `asset:${asset.asset_type}` } : {};
+}
+
+// Write a store-ready cover at `destPath`: a square 3000×3000 JPG (DistroKid's
+// recommended format). Center-crops non-square sources before scaling so the
+// aspect ratio is never distorted. Uses macOS `sips` (the builder runs on the
+// user's Mac); on any failure or non-macOS host it falls back to a plain copy of
+// the source (no regression versus the prior copy-only behavior).
+function writeStoreReadyCover(srcPath, destPath) {
+  const TARGET = 3000;
+  try {
+    const dims = execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', srcPath], { encoding: 'utf8' });
+    const w = Number((dims.match(/pixelWidth:\s*(\d+)/) || [])[1] || 0);
+    const h = Number((dims.match(/pixelHeight:\s*(\d+)/) || [])[1] || 0);
+    const args = ['-s', 'format', 'jpeg', '-s', 'formatOptions', '90'];
+    // Center-crop to a square when needed, then scale to 3000×3000.
+    if (w && h && w !== h) {
+      const side = Math.min(w, h);
+      args.push('-c', String(side), String(side));
+    }
+    args.push('-z', String(TARGET), String(TARGET), srcPath, '--out', destPath);
+    execFileSync('sips', args, { stdio: 'ignore' });
+    if (!exists(destPath)) copyFileIfExists(srcPath, destPath);
+  } catch {
+    // sips unavailable or failed — best-effort plain copy of the source.
+    copyFileIfExists(srcPath, destPath);
+  }
 }
 
 function findLyrics(song, songId, assets) {
