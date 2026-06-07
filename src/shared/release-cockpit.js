@@ -414,7 +414,9 @@ export function validateReleaseAction(action, cockpit, options = {}) {
     if (options.confirm !== true) blockers.push('Live DistroKid submit requires explicit confirmation.');
   }
 
-  if (key === 'hyperfollow' && !isAtLeastLifecycle(cockpit.lifecycle.current, 'submitted_to_distrokid')) {
+  // A manually pasted HyperFollow URL is ground truth: if the operator physically has
+  // the link, the release is effectively live, so don't gate the save on lifecycle.
+  if (key === 'hyperfollow' && !String(options.manualHyperfollowUrl || '').trim() && !isAtLeastLifecycle(cockpit.lifecycle.current, 'submitted_to_distrokid')) {
     blockers.push('HyperFollow requires submitted_to_distrokid lifecycle state.');
   }
 
@@ -703,6 +705,9 @@ function buildStages({ type, release, tracks, assetState, distrokidArtwork, camp
       actions: [
         { label: liveSubmitApproval?.approved ? 'Live submit approved' : 'Approve live submit', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/approve-live-submit`, enabled: readyForApproval && !liveComplete, disabledReason: readyForApproval ? '' : getPreviewApprovalBlockers({ type, id: release.id, latestPreviewRun, latestPreviewAssessment: previewAssessment, packageState, stages: [], lifecycle: { current: previewPassed ? 'distrokid_previewed' : 'approved_for_distribution' } }).join(', ') || 'Preview must pass before live submit can be approved.' },
         { label: 'Run live submit automation', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/distrokid-live-submit`, enabled: readyForLiveSubmit && Boolean(liveSubmitApproval?.approved) && !liveComplete && latestLiveSubmitRun?.status !== 'running', confirmation: 'Run the live DistroKid submit? This can submit externally.', disabledReason: latestLiveSubmitRun?.status === 'running' ? 'Live submit automation is already running.' : (liveSubmitApproval?.approved ? '' : 'Human approval is still required.') },
+        // Manual override for when the operator already submitted directly in DistroKid:
+        // records it as done (no preview/approval gate, since the submit already happened).
+        { label: 'Mark submitted in DistroKid', method: 'POST', url: `/releases/${type}/${encodeURIComponent(release.id)}/actions/mark-submitted`, enabled: !liveComplete, confirmation: 'Mark this release as already submitted in DistroKid? Use this when you completed the submit yourself.', disabledReason: liveComplete ? 'Already marked submitted.' : '' },
       ],
     }),
     stage('hyperfollow', 'HyperFollow capture', latestHyperFollowRun?.status === 'failed' ? 'failed' : hyperfollow?.url ? 'complete' : liveComplete ? 'ready' : 'blocked', latestHyperFollowRun?.status === 'failed' ? [latestHyperFollowRun.error || latestHyperFollowRun.message] : (hyperfollow?.url ? [] : [hyperfollowDetail]), false, {
@@ -1395,10 +1400,16 @@ function summarizeDistroKidBrowsyWorkflow({ type, releaseId = '', browsyRecordin
   // local setup row still gets "Automation setup exists" guidance when not ready.
   const nextStepPhases = [...activeLifecyclePhases, 'recording_setup'];
   const lifecycleActive = Boolean(recordingPhase && activeLifecyclePhases.includes(recordingPhase));
-  // A reusable contract published from another release makes this one runnable even
-  // if this release's own recording row isn't complete — unless we're mid-recording
-  // here (then show the live lifecycle instead of masking it as "ready").
-  const effectiveReady = Boolean(item.ready) || (globalReady && !lifecycleActive && !failed && !unreachable);
+  // A published, reusable contract makes THIS release runnable even while its own
+  // recording row is mid-flight: recording captures a NEW version of the workflow and
+  // is orthogonal to running the already-published one. Suppressing readiness during a
+  // (possibly stale) recording session is what falsely demanded a re-record on every
+  // fresh release. The ONE phase we still suppress on is auth: the persistent profile
+  // isn't signed in, so a run would fail at DistroKid's login wall — keep surfacing
+  // auth setup instead of masking it as ready.
+  const authBlockedPhases = ['auth_blocked', 'auth_required', 'auth_rejected'];
+  const authBlocked = Boolean(recordingPhase && authBlockedPhases.includes(recordingPhase));
+  const effectiveReady = Boolean(item.ready) || (globalReady && !authBlocked && !failed && !unreachable);
   const readinessLabel = effectiveReady
     ? 'ready'
     : unreachable

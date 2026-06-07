@@ -353,10 +353,10 @@
                   <label class="text-xs font-semibold text-zinc-600" for="hyperfollow-url">Paste / save HyperFollow URL</label>
                   <div class="mt-2 flex flex-col gap-2 sm:flex-row">
                     <input id="hyperfollow-url" name="hyperfollow_url" value="<%= cockpit.hyperfollow?.url || '' %>" placeholder="https://distrokid.com/hyperfollow/..." class="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm">
-                    <button data-submit-label="Saving…" <%= stage.actions.some(action => action.label === 'Save HyperFollow' && action.enabled) || cockpit.hyperfollow?.url ? '' : 'disabled' %> class="rounded-xl border px-4 py-2 text-sm font-bold <%= buttonClass('Save HyperFollow', stage.actions.some(action => action.label === 'Save HyperFollow' && action.enabled) || Boolean(cockpit.hyperfollow?.url)) %>">Save HyperFollow</button>
+                    <button data-submit-label="Saving…" class="rounded-xl border px-4 py-2 text-sm font-bold <%= buttonClass('Save HyperFollow', true) %>">Save HyperFollow</button>
                   </div>
-                  <% if (!stage.actions.some(action => action.label === 'Save HyperFollow' && action.enabled) && !cockpit.hyperfollow?.url) { %>
-                    <div class="mt-2 text-xs text-amber-700">Available after live submit.</div>
+                  <% if (!cockpit.hyperfollow?.url) { %>
+                    <div class="mt-2 text-xs text-zinc-500">Paste the HyperFollow link any time — saving it manually marks the release HyperFollow-ready.</div>
                   <% } %>
                 </form>
               <% } %>

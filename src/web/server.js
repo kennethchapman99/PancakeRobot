@@ -700,6 +700,33 @@ app.post('/releases/:type/:id/actions/distrokid-live-submit', async (req, res) =
   }
 });
 
+// Manual override: the operator completed the submit directly in DistroKid. Record
+// it (flip every track to submitted) without the automated-preview safety gate —
+// that gate guards the AUTOMATION clicking submit, not a human marking a done deal.
+app.post('/releases/:type/:id/actions/mark-submitted', async (req, res) => {
+  const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+  if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
+  try {
+    const distrokidUrl = String(req.body?.distrokid_url || req.body?.url || '').trim();
+    const hyperfollowUrl = String(req.body?.hyperfollow_url || '').trim();
+    const results = [];
+    for (const track of cockpit.tracks) {
+      results.push(markSongSubmittedToDistroKid(track.id, {
+        distrokid_url: distrokidUrl || undefined,
+        hyperfollow_url: hyperfollowUrl || undefined,
+        notes: 'Marked submitted manually from Release Cockpit.',
+      }));
+    }
+    const msg = `Marked ${results.length} track${results.length === 1 ? '' : 's'} submitted to DistroKid.`;
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_live_submit', 'complete', msg, { count: results.length, manual: true });
+    respondReleaseAction(req, res, cockpit, msg);
+  } catch (error) {
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_live_submit', 'failed', error.message);
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `/releases/${encodeURIComponent(cockpit.type)}/${encodeURIComponent(cockpit.id)}`);
+  }
+});
+
 app.post('/releases/:type/:id/actions/approve-live-submit', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
@@ -732,8 +759,10 @@ app.post('/releases/:type/:id/actions/hyperfollow', async (req, res) => {
   const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
   if (!cockpit) return res.status(404).json({ ok: false, error: 'Release not found' });
   try {
-    validateReleaseAction('hyperfollow', cockpit);
     const url = req.body?.hyperfollow_url || req.body?.url;
+    // A manually pasted URL is ground truth — let the operator save it without the
+    // submitted_to_distrokid lifecycle gate.
+    validateReleaseAction('hyperfollow', cockpit, { manualHyperfollowUrl: url });
     const results = [];
     for (const track of cockpit.tracks) results.push(await captureHyperFollowLink(track.id, { hyperfollowUrl: url }));
     const captured = results.find(result => result.url) || results[0] || { url: null };
