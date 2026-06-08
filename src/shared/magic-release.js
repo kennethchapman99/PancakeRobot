@@ -621,7 +621,10 @@ function applyCapturedOutputs(campaign, outputs, result) {
   const updateTrackLinks = (platform, url) => {
     for (const track of release.tracks) upsertReleaseLink(track.id, platform, url);
   };
-  for (const [key, value] of Object.entries(outputs)) {
+  for (const [key, raw] of Object.entries(outputs)) {
+    // Browsy surfaces captured outputs as { status, value, selector, required }
+    // objects; simpler callers may pass a raw string. Normalize to the value.
+    const value = raw && typeof raw === 'object' && 'value' in raw ? raw.value : raw;
     if (!value) continue;
     if (['smart_link_url', 'hyperfollow_url'].includes(key)) {
       links.smart_link_url = value;
@@ -891,6 +894,11 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
       authProfileRef: contractGate.contract?.authProfileRef || contractGate.contract?.auth?.[0]?.authProfileId || contractGate.contract?.auth?.[0]?.siteId || null,
     },
   });
+  // End-to-end auto-submit is opt-in via env flag and OFF by default, so a normal
+  // run still parks at the human checkpoint. When enabled, the live run still
+  // requires a human confirm (Browsy parks until POST /api/runs/:id/confirm-submit)
+  // before it clicks final submit and harvests the HyperFollow link.
+  const autoSubmit = process.env.PANCAKE_DISTROKID_AUTO_SUBMIT === 'true';
   const execution = await executeBrowsyWorkflowRun({
     workflowId,
     payload: variables,
@@ -902,6 +910,8 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
       usePersistentProfile: true,
       authProfileId: contractGate.contract?.authProfileRef || contractGate.contract?.auth?.[0]?.authProfileId || contractGate.contract?.auth?.[0]?.siteId || 'distrokid',
       requireHumanApproval: true,
+      autoSubmit,
+      confirmBeforeSubmit: true,
     },
     config,
   });

@@ -101,6 +101,16 @@ export async function getBrowsyRunArtifacts(runId, config = getBrowsyConfig()) {
   return getBrowsyJson(config, `/api/runs/${encodeURIComponent(id)}/artifacts`);
 }
 
+// Out-of-band "human reviewed the filled live page — go ahead and submit" signal
+// for the auto-submit opt-in. The Browsy run-plan executor is parked at the human
+// checkpoint polling for a confirm flag; this drops it so the post-submit chain
+// (final submit → mixea → done → capture HyperFollow) proceeds on the live page.
+export async function confirmBrowsySubmit(runId, config = getBrowsyConfig()) {
+  const id = clean(runId);
+  if (!id) throw new Error('Browsy runId is required.');
+  return postBrowsyJson(config, `/api/runs/${encodeURIComponent(id)}/confirm-submit`, {});
+}
+
 // Maps a Browsy public run status into a coarse Pancake category so the engine
 // can decide task state without re-deriving Browsy semantics everywhere.
 export function categorizeBrowsyStatus(status) {
