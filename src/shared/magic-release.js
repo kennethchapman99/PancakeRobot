@@ -531,6 +531,15 @@ async function runBrowsyTask({ campaign, task, release, dryRun }) {
     payload: packageResult.payload,
     dryRun: effectiveDryRun,
     config,
+    // Persist the Browsy runId + awaiting-confirmation marker the instant the run
+    // starts, so a cockpit reload can render the "Confirm & resume live submit"
+    // button while this call is still blocked polling the parked run.
+    onRunStart: ({ runId, awaitingConfirmation }) => {
+      updateReleaseCampaignRun(run.id, {
+        run_id: runId,
+        log: { ...(run.log || {}), browsy_run_id: runId, awaiting_submit_confirmation: Boolean(awaitingConfirmation), awaiting_since: new Date().toISOString() },
+      });
+    },
   });
 
   updateReleaseCampaignRun(run.id, {
@@ -795,7 +804,7 @@ function writeBrowsyWorkflowPackage({ campaign, task, release, dryRun }) {
 // result.json that ingestBrowsyResult understands. There is no silent fake
 // success: an explicit dry-run is clearly marked, and a replay that cannot reach
 // Browsy is recorded as not_configured rather than a passing run.
-async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, config = getBrowsyConfig() }) {
+async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, config = getBrowsyConfig(), onRunStart = null }) {
   const resultPath = path.join(path.dirname(packagePath), 'result.json');
   const packagePayload = payload || JSON.parse(fs.readFileSync(packagePath, 'utf8'));
   const entityType = packagePayload.entity_type;
@@ -905,6 +914,10 @@ async function runBrowsyWorkflow({ workflowId, packagePath, payload, dryRun, con
     mode: 'preview',
     callerId: 'pancake-robot',
     correlationId,
+    // A live auto-submit run parks at the checkpoint waiting for a human confirm;
+    // surface the runId immediately so the cockpit can show a "Confirm & resume"
+    // button while we keep polling for the final HyperFollow capture.
+    onStart: autoSubmit ? (runId => onRunStart?.({ runId, awaitingConfirmation: true })) : null,
     options: {
       leaveBrowserOpen: true,
       usePersistentProfile: true,

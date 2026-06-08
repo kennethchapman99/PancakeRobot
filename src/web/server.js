@@ -145,6 +145,7 @@ import {
   runNextMagicReleaseTask,
 } from '../shared/magic-release.js';
 import {
+  confirmBrowsySubmit,
   getBrowsyRecordingContract,
   getBrowsyWorkflowContract,
 } from '../shared/browsy-client.js';
@@ -882,6 +883,30 @@ app.post('/releases/:type/:id/magic-release/tasks/:taskKey/run', async (req, res
     if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
     const base = `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`;
     res.redirect(303, `${base}?error=${encodeURIComponent(error.message || 'Automation run failed.')}#magic-release`);
+  }
+});
+
+// Confirm & resume a parked live auto-submit run. The Browsy run-plan executor is
+// waiting at the human_checkpoint for an out-of-band go-ahead; this drops the
+// confirm flag so it runs the post-submit chain (submit → mixea → done → capture
+// HyperFollow, which then saves back to the release).
+app.post('/releases/:type/:id/distrokid/confirm-submit', async (req, res) => {
+  const base = `/releases/${encodeURIComponent(req.params.type)}/${encodeURIComponent(req.params.id)}`;
+  try {
+    const cockpit = buildReleaseCockpitViewModel(req.params.type, req.params.id);
+    if (!cockpit) return wantsJson(req) ? res.status(404).json({ ok: false, error: 'Release not found' }) : res.redirect(303, base);
+    const pending = cockpit.distrokidBrowsyWorkflow?.pendingSubmit;
+    if (!pending?.runId) {
+      const msg = 'No live submit is parked awaiting confirmation.';
+      return wantsJson(req) ? res.status(409).json({ ok: false, error: msg }) : res.redirect(303, `${base}?error=${encodeURIComponent(msg)}#magic-release`);
+    }
+    await confirmBrowsySubmit(pending.runId);
+    logReleaseCockpitEvent(cockpit.type, cockpit.id, 'distrokid_confirm_submit', 'complete', 'Confirmed live submit — automation is finishing the release.', { runId: pending.runId });
+    const msg = 'Confirmed — the automation is submitting and will save the HyperFollow link when done.';
+    return wantsJson(req) ? res.json({ ok: true, runId: pending.runId }) : res.redirect(303, `${base}?notice=${encodeURIComponent(msg)}#magic-release`);
+  } catch (error) {
+    if (wantsJson(req)) return res.status(400).json({ ok: false, error: error.message });
+    res.redirect(303, `${base}?error=${encodeURIComponent(error.message || 'Confirm failed.')}#magic-release`);
   }
 });
 

@@ -230,6 +230,20 @@
                     </div>
                   </div>
                   <% } %>
+                  <% if (wf.pendingSubmit) { %>
+                  <div data-distrokid-pending-submit class="mb-3 rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                    <div class="flex items-start gap-2">
+                      <span class="text-lg leading-none">⏸️</span>
+                      <div>
+                        <div class="font-bold">Live submit is filled and parked for your OK</div>
+                        <div class="mt-0.5 text-xs">The automation filled the live DistroKid release and is waiting. Review it in the open browser, then confirm to finish hands-off: it will submit, clear the mixea page, grab the HyperFollow link, and save it back to this release.</div>
+                      </div>
+                    </div>
+                    <form data-action-form method="POST" action="/releases/<%= encodeURIComponent(cockpit.type) %>/<%= encodeURIComponent(cockpit.id) %>/distrokid/confirm-submit" data-confirm="Confirm the live DistroKid submit? This actually submits the release, then finishes the post-submit steps automatically." class="mt-2">
+                      <button data-distrokid-confirm-submit data-submit-label="Submitting…" class="rounded-xl border border-amber-400 bg-amber-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:brightness-95">Confirm &amp; resume live submit</button>
+                    </form>
+                  </div>
+                  <% } %>
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">Primary</span>
                     <h3 class="text-base font-bold text-zinc-900">Browsy automation</h3>

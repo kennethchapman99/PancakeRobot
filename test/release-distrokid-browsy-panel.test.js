@@ -24,7 +24,7 @@ test.after(() => {
   cleanupTestOutputArtifacts({ songIds: [...songIds], albumIds: [...albumIds] });
 });
 
-const { upsertSong, createReleaseBrowsyRecording, createAlbum, assignSongsToAlbum, getReleaseCockpitLogs } = await import('../src/shared/db.js');
+const { upsertSong, createReleaseBrowsyRecording, createAlbum, assignSongsToAlbum, getReleaseCockpitLogs, addReleaseCampaignRun } = await import('../src/shared/db.js');
 const { evaluateBrowsyContractCompleteness } = await import('../src/shared/browsy-client.js');
 const { createMagicReleaseCampaign } = await import('../src/shared/magic-release.js');
 const { buildReleaseCockpitViewModel, warmDistroKidBrowsyContract } = await import('../src/shared/release-cockpit.js');
@@ -519,4 +519,45 @@ test('a failed launch route writes an object-style cockpit log with correct rele
   assert.ok(failLog, 'expected a browsy_recording failure log (error or warning) for the failed launch');
   assert.equal(failLog.release_id, songId);
   assert.equal(failLog.release_type, 'single');
+});
+
+// Confirm & resume: a parked live auto-submit run (campaign run still 'running'
+// with a Browsy run_id + awaiting flag) surfaces pendingSubmit + the button.
+test('parked live auto-submit run surfaces pendingSubmit + Confirm & resume button', async () => {
+  const songId = seedSong();
+  const campaignId = seedRecording('single', songId, { contract: completeContract('distrokid-single-submit') });
+  addReleaseCampaignRun({
+    campaign_id: campaignId,
+    workflow_id: 'distrokid-single-submit',
+    run_id: 'RUN_PARKED_1',
+    status: 'running',
+    log: { awaiting_submit_confirmation: true, awaiting_since: new Date().toISOString() },
+  });
+
+  const wf = buildReleaseCockpitViewModel('single', songId).distrokidBrowsyWorkflow;
+  assert.equal(wf.pendingSubmit?.runId, 'RUN_PARKED_1');
+
+  const html = await fetchDetailHtml('single', songId);
+  assert.match(html, /data-distrokid-pending-submit/);
+  assert.match(html, />Confirm &amp; resume live submit<\/button>/);
+  assert.match(html, /distrokid\/confirm-submit/);
+});
+
+// A finished run (status complete) must NOT surface pendingSubmit, even if its log
+// still carries the flag — the marker is keyed on a still-running parked run.
+test('completed run does not surface pendingSubmit', async () => {
+  const songId = seedSong();
+  const campaignId = seedRecording('single', songId, { contract: completeContract('distrokid-single-submit') });
+  addReleaseCampaignRun({
+    campaign_id: campaignId,
+    workflow_id: 'distrokid-single-submit',
+    run_id: 'RUN_DONE_1',
+    status: 'complete',
+    log: { awaiting_submit_confirmation: true },
+  });
+
+  const wf = buildReleaseCockpitViewModel('single', songId).distrokidBrowsyWorkflow;
+  assert.equal(wf.pendingSubmit, null);
+  const html = await fetchDetailHtml('single', songId);
+  assert.doesNotMatch(html, /data-distrokid-pending-submit/);
 });

@@ -149,6 +149,10 @@ export async function executeBrowsyWorkflowRun({
   approvalToken = '',
   options = null,
   config = getBrowsyConfig(),
+  // Fires once with the Browsy runId the moment the run starts, before the poll
+  // loop blocks. Lets callers persist the runId (e.g. so a parked confirm-before-
+  // submit run can be surfaced and confirmed from the UI while we keep polling).
+  onStart = null,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   now = () => Date.now(),
 } = {}) {
@@ -168,6 +172,10 @@ export async function executeBrowsyWorkflowRun({
   }
   if (!start.runId) {
     return { ok: false, reachable: true, runId: null, workflowRef: start.workflowRef, error: 'Browsy did not return a runId.', response: start.response };
+  }
+
+  if (typeof onStart === 'function') {
+    try { await onStart(start.runId); } catch { /* never let a UI hook break the run */ }
   }
 
   const deadline = now() + (config.runTimeoutMs || DEFAULT_RUN_TIMEOUT_MS);

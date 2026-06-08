@@ -14,6 +14,7 @@ import {
   getReleaseLinks,
   getSong,
   getSongsForAlbum,
+  listReleaseCampaignRuns,
   updateAlbum,
   upsertSong,
 } from './db.js';
@@ -275,6 +276,15 @@ export function buildReleaseCockpitViewModel(releaseType, releaseId) {
     distrokidBrowsyWorkflow.awaitingHumanSubmitMessage = distrokidBrowsyWorkflow.awaitingHumanSubmit
       ? 'Automation finished and stopped before the final submit. Review the staged DistroKid release in the browser, then submit manually.'
       : null;
+    // Live auto-submit run parked at the checkpoint waiting for a human confirm:
+    // a campaign run is still 'running' with a Browsy run_id and the awaiting flag.
+    // Surface its run_id so the cockpit can render "Confirm & resume live submit".
+    distrokidBrowsyWorkflow.pendingSubmit = null;
+    if (magicRelease?.campaignId) {
+      const parked = listReleaseCampaignRuns(magicRelease.campaignId)
+        .find(r => r.status === 'running' && r.run_id && r.log?.awaiting_submit_confirmation);
+      if (parked) distrokidBrowsyWorkflow.pendingSubmit = { runId: parked.run_id, since: parked.log?.awaiting_since || null };
+    }
   }
   const blockers = stages.filter(stage => stage.blocksLiveSubmit && stage.status !== 'complete').flatMap(stage => stage.issues);
   const lifecycle = determineReleaseLifecycle({ tracks, stages, blockers, hyperfollow, campaigns, packageState });
